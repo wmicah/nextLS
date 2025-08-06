@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss"
 
 const config: Config = {
   darkMode: "class",
@@ -41,7 +41,7 @@ const config: Config = {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
-        accent : {
+        accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
@@ -61,21 +61,72 @@ const config: Config = {
       },
       keyframes: {
         "accordion-down": {
-            from: { height: "0" },
-            to: { height: "var(--radix-accordion-content-height)" },
-            },
-        "accordion-up": {
-            from: { height: "var(--radix-accordion-content-height)" },
-            to: { height: "0" },
-            },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
-        animation: {
-            "accordion-up": "accordion-up 0.2s ease-out",
-            "accordion-down": "accordion-down 0.2s ease-out",
-        }
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+      },
+      animation: {
+        "accordion-up": "accordion-up 0.2s ease-out",
+        "accordion-down": "accordion-down 0.2s ease-out",
+      },
     },
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
-};
+}
 
-export default config;
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: ["class"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // Your custom moody palette
+        background: {
+          DEFAULT: "#2A3133", // Dark Background
+          card: "#353A3A", // Card/Box Background
+        },
+        foreground: {
+          DEFAULT: "#ABA4AA", // Light Text
+          muted: "#606364", // Border/Text Accent
+          accent: "#C3BCC2", // Soft Highlight
+        },
+        border: {
+          DEFAULT: "#606364", // Border/Text Accent
+          muted: "#4A4F4F", // Slightly darker for subtle borders
+        },
+        // Override default grays with your palette
+        gray: {
+          50: "#F8F7F8",
+          100: "#E8E6E8",
+          200: "#D4D1D4",
+          300: "#C3BCC2", // Soft Highlight
+          400: "#ABA4AA", // Light Text
+          500: "#8A8288",
+          600: "#606364", // Border/Text Accent
+          700: "#4A4F4F",
+          800: "#353A3A", // Card/Box Background
+          900: "#2A3133", // Dark Background
+          950: "#1F2324",
+        },
+        // Keep orange for accents
+        orange: {
+          500: "#F97316",
+          600: "#EA580C",
+        },
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+}
+
+export default config

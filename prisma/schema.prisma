@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @unique
+  email String @unique
+  name String?
+  role UserRole?
+  
+  stripeCustomerId String? @unique @map(name: "stripe_customer_id")
+  stripeSubscriptionId String? @unique @map(name: "stripe_subscription_id")
+  stripePriceId String? @map(name: "stripe_price_id")
+  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+
+  // Fixed relation - use the same name as the back-reference
+  clients Client[] @relation("CoachClients")
+}
+
+enum UserRole {
+  COACH
+  CLIENT
+}
+
+model Client {
+  id           String    @id @default(uuid())
+  name         String
+  avatar       String?
+  nextLessonDate        DateTime?
+  lastCompletedWorkout  String?
+  dueDate      DateTime?
+  lastActivity String?
+  updates      Json?
+  coachId      String?
+  
+  // Fixed relation - specify the relation name
+  coach        User?     @relation("CoachClients", fields: [coachId], references: [id])
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
