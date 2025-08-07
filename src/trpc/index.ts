@@ -3,6 +3,13 @@ import { publicProcedure, router } from "./trpc"
 import { TRPCError } from "@trpc/server"
 import { db } from "@/db"
 import { z } from "zod"
+import {
+  extractYouTubeVideoId,
+  extractPlaylistId,
+  getYouTubeThumbnail,
+  fetchYouTubeVideoInfo,
+  fetchPlaylistVideos,
+} from "@/lib/youtube"
 
 export const appRouter = router({
   authCallback: publicProcedure.query(
@@ -12,7 +19,7 @@ export const appRouter = router({
       user: {
         id: string
         email: string
-        role?: "COACH" | "CLIENT" // Make role optional
+        role?: "COACH" | "CLIENT"
         name: string
       }
     }> => {
@@ -22,13 +29,11 @@ export const appRouter = router({
       if (!user || !user.id || !user.email)
         throw new TRPCError({ code: "UNAUTHORIZED" })
 
-      // Check if user exists in database
       const dbUser = await db.user.findFirst({
         where: { id: user.id },
       })
 
       if (!dbUser) {
-        // Create new user WITHOUT a role
         const newUser = await db.user.create({
           data: {
             id: user.id,
@@ -37,17 +42,15 @@ export const appRouter = router({
               user.given_name && user.family_name
                 ? `${user.given_name} ${user.family_name}`
                 : null,
-            // ✅ Don't set role initially - let them choose
           },
         })
 
         return {
           success: true,
-          needsRoleSelection: true, // Always true for new users
+          needsRoleSelection: true,
           user: {
             id: newUser.id,
             email: newUser.email,
-            // role: undefined, // No role set yet
             name:
               newUser.name ||
               user.given_name ||
@@ -58,11 +61,10 @@ export const appRouter = router({
         }
       }
 
-      // For existing users, check if they have a role
       if (!dbUser.role) {
         return {
           success: true,
-          needsRoleSelection: true, // They need to select a role
+          needsRoleSelection: true,
           user: {
             id: dbUser.id,
             email: dbUser.email,
@@ -113,7 +115,6 @@ export const appRouter = router({
           data: { role: input.role },
         })
 
-        // If user is a client and selected a coach, create the client record
         if (input.role === "CLIENT" && input.coachId) {
           await db.client.create({
             data: {
@@ -126,7 +127,6 @@ export const appRouter = router({
           })
         }
 
-        // ✅ Return the role that was actually set
         return {
           role: updatedUser.role as "COACH" | "CLIENT",
           success: true,
@@ -134,7 +134,6 @@ export const appRouter = router({
       }),
 
     getCoaches: publicProcedure.query(async () => {
-      // This queries Users who have the role of COACH
       return await db.user.findMany({
         where: { role: "COACH" },
         select: {
@@ -157,61 +156,41 @@ export const appRouter = router({
     }),
   }),
 
-  // ✅ Keep this query - it's working correctly
   getMyClients: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession()
     const user = await getUser()
 
-    console.log("🔍 SERVER: getMyClients - User ID:", user?.id) // Debug log
-
     if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
 
-    // Get the coach's clients
     const clients = await db.client.findMany({
       where: { coachId: user.id },
-      orderBy: { nextLessonDate: "asc" }, // Show upcoming lessons first
+      orderBy: { nextLessonDate: "asc" },
     })
-
-    console.log(
-      "🔍 SERVER: getMyClients - Found clients:",
-      clients.length,
-      clients
-    ) // Debug log
 
     return clients
   }),
 
   clients: router({
-    // ✅ FIX: Make this query actually return the coach's clients
     list: publicProcedure.query(async () => {
       const { getUser } = getKindeServerSession()
       const user = await getUser()
 
-      console.log("🔍 SERVER: clients.list - User ID:", user?.id) // Debug log
-
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
 
-      // Get the coach's clients - same as getMyClients
       const clients = await db.client.findMany({
         where: { coachId: user.id },
         orderBy: { createdAt: "desc" },
       })
 
-      console.log(
-        "🔍 SERVER: clients.list - Found clients:",
-        clients.length,
-        clients
-      ) // Debug log
-
       return clients
     }),
+
     dueSoon: publicProcedure.query(async () => {
       const { getUser } = getKindeServerSession()
       const user = await getUser()
 
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
 
-      // Return clients with lessons due soon
       const threeDaysFromNow = new Date()
       threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
 
@@ -226,28 +205,25 @@ export const appRouter = router({
         orderBy: { nextLessonDate: "asc" },
       })
     }),
+
     needsAttention: publicProcedure.query(async () => {
       const { getUser } = getKindeServerSession()
       const user = await getUser()
 
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
 
-      // Return clients who haven't had a lesson in a while or have no upcoming lessons
-      const oneWeekAgo = new Date()
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-
       return await db.client.findMany({
         where: {
           coachId: user.id,
           OR: [
             { nextLessonDate: null },
-            { nextLessonDate: { lt: new Date() } }, // Past due lessons
+            { nextLessonDate: { lt: new Date() } },
           ],
         },
         orderBy: { nextLessonDate: "asc" },
       })
     }),
-    // Add this to your clients router
+
     create: publicProcedure
       .input(
         z.object({
@@ -275,7 +251,7 @@ export const appRouter = router({
 
         return newClient
       }),
-    // Add this to your clients router
+
     delete: publicProcedure
       .input(
         z.object({
@@ -288,7 +264,6 @@ export const appRouter = router({
 
         if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
 
-        // Verify the client belongs to the user
         const client = await db.client.findFirst({
           where: {
             id: input.id,
@@ -308,6 +283,404 @@ export const appRouter = router({
         })
 
         return { success: true }
+      }),
+  }),
+
+  library: router({
+    list: publicProcedure
+      .input(
+        z.object({
+          search: z.string().optional(),
+          category: z.string().optional(),
+          difficulty: z.string().optional(),
+          type: z.enum(["video", "document", "all"]).optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        const where: any = {}
+
+        if (input.search) {
+          where.OR = [
+            { title: { contains: input.search, mode: "insensitive" } },
+            { description: { contains: input.search, mode: "insensitive" } },
+          ]
+        }
+
+        if (input.category && input.category !== "All") {
+          where.category = input.category
+        }
+
+        if (input.difficulty && input.difficulty !== "All") {
+          where.difficulty = input.difficulty
+        }
+
+        if (input.type && input.type !== "all") {
+          where.type = input.type
+        }
+
+        const resources = await db.libraryResource.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+        })
+
+        return resources
+      }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        const resource = await db.libraryResource.findUnique({
+          where: { id: input.id },
+        })
+
+        if (!resource) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Resource not found",
+          })
+        }
+
+        await db.libraryResource.update({
+          where: { id: input.id },
+          data: { views: { increment: 1 } },
+        })
+
+        return resource
+      }),
+
+    create: publicProcedure
+      .input(
+        z.object({
+          title: z.string().min(1, "Title is required"),
+          description: z.string().min(1, "Description is required"),
+          category: z.string().min(1, "Category is required"),
+          difficulty: z.enum([
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+            "All Levels",
+          ]),
+          type: z.enum(["video", "document"]),
+          url: z.string().url("Valid URL is required"),
+          duration: z.string().optional(),
+          thumbnail: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        const newResource = await db.libraryResource.create({
+          data: {
+            title: input.title,
+            description: input.description,
+            category: input.category,
+            difficulty: input.difficulty,
+            type: input.type,
+            url: input.url,
+            duration: input.duration,
+            thumbnail: input.thumbnail || "📚",
+            coachId: user.id,
+            views: 0,
+            rating: 0,
+          },
+        })
+
+        return newResource
+      }),
+
+    update: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          title: z.string().optional(),
+          description: z.string().optional(),
+          category: z.string().optional(),
+          difficulty: z
+            .enum(["Beginner", "Intermediate", "Advanced", "All Levels"])
+            .optional(),
+          type: z.enum(["video", "document"]).optional(),
+          url: z.string().url().optional(),
+          duration: z.string().optional(),
+          thumbnail: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        const resource = await db.libraryResource.findFirst({
+          where: {
+            id: input.id,
+            coachId: user.id,
+          },
+        })
+
+        if (!resource) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Resource not found",
+          })
+        }
+
+        const { id, ...updateData } = input
+
+        const updatedResource = await db.libraryResource.update({
+          where: { id: input.id },
+          data: updateData,
+        })
+
+        return updatedResource
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        const resource = await db.libraryResource.findFirst({
+          where: {
+            id: input.id,
+            coachId: user.id,
+          },
+        })
+
+        if (!resource) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Resource not found",
+          })
+        }
+
+        await db.libraryResource.delete({
+          where: { id: input.id },
+        })
+
+        return { success: true }
+      }),
+
+    rate: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          rating: z.number().min(1).max(5),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        const resource = await db.libraryResource.findUnique({
+          where: { id: input.id },
+        })
+
+        if (!resource) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Resource not found",
+          })
+        }
+
+        const updatedResource = await db.libraryResource.update({
+          where: { id: input.id },
+          data: { rating: input.rating },
+        })
+
+        return updatedResource
+      }),
+
+    getStats: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession()
+      const user = await getUser()
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+      const totalResources = await db.libraryResource.count()
+      const videoCount = await db.libraryResource.count({
+        where: { type: "video" },
+      })
+      const documentCount = await db.libraryResource.count({
+        where: { type: "document" },
+      })
+
+      const avgRating = await db.libraryResource.aggregate({
+        _avg: { rating: true },
+      })
+
+      return {
+        totalResources,
+        videoCount,
+        documentCount,
+        avgRating: avgRating._avg.rating || 0,
+      }
+    }),
+
+    getCategories: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession()
+      const user = await getUser()
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+      const categories = await db.libraryResource.groupBy({
+        by: ["category"],
+        _count: { category: true },
+      })
+
+      return categories.map((cat) => ({
+        name: cat.category,
+        count: cat._count.category,
+      }))
+    }),
+
+    // YouTube import procedures
+    importYouTubeVideo: publicProcedure
+      .input(
+        z.object({
+          url: z.string().url("Valid YouTube URL is required"),
+          category: z.string().min(1, "Category is required"),
+          difficulty: z.enum([
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+            "All Levels",
+          ]),
+          customTitle: z.string().optional(),
+          customDescription: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        const videoId = extractYouTubeVideoId(input.url)
+        if (!videoId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid YouTube URL",
+          })
+        }
+
+        const youtubeInfo = await fetchYouTubeVideoInfo(
+          videoId,
+          process.env.YOUTUBE_API_KEY
+        )
+
+        const newResource = await db.libraryResource.create({
+          data: {
+            title:
+              input.customTitle ||
+              youtubeInfo?.title ||
+              `YouTube Video ${videoId}`,
+            description:
+              input.customDescription ||
+              youtubeInfo?.description ||
+              "Imported from YouTube",
+            category: input.category,
+            difficulty: input.difficulty,
+            type: "youtube",
+            url: input.url,
+            youtubeId: videoId,
+            thumbnail: youtubeInfo?.thumbnail || getYouTubeThumbnail(videoId),
+            duration: youtubeInfo?.duration,
+            isYoutube: true,
+            coachId: user.id,
+            views: 0,
+            rating: 0,
+          },
+        })
+
+        return newResource
+      }),
+
+    importYouTubePlaylist: publicProcedure
+      .input(
+        z.object({
+          playlistUrl: z.string().url("Valid YouTube playlist URL is required"),
+          category: z.string().min(1, "Category is required"),
+          difficulty: z.enum([
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+            "All Levels",
+          ]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        const playlistId = extractPlaylistId(input.playlistUrl)
+        if (!playlistId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid YouTube playlist URL",
+          })
+        }
+
+        const videos = await fetchPlaylistVideos(
+          playlistId,
+          process.env.YOUTUBE_API_KEY
+        )
+
+        if (videos.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No videos found in playlist or API key not configured",
+          })
+        }
+
+        const createdResources = await Promise.all(
+          videos.map(async (video: any) => {
+            return await db.libraryResource.create({
+              data: {
+                title: video.title,
+                description:
+                  video.description || "Imported from YouTube playlist",
+                category: input.category,
+                difficulty: input.difficulty,
+                type: "youtube",
+                url: `https://www.youtube.com/watch?v=${video.videoId}`,
+                youtubeId: video.videoId,
+                playlistId: playlistId,
+                thumbnail:
+                  video.thumbnail || getYouTubeThumbnail(video.videoId),
+                isYoutube: true,
+                coachId: user.id,
+                views: 0,
+                rating: 0,
+              },
+            })
+          })
+        )
+
+        return {
+          success: true,
+          imported: createdResources.length,
+          resources: createdResources,
+        }
       }),
   }),
 })

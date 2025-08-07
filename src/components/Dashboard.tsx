@@ -29,6 +29,7 @@ import { format } from "date-fns"
 import AddClientModal from "./AddClientModal"
 
 const navLinks = [
+  { name: "Dashboard", icon: <FiUsers />, href: "/dashboard" }, // Add this line
   { name: "Clients", icon: <FiUsers />, href: "/clients" },
   { name: "Library", icon: <FiBookOpen />, href: "/library" },
   { name: "Programs", icon: <FiClipboard />, href: "/programs" },
@@ -230,7 +231,7 @@ export default function ClientsPage() {
                 className='text-4xl font-bold mb-2'
                 style={{ color: "#C3BCC2" }}
               >
-                Client Management
+                Coach Dashboard
               </h1>
               <p
                 className='flex items-center gap-2'

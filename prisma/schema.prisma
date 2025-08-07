@@ -15,18 +15,22 @@ datasource db {
 }
 
 model User {
-  id String @id @unique
-  email String @unique
-  name String?
-  role UserRole?
-  
+  id               String            @id @default(cuid())
+  email            String            @unique
+  name             String?
+  role             UserRole?
   stripeCustomerId String? @unique @map(name: "stripe_customer_id")
   stripeSubscriptionId String? @unique @map(name: "stripe_subscription_id")
   stripePriceId String? @map(name: "stripe_price_id")
   stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+  
+  clients          Client[] @relation("CoachClients")
+  libraryResources LibraryResource[]  // Add this line if not present
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  // Fixed relation - use the same name as the back-reference
-  clients Client[] @relation("CoachClients")
+  @@map("users")
 }
 
 enum UserRole {
@@ -50,4 +54,33 @@ model Client {
   
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+
+// Add this to your schema.prisma file
+model LibraryResource {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  difficulty  String
+  type        String   // "video", "document", "youtube"
+  url         String   // For YouTube, this will be the video ID or full URL
+  duration    String?
+  thumbnail   String?
+  rating      Float    @default(0)
+  views       Int      @default(0)
+  coachId     String
+  coach       User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  
+  // YouTube specific fields
+  youtubeId   String?  // Extract video ID for embedding
+  playlistId  String?  // If part of a playlist
+  channelId   String?  // YouTube channel
+  isYoutube   Boolean  @default(false)  // Add this line
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("library_resources")
 }
