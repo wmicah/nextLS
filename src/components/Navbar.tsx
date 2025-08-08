@@ -8,12 +8,12 @@ import { ArrowRight } from "lucide-react"
 
 const Navbar = () => {
     return (
-        <nav className="sticky h-14 inset-x-0 top-0 z-30 w-full border-b border-zinc-900 drop-shadow-2xl bg-zinc-900/75 backdrop-blur-lg transition-all">
+        <nav className="sticky h-14 inset-x-0 top-0 z-30 w-full border-b border-zinc-700 bg-zinc-900/75 backdrop-blur-lg transition-all">
             <MaxWidthWrapper>
-                <div className="flex h-14 items-center text-white justify-between border-b border-zinc-900">
+                <div className="flex h-14 items-center text-white justify-between">
                     <Link 
                         href='/' 
-                        className="flex z-40 font-semibold">
+                        className="flex z-40 font-semibold text-lg tracking-tight">
                         <span>Next Level Softball</span>
                     </Link>
 
