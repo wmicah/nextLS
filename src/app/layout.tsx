@@ -7,10 +7,10 @@ import Providers from "@/components/Providers"
 import ConditionalNavbar from "@/components/ConditionalNavbar"
 
 const inter = Inter({ subsets: ["latin"] })
-const poppins = Poppins({ 
+const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
-  variable: "--font-poppins"
+  variable: "--font-poppins",
 })
 
 export const metadata: Metadata = {

@@ -10,5 +10,5 @@ export default async function Clients() {
     redirect("/auth-callback?origin=clients")
   }
 
-  return <ClientsPage user={user} />
+  return <ClientsPage />
 }

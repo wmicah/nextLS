@@ -15,18 +15,51 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  email            String            @unique
+  id               String   @id @default(cuid())
+  email            String   @unique
   name             String?
   role             UserRole?
-  stripeCustomerId String? @unique @map(name: "stripe_customer_id")
+  stripeCustomerId String?  @unique @map(name: "stripe_customer_id")
   stripeSubscriptionId String? @unique @map(name: "stripe_subscription_id")
   stripePriceId String? @map(name: "stripe_price_id")
   stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
-  
+
+  // Client management (for coaches)
   clients          Client[] @relation("CoachClients")
-  libraryResources LibraryResource[]  // Add this line if not present
-  
+  clientProfile    Client?  @relation("UserClient")
+
+  // Library resources (for coaches)
+  libraryResources LibraryResource[]
+
+  // Video assignments (for clients)
+  videoAssignments VideoAssignment[]
+
+  // Messaging
+  coachConversations  Conversation[] @relation("CoachConversations")
+  clientConversations Conversation[] @relation("ClientConversations")
+  sentMessages        Message[]
+
+  // Workouts (as coach assigning to clients, or as client receiving from coach)
+  assignedWorkouts Workout[] @relation("CoachWorkouts")
+  clientWorkouts   Workout[] @relation("ClientWorkouts")
+
+  // Events (as coach creating for clients, or as client attending)
+  assignedEvents   Event[]   @relation("CoachEvents") 
+  clientEvents     Event[]   @relation("ClientEvents")
+
+  // Progress tracking (as coach tracking client progress, or as client being tracked)
+  assignedProgress Progress[] @relation("CoachProgress")
+  clientProgress   Progress[] @relation("ClientProgress")
+
+  // Workout Templates (for coaches)
+  workoutTemplates WorkoutTemplate[]
+  coachedWorkouts  AssignedWorkout[] @relation("CoachAssignedWorkouts")
+  assignedWorkoutsAsClient AssignedWorkout[] @relation("ClientAssignedWorkouts")
+
+  // Scheduling (for coaches and clients)
+  coachedSchedules WeeklySchedule[] @relation("CoachWeeklySchedules")
+  weeklySchedulesAsClient  WeeklySchedule[]  @relation("ClientWeeklySchedules")
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -39,25 +72,28 @@ enum UserRole {
 }
 
 model Client {
-  id           String    @id @default(uuid())
-  name         String
-  avatar       String?
-  nextLessonDate        DateTime?
-  lastCompletedWorkout  String?
-  dueDate      DateTime?
-  lastActivity String?
-  updates      Json?
-  coachId      String?
-  
-  // Fixed relation - specify the relation name
-  coach        User?     @relation("CoachClients", fields: [coachId], references: [id])
-  
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  name                 String
+  email                String?
+  phone                String?
+  notes                String?
+  coachId              String
+  userId               String?   @unique
+  nextLessonDate       DateTime?
+  lastCompletedWorkout String?
+  avatar               String?
+  dueDate              String?
+  lastActivity         String?
+  updates              String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  coach User  @relation("CoachClients", fields: [coachId], references: [id])
+  user  User? @relation("UserClient", fields: [userId], references: [id])
+
+  @@map("clients")
 }
 
-
-// Add this to your schema.prisma file
 model LibraryResource {
   id          String   @id @default(cuid())
   title       String
@@ -66,6 +102,7 @@ model LibraryResource {
   difficulty  String
   type        String   // "video", "document", "youtube"
   url         String   // For YouTube, this will be the video ID or full URL
+  filename    String?  // Optional, for documents or other files
   duration    String?
   thumbnail   String?
   rating      Float    @default(0)
@@ -77,10 +114,204 @@ model LibraryResource {
   youtubeId   String?  // Extract video ID for embedding
   playlistId  String?  // If part of a playlist
   channelId   String?  // YouTube channel
-  isYoutube   Boolean  @default(false)  // Add this line
+  isYoutube   Boolean  @default(false)
+  
+  // Add assignments relation
+  assignments VideoAssignment[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("library_resources")
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  coachId   String
+  clientId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach    User      @relation("CoachConversations", fields: [coachId], references: [id], onDelete: Cascade)
+  client   User      @relation("ClientConversations", fields: [clientId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([coachId, clientId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+}
+
+model Workout {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  notes       String?
+  duration    String?
+  videoUrl    String?
+  clientId    String
+  coachId     String
+  date        DateTime
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client User @relation("ClientWorkouts", fields: [clientId], references: [id], onDelete: Cascade)
+  coach  User @relation("CoachWorkouts", fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@map("workouts")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  clientId    String
+  coachId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client User @relation("ClientEvents", fields: [clientId], references: [id], onDelete: Cascade)
+  coach  User @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@map("events")
+}
+
+model Progress {
+  id        String   @id @default(cuid())
+  clientId  String
+  coachId   String
+  skill     String
+  progress  Int      // percentage
+  date      DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client User @relation("ClientProgress", fields: [clientId], references: [id], onDelete: Cascade)
+  coach  User @relation("CoachProgress", fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@map("progress")
+}
+
+model VideoAssignment {
+  id        String   @id @default(cuid())
+  videoId   String
+  clientId  String
+  assignedAt DateTime @default(now())
+  dueDate   DateTime?
+  notes     String?
+  completed Boolean  @default(false)
+  completedAt DateTime?
+  
+  video  LibraryResource @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  client User            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  // Relations to scheduled days
+  scheduledDayId String?
+  scheduledDay   ScheduledDay? @relation(fields: [scheduledDayId], references: [id])
+  
+  @@unique([videoId, clientId])
+  @@map("video_assignments")
+}
+
+model WorkoutTemplate {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  exercises   Json     // Array of exercises with sets, reps, etc.
+  duration    String?
+  difficulty  String?
+  category    String?
+  coachId     String
+  coach       User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  isTemplate  Boolean  @default(true)
+  
+  // Relations to assigned workouts
+  assignedWorkouts AssignedWorkout[]
+  
+  // Add this missing relation
+  scheduledDays ScheduledDay[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("workout_templates")
+}
+
+model AssignedWorkout {
+  id              String   @id @default(cuid())
+  clientId        String
+  coachId         String
+  workoutTemplateId String?
+  title           String
+  description     String?
+  exercises       Json     // Copy of exercises from template
+  duration        String?
+  scheduledDate   DateTime
+  completed       Boolean  @default(false)
+  completedAt     DateTime?
+  notes           String?
+  
+  // Relations with explicit names
+  client          User     @relation("ClientAssignedWorkouts", fields: [clientId], references: [id], onDelete: Cascade)
+  coach           User     @relation("CoachAssignedWorkouts", fields: [coachId], references: [id], onDelete: Cascade)
+  template        WorkoutTemplate? @relation(fields: [workoutTemplateId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("assigned_workouts")
+}
+
+model WeeklySchedule {
+  id          String   @id @default(cuid())
+  clientId    String
+  coachId     String
+  weekStart   DateTime // Monday of the week
+  weekEnd     DateTime // Sunday of the week
+  
+  // Relations with explicit names
+  client      User     @relation("ClientWeeklySchedules", fields: [clientId], references: [id], onDelete: Cascade)
+  coach       User     @relation("CoachWeeklySchedules", fields: [coachId], references: [id], onDelete: Cascade)
+  days        ScheduledDay[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([clientId, coachId, weekStart])
+  @@map("weekly_schedules")
+}
+
+model ScheduledDay {
+  id              String   @id @default(cuid())
+  weeklyScheduleId String
+  dayOfWeek       Int      // 0 = Sunday, 1 = Monday, etc.
+  workoutTemplateId String?
+  title           String
+  description     String?
+  exercises       Json?
+  duration        String?
+  videoAssignments VideoAssignment[]
+  
+  // Relations
+  weeklySchedule  WeeklySchedule @relation(fields: [weeklyScheduleId], references: [id], onDelete: Cascade)
+  workoutTemplate WorkoutTemplate? @relation(fields: [workoutTemplateId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("scheduled_days")
 }
