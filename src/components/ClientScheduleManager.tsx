@@ -31,14 +31,26 @@ export default function ClientScheduleManager({
           <ArrowLeft className='w-5 h-5' />
         </button>
         <div className='flex items-center gap-3'>
-          <div className='p-2 rounded-lg' style={{ backgroundColor: "#4A5A70" }}>
-            <Calendar className='w-5 h-5' style={{ color: "#FFFFFF" }} />
+          <div
+            className='p-2 rounded-lg'
+            style={{ backgroundColor: "#4A5A70" }}
+          >
+            <Calendar
+              className='w-5 h-5'
+              style={{ color: "#FFFFFF" }}
+            />
           </div>
           <div>
-            <h1 className='text-2xl font-bold' style={{ color: "#C3BCC2" }}>
+            <h1
+              className='text-2xl font-bold'
+              style={{ color: "#C3BCC2" }}
+            >
               Schedule Management
             </h1>
-            <p className='text-sm' style={{ color: "#ABA4AA" }}>
+            <p
+              className='text-sm'
+              style={{ color: "#ABA4AA" }}
+            >
               Managing schedule for {clientName}
             </p>
           </div>
@@ -46,7 +58,10 @@ export default function ClientScheduleManager({
       </div>
 
       {/* Scheduler Component */}
-      <ClientScheduler clientId={clientId} clientName={clientName} />
+      <ClientScheduler
+        clientId={clientId}
+        clientName={clientName}
+      />
     </div>
   )
 }

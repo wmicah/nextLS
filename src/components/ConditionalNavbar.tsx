@@ -21,11 +21,16 @@ export default function ConditionalNavbar() {
     return null
   }
 
-  // If user is authenticated, don't show any navbar
-  if (isAuthenticated) {
-    return null
+  // Always show navbar on landing page (/) regardless of auth status
+  if (pathname === "/") {
+    return <Navbar />
   }
 
-  // Only show navbar for unauthenticated users (landing page)
-  return <Navbar />
+  // Only show navbar for unauthenticated users on other pages
+  if (!isAuthenticated) {
+    return <Navbar />
+  }
+
+  // No navbar for authenticated users on non-landing pages - they use the sidebar
+  return null
 }

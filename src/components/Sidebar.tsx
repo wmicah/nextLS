@@ -18,6 +18,9 @@ import {
   FiX,
   FiChevronLeft,
   FiChevronRight,
+  FiActivity,
+  FiTrendingUp,
+  FiAward,
 } from "react-icons/fi"
 import {
   LogOut,
@@ -26,14 +29,55 @@ import {
   Plus,
   MessageCircle,
   User,
+  Sparkles,
+  Crown,
+  Zap,
+  Star,
+  Target,
+  BarChart3,
 } from "lucide-react"
 
 const navLinks = [
-  { name: "Dashboard", icon: <FiHome />, href: "/dashboard" },
-  { name: "Clients", icon: <FiUsers />, href: "/clients" },
-  { name: "Library", icon: <FiBookOpen />, href: "/library" },
-  { name: "Programs", icon: <FiClipboard />, href: "/programs" },
-  { name: "Schedule", icon: <FiCalendar />, href: "/schedule" },
+  {
+    name: "Dashboard",
+    icon: <FiHome />,
+    href: "/dashboard",
+    description: "Overview & analytics",
+    badge: null,
+    gradient: "from-blue-500 to-cyan-500",
+  },
+  {
+    name: "Clients",
+    icon: <FiUsers />,
+    href: "/clients",
+    description: "Manage athletes",
+    badge: null,
+    gradient: "from-green-500 to-emerald-500",
+  },
+  {
+    name: "Library",
+    icon: <FiBookOpen />,
+    href: "/library",
+    description: "Training resources",
+    badge: null,
+    gradient: "from-purple-500 to-pink-500",
+  },
+  {
+    name: "Programs",
+    icon: <FiClipboard />,
+    href: "/programs",
+    description: "Workout plans",
+    badge: null,
+    gradient: "from-orange-500 to-red-500",
+  },
+  {
+    name: "Schedule",
+    icon: <FiCalendar />,
+    href: "/schedule",
+    description: "Lesson planning",
+    badge: null,
+    gradient: "from-indigo-500 to-purple-500",
+  },
 ]
 
 const bottomLinks = [
@@ -57,6 +101,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [showRecentMessages, setShowRecentMessages] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [hoveredLink, setHoveredLink] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const messagePopupRef = useRef<HTMLDivElement>(null)
 
@@ -191,34 +236,36 @@ export default function Sidebar({ user, children }: SidebarProps) {
       {/* Mobile hamburger button */}
       <button
         onClick={toggleMobileSidebar}
-        className='fixed top-4 left-4 z-30 md:hidden p-2 rounded-lg transition-all duration-300 hover:scale-110'
+        className='fixed top-4 left-4 z-30 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-lg'
         style={{
           backgroundColor: "#141718",
           color: "#C3BCC2",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
+          border: "1px solid #606364",
         }}
       >
-        {isMobileOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+        {isMobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
       </button>
 
       {/* Desktop toggle button */}
       <button
         onClick={toggleDesktopSidebar}
-        className='hidden md:block fixed top-4 z-30 p-2 rounded-lg transition-all duration-300 hover:scale-110'
+        className='hidden md:block fixed top-6 z-30 p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-lg'
         style={{
-          left: isOpen ? "240px" : "60px",
+          left: isOpen ? "260px" : "80px",
           backgroundColor: "#141718",
           color: "#C3BCC2",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
+          border: "1px solid #606364",
         }}
       >
-        {isOpen ? <FiChevronLeft size={20} /> : <FiChevronRight size={20} />}
+        {isOpen ? <FiChevronLeft size={18} /> : <FiChevronRight size={18} />}
       </button>
 
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className='fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden transition-opacity duration-300'
+          className='fixed inset-0 bg-black bg-opacity-60 z-10 md:hidden transition-opacity duration-300 backdrop-blur-sm'
           onClick={() => setIsMobileOpen(false)}
         />
       )}
@@ -234,40 +281,69 @@ export default function Sidebar({ user, children }: SidebarProps) {
           backgroundColor: "#141718",
           color: "#ABA4AA",
           borderRight: "1px solid #606364",
-          boxShadow: "2px 0 10px rgba(0, 0, 0, 0.3)",
+          boxShadow: "4px 0 25px rgba(0, 0, 0, 0.4)",
         }}
       >
         <div>
           {/* Header */}
-          <div className='flex items-center justify-center h-20 px-4 font-bold text-xl transition-all duration-300 overflow-hidden'>
+          <div className='flex items-center justify-center h-24 px-4 font-bold text-xl transition-all duration-300 overflow-hidden relative'>
+            {/* Background gradient effect */}
+            <div
+              className='absolute inset-0 opacity-10'
+              style={{
+                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+              }}
+            />
+
             <span
-              className={`hover:scale-105 transition-all duration-500 cursor-default whitespace-nowrap ${
+              className={`hover:scale-105 transition-all duration-500 cursor-default whitespace-nowrap relative z-10 ${
                 isOpen
                   ? "opacity-100 translate-x-0 delay-150"
                   : "opacity-0 -translate-x-4"
               }`}
               style={{ color: "#C3BCC2" }}
             >
-              Next Level Softball
+              <div className='flex items-center gap-2'>
+                <div
+                  className='w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden'
+                  style={{ backgroundColor: "#4A5A70" }}
+                >
+                  <img
+                    src='/logo image.png'
+                    alt='Next Level Softball'
+                    className='w-full h-full object-cover'
+                  />
+                </div>
+                Next Level Softball
+              </div>
             </span>
             <span
-              className={`hover:scale-105 transition-all duration-500 cursor-default absolute ${
+              className={`hover:scale-105 transition-all duration-500 cursor-default absolute z-10 ${
                 isOpen
                   ? "opacity-0 translate-x-4"
                   : "opacity-100 translate-x-0 delay-150"
               }`}
               style={{ color: "#C3BCC2" }}
             >
-              NLS
+              <div
+                className='w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden'
+                style={{ backgroundColor: "#4A5A70" }}
+              >
+                <img
+                  src='/logo image.png'
+                  alt='Next Level Softball'
+                  className='w-full h-full object-cover'
+                />
+              </div>
             </span>
           </div>
 
           {/* Navigation */}
           <nav
-            className={`mt-8 px-2 ${
+            className={`mt-6 px-3 ${
               isOpen
-                ? "flex flex-col gap-2"
-                : "grid grid-cols-1 gap-2 place-items-center"
+                ? "flex flex-col gap-1"
+                : "grid grid-cols-1 gap-1 place-items-center"
             }`}
           >
             {navLinks.map((link, index) => (
@@ -275,10 +351,10 @@ export default function Sidebar({ user, children }: SidebarProps) {
                 key={link.name}
                 href={link.href}
                 onClick={() => setIsMobileOpen(false)}
-                className={`transition-all duration-300 ease-in-out transform hover:scale-110 group relative ${
+                className={`transition-all duration-300 ease-in-out transform hover:scale-105 group relative ${
                   isOpen
-                    ? "flex items-center gap-3 px-4 py-3 hover:shadow-lg overflow-hidden"
-                    : "flex items-center justify-center p-3 text-xl"
+                    ? "flex items-center gap-3 px-4 py-3 hover:shadow-lg overflow-hidden rounded-xl"
+                    : "flex items-center justify-center p-3 text-xl rounded-xl"
                 } ${
                   isActiveLink(link.href) ? "text-white" : "hover:text-white"
                 }`}
@@ -288,26 +364,33 @@ export default function Sidebar({ user, children }: SidebarProps) {
                     : "transparent",
                   color: isActiveLink(link.href) ? "#C3BCC2" : "#606364",
                   boxShadow: isActiveLink(link.href)
-                    ? "0 4px 15px rgba(0, 0, 0, 0.2)"
+                    ? "0 4px 20px rgba(0, 0, 0, 0.3)"
                     : "none",
                   animationDelay: `${index * 100}ms`,
+                  border: isActiveLink(link.href)
+                    ? "1px solid #4A5A70"
+                    : "1px solid transparent",
                 }}
                 onMouseEnter={(e) => {
+                  setHoveredLink(link.name)
                   if (!isActiveLink(link.href)) {
                     e.currentTarget.style.backgroundColor = isOpen
                       ? "#353A3A"
                       : "rgba(74, 90, 112, 0.1)"
                     e.currentTarget.style.color = "#C3BCC2"
+                    e.currentTarget.style.borderColor = "#4A5A70"
                     if (isOpen) {
                       e.currentTarget.style.boxShadow =
-                        "0 4px 15px rgba(0, 0, 0, 0.2)"
+                        "0 4px 20px rgba(0, 0, 0, 0.3)"
                     }
                   }
                 }}
                 onMouseLeave={(e) => {
+                  setHoveredLink(null)
                   if (!isActiveLink(link.href)) {
                     e.currentTarget.style.backgroundColor = "transparent"
                     e.currentTarget.style.color = "#606364"
+                    e.currentTarget.style.borderColor = "transparent"
                     e.currentTarget.style.boxShadow = "none"
                   }
                 }}
@@ -320,26 +403,67 @@ export default function Sidebar({ user, children }: SidebarProps) {
                   {link.icon}
                 </span>
                 {isOpen && (
-                  <span
-                    className={`font-medium transition-all duration-500 whitespace-nowrap opacity-100 translate-x-0 delay-150`}
-                  >
-                    {link.name}
-                  </span>
+                  <div className='flex-1 flex items-center justify-between'>
+                    <div className='flex flex-col'>
+                      <span className='font-medium transition-all duration-500 whitespace-nowrap opacity-100 translate-x-0 delay-150'>
+                        {link.name}
+                      </span>
+                      <span
+                        className='text-xs transition-all duration-500 opacity-60'
+                        style={{ color: "#ABA4AA" }}
+                      >
+                        {link.description}
+                      </span>
+                    </div>
+                    {link.badge && (
+                      <span
+                        className='px-2 py-1 text-xs rounded-full font-medium transition-all duration-300'
+                        style={{
+                          backgroundColor: "#10B981",
+                          color: "#DCFCE7",
+                        }}
+                      >
+                        {link.badge}
+                      </span>
+                    )}
+                  </div>
                 )}
 
                 {/* Enhanced Tooltip for collapsed state */}
                 {!isOpen && (
                   <div
-                    className='absolute left-full ml-4 px-3 py-2 text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-lg border'
+                    className='absolute left-full ml-4 px-4 py-3 text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-xl border'
                     style={{
                       backgroundColor: "#353A3A",
                       color: "#C3BCC2",
                       borderColor: "#606364",
                       transform: "translateY(-50%)",
                       top: "50%",
+                      minWidth: "200px",
                     }}
                   >
-                    {link.name}
+                    <div className='flex flex-col gap-1'>
+                      <div className='flex items-center justify-between'>
+                        <span className='font-medium'>{link.name}</span>
+                        {link.badge && (
+                          <span
+                            className='px-2 py-1 text-xs rounded-full font-medium'
+                            style={{
+                              backgroundColor: "#10B981",
+                              color: "#DCFCE7",
+                            }}
+                          >
+                            {link.badge}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className='text-xs opacity-60'
+                        style={{ color: "#ABA4AA" }}
+                      >
+                        {link.description}
+                      </span>
+                    </div>
                     <div className='absolute right-full top-1/2 transform -translate-y-1/2'>
                       <div className='w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]'></div>
                     </div>
@@ -351,7 +475,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
         </div>
 
         {/* Bottom section */}
-        <div className='flex flex-col gap-4 mb-6 px-4'>
+        <div className='flex flex-col gap-4 mb-6 px-3'>
           {/* Bottom links */}
           <div
             className={`grid gap-2 ${
@@ -362,16 +486,18 @@ export default function Sidebar({ user, children }: SidebarProps) {
               <Link
                 key={link.name}
                 href={link.href}
-                className='text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-2 relative group flex items-center justify-center'
+                className='text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl'
                 style={{ color: "#606364" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "#4A5A70"
                   e.currentTarget.style.backgroundColor =
                     "rgba(74, 90, 112, 0.1)"
+                  e.currentTarget.style.borderColor = "#4A5A70"
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = "#606364"
                   e.currentTarget.style.backgroundColor = "transparent"
+                  e.currentTarget.style.borderColor = "transparent"
                 }}
               >
                 {link.icon}
@@ -403,7 +529,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
             >
               <button
                 onClick={handleMessageClick}
-                className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-2 relative group flex items-center justify-center ${
+                className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl ${
                   showRecentMessages ? "scale-110" : ""
                 }`}
                 style={{ color: "#606364" }}
@@ -411,10 +537,12 @@ export default function Sidebar({ user, children }: SidebarProps) {
                   e.currentTarget.style.color = "#4A5A70"
                   e.currentTarget.style.backgroundColor =
                     "rgba(74, 90, 112, 0.1)"
+                  e.currentTarget.style.borderColor = "#4A5A70"
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = "#606364"
                   e.currentTarget.style.backgroundColor = "transparent"
+                  e.currentTarget.style.borderColor = "transparent"
                 }}
               >
                 <div className='relative'>
@@ -453,7 +581,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
               {/* Recent Messages Popup with Animation */}
               {showRecentMessages && (
                 <div
-                  className={`absolute bottom-full mb-2 w-80 h-96 rounded-lg shadow-lg border ${
+                  className={`absolute bottom-full mb-2 w-80 h-96 rounded-xl shadow-xl border ${
                     isOpen ? "left-0" : "left-12"
                   } ${
                     isAnimating && !showRecentMessages
@@ -470,7 +598,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
                       !isAnimating && showRecentMessages
                         ? "slideInUp 0.3s ease-out"
                         : undefined,
-                    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
+                    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
                   }}
                 >
                   <div className='flex flex-col h-full'>
@@ -703,10 +831,21 @@ export default function Sidebar({ user, children }: SidebarProps) {
               <button
                 onClick={handleUserClick}
                 disabled={isLoggingOut}
-                className='rounded-full w-10 h-10 flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-110 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                className='rounded-full w-12 h-12 flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-110 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg'
                 style={{
                   backgroundColor: "#4A5A70",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
+                  border: "2px solid transparent",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#606364"
+                  e.currentTarget.style.boxShadow =
+                    "0 6px 25px rgba(0, 0, 0, 0.5)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "transparent"
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 20px rgba(0, 0, 0, 0.4)"
                 }}
               >
                 {isLoggingOut ? (
@@ -718,20 +857,24 @@ export default function Sidebar({ user, children }: SidebarProps) {
                 {/* User tooltip when collapsed and dropdown closed */}
                 {!isOpen && !userDropdownOpen && !isLoggingOut && (
                   <div
-                    className='absolute left-full ml-4 px-3 py-2 text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-lg border'
+                    className='absolute left-full ml-4 px-4 py-3 text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-xl border'
                     style={{
                       backgroundColor: "#353A3A",
                       color: "#C3BCC2",
                       borderColor: "#606364",
                       transform: "translateY(-50%)",
                       top: "50%",
+                      minWidth: "200px",
                     }}
                   >
-                    {user?.name || authData?.user?.name || "User"}
-                    <br />
-                    <span className='text-xs opacity-70'>
-                      {user?.email || authData?.user?.email}
-                    </span>
+                    <div className='flex flex-col gap-1'>
+                      <span className='font-medium'>
+                        {user?.name || authData?.user?.name || "User"}
+                      </span>
+                      <span className='text-xs opacity-70'>
+                        {user?.email || authData?.user?.email}
+                      </span>
+                    </div>
                     <div className='absolute right-full top-1/2 transform -translate-y-1/2'>
                       <div className='w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]'></div>
                     </div>
@@ -741,7 +884,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
 
               {/* User info when expanded */}
               {isOpen && (
-                <div className='flex flex-col ml-2 transition-all duration-500 opacity-100 translate-x-0 delay-150'>
+                <div className='flex flex-col ml-3 transition-all duration-500 opacity-100 translate-x-0 delay-150'>
                   <span
                     className='font-medium text-sm whitespace-nowrap'
                     style={{ color: "#ABA4AA" }}
@@ -761,12 +904,13 @@ export default function Sidebar({ user, children }: SidebarProps) {
             {/* User Dropdown Menu */}
             {userDropdownOpen && !isLoggingOut && (
               <div
-                className={`absolute bottom-full mb-2 w-64 rounded-lg shadow-lg border transition-all duration-300 ${
+                className={`absolute bottom-full mb-2 w-64 rounded-xl shadow-xl border transition-all duration-300 ${
                   isOpen ? "left-0" : "left-16"
                 }`}
                 style={{
                   backgroundColor: "#353A3A",
                   borderColor: "#606364",
+                  boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
                 }}
               >
                 <div className='p-4'>

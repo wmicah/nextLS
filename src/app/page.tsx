@@ -2,191 +2,283 @@
 
 import MaxWidthWrapper from "@/components/MaxWidthWrapper"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
 import Image from "next/image"
 import { RegisterLink } from "@kinde-oss/kinde-auth-nextjs"
+import {
+  ArrowRight,
+  Check,
+  Trophy,
+  Target,
+  Brain,
+  BarChart3,
+} from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 
 export default function Home() {
+  // Scroll reveal
+  useEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>("[data-reveal]")
+    els.forEach((el) => {
+      el.classList.add(
+        "opacity-0",
+        "translate-y-4",
+        "transition-all",
+        "duration-700"
+      )
+    })
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const el = entry.target as HTMLElement
+          if (entry.isIntersecting) {
+            el.classList.add("opacity-100", "translate-y-0")
+            el.classList.remove("opacity-0", "translate-y-4")
+          } else {
+            el.classList.add("opacity-0", "translate-y-4")
+            el.classList.remove("opacity-100", "translate-y-0")
+          }
+        })
+      },
+      { threshold: 0.15 }
+    )
+    els.forEach((el) => io.observe(el))
+    return () => {
+      els.forEach((el) => io.unobserve(el))
+      io.disconnect()
+    }
+  }, [])
+
   return (
-    <div className='min-h-screen bg-gradient-to-b from-zinc-800 via-zinc-900 to-black -mt-14 pb-20 relative'>
-      {/* Subtle dot pattern overlay */}
-      <div className='absolute inset-0 opacity-[0.15] bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.3)_1px,transparent_0)] bg-[length:24px_24px]'></div>
-      <div className='pt-14 relative z-10'>
-        <MaxWidthWrapper className='mb-12 mt-28 sm:mt-40 flex flex-col items-center justify-center text-center'>
-          <div className='mb-8 inline-flex items-center rounded-full bg-zinc-800/50 px-4 py-2 border border-zinc-700/50 backdrop-blur-sm'>
-            <span className='text-sky-400 text-sm font-medium'>
-              🏆 Premium Softball Coaching
-            </span>
+    <div className='relative -mt-14 min-h-[calc(100vh+3.5rem)] overflow-hidden bg-gradient-to-b from-neutral-900 via-neutral-950 to-black'>
+      {/* Background spotlights */}
+      <div className='pointer-events-none absolute inset-0 [background:radial-gradient(1200px_600px_at_8%_-10%,rgba(56,189,248,.2),transparent_60%),radial-gradient(900px_500px_at_90%_0%,rgba(59,130,246,.18),transparent_60%)]'></div>
+      {/* Subtle grid */}
+      <div className='pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30'></div>
+
+      {/* HERO */}
+      <section className='relative z-10 pt-24 sm:pt-32'>
+        <MaxWidthWrapper className='grid items-center gap-10 lg:grid-cols-2'>
+          <div data-reveal>
+            <h1 className='mt-5 text-5xl font-extrabold tracking-tight text-white leading-tight md:text-6xl md:leading-snug lg:text-7xl lg:leading-snug'>
+              Take your pitching to the{" "}
+              <span className='bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 bg-clip-text text-transparent'>
+                Next Level
+              </span>
+            </h1>
+            <p className='mt-5 max-w-xl text-zinc-300 sm:text-lg'>
+              Personalized training plans, video feedback, and proven techniques
+              to build power, accuracy, and confidence in the circle.
+            </p>
+
+            <div className='mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center'>
+              <RegisterLink className='inline-flex items-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-7 py-3 text-base font-semibold text-white shadow-lg transition-all hover:from-sky-600 hover:to-blue-700 hover:shadow-xl hover:scale-[1.02]'>
+                Get Started
+                <ArrowRight className='ml-2 h-5 w-5' />
+              </RegisterLink>
+              <Link
+                href='/pricing'
+                className='inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-7 py-3 text-base font-semibold text-white/90 backdrop-blur transition-colors hover:bg-white/10'
+              >
+                See Pricing
+              </Link>
+            </div>
+
+            <ul className='mt-6 grid grid-cols-1 gap-3 text-sm text-zinc-300 sm:grid-cols-2'>
+              <li className='flex items-center gap-2'>
+                <Check className='h-4 w-4 text-sky-400' /> Personalized plans
+              </li>
+              <li className='flex items-center gap-2'>
+                <Check className='h-4 w-4 text-sky-400' /> Video feedback
+              </li>
+              <li className='flex items-center gap-2'>
+                <Check className='h-4 w-4 text-sky-400' /> Progress tracking
+              </li>
+              <li className='flex items-center gap-2'>
+                <Check className='h-4 w-4 text-sky-400' /> All levels welcome
+              </li>
+            </ul>
           </div>
-          <h1 className='max-w-4xl text-5xl font-bold text-zinc-100 md:text-6xl lg:text-7xl animate-fade-in tracking-tight leading-tight mb-6'>
-            Take your softball pitching to the{" "}
-            <span className='text-transparent bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 bg-clip-text font-extrabold'>
-              Next Level
-            </span>
-          </h1>
-          <p className='mt-5 max-w-prose text-zinc-300 sm:text-lg font-medium leading-relaxed'>
-            Next Level Softball offers personalized coaching to help pitchers of
-            all ages develop power, accuracy, and confidence in the circle. With
-            expert guidance and proven training techniques, we&apos;ll help you
-            reach your full potential and dominate every game.
-          </p>
 
-          <RegisterLink className='mt-8 inline-flex items-center px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl hover:from-sky-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group'>
-            Get Started
-            <ArrowRight className='ml-2 inline h-5 w-5 group-hover:translate-x-1 transition-transform duration-300' />
-          </RegisterLink>
+          <div
+            className='relative'
+            data-reveal
+          >
+            <div className='absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-tr from-sky-500/10 via-blue-500/10 to-transparent blur-2xl'></div>
+
+            {/* Perspective wrapper */}
+            <div className='[perspective:1000px]'>
+              <div
+                className='relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 to-white/[.03] shadow-2xl transform-gpu will-change-transform transition-transform duration-300'
+                style={{
+                  transformStyle: "preserve-3d",
+                }}
+              >
+                <Image
+                  src='/logo image.png'
+                  alt='App preview'
+                  width={1536}
+                  height={1024}
+                  priority
+                  quality={100}
+                  className='h-full w-full object-cover transition-transform duration-300'
+                  style={{ transform: "translateZ(30px) scale(1.02)" }}
+                />
+                <div
+                  className='absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent'
+                  style={{ transform: "translateZ(20px)" }}
+                ></div>
+              </div>
+            </div>
+          </div>
         </MaxWidthWrapper>
+      </section>
 
-        {/* WHY CHOOSE US SECTION */}
-        <div className='mx-auto mb-20 max-w-5xl px-4 sm:px-6 lg:px-8'>
-          <div className='text-center mb-12'>
-            <h2 className='text-3xl font-bold text-white sm:text-4xl mb-4 tracking-tight'>
-              Why Choose Next Level Softball?
+      {/* FEATURES */}
+      <section className='relative z-10 mt-24'>
+        <MaxWidthWrapper>
+          <div
+            className='mx-auto max-w-2xl text-center'
+            data-reveal
+          >
+            <h2 className='text-3xl font-bold text-white sm:text-4xl'>
+              Why Next Level Softball?
             </h2>
-            <p className='text-zinc-300 text-lg font-medium'>
-              Trusted by athletes at every level to achieve their pitching goals
+            <p className='mt-3 text-zinc-400'>
+              Trusted by athletes at every level to achieve their pitching
+              goals.
             </p>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
-            <div className='bg-zinc-800/40 backdrop-blur-sm p-6 rounded-xl border border-zinc-700/50 hover:border-sky-500/50 transition-all duration-300 hover:shadow-lg hover:bg-zinc-800/60 group hover:-translate-y-1'>
-              <div className='text-4xl mb-4 group-hover:scale-110 transition-transform duration-300'>
-                🏅
-              </div>
-              <h3 className='text-white font-semibold text-lg mb-2 tracking-tight'>
-                20+ Years Experience
-              </h3>
-              <p className='text-zinc-300 text-sm font-medium leading-relaxed'>
-                Expert coaching with proven results at every competitive level
-              </p>
-            </div>
-
-            <div className='bg-zinc-800/40 backdrop-blur-sm p-6 rounded-xl border border-zinc-700/50 hover:border-sky-500/50 transition-all duration-300 hover:shadow-lg hover:bg-zinc-800/60 group hover:-translate-y-1'>
-              <div className='text-4xl mb-4 group-hover:scale-110 transition-transform duration-300'>
-                🎯
-              </div>
-              <h3 className='text-white font-semibold text-lg mb-2 tracking-tight'>
-                Personalized Training
-              </h3>
-              <p className='text-zinc-300 text-sm font-medium leading-relaxed'>
-                Custom drills and video feedback tailored to your unique needs
-              </p>
-            </div>
-
-            <div className='bg-zinc-800/40 backdrop-blur-sm p-6 rounded-xl border border-zinc-700/50 hover:border-sky-500/50 transition-all duration-300 hover:shadow-lg hover:bg-zinc-800/60 group hover:-translate-y-1'>
-              <div className='text-4xl mb-4 group-hover:scale-110 transition-transform duration-300'>
-                🧠
-              </div>
-              <h3 className='text-white font-semibold text-lg mb-2 tracking-tight'>
-                Mental Game Training
-              </h3>
-              <p className='text-zinc-300 text-sm font-medium leading-relaxed'>
-                Build unshakeable confidence and focus under pressure
-              </p>
-            </div>
-
-            <div className='bg-zinc-800/40 backdrop-blur-sm p-6 rounded-xl border border-zinc-700/50 hover:border-sky-500/50 transition-all duration-300 hover:shadow-lg hover:bg-zinc-800/60 group hover:-translate-y-1'>
-              <div className='text-4xl mb-4 group-hover:scale-110 transition-transform duration-300'>
-                📈
-              </div>
-              <h3 className='text-white font-semibold text-lg mb-2 tracking-tight'>
-                Track Your Progress
-              </h3>
-              <p className='text-zinc-300 text-sm font-medium leading-relaxed'>
-                Detailed analytics and progress reports to monitor improvement
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/*VALUE PROPOSITION SECTION*/}
-        <div className='mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 mb-20'>
-          <div className='rounded-xl bg-zinc-800/30 p-4 shadow-lg border border-zinc-700 flex justify-center items-center transition-all duration-300 hover:shadow-2xl hover:border-zinc-600'>
-            <Image
-              src='/logo image.png'
-              alt='logo-Dash'
-              width={1536}
-              height={1024}
-              quality={100}
-              className='rounded-md bg-zinc-700 p-2'
+          <div className='mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4'>
+            <Feature
+              icon={<Trophy className='h-6 w-6' />}
+              title='20+ Years Experience'
+              desc='Proven results across competitive levels.'
+            />
+            <Feature
+              icon={<Target className='h-6 w-6' />}
+              title='Personalized Training'
+              desc='Custom drills and targeted plans.'
+            />
+            <Feature
+              icon={<Brain className='h-6 w-6' />}
+              title='Mental Game'
+              desc='Confidence and focus under pressure.'
+            />
+            <Feature
+              icon={<BarChart3 className='h-6 w-6' />}
+              title='Track Progress'
+              desc='Analytics and clear milestones.'
             />
           </div>
-        </div>
-        {/* Remove or comment out these two blocks */}
+        </MaxWidthWrapper>
+      </section>
 
-        {/*feature section*/}
-        <div className='mx-auto mb-32 mt-32 max-w-5xl sm:mt-56'>
-          <div className='mb-12 px-6 lg:px-8'>
-            <div className='mx-auto max-w-2xl sm:text-center'>
-              <h2 className='mt-2 font-bold text-4xl text-white sm:text-5xl tracking-tight'>
-                Your Path to Pitching Excellence
-              </h2>
-              <p className='mt-4 text-lg text-zinc-400 font-medium leading-relaxed'>
-                Follow our proven 3-step process to transform your pitching game
-              </p>
-            </div>
+      {/* PROCESS */}
+      <section className='relative z-10 mt-28'>
+        <MaxWidthWrapper>
+          <div
+            className='mx-auto max-w-2xl text-center'
+            data-reveal
+          >
+            <h3 className='text-2xl font-semibold text-white sm:text-3xl'>
+              Your path to excellence
+            </h3>
+            <p className='mt-3 text-zinc-400'>
+              Follow our simple 3‑step process.
+            </p>
           </div>
 
-          {/*ANIMATED STEP CARDS */}
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-8 px-6 lg:px-8'>
-            <div className='bg-zinc-800/40 backdrop-blur-sm p-8 rounded-2xl border border-zinc-700/50 hover:border-sky-500/50 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:bg-zinc-800/60 group hover:-translate-y-2'>
-              <div className='flex items-center mb-6'>
-                <div className='bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg mr-4 group-hover:scale-110 transition-all duration-300 shadow-lg flex-shrink-0'>
-                  1
-                </div>
-                <span className='text-white text-xl font-semibold tracking-tight'>
-                  Create Your Profile
-                </span>
-              </div>
-              <p className='text-zinc-300 leading-relaxed font-medium'>
-                Set up your player or coach account and tell us about your
-                pitching experience, goals, and current skill level. Choose
-                between our premium and{" "}
-                <Link
-                  href='/pricing'
-                  className='text-sky-400 underline underline-offset-2 hover:text-sky-300 transition-colors font-semibold'
-                >
-                  Pro
-                </Link>{" "}
-                pricing options.
-              </p>
-            </div>
+          <div className='mt-10 grid gap-6 md:grid-cols-3'>
+            <Step
+              number='1'
+              title='Create your profile'
+              desc='Tell us your goals and current level.'
+            />
+            <Step
+              number='2'
+              title='Get your plan'
+              desc='Receive a personalized training program.'
+            />
+            <Step
+              number='3'
+              title='Improve & track'
+              desc='Train, submit videos, and see progress.'
+            />
+          </div>
+        </MaxWidthWrapper>
+      </section>
 
-            <div className='bg-zinc-800/40 backdrop-blur-sm p-8 rounded-2xl border border-zinc-700/50 hover:border-sky-500/50 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:bg-zinc-800/60 group hover:-translate-y-2'>
-              <div className='flex items-center mb-6'>
-                <div className='bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg mr-4 group-hover:scale-110 transition-all duration-300 shadow-lg flex-shrink-0'>
-                  2
-                </div>
-                <span className='text-white text-xl font-semibold tracking-tight'>
-                  Get Personalized Training
-                </span>
-              </div>
-              <p className='text-zinc-300 leading-relaxed font-medium'>
-                Receive a customized training plan based on your assessment.
-                Access personalized drills, technique videos, and coaching tips
-                designed specifically for your development needs.
+      {/* FINAL CTA */}
+      <section className='relative z-10 mt-28 mb-24'>
+        <MaxWidthWrapper>
+          <div
+            className='relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-sky-600/20 via-sky-500/10 to-transparent p-8 sm:p-12'
+            data-reveal
+          >
+            <div className='absolute -inset-24 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,.25),transparent_40%)]'></div>
+            <div className='mx-auto max-w-2xl text-center'>
+              <h4 className='text-2xl font-semibold text-white sm:text-3xl'>
+                Ready to take the mound with confidence?
+              </h4>
+              <p className='mt-3 text-zinc-300'>
+                Join today and start training with a plan that fits you.
               </p>
-            </div>
-
-            <div className='bg-zinc-800/40 backdrop-blur-sm p-8 rounded-2xl border border-zinc-700/50 hover:border-sky-500/50 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:bg-zinc-800/60 group hover:-translate-y-2'>
-              <div className='flex items-center mb-6'>
-                <div className='bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg mr-4 group-hover:scale-110 transition-all duration-300 shadow-lg flex-shrink-0'>
-                  3
-                </div>
-                <span className='text-white text-xl font-semibold tracking-tight'>
-                  Track Your Growth
-                </span>
-              </div>
-              <p className='text-zinc-300 leading-relaxed font-medium'>
-                Monitor your progress with detailed analytics and receive
-                ongoing feedback. Get expert coaching tips, progress reports,
-                and advanced drills to help you reach your next level.
-              </p>
+              <RegisterLink className='mt-6 inline-flex items-center rounded-xl bg-white px-6 py-3 text-sm font-semibold text-neutral-900 transition hover:bg-zinc-100'>
+                Start free
+                <ArrowRight className='ml-2 h-4 w-4' />
+              </RegisterLink>
             </div>
           </div>
-        </div>
+        </MaxWidthWrapper>
+      </section>
+    </div>
+  )
+}
+
+function Feature({
+  icon,
+  title,
+  desc,
+}: {
+  icon: React.ReactNode
+  title: string
+  desc: string
+}) {
+  return (
+    <div
+      className='group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[.04] p-6 transition-all hover:bg-white/[.06]'
+      data-reveal
+    >
+      <div className='absolute -inset-1 -z-10 rounded-2xl opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100 bg-gradient-to-tr from-sky-500/20 via-blue-500/10 to-transparent'></div>
+      <div className='flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-sky-300'>
+        {icon}
       </div>
+      <h3 className='mt-4 text-lg font-semibold text-white'>{title}</h3>
+      <p className='mt-2 text-sm text-zinc-400'>{desc}</p>
+    </div>
+  )
+}
+
+function Step({
+  number,
+  title,
+  desc,
+}: {
+  number: string
+  title: string
+  desc: string
+}) {
+  return (
+    <div
+      className='relative rounded-2xl border border-white/10 bg-white/[.04] p-6'
+      data-reveal
+    >
+      <div className='mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-blue-600 font-bold text-white'>
+        {number}
+      </div>
+      <h4 className='text-base font-semibold text-white'>{title}</h4>
+      <p className='mt-2 text-sm text-zinc-400'>{desc}</p>
     </div>
   )
 }

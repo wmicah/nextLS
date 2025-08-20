@@ -475,7 +475,10 @@ export const appRouter = router({
       })
 
       const videoCount = await db.libraryResource.count({
-        where: { coachId: user.id, type: "video" },
+        where: {
+          coachId: user.id,
+          OR: [{ type: "video" }, { isYoutube: true }],
+        },
       })
 
       const documentCount = await db.libraryResource.count({
@@ -1798,6 +1801,370 @@ export const appRouter = router({
             days: copiedDays,
           }
         })
+      }),
+  }),
+
+  programs: router({
+    list: publicProcedure
+      .input(
+        z.object({
+          search: z.string().optional(),
+          sport: z.string().optional(),
+          level: z.string().optional(),
+          status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]).optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        })
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can view programs",
+          })
+        }
+
+        const where: any = {
+          coachId: user.id,
+        }
+
+        if (input.search) {
+          where.OR = [
+            { title: { contains: input.search, mode: "insensitive" } },
+            { description: { contains: input.search, mode: "insensitive" } },
+          ]
+        }
+
+        if (input.sport) {
+          where.sport = input.sport
+        }
+
+        if (input.level) {
+          where.level = input.level
+        }
+
+        if (input.status) {
+          where.status = input.status
+        }
+
+        const programs = await db.program.findMany({
+          where,
+          include: {
+            weeks: {
+              include: {
+                days: {
+                  include: {
+                    drills: true,
+                  },
+                },
+              },
+            },
+            assignments: {
+              include: {
+                client: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+
+        return programs.map((program) => ({
+          ...program,
+          completionRate:
+            (program.assignments?.length || 0) > 0
+              ? Math.round(
+                  (program.assignments || []).reduce(
+                    (acc, assignment) => acc + assignment.progress,
+                    0
+                  ) / (program.assignments?.length || 1)
+                )
+              : 0,
+          totalAssignments: program.assignments?.length || 0,
+        }))
+      }),
+
+    getStats: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession()
+      const user = await getUser()
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      })
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view program stats",
+        })
+      }
+
+      const totalPrograms = await db.program.count({
+        where: { coachId: user.id },
+      })
+
+      const activePrograms = await db.program.count({
+        where: {
+          coachId: user.id,
+          status: "ACTIVE",
+        },
+      })
+
+      const totalAssignments = await db.programAssignment.count({
+        where: {
+          program: {
+            coachId: user.id,
+          },
+        },
+      })
+
+      const completedAssignments = await db.programAssignment.count({
+        where: {
+          program: {
+            coachId: user.id,
+          },
+          completedAt: {
+            not: null,
+          },
+        },
+      })
+
+      return {
+        totalPrograms,
+        activePrograms,
+        totalAssignments,
+        completedAssignments,
+        completionRate:
+          totalAssignments > 0
+            ? Math.round((completedAssignments / totalAssignments) * 100)
+            : 0,
+      }
+    }),
+
+    create: publicProcedure
+      .input(
+        z.object({
+          title: z.string().min(1, "Title is required"),
+          description: z.string().optional(),
+          sport: z.string().min(1, "Sport is required"),
+          level: z.enum(["Beginner", "Intermediate", "Advanced"]),
+          duration: z.number().min(1, "Duration must be at least 1 week"),
+          weeks: z.array(
+            z.object({
+              weekNumber: z.number(),
+              title: z.string().min(1, "Week title is required"),
+              description: z.string().optional(),
+              days: z.array(
+                z.object({
+                  dayNumber: z.number(),
+                  title: z.string().min(1, "Day title is required"),
+                  description: z.string().optional(),
+                  drills: z.array(
+                    z.object({
+                      order: z.number(),
+                      title: z.string().min(1, "Drill title is required"),
+                      description: z.string().optional(),
+                      duration: z.string().optional(),
+                      videoUrl: z.string().url().optional().or(z.literal("")),
+                      notes: z.string().optional(),
+                    })
+                  ),
+                })
+              ),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        })
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can create programs",
+          })
+        }
+
+        return await db.$transaction(async (tx) => {
+          const program = await tx.program.create({
+            data: {
+              title: input.title,
+              description: input.description,
+              sport: input.sport,
+              level: input.level,
+              duration: input.duration,
+              coachId: user.id,
+            },
+          })
+
+          // Create weeks
+          for (const weekData of input.weeks) {
+            const week = await tx.programWeek.create({
+              data: {
+                weekNumber: weekData.weekNumber,
+                title: weekData.title,
+                description: weekData.description,
+                programId: program.id,
+              },
+            })
+
+            // Create days
+            for (const dayData of weekData.days) {
+              const day = await tx.programDay.create({
+                data: {
+                  dayNumber: dayData.dayNumber,
+                  title: dayData.title,
+                  description: dayData.description,
+                  weekId: week.id,
+                },
+              })
+
+              // Create drills
+              for (const drillData of dayData.drills) {
+                await tx.programDrill.create({
+                  data: {
+                    order: drillData.order,
+                    title: drillData.title,
+                    description: drillData.description,
+                    duration: drillData.duration,
+                    videoUrl: drillData.videoUrl || null,
+                    notes: drillData.notes,
+                    dayId: day.id,
+                  },
+                })
+              }
+            }
+          }
+
+          return program
+        })
+      }),
+
+    assignToClients: publicProcedure
+      .input(
+        z.object({
+          programId: z.string(),
+          clientIds: z.array(z.string()),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        })
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can assign programs",
+          })
+        }
+
+        // Verify the program belongs to the coach
+        const program = await db.program.findFirst({
+          where: {
+            id: input.programId,
+            coachId: user.id,
+          },
+        })
+
+        if (!program) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Program not found or you don't own it",
+          })
+        }
+
+        // Create assignments for each client
+        const assignments = await Promise.all(
+          input.clientIds.map(async (clientId) => {
+            return await db.programAssignment.upsert({
+              where: {
+                programId_clientId: {
+                  programId: input.programId,
+                  clientId: clientId,
+                },
+              },
+              update: {},
+              create: {
+                programId: input.programId,
+                clientId: clientId,
+                assignedAt: new Date(),
+                progress: 0,
+              },
+            })
+          })
+        )
+
+        return assignments
+      }),
+
+    delete: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession()
+        const user = await getUser()
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        })
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can delete programs",
+          })
+        }
+
+        const program = await db.program.findFirst({
+          where: {
+            id: input.id,
+            coachId: user.id,
+          },
+        })
+
+        if (!program) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Program not found or you don't own it",
+          })
+        }
+
+        await db.program.delete({
+          where: { id: input.id },
+        })
+
+        return { success: true }
       }),
   }),
 })
