@@ -1,176 +1,200 @@
 "use client"
 
 import { useState } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog"
-import { Button } from "./ui/button"
-import { Checkbox } from "./ui/checkbox"
-import { Label } from "./ui/label"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
-import { ScrollArea } from "./ui/scroll-area"
-
-interface Program {
-  id: string
-  title: string
-  description: string | null
-  sport: string
-  level: string
-  status: "DRAFT" | "ACTIVE" | "ARCHIVED"
-  duration: number
-  coachId: string
-  completionRate: number
-  totalAssignments: number
-  createdAt: string
-  updatedAt: string
-}
-
-interface Client {
-  id: string
-  name: string
-  email: string | null
-  phone: string | null
-  notes: string | null
-  coachId: string | null
-  createdAt: string
-  updatedAt: string
-  nextLessonDate: string | null
-  lastCompletedWorkout: string | null
-  avatar: string | null
-  dueDate: string | null
-  lastActivity: string | null
-  updates: string | null
-  userId?: string | null
-}
+import { trpc } from "@/app/_trpc/client"
+import { X, Check, Clock, Users } from "lucide-react"
 
 interface AssignProgramModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (data: { programId: string; clientIds: string[] }) => void
-  program: Program | null
-  clients: Client[]
+	isOpen: boolean
+	onClose: () => void
+	clientId: string
+	clientName: string
 }
 
 export default function AssignProgramModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  program,
-  clients,
+	isOpen,
+	onClose,
+	clientId,
+	clientName,
 }: AssignProgramModalProps) {
-  const [selectedClients, setSelectedClients] = useState<string[]>([])
+	const [selectedProgram, setSelectedProgram] = useState<string>("")
+	const [isAssigning, setIsAssigning] = useState(false)
 
-  const handleClientToggle = (clientId: string) => {
-    setSelectedClients(prev =>
-      prev.includes(clientId)
-        ? prev.filter(id => id !== clientId)
-        : [...prev, clientId]
-    )
-  }
+	const { data: programs = [], isLoading: programsLoading } =
+		trpc.programs.list.useQuery({})
 
-  const handleSelectAll = () => {
-    if (selectedClients.length === clients.length) {
-      setSelectedClients([])
-    } else {
-      setSelectedClients(clients.map(client => client.id))
-    }
-  }
+	// Debug: Log programs data
+	console.log("Available programs:", programs)
+	const utils = trpc.useUtils()
+	const assignProgramMutation = trpc.programs.assignToClients.useMutation({
+		onSuccess: () => {
+			setIsAssigning(false)
+			onClose()
+			setSelectedProgram("")
 
-  const handleSubmit = () => {
-    if (program && selectedClients.length > 0) {
-      onSubmit({
-        programId: program.id,
-        clientIds: selectedClients,
-      })
-    }
-  }
+			// Invalidate and refetch client data to show updated assignments
+			utils.clients.getById.invalidate({ id: clientId })
+			utils.clients.getAssignedPrograms.invalidate({ clientId })
+			utils.workouts.getClientWorkouts.invalidate({ clientId })
+			utils.library.getClientAssignedVideos.invalidate({ clientId })
+		},
+		onError: (error) => {
+			setIsAssigning(false)
+			alert(`Error assigning program: ${error.message}`)
+		},
+	})
 
-  const handleClose = () => {
-    setSelectedClients([])
-    onClose()
-  }
+	const handleAssign = async () => {
+		if (!selectedProgram) {
+			alert("Please select a program")
+			return
+		}
 
-  if (!program) return null
+		console.log("Assigning program:", selectedProgram, "to client:", clientId)
+		setIsAssigning(true)
+		assignProgramMutation.mutate({
+			programId: selectedProgram,
+			clientIds: [clientId],
+		})
+	}
 
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl bg-[#2A3133] border-gray-600">
-        <DialogHeader>
-          <DialogTitle className="text-white">Assign Program</DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Select clients to assign "{program.title}" to
-          </DialogDescription>
-        </DialogHeader>
+	if (!isOpen) return null
 
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="select-all"
-              checked={selectedClients.length === clients.length && clients.length > 0}
-              onCheckedChange={handleSelectAll}
-            />
-            <Label htmlFor="select-all" className="text-white">
-              Select All ({clients.length} clients)
-            </Label>
-          </div>
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div
+				className="rounded-2xl shadow-xl border p-6 w-full max-w-md mx-4"
+				style={{
+					backgroundColor: "#353A3A",
+					borderColor: "#606364",
+				}}
+			>
+				{/* Header */}
+				<div className="flex items-center justify-between mb-4">
+					<h2 className="text-xl font-bold text-white">Assign Program</h2>
+					<button
+						onClick={onClose}
+						className="text-gray-400 hover:text-white transition-colors"
+					>
+						<X className="h-5 w-5" />
+					</button>
+				</div>
 
-          <ScrollArea className="h-64">
-            <div className="space-y-2">
-              {clients.map((client) => (
-                <div
-                  key={client.id}
-                  className="flex items-center space-x-3 p-3 bg-[#3A4245] rounded-lg"
-                >
-                  <Checkbox
-                    id={client.id}
-                    checked={selectedClients.includes(client.id)}
-                    onCheckedChange={() => handleClientToggle(client.id)}
-                  />
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={client.avatar || undefined} />
-                    <AvatarFallback className="bg-blue-600 text-white text-xs">
-                      {client.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <Label
-                      htmlFor={client.id}
-                      className="text-white font-medium cursor-pointer"
-                    >
-                      {client.name}
-                    </Label>
-                    {client.email && (
-                      <p className="text-gray-400 text-sm truncate">
-                        {client.email}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
+				{/* Client Info */}
+				<div
+					className="mb-4 p-3 rounded-lg"
+					style={{ backgroundColor: "#2A2F2F" }}
+				>
+					<p className="text-sm text-gray-300">Assigning to:</p>
+					<p className="text-white font-medium">{clientName}</p>
+				</div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={selectedClients.length === 0}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Assign to {selectedClients.length} client{selectedClients.length !== 1 ? 's' : ''}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
+				{/* Program Selection */}
+				<div className="mb-6">
+					<label className="block text-sm font-medium text-white mb-2">
+						Select Program
+					</label>
+					{programsLoading ? (
+						<div
+							className="w-full p-3 rounded-lg border text-center"
+							style={{
+								backgroundColor: "#2A2F2F",
+								borderColor: "#606364",
+								color: "#FFFFFF",
+							}}
+						>
+							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>
+							<span className="ml-2">Loading programs...</span>
+						</div>
+					) : (
+						<select
+							value={selectedProgram}
+							onChange={(e) => setSelectedProgram(e.target.value)}
+							className="w-full p-3 rounded-lg border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500"
+							style={{
+								backgroundColor: "#2A2F2F",
+								borderColor: "#606364",
+								color: "#FFFFFF",
+							}}
+						>
+							<option value="">Choose a program...</option>
+							{programs.map((program: any) => (
+								<option key={program.id} value={program.id}>
+									{program.title} ({program.sport} - {program.level})
+								</option>
+							))}
+						</select>
+					)}
+				</div>
+
+				{/* Selected Program Details */}
+				{selectedProgram && (
+					<div
+						className="mb-6 p-4 rounded-lg"
+						style={{ backgroundColor: "#2A2F2F" }}
+					>
+						{(() => {
+							const program = programs.find(
+								(p: any) => p.id === selectedProgram
+							)
+							if (!program) return null
+
+							return (
+								<div className="space-y-2">
+									<h3 className="font-medium text-white">{program.title}</h3>
+									<p className="text-sm text-gray-300">{program.description}</p>
+									<div className="flex items-center gap-4 text-xs text-gray-400">
+										<div className="flex items-center gap-1">
+											<Clock className="h-3 w-3" />
+											{program.duration} weeks
+										</div>
+										<div className="flex items-center gap-1">
+											<Users className="h-3 w-3" />
+											{program.totalAssignments || 0} assigned
+										</div>
+									</div>
+								</div>
+							)
+						})()}
+					</div>
+				)}
+
+				{/* Actions */}
+				<div className="flex gap-3">
+					<button
+						onClick={onClose}
+						className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
+						style={{
+							backgroundColor: "transparent",
+							borderColor: "#606364",
+							color: "#FFFFFF",
+						}}
+					>
+						Cancel
+					</button>
+					<button
+						onClick={handleAssign}
+						disabled={!selectedProgram || isAssigning}
+						className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+						style={{
+							backgroundColor: "#4A5A70",
+							color: "#FFFFFF",
+						}}
+					>
+						{isAssigning ? (
+							<>
+								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+								Assigning...
+							</>
+						) : (
+							<>
+								<Check className="h-4 w-4" />
+								Assign Program
+							</>
+						)}
+					</button>
+				</div>
+			</div>
+		</div>
+	)
 }
-
-

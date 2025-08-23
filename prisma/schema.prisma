@@ -19,6 +19,8 @@ model User {
   stripePriceId            String?           @map("stripe_price_id")
   stripeSubscriptionId     String?           @unique @map("stripe_subscription_id")
   role                     UserRole?
+  workingHoursStart        String?           @map("working_hours_start")
+  workingHoursEnd          String?           @map("working_hours_end")
   clientConversations      Conversation[]    @relation("ClientConversations")
   coachConversations       Conversation[]    @relation("CoachConversations")
   sentMessages             Message[]
@@ -26,7 +28,6 @@ model User {
   coachedWorkouts          AssignedWorkout[] @relation("CoachAssignedWorkouts")
   clients                  Client[]          @relation("CoachClients")
   clientProfile            Client?           @relation("UserClient")
-  clientEvents             Event[]           @relation("ClientEvents")
   assignedEvents           Event[]           @relation("CoachEvents")
   libraryResources         LibraryResource[]
   clientProgress           Progress[]        @relation("ClientProgress")
@@ -61,6 +62,7 @@ model Client {
   coach                User      @relation("CoachClients", fields: [coachId], references: [id])
   user                 User?     @relation("UserClient", fields: [userId], references: [id])
   programAssignments   ProgramAssignment[]
+  events               Event[]
 
   @@map("clients")
 }
@@ -146,7 +148,7 @@ model Event {
   coachId     String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  client      User     @relation("ClientEvents", fields: [clientId], references: [id], onDelete: Cascade)
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   coach       User     @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
 
   @@map("events")
@@ -309,6 +311,13 @@ model ProgramDay {
   weekId      String
   week        ProgramWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
   
+  // Rest day functionality
+  isRestDay   Boolean  @default(false)
+  
+  // Warmup functionality
+  warmupTitle       String?
+  warmupDescription String?
+  
   // Day structure
   drills      ProgramDrill[]
   
@@ -328,6 +337,14 @@ model ProgramDrill {
   notes       String?
   dayId       String
   day         ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  
+  // Exercise details
+  sets        Int?
+  reps        Int?
+  tempo       String? // e.g., "2-0-2" for tempo training
+  
+  // Superset functionality
+  supersetWithId String? // ID of the exercise this is paired with
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

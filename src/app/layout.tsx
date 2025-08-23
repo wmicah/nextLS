@@ -1,44 +1,41 @@
 import { cn } from "@/lib/utils"
 import "./globals.css"
 import type { Metadata } from "next"
-import { Inter, Poppins } from "next/font/google"
+import { Inter } from "next/font/google"
+// import { Poppins } from "next/font/google"
 import Navbar from "@/components/Navbar"
 import Providers from "@/components/Providers"
 import ConditionalNavbar from "@/components/ConditionalNavbar"
+import Toast from "@/components/common/Toast"
 
 const inter = Inter({ subsets: ["latin"] })
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-  variable: "--font-poppins",
-})
+// const poppins = Poppins({
+//   subsets: ["latin"],
+//   weight: ["300", "400", "500", "600", "700", "800"],
+//   variable: "--font-poppins",
+// })
 
 export const metadata: Metadata = {
-  title: "Next Level Softball",
-  description: "Next Level Softball",
+	title: "Next Level Softball",
+	description: "Next Level Softball",
 }
 
 export default function RootLayout({
-  children,
+	children,
 }: {
-  children: React.ReactNode
+	children: React.ReactNode
 }) {
-  return (
-    <html
-      lang='en'
-      className={`light ${poppins.variable}`}
-    >
-      <Providers>
-        <body
-          className={cn(
-            "min-h-screen font-sans antialiased",
-            poppins.className
-          )}
-        >
-          <ConditionalNavbar />
-          {children}
-        </body>
-      </Providers>
-    </html>
-  )
+	return (
+		<html lang="en" className={`light`}>
+			<Providers>
+				<body
+					className={cn("min-h-screen font-sans antialiased", inter.className)}
+				>
+					<ConditionalNavbar />
+					{children}
+					<Toast />
+				</body>
+			</Providers>
+		</html>
+	)
 }
