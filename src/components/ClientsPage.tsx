@@ -27,11 +27,13 @@ import {
 	MoreHorizontal,
 	ChevronDown,
 	ChevronUp,
+	Archive,
 } from "lucide-react"
 import { format } from "date-fns"
 import AddClientModal from "./AddClientModal"
 import Sidebar from "./Sidebar"
 import ClientScheduler from "./ClientScheduler"
+import ClientProfileModal from "./ClientProfileModal"
 
 interface Client {
 	id: string
@@ -49,6 +51,8 @@ interface Client {
 	lastActivity: string | null
 	updates: string | null
 	userId?: string | null
+	archived: boolean
+	archivedAt: string | null
 	programAssignments?: {
 		id: string
 		programId: string
@@ -66,40 +70,98 @@ interface Client {
 
 export default function ClientsPage() {
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-	const [deletingClientId, setDeletingClientId] = useState<string | null>(null)
+	const [archivingClientId, setArchivingClientId] = useState<string | null>(
+		null
+	)
 	const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 	const [selectedForSchedule, setSelectedForSchedule] = useState<{
 		userId: string
 		name: string
 	} | null>(null)
+	const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+	const [selectedClientForProfile, setSelectedClientForProfile] =
+		useState<Client | null>(null)
 	const [searchTerm, setSearchTerm] = useState("")
 	const [sortBy, setSortBy] = useState("name")
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+	const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
 
-	const { data: clients = [], isLoading, error } = trpc.clients.list.useQuery()
+	const {
+		data: clients = [],
+		isLoading,
+		error,
+	} = trpc.clients.list.useQuery({
+		archived: activeTab === "archived",
+	})
+
+	// Get counts for both tabs
+	const { data: activeClientsData = [] } = trpc.clients.list.useQuery({
+		archived: false,
+	})
+
+	const { data: archivedClientsData = [] } = trpc.clients.list.useQuery({
+		archived: true,
+	})
 	const utils = trpc.useUtils()
 
-	const deleteClient = trpc.clients.delete.useMutation({
+	const archiveClient = trpc.clients.archive.useMutation({
 		onSuccess: () => {
-			utils.clients.list.invalidate() // Invalidate the clients list cache
-			setDeletingClientId(null)
+			utils.clients.list.invalidate()
 		},
 		onError: (error) => {
-			console.error("Failed to delete client:", error)
-			setDeletingClientId(null)
+			console.error("Failed to archive client:", error)
 		},
 	})
 
-	const handleDeleteClient = (clientId: string, clientName: string) => {
+	const unarchiveClient = trpc.clients.unarchive.useMutation({
+		onSuccess: () => {
+			utils.clients.list.invalidate()
+		},
+		onError: (error) => {
+			console.error("Failed to unarchive client:", error)
+		},
+	})
+
+	const handleArchiveClientFromDelete = (
+		clientId: string,
+		clientName: string
+	) => {
 		if (
 			window.confirm(
-				`Are you sure you want to delete ${clientName}? This action cannot be undone.`
+				`Are you sure you want to archive ${clientName}? They will be moved to the archived section and can be restored later.`
 			)
 		) {
-			setDeletingClientId(clientId)
-			deleteClient.mutate({ id: clientId })
+			setArchivingClientId(clientId)
+			archiveClient.mutate({ id: clientId })
 		}
+	}
+
+	const handleArchiveClient = (clientId: string, clientName: string) => {
+		if (
+			window.confirm(
+				`Are you sure you want to archive ${clientName}? They will be moved to the archived section.`
+			)
+		) {
+			archiveClient.mutate({ id: clientId })
+		}
+	}
+
+	const handleUnarchiveClient = (clientId: string, clientName: string) => {
+		if (
+			window.confirm(
+				`Are you sure you want to unarchive ${clientName}? They will be moved back to the active section.`
+			)
+		) {
+			unarchiveClient.mutate({ id: clientId })
+		}
+	}
+
+	const handleOpenProfile = (client: Client) => {
+		console.log("handleOpenProfile called with client:", client)
+		setSelectedClientForProfile(client)
+		setIsProfileModalOpen(true)
+		console.log("Modal should be opening now")
 	}
 
 	// Filter and sort clients
@@ -140,7 +202,8 @@ export default function ClientsPage() {
 
 	// Calculate stats
 	const totalClients = clients.length
-	const activeClients = clients.filter((c: Client) => c.nextLessonDate).length
+	const activeClients = activeClientsData.length
+	const archivedClients = archivedClientsData.length
 	const recentClients = clients.filter((c: Client) => {
 		const createdAt = new Date(c.createdAt)
 		const thirtyDaysAgo = new Date()
@@ -226,11 +289,21 @@ export default function ClientsPage() {
 												style={{ color: "#ABA4AA" }}
 											>
 												<Sparkles className="h-5 w-5 text-yellow-400" />
-												{totalClients > 0
-													? `Managing ${totalClients} ${
-															totalClients === 1 ? "athlete" : "athletes"
+												{activeTab === "active"
+													? activeClients > 0
+														? `Managing ${activeClients} ${
+																activeClients === 1
+																	? "active athlete"
+																	: "active athletes"
+														  }`
+														: "Ready to build your coaching team"
+													: archivedClients > 0
+													? `Viewing ${archivedClients} ${
+															archivedClients === 1
+																? "archived athlete"
+																: "archived athletes"
 													  }`
-													: "Ready to build your coaching team"}
+													: "No archived athletes"}
 											</p>
 										</div>
 									</div>
@@ -288,16 +361,24 @@ export default function ClientsPage() {
 										className="text-sm font-medium mb-1"
 										style={{ color: "#ABA4AA" }}
 									>
-										Total Athletes
+										{activeTab === "active"
+											? "Active Athletes"
+											: "Archived Athletes"}
 									</p>
 									<p
 										className="text-3xl font-bold mb-1"
 										style={{ color: "#C3BCC2" }}
 									>
-										{totalClients}
+										{activeTab === "active" ? activeClients : archivedClients}
 									</p>
 									<p className="text-xs" style={{ color: "#ABA4AA" }}>
-										{totalClients > 0 ? "Your coaching team" : "Start building"}
+										{activeTab === "active"
+											? activeClients > 0
+												? "Active athletes"
+												: "No active athletes"
+											: archivedClients > 0
+											? "Archived athletes"
+											: "No archived athletes"}
 									</p>
 								</div>
 							</div>
@@ -340,18 +421,18 @@ export default function ClientsPage() {
 										className="text-sm font-medium mb-1"
 										style={{ color: "#ABA4AA" }}
 									>
-										Active Athletes
+										Archived Athletes
 									</p>
 									<p
 										className="text-3xl font-bold mb-1"
 										style={{ color: "#C3BCC2" }}
 									>
-										{activeClients}
+										{archivedClients}
 									</p>
 									<p className="text-xs" style={{ color: "#ABA4AA" }}>
-										{activeClients > 0
-											? "With scheduled lessons"
-											: "Schedule now"}
+										{archivedClients > 0
+											? "Previously active"
+											: "No archived athletes"}
 									</p>
 								</div>
 							</div>
@@ -453,6 +534,91 @@ export default function ClientsPage() {
 									</p>
 								</div>
 							</div>
+						</div>
+					</div>
+
+					{/* Tabs */}
+					<div className="mb-6">
+						<div
+							className="flex space-x-1 p-1 rounded-xl border"
+							style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+						>
+							<button
+								onClick={() => setActiveTab("active")}
+								className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+									activeTab === "active" ? "shadow-lg" : ""
+								}`}
+								style={{
+									backgroundColor:
+										activeTab === "active" ? "#4A5A70" : "transparent",
+									color: activeTab === "active" ? "#FFFFFF" : "#ABA4AA",
+								}}
+								onMouseEnter={(e) => {
+									if (activeTab !== "active") {
+										e.currentTarget.style.backgroundColor = "#3A4040"
+										e.currentTarget.style.color = "#C3BCC2"
+									}
+								}}
+								onMouseLeave={(e) => {
+									if (activeTab !== "active") {
+										e.currentTarget.style.backgroundColor = "transparent"
+										e.currentTarget.style.color = "#ABA4AA"
+									}
+								}}
+							>
+								<div className="flex items-center justify-center gap-2">
+									<Users className="h-4 w-4" />
+									<span>Active Athletes</span>
+									<span
+										className="px-2 py-1 rounded-full text-xs font-medium"
+										style={{
+											backgroundColor:
+												activeTab === "active" ? "#FFFFFF" : "#4A5A70",
+											color: activeTab === "active" ? "#4A5A70" : "#C3BCC2",
+										}}
+									>
+										{activeClientsData.length}
+									</span>
+								</div>
+							</button>
+							<button
+								onClick={() => setActiveTab("archived")}
+								className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+									activeTab === "archived" ? "shadow-lg" : ""
+								}`}
+								style={{
+									backgroundColor:
+										activeTab === "archived" ? "#4A5A70" : "transparent",
+									color: activeTab === "archived" ? "#FFFFFF" : "#ABA4AA",
+								}}
+								onMouseEnter={(e) => {
+									if (activeTab !== "archived") {
+										e.currentTarget.style.backgroundColor = "#3A4040"
+										e.currentTarget.style.color = "#C3BCC2"
+									}
+								}}
+								onMouseLeave={(e) => {
+									if (activeTab !== "archived") {
+										e.currentTarget.style.backgroundColor = "transparent"
+										e.currentTarget.style.color = "#ABA4AA"
+									}
+								}}
+							>
+								<div className="flex items-center justify-center gap-2">
+									<Archive className="h-4 w-4" />
+									<span>Archived Athletes</span>
+									<span
+										className="px-2 py-1 rounded-full text-xs font-medium"
+										style={{
+											backgroundColor:
+												activeTab === "archived" ? "#FFFFFF" : "#4A5A70",
+											color: activeTab === "archived" ? "#4A5A70" : "#C3BCC2",
+										}}
+									>
+										{archivedClientsData.length}
+									</span>
+								</div>
+							</button>
 						</div>
 					</div>
 
@@ -731,6 +897,7 @@ export default function ClientsPage() {
 														animationDelay: `${index * 100}ms`,
 														animation: "fadeInUp 0.6s ease-out forwards",
 													}}
+													onClick={() => handleOpenProfile(client)}
 													onMouseEnter={(e) => {
 														e.currentTarget.style.backgroundColor = "#3A4040"
 														e.currentTarget.style.borderColor = "#4A5A70"
@@ -775,17 +942,69 @@ export default function ClientsPage() {
 																>
 																	<Edit className="h-4 w-4" />
 																</button>
+																{activeTab === "active" ? (
+																	<button
+																		onClick={(e) => {
+																			e.stopPropagation()
+																			handleArchiveClient(
+																				client.id,
+																				client.name
+																			)
+																		}}
+																		className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
+																		style={{ color: "#ABA4AA" }}
+																		onMouseEnter={(e) => {
+																			e.currentTarget.style.color = "#F59E0B"
+																			e.currentTarget.style.backgroundColor =
+																				"#3A4040"
+																		}}
+																		onMouseLeave={(e) => {
+																			e.currentTarget.style.color = "#ABA4AA"
+																			e.currentTarget.style.backgroundColor =
+																				"transparent"
+																		}}
+																	>
+																		<Archive className="h-4 w-4" />
+																	</button>
+																) : (
+																	<button
+																		onClick={(e) => {
+																			e.stopPropagation()
+																			handleUnarchiveClient(
+																				client.id,
+																				client.name
+																			)
+																		}}
+																		className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
+																		style={{ color: "#ABA4AA" }}
+																		onMouseEnter={(e) => {
+																			e.currentTarget.style.color = "#10B981"
+																			e.currentTarget.style.backgroundColor =
+																				"#3A4040"
+																		}}
+																		onMouseLeave={(e) => {
+																			e.currentTarget.style.color = "#ABA4AA"
+																			e.currentTarget.style.backgroundColor =
+																				"transparent"
+																		}}
+																	>
+																		<Archive className="h-4 w-4" />
+																	</button>
+																)}
 																<button
 																	onClick={(e) => {
 																		e.stopPropagation()
-																		handleDeleteClient(client.id, client.name)
+																		handleArchiveClientFromDelete(
+																			client.id,
+																			client.name
+																		)
 																	}}
-																	disabled={deletingClientId === client.id}
+																	disabled={archivingClientId === client.id}
 																	className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
 																	style={{ color: "#ABA4AA" }}
 																	onMouseEnter={(e) => {
 																		if (!e.currentTarget.disabled) {
-																			e.currentTarget.style.color = "#EF4444"
+																			e.currentTarget.style.color = "#F59E0B"
 																			e.currentTarget.style.backgroundColor =
 																				"#3A4040"
 																		}
@@ -798,13 +1017,13 @@ export default function ClientsPage() {
 																		}
 																	}}
 																>
-																	{deletingClientId === client.id ? (
+																	{archivingClientId === client.id ? (
 																		<div
 																			className="animate-spin rounded-full h-4 w-4 border-b-2"
-																			style={{ borderColor: "#EF4444" }}
+																			style={{ borderColor: "#F59E0B" }}
 																		></div>
 																	) : (
-																		<Trash2 className="h-4 w-4" />
+																		<Archive className="h-4 w-4" />
 																	)}
 																</button>
 															</div>
@@ -818,7 +1037,7 @@ export default function ClientsPage() {
 															</h3>
 															<p
 																className="text-sm mb-3"
-																style={{ color: "#ABA4AA" }}
+																style={{ color: "#9ca3af" }}
 															>
 																Added{" "}
 																{format(
@@ -829,7 +1048,7 @@ export default function ClientsPage() {
 															<div className="grid grid-cols-2 gap-3 mb-4">
 																<div
 																	className="rounded-lg p-3"
-																	style={{ backgroundColor: "#3A4040" }}
+																	style={{ backgroundColor: "#2A2F2F" }}
 																>
 																	<p
 																		className="text-xs font-medium mb-1"
@@ -851,7 +1070,7 @@ export default function ClientsPage() {
 																</div>
 																<div
 																	className="rounded-lg p-3"
-																	style={{ backgroundColor: "#3A4040" }}
+																	style={{ backgroundColor: "#2A2F2F" }}
 																>
 																	<p
 																		className="text-xs font-medium mb-1"
@@ -886,7 +1105,7 @@ export default function ClientsPage() {
 																						key={assignment.id}
 																						className="flex items-center justify-between p-2 rounded-lg"
 																						style={{
-																							backgroundColor: "#3A4040",
+																							backgroundColor: "#2A2F2F",
 																						}}
 																					>
 																						<div className="flex-1 min-w-0">
@@ -1044,6 +1263,10 @@ export default function ClientsPage() {
 														animationDelay: `${index * 50}ms`,
 														animation: "fadeInUp 0.6s ease-out forwards",
 													}}
+													onClick={() => {
+														console.log("Card clicked for client:", client.name)
+														handleOpenProfile(client)
+													}}
 													onMouseEnter={(e) => {
 														e.currentTarget.style.backgroundColor = "#3A4040"
 														e.currentTarget.style.borderColor = "#4A5A70"
@@ -1166,7 +1389,7 @@ export default function ClientsPage() {
 																	</p>
 																</div>
 																<div className="flex items-center gap-1">
-																	{client.userId && (
+																	{client.userId && activeTab === "active" && (
 																		<button
 																			onClick={(e) => {
 																				e.stopPropagation()
@@ -1208,17 +1431,69 @@ export default function ClientsPage() {
 																	>
 																		<Edit className="h-4 w-4" />
 																	</button>
+																	{activeTab === "active" ? (
+																		<button
+																			onClick={(e) => {
+																				e.stopPropagation()
+																				handleArchiveClient(
+																					client.id,
+																					client.name
+																				)
+																			}}
+																			className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
+																			style={{ color: "#ABA4AA" }}
+																			onMouseEnter={(e) => {
+																				e.currentTarget.style.color = "#F59E0B"
+																				e.currentTarget.style.backgroundColor =
+																					"#3A4040"
+																			}}
+																			onMouseLeave={(e) => {
+																				e.currentTarget.style.color = "#ABA4AA"
+																				e.currentTarget.style.backgroundColor =
+																					"transparent"
+																			}}
+																		>
+																			<Archive className="h-4 w-4" />
+																		</button>
+																	) : (
+																		<button
+																			onClick={(e) => {
+																				e.stopPropagation()
+																				handleUnarchiveClient(
+																					client.id,
+																					client.name
+																				)
+																			}}
+																			className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
+																			style={{ color: "#ABA4AA" }}
+																			onMouseEnter={(e) => {
+																				e.currentTarget.style.color = "#10B981"
+																				e.currentTarget.style.backgroundColor =
+																					"#3A4040"
+																			}}
+																			onMouseLeave={(e) => {
+																				e.currentTarget.style.color = "#ABA4AA"
+																				e.currentTarget.style.backgroundColor =
+																					"transparent"
+																			}}
+																		>
+																			<Archive className="h-4 w-4" />
+																		</button>
+																	)}
 																	<button
 																		onClick={(e) => {
 																			e.stopPropagation()
-																			handleDeleteClient(client.id, client.name)
+																			handleArchiveClientFromDelete(
+																				client.id,
+																				client.name
+																			)
 																		}}
-																		disabled={deletingClientId === client.id}
+																		disabled={archivingClientId === client.id}
 																		className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
 																		style={{ color: "#ABA4AA" }}
 																		onMouseEnter={(e) => {
 																			if (!e.currentTarget.disabled) {
-																				e.currentTarget.style.color = "#EF4444"
+																				e.currentTarget.style.color = "#F59E0B"
 																				e.currentTarget.style.backgroundColor =
 																					"#3A4040"
 																			}
@@ -1231,13 +1506,13 @@ export default function ClientsPage() {
 																			}
 																		}}
 																	>
-																		{deletingClientId === client.id ? (
+																		{archivingClientId === client.id ? (
 																			<div
 																				className="animate-spin rounded-full h-4 w-4 border-b-2"
-																				style={{ borderColor: "#EF4444" }}
+																				style={{ borderColor: "#F59E0B" }}
 																			></div>
 																		) : (
-																			<Trash2 className="h-4 w-4" />
+																			<Archive className="h-4 w-4" />
 																		)}
 																	</button>
 																</div>
@@ -1262,6 +1537,22 @@ export default function ClientsPage() {
 					console.log("Client added successfully!")
 				}}
 			/>
+
+			{selectedClientForProfile && (
+				<ClientProfileModal
+					isOpen={isProfileModalOpen}
+					onClose={() => {
+						setIsProfileModalOpen(false)
+						setSelectedClientForProfile(null)
+					}}
+					clientId={selectedClientForProfile.id}
+					clientName={selectedClientForProfile.name}
+					clientEmail={selectedClientForProfile.email}
+					clientPhone={selectedClientForProfile.phone}
+					clientNotes={selectedClientForProfile.notes}
+					clientAvatar={selectedClientForProfile.avatar}
+				/>
+			)}
 		</Sidebar>
 	)
 }

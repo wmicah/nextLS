@@ -59,6 +59,8 @@ model Client {
   lastActivity         String?
   updates              String?
   userId               String?   @unique
+  archived             Boolean   @default(false)
+  archivedAt           DateTime?
   coach                User      @relation("CoachClients", fields: [coachId], references: [id])
   user                 User?     @relation("UserClient", fields: [userId], references: [id])
   programAssignments   ProgramAssignment[]

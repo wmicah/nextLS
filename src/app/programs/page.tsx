@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import Sidebar from "@/components/Sidebar"
 import { useRouter } from "next/navigation"
+import AssignProgramModal from "@/components/AssignProgramModal"
 
 export default function ProgramsPage() {
 	const [showAddModal, setShowAddModal] = useState(false)
@@ -831,45 +832,12 @@ export default function ProgramsPage() {
 					)}
 
 					{/* Assign Program Modal */}
-					{showAssignModal && selectedProgram && (
-						<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-							<div
-								className="rounded-2xl shadow-xl border p-6 w-full max-w-lg mx-4"
-								style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-							>
-								<div className="flex items-center justify-between mb-4">
-									<h2
-										className="text-xl font-bold"
-										style={{ color: "#C3BCC2" }}
-									>
-										Assign "{selectedProgram.title}" to Clients
-									</h2>
-									<button
-										onClick={() => setShowAssignModal(false)}
-										className="text-gray-400 hover:text-white transition-colors"
-									>
-										×
-									</button>
-								</div>
-
-								<div className="text-center py-8">
-									<p style={{ color: "#ABA4AA" }}>
-										Assign program functionality will be implemented here
-									</p>
-									<button
-										onClick={() => setShowAssignModal(false)}
-										className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 mt-4"
-										style={{
-											backgroundColor: "#4A5A70",
-											color: "#C3BCC2",
-										}}
-									>
-										Close
-									</button>
-								</div>
-							</div>
-						</div>
-					)}
+					<AssignProgramModal
+						isOpen={showAssignModal}
+						onClose={() => setShowAssignModal(false)}
+						programId={selectedProgram?.id}
+						programTitle={selectedProgram?.title}
+					/>
 				</div>
 			</div>
 		</Sidebar>

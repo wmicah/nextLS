@@ -54,8 +54,8 @@ export default function SchedulePageClient() {
 	// Fetch coach's profile for working hours
 	const { data: coachProfile } = trpc.user.getProfile.useQuery()
 
-	// Fetch coach's clients for scheduling
-	const { data: clients = [] } = trpc.clients.list.useQuery()
+	// Fetch coach's active clients for scheduling (exclude archived)
+	const { data: clients = [] } = trpc.clients.list.useQuery({ archived: false })
 
 	// Update working hours state when coach profile loads
 	useEffect(() => {

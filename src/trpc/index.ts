@@ -269,46 +269,61 @@ export const appRouter = router({
 	}),
 
 	clients: router({
-		list: publicProcedure.query(async () => {
-			const { getUser } = getKindeServerSession()
-			const user = await getUser()
+		list: publicProcedure
+			.input(
+				z
+					.object({
+						archived: z.boolean().optional(),
+					})
+					.optional()
+			)
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
 
-			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
 
-			// Verify user is a COACH
-			const coach = await db.user.findFirst({
-				where: { id: user.id, role: "COACH" },
-			})
-
-			if (!coach) {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "Only coaches can view clients",
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
 				})
-			}
 
-			const clients = await db.client.findMany({
-				where: { coachId: user.id },
-				include: {
-					programAssignments: {
-						include: {
-							program: {
-								select: {
-									id: true,
-									title: true,
-									status: true,
-									sport: true,
-									level: true,
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can view clients",
+					})
+				}
+
+				const whereClause: any = { coachId: user.id }
+
+				// Filter by archived status if provided
+				if (input?.archived !== undefined) {
+					whereClause.archived = input.archived
+				}
+
+				const clients = await db.client.findMany({
+					where: whereClause,
+					include: {
+						programAssignments: {
+							include: {
+								program: {
+									select: {
+										id: true,
+										title: true,
+										status: true,
+										sport: true,
+										level: true,
+									},
 								},
 							},
 						},
 					},
-				},
-				orderBy: { createdAt: "desc" },
-			})
+					orderBy: { createdAt: "desc" },
+				})
 
-			return clients
-		}),
+				return clients
+			}),
 
 		dueSoon: publicProcedure.query(async () => {
 			const { getUser } = getKindeServerSession()
@@ -334,6 +349,7 @@ export const appRouter = router({
 			return await db.client.findMany({
 				where: {
 					coachId: user.id,
+					archived: false, // Exclude archived clients
 					nextLessonDate: {
 						lte: threeDaysFromNow,
 						gte: new Date(),
@@ -364,6 +380,7 @@ export const appRouter = router({
 			return await db.client.findMany({
 				where: {
 					coachId: user.id,
+					archived: false, // Exclude archived clients
 					OR: [
 						{ nextLessonDate: null },
 						{ nextLessonDate: { lt: new Date() } },
@@ -464,6 +481,104 @@ export const appRouter = router({
 				return { success: true }
 			}),
 
+		archive: publicProcedure
+			.input(
+				z.object({
+					id: z.string(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can archive clients",
+					})
+				}
+
+				const client = await db.client.findFirst({
+					where: {
+						id: input.id,
+						coachId: user.id,
+					},
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client not found",
+					})
+				}
+
+				await db.client.update({
+					where: { id: input.id },
+					data: {
+						archived: true,
+						archivedAt: new Date(),
+					},
+				})
+
+				return { success: true }
+			}),
+
+		unarchive: publicProcedure
+			.input(
+				z.object({
+					id: z.string(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can unarchive clients",
+					})
+				}
+
+				const client = await db.client.findFirst({
+					where: {
+						id: input.id,
+						coachId: user.id,
+					},
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client not found",
+					})
+				}
+
+				await db.client.update({
+					where: { id: input.id },
+					data: {
+						archived: false,
+						archivedAt: null,
+					},
+				})
+
+				return { success: true }
+			}),
+
 		getById: publicProcedure
 			.input(z.object({ id: z.string() }))
 			.query(async ({ input }) => {
@@ -488,6 +603,25 @@ export const appRouter = router({
 					where: {
 						id: input.id,
 						coachId: user.id,
+						archived: false, // Only allow access to active clients
+					},
+					include: {
+						programAssignments: {
+							include: {
+								program: {
+									select: {
+										id: true,
+										title: true,
+										status: true,
+										sport: true,
+										level: true,
+									},
+								},
+							},
+							orderBy: {
+								assignedAt: "desc",
+							},
+						},
 					},
 				})
 
@@ -525,18 +659,19 @@ export const appRouter = router({
 					})
 				}
 
-				// Verify the client belongs to this coach
+				// Verify the client belongs to this coach and is not archived
 				const client = await db.client.findFirst({
 					where: {
 						id: input.clientId,
 						coachId: user.id,
+						archived: false, // Only allow access to active clients
 					},
 				})
 
 				if (!client) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
-						message: "Client not found or not assigned to you",
+						message: "Client not found, not assigned to you, or is archived",
 					})
 				}
 
@@ -554,6 +689,96 @@ export const appRouter = router({
 				})
 
 				return assignments
+			}),
+
+		update: publicProcedure
+			.input(
+				z.object({
+					id: z.string(),
+					name: z.string().optional(),
+					email: z.string().email().optional().or(z.literal("")),
+					phone: z.string().optional().or(z.literal("")),
+					notes: z.string().optional().or(z.literal("")),
+					nextLessonDate: z.string().optional(),
+					lastCompletedWorkout: z.string().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can update clients",
+					})
+				}
+
+				// Verify the client belongs to this coach and is not archived
+				const client = await db.client.findFirst({
+					where: {
+						id: input.id,
+						coachId: user.id,
+						archived: false, // Only allow updating active clients
+					},
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client not found or is archived",
+					})
+				}
+
+				const { id, ...updateData } = input
+
+				// Convert date strings to Date objects if provided
+				const data: any = { ...updateData }
+				if (data.nextLessonDate === "") {
+					data.nextLessonDate = null
+				} else if (data.nextLessonDate) {
+					data.nextLessonDate = new Date(data.nextLessonDate)
+				}
+
+				if (data.lastCompletedWorkout === "") {
+					data.lastCompletedWorkout = null
+				} else if (data.lastCompletedWorkout) {
+					data.lastCompletedWorkout = new Date(data.lastCompletedWorkout)
+				}
+
+				// Convert empty strings to null for optional fields
+				if (data.email === "") data.email = null
+				if (data.phone === "") data.phone = null
+				if (data.notes === "") data.notes = null
+
+				const updatedClient = await db.client.update({
+					where: { id: input.id },
+					data,
+					include: {
+						programAssignments: {
+							include: {
+								program: {
+									select: {
+										id: true,
+										title: true,
+										status: true,
+										sport: true,
+										level: true,
+									},
+								},
+							},
+						},
+					},
+				})
+
+				return updatedClient
 			}),
 	}),
 
@@ -2695,11 +2920,14 @@ export const appRouter = router({
 					})
 				}
 
-				// Count active client assignments for this program
+				// Count active client assignments for this program (excluding archived clients)
 				const count = await db.programAssignment.count({
 					where: {
 						programId: input.programId,
 						completedAt: null, // Not completed = active
+						client: {
+							archived: false, // Exclude archived clients
+						},
 					},
 				})
 
@@ -2806,10 +3034,10 @@ export const appRouter = router({
 								weekId: week.id,
 								dayNumber: dayData.dayNumber,
 								title: dayData.title,
-								description: dayData.description,
+								description: dayData.description || "",
 								isRestDay: dayData.isRestDay || false,
-								warmupTitle: dayData.warmupTitle,
-								warmupDescription: dayData.warmupDescription,
+								warmupTitle: dayData.warmupTitle || "",
+								warmupDescription: dayData.warmupDescription || "",
 							},
 						})
 					} else {
@@ -2818,10 +3046,10 @@ export const appRouter = router({
 							where: { id: day.id },
 							data: {
 								title: dayData.title,
-								description: dayData.description,
+								description: dayData.description || "",
 								isRestDay: dayData.isRestDay || false,
-								warmupTitle: dayData.warmupTitle,
-								warmupDescription: dayData.warmupDescription,
+								warmupTitle: dayData.warmupTitle || "",
+								warmupDescription: dayData.warmupDescription || "",
 							},
 						})
 					}
@@ -2838,14 +3066,14 @@ export const appRouter = router({
 								dayId: day.id,
 								order: drillData.order,
 								title: drillData.title,
-								description: drillData.description,
-								duration: drillData.duration,
-								videoUrl: drillData.videoUrl,
-								notes: drillData.notes,
-								sets: drillData.sets,
-								reps: drillData.reps,
-								tempo: drillData.tempo,
-								supersetWithId: drillData.supersetWithId,
+								description: drillData.description || "",
+								duration: drillData.duration || "",
+								videoUrl: drillData.videoUrl || "",
+								notes: drillData.notes || "",
+								sets: drillData.sets || 0,
+								reps: drillData.reps || 0,
+								tempo: drillData.tempo || "",
+								supersetWithId: drillData.supersetWithId || "",
 							},
 						})
 					}
@@ -3320,7 +3548,7 @@ export const appRouter = router({
 				z.object({
 					programId: z.string(),
 					clientIds: z.array(z.string()),
-					startDate: z.date().optional(),
+					startDate: z.string().optional(),
 				})
 			)
 			.mutation(async ({ input }) => {
@@ -3378,11 +3606,186 @@ export const appRouter = router({
 						data: {
 							programId: input.programId,
 							clientId,
-							startDate: input.startDate || new Date(),
+							startDate: input.startDate
+								? new Date(input.startDate)
+								: new Date(),
 						},
 					})
 					assignments.push(assignment)
 				}
+
+				return assignments
+			}),
+
+		// Unassign program from clients
+		unassignFromClients: publicProcedure
+			.input(
+				z.object({
+					programId: z.string(),
+					clientIds: z.array(z.string()),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can unassign programs",
+					})
+				}
+
+				// Verify program exists and belongs to coach
+				const program = await db.program.findFirst({
+					where: {
+						id: input.programId,
+						coachId: user.id,
+					},
+				})
+
+				if (!program) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Program not found",
+					})
+				}
+
+				// Delete assignments
+				const result = await db.programAssignment.deleteMany({
+					where: {
+						programId: input.programId,
+						clientId: { in: input.clientIds },
+					},
+				})
+
+				return { deletedCount: result.count }
+			}),
+
+		// Update assignment progress
+		updateAssignmentProgress: publicProcedure
+			.input(
+				z.object({
+					assignmentId: z.string(),
+					progress: z.number().min(0).max(100),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can update progress",
+					})
+				}
+
+				// Verify assignment exists and belongs to coach's program
+				const assignment = await db.programAssignment.findFirst({
+					where: {
+						id: input.assignmentId,
+						program: {
+							coachId: user.id,
+						},
+					},
+				})
+
+				if (!assignment) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Assignment not found",
+					})
+				}
+
+				// Update progress
+				const updatedAssignment = await db.programAssignment.update({
+					where: { id: input.assignmentId },
+					data: {
+						progress: input.progress,
+						completedAt: input.progress === 100 ? new Date() : null,
+					},
+					include: {
+						client: true,
+						program: true,
+					},
+				})
+
+				return updatedAssignment
+			}),
+
+		// Get all assignments for a program
+		getProgramAssignments: publicProcedure
+			.input(z.object({ programId: z.string() }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can view program assignments",
+					})
+				}
+
+				// Verify program exists and belongs to coach
+				const program = await db.program.findFirst({
+					where: {
+						id: input.programId,
+						coachId: user.id,
+					},
+				})
+
+				if (!program) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Program not found",
+					})
+				}
+
+				// Get all assignments for this program (excluding archived clients)
+				const assignments = await db.programAssignment.findMany({
+					where: {
+						programId: input.programId,
+						client: {
+							archived: false, // Exclude archived clients
+						},
+					},
+					include: {
+						client: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								avatar: true,
+							},
+						},
+					},
+					orderBy: {
+						assignedAt: "desc",
+					},
+				})
 
 				return assignments
 			}),
