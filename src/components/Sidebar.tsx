@@ -18,6 +18,7 @@ import {
 	FiX,
 	FiChevronLeft,
 	FiChevronRight,
+	FiBarChart2,
 } from "react-icons/fi"
 import { LogOut, Settings, UserIcon, MessageCircle } from "lucide-react"
 
@@ -29,6 +30,14 @@ const navLinks = [
 		description: "Overview & analytics",
 		badge: null,
 		gradient: "from-blue-500 to-cyan-500",
+	},
+	{
+		name: "Analytics",
+		icon: <FiBarChart2 />,
+		href: "/analytics",
+		description: "Data insights",
+		badge: null,
+		gradient: "from-emerald-500 to-teal-500",
 	},
 	{
 		name: "Clients",

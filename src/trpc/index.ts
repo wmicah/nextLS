@@ -3899,6 +3899,394 @@ export const appRouter = router({
 			}))
 		}),
 	}),
+
+	// Analytics
+	analytics: router({
+		getDashboardData: publicProcedure
+			.input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can access analytics",
+					})
+				}
+
+				// Calculate date ranges
+				const now = new Date()
+				const currentPeriodStart = new Date()
+				const previousPeriodStart = new Date()
+
+				switch (input.timeRange) {
+					case "7d":
+						currentPeriodStart.setDate(now.getDate() - 7)
+						previousPeriodStart.setDate(now.getDate() - 14)
+						break
+					case "30d":
+						currentPeriodStart.setDate(now.getDate() - 30)
+						previousPeriodStart.setDate(now.getDate() - 60)
+						break
+					case "90d":
+						currentPeriodStart.setDate(now.getDate() - 90)
+						previousPeriodStart.setDate(now.getDate() - 180)
+						break
+					case "1y":
+						currentPeriodStart.setFullYear(now.getFullYear() - 1)
+						previousPeriodStart.setFullYear(now.getFullYear() - 2)
+						break
+				}
+
+				// Get active clients count
+				const activeClients = await db.client.count({
+					where: {
+						coachId: user.id,
+						archived: false,
+					},
+				})
+
+				// Get previous period active clients for trend calculation
+				const previousActiveClients = await db.client.count({
+					where: {
+						coachId: user.id,
+						archived: false,
+						createdAt: {
+							lt: currentPeriodStart,
+						},
+					},
+				})
+
+				const activeClientsTrend =
+					previousActiveClients > 0
+						? ((activeClients - previousActiveClients) /
+								previousActiveClients) *
+						  100
+						: 0
+
+				// Get program assignments and calculate average progress
+				const programAssignments = await db.programAssignment.findMany({
+					where: {
+						program: {
+							coachId: user.id,
+						},
+					},
+					include: {
+						program: true,
+					},
+				})
+
+				const averageProgress =
+					programAssignments.length > 0
+						? programAssignments.reduce(
+								(sum, assignment) => sum + assignment.progress,
+								0
+						  ) / programAssignments.length
+						: 0
+
+				// Calculate completion rate
+				const completedPrograms = programAssignments.filter(
+					(assignment) => assignment.progress >= 100
+				).length
+				const completionRate =
+					programAssignments.length > 0
+						? (completedPrograms / programAssignments.length) * 100
+						: 0
+
+				// Calculate retention rate (clients who have been active in the last 30 days)
+				const thirtyDaysAgo = new Date()
+				thirtyDaysAgo.setDate(now.getDate() - 30)
+
+				const recentActivity = await db.programAssignment.findMany({
+					where: {
+						program: {
+							coachId: user.id,
+						},
+						updatedAt: {
+							gte: thirtyDaysAgo,
+						},
+					},
+					select: {
+						clientId: true,
+					},
+				})
+
+				const uniqueActiveClients = new Set(
+					recentActivity.map((a) => a.clientId)
+				).size
+				const retentionRate =
+					activeClients > 0 ? (uniqueActiveClients / activeClients) * 100 : 0
+
+				// Calculate trends based on previous period data
+				const previousPeriodAssignments = await db.programAssignment.findMany({
+					where: {
+						program: {
+							coachId: user.id,
+						},
+						updatedAt: {
+							gte: previousPeriodStart,
+							lt: currentPeriodStart,
+						},
+					},
+				})
+
+				const previousAverageProgress =
+					previousPeriodAssignments.length > 0
+						? previousPeriodAssignments.reduce(
+								(sum, assignment) => sum + assignment.progress,
+								0
+						  ) / previousPeriodAssignments.length
+						: 0
+
+				const previousCompletedPrograms = previousPeriodAssignments.filter(
+					(assignment) => assignment.progress >= 100
+				).length
+				const previousCompletionRate =
+					previousPeriodAssignments.length > 0
+						? (previousCompletedPrograms / previousPeriodAssignments.length) *
+						  100
+						: 0
+
+				const averageProgressTrend =
+					previousAverageProgress > 0
+						? ((averageProgress - previousAverageProgress) /
+								previousAverageProgress) *
+						  100
+						: 0
+
+				const completionRateTrend =
+					previousCompletionRate > 0
+						? ((completionRate - previousCompletionRate) /
+								previousCompletionRate) *
+						  100
+						: 0
+
+				const retentionRateTrend = 1.8 // Mock trend data for now
+
+				return {
+					activeClients,
+					activeClientsTrend,
+					averageProgress,
+					averageProgressTrend,
+					completionRate,
+					completionRateTrend,
+					retentionRate,
+					retentionRateTrend,
+				}
+			}),
+
+		getClientProgress: publicProcedure
+			.input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can access analytics",
+					})
+				}
+
+				// Get clients with their program assignments
+				const clients = await db.client.findMany({
+					where: {
+						coachId: user.id,
+						archived: false,
+					},
+					include: {
+						programAssignments: {
+							include: {
+								program: true,
+							},
+						},
+					},
+				})
+
+				// Calculate progress for each client
+				const clientProgress = clients.map((client) => {
+					const totalProgress = client.programAssignments.reduce(
+						(sum, assignment) => sum + assignment.progress,
+						0
+					)
+					const averageProgress =
+						client.programAssignments.length > 0
+							? totalProgress / client.programAssignments.length
+							: 0
+
+					const programsCompleted = client.programAssignments.filter(
+						(assignment) => assignment.progress >= 100
+					).length
+
+					// Calculate trend based on recent activity
+					const recentAssignments = client.programAssignments.filter(
+						(assignment) => {
+							const thirtyDaysAgo = new Date()
+							thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+							return assignment.updatedAt >= thirtyDaysAgo
+						}
+					)
+
+					const recentProgress =
+						recentAssignments.length > 0
+							? recentAssignments.reduce(
+									(sum, assignment) => sum + assignment.progress,
+									0
+							  ) / recentAssignments.length
+							: 0
+
+					const trend =
+						averageProgress > 0
+							? ((recentProgress - averageProgress) / averageProgress) * 100
+							: 0
+
+					return {
+						id: client.id,
+						name: client.name,
+						progress: averageProgress,
+						programsCompleted,
+						trend,
+					}
+				})
+
+				// Sort by progress (highest first)
+				return clientProgress.sort((a, b) => b.progress - a.progress)
+			}),
+
+		getProgramPerformance: publicProcedure
+			.input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can access analytics",
+					})
+				}
+
+				// Get programs with their assignments
+				const programs = await db.program.findMany({
+					where: {
+						coachId: user.id,
+					},
+					include: {
+						assignments: true,
+					},
+				})
+
+				// Calculate performance for each program
+				const programPerformance = programs.map((program) => {
+					const totalProgress = program.assignments.reduce(
+						(sum, assignment) => sum + assignment.progress,
+						0
+					)
+					const averageProgress =
+						program.assignments.length > 0
+							? totalProgress / program.assignments.length
+							: 0
+
+					const completedAssignments = program.assignments.filter(
+						(assignment) => assignment.progress >= 100
+					).length
+					const completionRate =
+						program.assignments.length > 0
+							? (completedAssignments / program.assignments.length) * 100
+							: 0
+
+					return {
+						id: program.id,
+						title: program.title,
+						activeClients: program.assignments.length,
+						averageProgress,
+						completionRate,
+					}
+				})
+
+				// Sort by completion rate (highest first)
+				return programPerformance.sort(
+					(a, b) => b.completionRate - a.completionRate
+				)
+			}),
+
+		getEngagementMetrics: publicProcedure
+			.input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can access analytics",
+					})
+				}
+
+				// Calculate date range
+				const now = new Date()
+				const periodStart = new Date()
+
+				switch (input.timeRange) {
+					case "7d":
+						periodStart.setDate(now.getDate() - 7)
+						break
+					case "30d":
+						periodStart.setDate(now.getDate() - 30)
+						break
+					case "90d":
+						periodStart.setDate(now.getDate() - 90)
+						break
+					case "1y":
+						periodStart.setFullYear(now.getFullYear() - 1)
+						break
+				}
+
+				// Get message response rate (simplified for now since we don't have full messaging system)
+				const messageResponseRate = 85.5 // Mock data - you can implement real messaging analytics later
+
+				// Get video engagement (simplified for now)
+				const videoEngagement = 78.2 // Mock data - you can implement real video analytics later
+
+				// Get workout completion rate (simplified for now)
+				const workoutCompletion = 92.1 // Mock data - you can implement real workout analytics later
+
+				return {
+					messageResponseRate,
+					videoEngagement,
+					workoutCompletion,
+				}
+			}),
+	}),
 })
 
 export type AppRouter = typeof appRouter

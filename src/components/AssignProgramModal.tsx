@@ -235,13 +235,13 @@ export default function AssignProgramModal({
 	if (!isOpen) return null
 
 	return (
-		<div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-			<div className="bg-gray-800 rounded-xl border border-gray-600 max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
-				<div className="p-6">
-					{/* Header */}
-					<div className="flex items-center justify-between mb-6">
+		<div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+			<div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+				{/* Header - Fixed */}
+				<div className="sticky top-0 z-10 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700/50 px-6 py-4">
+					<div className="flex items-center justify-between">
 						<div>
-							<h3 className="text-xl font-bold text-white">
+							<h3 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
 								{viewMode === "assign"
 									? "Assign Program"
 									: "Manage Assignments"}
@@ -253,36 +253,38 @@ export default function AssignProgramModal({
 							</p>
 						</div>
 						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="sm"
+							<button
 								onClick={() =>
 									setViewMode(viewMode === "assign" ? "manage" : "assign")
 								}
-								className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+								className="px-4 py-2 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 text-white border border-gray-600/50 transition-all duration-200 hover:border-gray-500/50"
 							>
 								{viewMode === "assign" ? "Manage" : "Assign"}
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
+							</button>
+							<button
 								onClick={onClose}
-								className="text-gray-400 hover:text-white"
+								className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-all duration-200"
 							>
 								<X className="h-5 w-5" />
-							</Button>
+							</button>
 						</div>
 					</div>
+				</div>
 
+				{/* Content - Scrollable */}
+				<div
+					className="p-6 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-700/30 [&::-webkit-scrollbar-thumb]:bg-gray-600/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500/50"
+					style={{ height: "calc(90vh - 120px)" }}
+				>
 					{/* Program Selection */}
 					<div className="mb-6">
-						<Label className="text-white text-sm font-medium mb-2 block">
+						<label className="text-white text-sm font-medium mb-3 block">
 							Select Program
-						</Label>
+						</label>
 						<select
 							value={selectedProgram}
 							onChange={(e) => setSelectedProgram(e.target.value)}
-							className="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+							className="w-full p-4 rounded-xl bg-gray-800/50 border border-gray-600/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 placeholder-gray-400"
 						>
 							<option value="">Choose a program...</option>
 							{programs.map((program) => (
@@ -295,48 +297,37 @@ export default function AssignProgramModal({
 
 					{/* Selected Program Details */}
 					{selectedProgramData && (
-						<Card className="bg-gray-700 border-gray-600 mb-6">
-							<CardContent className="p-4">
-								<div className="flex items-start justify-between">
-									<div className="flex-1">
-										<h4 className="text-lg font-semibold text-white mb-2">
-											{selectedProgramData.title}
-										</h4>
-										{selectedProgramData.description && (
-											<p className="text-gray-300 text-sm mb-3">
-												{selectedProgramData.description}
-											</p>
-										)}
-										<div className="flex items-center gap-4 text-sm">
-											<Badge
-												variant="secondary"
-												className="bg-blue-500/20 text-blue-300"
-											>
-												{selectedProgramData.sport}
-											</Badge>
-											<Badge
-												variant="secondary"
-												className="bg-green-500/20 text-green-300"
-											>
-												{selectedProgramData.level}
-											</Badge>
-											<Badge
-												variant="secondary"
-												className="bg-purple-500/20 text-purple-300"
-											>
-												{selectedProgramData.duration} weeks
-											</Badge>
-										</div>
-									</div>
-									<div className="text-right">
-										<div className="flex items-center gap-2 text-sm text-gray-400">
-											<Users className="h-4 w-4" />
-											<span>{selectedProgramData.duration} weeks</span>
-										</div>
+						<div className="bg-gradient-to-r from-gray-800/50 to-gray-700/50 rounded-xl border border-gray-600/50 p-6 mb-6">
+							<div className="flex items-start justify-between">
+								<div className="flex-1">
+									<h4 className="text-xl font-semibold text-white mb-3">
+										{selectedProgramData.title}
+									</h4>
+									{selectedProgramData.description && (
+										<p className="text-gray-300 text-sm mb-4">
+											{selectedProgramData.description}
+										</p>
+									)}
+									<div className="flex items-center gap-3 text-sm">
+										<span className="px-3 py-1 rounded-full bg-gray-600/50 text-gray-300 text-xs font-medium">
+											{selectedProgramData.sport}
+										</span>
+										<span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 text-xs font-medium">
+											{selectedProgramData.level}
+										</span>
+										<span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-medium">
+											{selectedProgramData.duration} weeks
+										</span>
 									</div>
 								</div>
-							</CardContent>
-						</Card>
+								<div className="text-right">
+									<div className="flex items-center gap-2 text-sm text-gray-400">
+										<Users className="h-4 w-4" />
+										<span>{selectedProgramData.duration} weeks</span>
+									</div>
+								</div>
+							</div>
+						</div>
 					)}
 
 					{viewMode === "assign" ? (
@@ -344,37 +335,35 @@ export default function AssignProgramModal({
 						<div className="space-y-6">
 							{/* Start Date */}
 							<div>
-								<Label className="text-white text-sm font-medium mb-2 block">
+								<label className="text-white text-sm font-medium mb-3 block">
 									Start Date (Optional)
-								</Label>
-								<Input
+								</label>
+								<input
 									type="date"
 									value={startDate}
 									onChange={(e) => setStartDate(e.target.value)}
-									className="bg-gray-700 border-gray-600 text-white"
+									className="w-full p-4 rounded-xl bg-gray-800/50 border border-gray-600/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
 								/>
 							</div>
 
 							{/* Client Selection */}
 							<div>
 								<div className="flex items-center justify-between mb-4">
-									<Label className="text-white text-sm font-medium">
+									<label className="text-white text-sm font-medium">
 										Select Clients ({selectedClients.length} selected)
-									</Label>
-									<Button
-										variant="outline"
-										size="sm"
+									</label>
+									<button
 										onClick={toggleAllClients}
-										className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+										className="px-4 py-2 rounded-lg bg-gray-600/50 hover:bg-gray-500/50 text-white border border-gray-500/50 transition-all duration-200 hover:border-gray-400/50 text-sm"
 									>
 										{selectedClients.length === clients.length
 											? "Deselect All"
 											: "Select All"}
-									</Button>
+									</button>
 								</div>
 
-								<ScrollArea className="h-64 border border-gray-600 rounded-lg">
-									<div className="p-4 space-y-2">
+								<div className="h-64 border border-gray-600/50 rounded-xl overflow-y-auto bg-gray-800/30 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-700/30 [&::-webkit-scrollbar-thumb]:bg-gray-600/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500/50">
+									<div className="p-4 space-y-3">
 										{clients.map((client: Client) => {
 											const isSelected = selectedClients.includes(client.id)
 											const hasCurrentProgram = client.programAssignments?.some(
@@ -384,36 +373,31 @@ export default function AssignProgramModal({
 											return (
 												<div
 													key={client.id}
-													className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+													className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
 														isSelected
-															? "bg-blue-500/20 border-blue-500/50"
-															: "bg-gray-700/50 border-gray-600 hover:bg-gray-700"
+															? "bg-blue-500/20 border-blue-500/50 shadow-lg"
+															: "bg-gray-700/30 border-gray-600/50 hover:bg-gray-700/50 hover:border-gray-500/50"
 													}`}
 													onClick={() => toggleClientSelection(client.id)}
 												>
-													<Checkbox
+													<input
+														type="checkbox"
 														checked={isSelected}
 														onChange={() => toggleClientSelection(client.id)}
-														className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+														className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-gray-300 focus:ring-gray-500/50 focus:ring-2"
 													/>
-													<Avatar className="h-10 w-10">
-														<AvatarImage src={client.avatar || undefined} />
-														<AvatarFallback className="bg-blue-600 text-white">
-															{client.name.charAt(0).toUpperCase()}
-														</AvatarFallback>
-													</Avatar>
+													<div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white font-semibold">
+														{client.name.charAt(0).toUpperCase()}
+													</div>
 													<div className="flex-1 min-w-0">
 														<div className="flex items-center gap-2">
 															<h4 className="text-white font-medium truncate">
 																{client.name}
 															</h4>
 															{hasCurrentProgram && (
-																<Badge
-																	variant="secondary"
-																	className="bg-orange-500/20 text-orange-300 text-xs"
-																>
+																<span className="px-2 py-1 rounded-full bg-orange-500/20 text-orange-300 text-xs font-medium">
 																	Already Assigned
-																</Badge>
+																</span>
 															)}
 														</div>
 														{client.email && (
@@ -434,31 +418,30 @@ export default function AssignProgramModal({
 											)
 										})}
 									</div>
-								</ScrollArea>
+								</div>
 							</div>
 
 							{/* Action Buttons */}
-							<div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-600">
-								<Button
-									variant="outline"
+							<div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-600/50">
+								<button
 									onClick={onClose}
-									className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+									className="px-6 py-3 rounded-xl bg-gray-700/50 hover:bg-gray-600/50 text-white border border-gray-600/50 transition-all duration-200 hover:border-gray-500/50"
 								>
 									Cancel
-								</Button>
-								<Button
+								</button>
+								<button
 									onClick={handleAssign}
 									disabled={
 										isAssigning ||
 										!selectedProgram ||
 										selectedClients.length === 0
 									}
-									className="bg-blue-600 hover:bg-blue-700 text-white"
+									className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{isAssigning
 										? "Assigning..."
 										: `Assign to ${selectedClients.length} Client(s)`}
-								</Button>
+								</button>
 							</div>
 						</div>
 					) : (
@@ -466,11 +449,11 @@ export default function AssignProgramModal({
 						<div className="space-y-6">
 							{/* Assignment List */}
 							<div>
-								<Label className="text-white text-sm font-medium mb-4 block">
+								<label className="text-white text-sm font-medium mb-4 block">
 									Current Assignments ({programAssignments.length})
-								</Label>
+								</label>
 
-								<ScrollArea className="h-64 border border-gray-600 rounded-lg">
+								<div className="h-64 border border-gray-600/50 rounded-xl overflow-y-auto bg-gray-800/30 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-700/30 [&::-webkit-scrollbar-thumb]:bg-gray-600/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500/50">
 									<div className="p-4 space-y-3">
 										{programAssignments.length === 0 ? (
 											<div className="text-center py-8">
@@ -481,99 +464,87 @@ export default function AssignProgramModal({
 											</div>
 										) : (
 											programAssignments.map((assignment) => (
-												<Card
+												<div
 													key={assignment.id}
-													className="bg-gray-700 border-gray-600"
+													className="bg-gradient-to-r from-gray-800/50 to-gray-700/50 rounded-xl border border-gray-600/50 p-4"
 												>
-													<CardContent className="p-4">
-														<div className="flex items-center justify-between">
-															<div className="flex items-center gap-3">
-																<Avatar className="h-10 w-10">
-																	<AvatarImage
-																		src={assignment.client.avatar || undefined}
-																	/>
-																	<AvatarFallback className="bg-blue-600 text-white">
-																		{assignment.client.name
-																			.charAt(0)
-																			.toUpperCase()}
-																	</AvatarFallback>
-																</Avatar>
-																<div>
-																	<h4 className="text-white font-medium">
-																		{assignment.client.name}
-																	</h4>
-																	{assignment.client.email && (
-																		<p className="text-gray-400 text-sm">
-																			{assignment.client.email}
-																		</p>
-																	)}
-																	<div className="flex items-center gap-2 mt-1">
-																		<Calendar className="h-3 w-3 text-gray-400" />
-																		<span className="text-xs text-gray-400">
-																			Assigned{" "}
-																			{format(
-																				new Date(assignment.assignedAt),
-																				"MMM dd, yyyy"
-																			)}
-																		</span>
-																	</div>
-																</div>
+													<div className="flex items-center justify-between">
+														<div className="flex items-center gap-3">
+															<div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white font-semibold">
+																{assignment.client.name.charAt(0).toUpperCase()}
 															</div>
-															<div className="flex items-center gap-4">
-																<div className="text-right">
-																	<div className="flex items-center gap-2">
-																		<Target className="h-4 w-4 text-green-400" />
-																		<span className="text-white font-medium">
-																			{assignment.progress}%
-																		</span>
-																	</div>
-																	<div className="w-24 bg-gray-600 rounded-full h-2 mt-1">
-																		<div
-																			className="bg-green-500 h-2 rounded-full transition-all duration-300"
-																			style={{
-																				width: `${assignment.progress}%`,
-																			}}
-																		/>
-																	</div>
+															<div>
+																<h4 className="text-white font-medium">
+																	{assignment.client.name}
+																</h4>
+																{assignment.client.email && (
+																	<p className="text-gray-400 text-sm">
+																		{assignment.client.email}
+																	</p>
+																)}
+																<div className="flex items-center gap-2 mt-1">
+																	<Calendar className="h-3 w-3 text-gray-400" />
+																	<span className="text-xs text-gray-400">
+																		Assigned{" "}
+																		{format(
+																			new Date(assignment.assignedAt),
+																			"MMM dd, yyyy"
+																		)}
+																	</span>
 																</div>
-																<Button
-																	variant="outline"
-																	size="sm"
-																	onClick={() =>
-																		handleUnassign([assignment.clientId])
-																	}
-																	className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20"
-																>
-																	<X className="h-4 w-4" />
-																</Button>
 															</div>
 														</div>
-													</CardContent>
-												</Card>
+														<div className="flex items-center gap-4">
+															<div className="text-right">
+																<div className="flex items-center gap-2">
+																	<Target className="h-4 w-4 text-green-400" />
+																	<span className="text-white font-medium">
+																		{assignment.progress}%
+																	</span>
+																</div>
+																<div className="w-24 bg-gray-600/50 rounded-full h-2 mt-1">
+																	<div
+																		className="bg-gradient-to-r from-green-500 to-green-400 h-2 rounded-full transition-all duration-300"
+																		style={{
+																			width: `${assignment.progress}%`,
+																		}}
+																	/>
+																</div>
+															</div>
+															<button
+																onClick={() =>
+																	handleUnassign([assignment.clientId])
+																}
+																className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all duration-200"
+															>
+																<X className="h-4 w-4" />
+															</button>
+														</div>
+													</div>
+												</div>
 											))
 										)}
 									</div>
-								</ScrollArea>
+								</div>
 							</div>
 
 							{/* Bulk Actions */}
 							{programAssignments.length > 0 && (
-								<div className="flex items-center justify-between pt-4 border-t border-gray-600">
-									<Button
-										variant="outline"
+								<div className="flex items-center justify-between pt-6 border-t border-gray-600/50">
+									<button
 										onClick={() =>
 											handleUnassign(programAssignments.map((a) => a.clientId))
 										}
-										className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20"
+										className="px-6 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all duration-200"
 									>
 										Unassign All
-									</Button>
-									<Button
+									</button>
+									<button
 										onClick={onClose}
-										className="bg-gray-600 hover:bg-gray-700 text-white"
+										className="px-6 py-3 rounded-xl bg-gray-600/50 hover:bg-gray-700/50 text-white transition-all duration-200"
 									>
 										Close
-									</Button>
+									</button>
 								</div>
 							)}
 						</div>
