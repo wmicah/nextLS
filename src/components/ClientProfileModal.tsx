@@ -3,18 +3,17 @@
 import { useState, useEffect } from "react"
 import { trpc } from "@/app/_trpc/client"
 import { useUIStore } from "@/lib/stores/uiStore"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+// import { Button } from "@/components/ui/button"
+// import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ProfilePictureUploader from "./ProfilePictureUploader"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+// import { Badge } from "@/components/ui/badge"
+// import { Progress } from "@/components/ui/progress"
 import {
 	Calendar,
-	Users,
 	Target,
 	Clock,
 	Mail,
@@ -25,7 +24,6 @@ import {
 	TrendingUp,
 	Activity,
 	BookOpen,
-	Star,
 } from "lucide-react"
 import { format } from "date-fns"
 
@@ -40,51 +38,51 @@ interface ClientProfileModalProps {
 	clientAvatar?: string | null
 }
 
-interface Client {
-	id: string
-	name: string
-	email: string | null
-	phone: string | null
-	notes: string | null
-	avatar: string | null
-	createdAt: string
-	updatedAt: string
-	nextLessonDate: string | null
-	lastCompletedWorkout: string | null
-	// Pitching Information
-	age?: number | null
-	height?: string | null
-	dominantHand?: string | null
-	movementStyle?: string | null
-	reachingAbility?: string | null
-	averageSpeed?: number | null
-	topSpeed?: number | null
-	dropSpinRate?: number | null
-	changeupSpinRate?: number | null
-	riseSpinRate?: number | null
-	curveSpinRate?: number | null
-	user?: {
-		id: string
-		name: string | null
-		email: string
-		settings: {
-			avatarUrl: string | null
-		} | null
-	} | null
-	programAssignments?: {
-		id: string
-		programId: string
-		assignedAt: string
-		progress: number
-		program: {
-			id: string
-			title: string
-			status: string
-			sport: string
-			level: string
-		}
-	}[]
-}
+// interface Client {
+// 	id: string
+// 	name: string
+// 	email: string | null
+// 	phone: string | null
+// 	notes: string | null
+// 	avatar: string | null
+// 	createdAt: string
+// 	updatedAt: string
+// 	nextLessonDate: string | null
+// 	lastCompletedWorkout: string | null
+// 	// Pitching Information
+// 	age?: number | null
+// 	height?: string | null
+// 	dominantHand?: string | null
+// 	movementStyle?: string | null
+// 	reachingAbility?: string | null
+// 	averageSpeed?: number | null
+// 	topSpeed?: number | null
+// 	dropSpinRate?: number | null
+// 	changeupSpinRate?: number | null
+// 	riseSpinRate?: number | null
+// 	curveSpinRate?: number | null
+// 	user?: {
+// 		id: string
+// 		name: string | null
+// 		email: string
+// 		settings: {
+// 			avatarUrl: string | null
+// 		} | null
+// 	} | null
+// 	programAssignments?: {
+// 		id: string
+// 		programId: string
+// 		assignedAt: string
+// 		progress: number
+// 		program: {
+// 			id: string
+// 			title: string
+// 			status: string
+// 			sport: string
+// 			level: string
+// 		}
+// 	}[]
+// }
 
 export default function ClientProfileModal({
 	isOpen,
@@ -94,8 +92,8 @@ export default function ClientProfileModal({
 	clientEmail,
 	clientPhone,
 	clientNotes,
-	clientAvatar,
-}: ClientProfileModalProps) {
+}: // clientAvatar,
+ClientProfileModalProps) {
 	console.log("ClientProfileModal rendered with props:", {
 		isOpen,
 		clientId,
@@ -266,7 +264,7 @@ export default function ClientProfileModal({
 								Client Profile
 							</h3>
 							<p className="text-sm mt-1" style={{ color: "#ABA4AA" }}>
-								Overview of {clientName}'s information and progress
+								Overview of {clientName}&apos;s information and progress
 							</p>
 						</div>
 						<div className="flex items-center gap-2">
@@ -1152,7 +1150,7 @@ export default function ClientProfileModal({
 														No Recent Activity
 													</p>
 													<p className="text-sm" style={{ color: "#ABA4AA" }}>
-														This client hasn't completed any workouts yet
+														This client hasn&apos;t completed any workouts yet
 													</p>
 												</div>
 											</div>

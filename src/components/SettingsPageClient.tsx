@@ -10,22 +10,16 @@ import {
 	MessageSquare,
 	Users,
 	Calendar,
-	Shield,
 	Palette,
 	CreditCard,
 	Save,
-	X,
-	Camera,
-	Mail,
-	Phone,
-	Globe,
-	Clock,
-	FileText,
 	Settings as SettingsIcon,
 } from "lucide-react"
 import ProfilePictureUploader from "@/components/ProfilePictureUploader"
 
-interface SettingsPageClientProps {}
+interface SettingsPageClientProps {
+	// Add props here if needed in the future
+}
 
 export default function SettingsPageClient({}: SettingsPageClientProps) {
 	const [activeTab, setActiveTab] = useState("profile")
@@ -72,12 +66,12 @@ export default function SettingsPageClient({}: SettingsPageClientProps) {
 		showAnimations: true,
 	})
 
-	const [billingData, setBillingData] = useState({
-		subscriptionStatus: "active",
-		planName: "Pro Plan",
-		nextBillingDate: "2024-01-15",
-		stripeCustomerId: "",
-	})
+	// const [billingData, setBillingData] = useState({
+	// 	subscriptionStatus: "active",
+	// 	planName: "Pro Plan",
+	// 	nextBillingDate: "2024-01-15",
+	// 	stripeCustomerId: "",
+	// })
 
 	// Get current user data
 	const { data: currentUser, refetch: refetchUser } =

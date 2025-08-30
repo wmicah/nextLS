@@ -6,20 +6,13 @@ import { trpc } from "@/app/_trpc/client"
 import {
 	Search,
 	Plus,
-	MoreVertical,
 	Send,
 	Paperclip,
 	Image as ImageIcon,
 	File,
 	Video,
-	Archive,
-	Trash2,
-	User,
-	Clock,
-	Check,
 	CheckCheck,
 	X,
-	ArrowLeft,
 } from "lucide-react"
 import Sidebar from "./Sidebar"
 import { format } from "date-fns"
@@ -27,17 +20,19 @@ import MessageFileUpload from "./MessageFileUpload"
 import MessageNotification from "./MessageNotification"
 import ProfilePictureUploader from "./ProfilePictureUploader"
 
-interface MessagesPageProps {}
+interface MessagesPageProps {
+	// Add props here if needed in the future
+}
 
 export default function MessagesPage({}: MessagesPageProps) {
-	const router = useRouter()
+	// const router = useRouter()
 	const [selectedConversation, setSelectedConversation] = useState<
 		string | null
 	>(null)
 	const [searchTerm, setSearchTerm] = useState("")
 	const [messageText, setMessageText] = useState("")
-	const [isTyping, setIsTyping] = useState(false)
-	const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+	// const [isTyping, setIsTyping] = useState(false)
+	// const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 	const [showFileUpload, setShowFileUpload] = useState(false)
 	const [showCreateModal, setShowCreateModal] = useState(false)
 	const [clientSearchTerm, setClientSearchTerm] = useState("")
@@ -51,7 +46,7 @@ export default function MessagesPage({}: MessagesPageProps) {
 		}
 	} | null>(null)
 	const messagesEndRef = useRef<HTMLDivElement>(null)
-	const fileInputRef = useRef<HTMLInputElement>(null)
+	// const fileInputRef = useRef<HTMLInputElement>(null)
 
 	// Get current user info
 	const { data: currentUser } = trpc.user.getProfile.useQuery()

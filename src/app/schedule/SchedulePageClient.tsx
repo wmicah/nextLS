@@ -338,7 +338,7 @@ export default function SchedulePageClient() {
 	// 	return lesson.status === "PENDING"
 	// }
 
-	const isCoachScheduled = (lesson: { status: string }) => {
+	const isCoachScheduled = (_lesson: { status: string }) => {
 		return true // All lessons in coachSchedule are coach-scheduled (confirmed)
 	}
 

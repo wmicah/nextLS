@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { trpc } from "@/app/_trpc/client"
 import {
 	Calendar,
@@ -17,7 +17,6 @@ import {
 	User,
 	Send,
 	X,
-	Users,
 	Video,
 	TrendingUp,
 	BarChart3,
@@ -29,8 +28,6 @@ import {
 	Zap,
 	Star,
 	CheckCircle2,
-	PlayCircle,
-	Timer,
 	Award,
 	CalendarCheck,
 	CalendarX,
@@ -39,17 +36,17 @@ import {
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet"
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+// import {
+// 	Sheet,
+// 	SheetContent,
+// 	SheetHeader,
+// 	SheetTitle,
+// 	SheetTrigger,
+// } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
+// import { Progress } from "@/components/ui/progress"
+// import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import {
 	format,
@@ -64,8 +61,8 @@ import {
 	isSameMonth,
 	addDays,
 	isToday,
-	isPast,
-	isFuture,
+	// isPast,
+	// isFuture,
 } from "date-fns"
 import ClientSidebar from "@/components/ClientSidebar"
 
@@ -89,26 +86,26 @@ interface DayData {
 	totalDrills: number
 }
 
-interface ProgramInfo {
-	id: string
-	title: string
-	description?: string
-	startDate: string
-	endDate: string
-	currentWeek: number
-	totalWeeks: number
-	overallProgress: number
-	coachName: string
-}
+// interface ProgramInfo {
+// 	id: string
+// 	title: string
+// 	description?: string
+// 	startDate: string
+// 	endDate: string
+// 	currentWeek: number
+// 	totalWeeks: number
+// 	overallProgress: number
+// 	coachName: string
+// }
 
-interface WeeklyStats {
-	totalWorkouts: number
-	completedWorkouts: number
-	totalDrills: number
-	completedDrills: number
-	weeklyProgress: number
-	streak: number
-}
+// interface WeeklyStats {
+// 	totalWorkouts: number
+// 	completedWorkouts: number
+// 	totalDrills: number
+// 	completedDrills: number
+// 	weeklyProgress: number
+// 	streak: number
+// }
 
 export default function ClientProgramPage() {
 	const [currentDate, setCurrentDate] = useState(new Date())
@@ -123,10 +120,19 @@ export default function ClientProgramPage() {
 		id: string
 		title: string
 	} | null>(null)
-	const [selectedVideo, setSelectedVideo] = useState<any>(null)
+	const [selectedVideo, setSelectedVideo] = useState<{
+		id: string
+		title: string
+		url: string
+		isYoutube?: boolean
+		youtubeId?: string
+		type?: string
+	} | null>(null)
 	const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false)
-	const [selectedDrillForComment, setSelectedDrillForComment] =
-		useState<any>(null)
+	const [selectedDrillForComment, setSelectedDrillForComment] = useState<{
+		id: string
+		title: string
+	} | null>(null)
 	const [isCommentModalOpen, setIsCommentModalOpen] = useState(false)
 	const [commentText, setCommentText] = useState("")
 	const [isSubmittingComment, setIsSubmittingComment] = useState(false)
@@ -169,25 +175,25 @@ export default function ClientProgramPage() {
 	)
 
 	// Calendar navigation
-	const goToPreviousMonth = () => {
-		setCurrentDate((prev) => {
-			const newDate = new Date(prev)
-			newDate.setMonth(prev.getMonth() - 1)
-			return newDate
-		})
-	}
+	// const goToPreviousMonth = () => {
+	// 	setCurrentDate((prev) => {
+	// 		const newDate = new Date(prev)
+	// 		newDate.setMonth(prev.getMonth() - 1)
+	// 		return newDate
+	// 	})
+	// }
 
-	const goToNextMonth = () => {
-		setCurrentDate((prev) => {
-			const newDate = new Date(prev)
-			newDate.setMonth(prev.getMonth() + 1)
-			return newDate
-		})
-	}
+	// const goToNextMonth = () => {
+	// 	setCurrentDate((prev) => {
+	// 		const newDate = new Date(prev)
+	// 		newDate.setMonth(prev.getMonth() + 1)
+	// 		return newDate
+	// 	})
+	// }
 
-	const goToToday = () => {
-		setCurrentDate(new Date())
-	}
+	// const goToToday = () => {
+	// 	setCurrentDate(new Date())
+	// }
 
 	// Generate calendar days for the current month view
 	const monthStart = startOfMonth(currentDate)
@@ -209,7 +215,7 @@ export default function ClientProgramPage() {
 
 	const getLessonsForDate = (date: Date) => {
 		const now = new Date()
-		const lessons = clientLessons.filter((lesson: any) => {
+		const lessons = clientLessons.filter((lesson: { date: string }) => {
 			const lessonDate = new Date(lesson.date)
 			const lessonDateOnly = new Date(
 				lessonDate.getFullYear(),
@@ -285,26 +291,32 @@ export default function ClientProgramPage() {
 		console.log("Available library items:", libraryItems)
 
 		// Find the video in the library based on the URL
-		const videoItem = libraryItems?.find((item: any) => {
-			// Direct URL match
-			if (item.url === videoUrl) return true
+		const videoItem = libraryItems?.find(
+			(item: {
+				url?: string
+				isYoutube?: boolean
+				youtubeId?: string | null
+			}) => {
+				// Direct URL match
+				if (item.url === videoUrl) return true
 
-			// YouTube ID match
-			if (item.isYoutube && item.youtubeId) {
-				// Check if the videoUrl contains the YouTube ID
-				if (videoUrl.includes(item.youtubeId)) return true
+				// YouTube ID match
+				if (item.isYoutube && item.youtubeId) {
+					// Check if the videoUrl contains the YouTube ID
+					if (videoUrl.includes(item.youtubeId)) return true
 
-				// Check if it's a YouTube embed URL
-				if (videoUrl.includes(`youtube.com/embed/${item.youtubeId}`))
-					return true
+					// Check if it's a YouTube embed URL
+					if (videoUrl.includes(`youtube.com/embed/${item.youtubeId}`))
+						return true
 
-				// Check if it's a YouTube watch URL
-				if (videoUrl.includes(`youtube.com/watch?v=${item.youtubeId}`))
-					return true
+					// Check if it's a YouTube watch URL
+					if (videoUrl.includes(`youtube.com/watch?v=${item.youtubeId}`))
+						return true
+				}
+
+				return false
 			}
-
-			return false
-		})
+		)
 
 		console.log("Found video item:", videoItem)
 
@@ -319,6 +331,7 @@ export default function ClientProgramPage() {
 			if (youtubeIdMatch) {
 				const youtubeId = youtubeIdMatch[1]
 				setSelectedVideo({
+					id: "youtube-" + youtubeId,
 					isYoutube: true,
 					youtubeId: youtubeId,
 					title: "YouTube Video",
@@ -327,7 +340,12 @@ export default function ClientProgramPage() {
 				setIsVideoPlayerOpen(true)
 			} else {
 				// Fallback: treat as direct video URL
-				setSelectedVideo({ url: videoUrl, type: "video" })
+				setSelectedVideo({
+					id: "direct-" + Date.now(),
+					url: videoUrl,
+					type: "video",
+					title: "Video",
+				})
 				setIsVideoPlayerOpen(true)
 			}
 		}
@@ -340,7 +358,7 @@ export default function ClientProgramPage() {
 	}
 
 	// Handle opening comment modal
-	const handleOpenCommentModal = (drill: any) => {
+	const handleOpenCommentModal = (drill: { id: string; title: string }) => {
 		setSelectedDrillForComment(drill)
 		setIsCommentModalOpen(true)
 	}
@@ -384,19 +402,19 @@ export default function ClientProgramPage() {
 		return { type: "pending", label: "Pending", icon: "⏳" }
 	}
 
-	// Get status color
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "complete":
-				return "bg-green-100 text-green-800 border-green-200"
-			case "partial":
-				return "bg-yellow-100 text-yellow-800 border-yellow-200"
-			case "rest":
-				return "bg-blue-100 text-blue-800 border-blue-200"
-			default:
-				return "bg-gray-100 text-gray-800 border-gray-200"
-		}
-	}
+	// // Get status color
+	// const getStatusColor = (status: string) => {
+	// 	switch (status) {
+	// 		case "complete":
+	// 			return "bg-green-100 text-green-800 border-green-200"
+	// 		case "partial":
+	// 			return "bg-yellow-100 text-yellow-800 border-yellow-200"
+	// 		case "rest":
+	// 			return "bg-blue-100 text-blue-800 border-blue-200"
+	// 		default:
+	// 			return "bg-gray-100 text-gray-800 border-gray-200"
+	// 	}
+	// }
 
 	return (
 		<ClientSidebar>
@@ -510,7 +528,9 @@ export default function ClientProgramPage() {
 							].map((tab) => (
 								<button
 									key={tab.id}
-									onClick={() => setActiveTab(tab.id as any)}
+									onClick={() =>
+										setActiveTab(tab.id as "overview" | "calendar" | "progress")
+									}
 									className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${
 										activeTab === tab.id
 											? "shadow-lg border"
@@ -738,7 +758,22 @@ export default function ClientProgramPage() {
 
 									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 										{programInfo.allPrograms?.map(
-											(program: any, index: number) => (
+											(
+												program: {
+													id: string
+													title: string
+													description: string | null
+													startDate: string
+													endDate: string
+													currentWeek: number
+													totalWeeks: number
+													overallProgress: number
+													coachName: string | null
+													assignmentId: string
+													assignedAt: string
+												},
+												index: number
+											) => (
 												<div
 													key={program.id}
 													className={`rounded-2xl p-6 transition-all duration-200 hover:scale-105 shadow-lg border ${
@@ -1014,7 +1049,7 @@ export default function ClientProgramPage() {
 											className="text-3xl font-bold"
 											style={{ color: "#C3BCC2" }}
 										>
-											This Week's Schedule
+											This Week&apos;s Schedule
 										</h2>
 									</div>
 									<button
@@ -1163,8 +1198,8 @@ export default function ClientProgramPage() {
 								>
 									<p className="text-sm" style={{ color: "#ABA4AA" }}>
 										💡 <strong>Tip:</strong> Click on any day to see detailed
-										workouts, or use the "Calendar" tab above to view your full
-										program schedule for the entire month.
+										workouts, or use the &quot;Calendar&quot; tab above to view
+										your full program schedule for the entire month.
 									</p>
 								</div>
 							</div>
@@ -1195,7 +1230,7 @@ export default function ClientProgramPage() {
 												className="text-3xl font-bold"
 												style={{ color: "#C3BCC2" }}
 											>
-												Today's Plan
+												Today&apos;s Plan
 											</h2>
 										</div>
 										<div
@@ -1227,69 +1262,80 @@ export default function ClientProgramPage() {
 														>
 															📅 Scheduled Lessons
 														</h3>
-														{todaysLessons.map((lesson: any, index: number) => (
-															<div
-																key={index}
-																className="rounded-xl p-6 transition-all duration-200 hover:scale-102 shadow-lg border"
-																style={{
-																	backgroundColor: "#2B3038",
-																	borderColor: "#10B981",
-																	borderWidth: "1px",
-																}}
-															>
-																<div className="flex items-center justify-between">
-																	<div className="flex-1">
-																		<div className="flex items-center gap-3 mb-2">
-																			<div
-																				className="p-2 rounded-full"
-																				style={{ backgroundColor: "#10B981" }}
-																			>
-																				<CalendarCheck
-																					className="h-4 w-4"
+														{todaysLessons.map(
+															(
+																lesson: {
+																	id: string
+																	date: string
+																	title: string
+																	status: string
+																	coach?: { name?: string }
+																},
+																index: number
+															) => (
+																<div
+																	key={index}
+																	className="rounded-xl p-6 transition-all duration-200 hover:scale-102 shadow-lg border"
+																	style={{
+																		backgroundColor: "#2B3038",
+																		borderColor: "#10B981",
+																		borderWidth: "1px",
+																	}}
+																>
+																	<div className="flex items-center justify-between">
+																		<div className="flex-1">
+																			<div className="flex items-center gap-3 mb-2">
+																				<div
+																					className="p-2 rounded-full"
+																					style={{ backgroundColor: "#10B981" }}
+																				>
+																					<CalendarCheck
+																						className="h-4 w-4"
+																						style={{ color: "#C3BCC2" }}
+																					/>
+																				</div>
+																				<h4
+																					className="text-lg font-semibold"
 																					style={{ color: "#C3BCC2" }}
-																				/>
+																				>
+																					{format(
+																						new Date(lesson.date),
+																						"h:mm a"
+																					)}
+																				</h4>
 																			</div>
-																			<h4
-																				className="text-lg font-semibold"
-																				style={{ color: "#C3BCC2" }}
+																			<p
+																				className="text-base mb-2"
+																				style={{ color: "#ABA4AA" }}
 																			>
-																				{format(
-																					new Date(lesson.date),
-																					"h:mm a"
-																				)}
-																			</h4>
+																				{lesson.title || "Lesson with Coach"}
+																			</p>
+																			<div className="flex items-center gap-2">
+																				<User
+																					className="h-4 w-4"
+																					style={{ color: "#ABA4AA" }}
+																				/>
+																				<span
+																					className="text-sm"
+																					style={{ color: "#ABA4AA" }}
+																				>
+																					{lesson.coach?.name || "Coach"}
+																				</span>
+																			</div>
 																		</div>
-																		<p
-																			className="text-base mb-2"
-																			style={{ color: "#ABA4AA" }}
+																		<button
+																			className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105"
+																			style={{
+																				backgroundColor: "#10B981",
+																				color: "#C3BCC2",
+																			}}
 																		>
-																			{lesson.title || "Lesson with Coach"}
-																		</p>
-																		<div className="flex items-center gap-2">
-																			<User
-																				className="h-4 w-4"
-																				style={{ color: "#ABA4AA" }}
-																			/>
-																			<span
-																				className="text-sm"
-																				style={{ color: "#ABA4AA" }}
-																			>
-																				{lesson.coach?.name || "Coach"}
-																			</span>
-																		</div>
+																			Join
+																		</button>
 																	</div>
-																	<button
-																		className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105"
-																		style={{
-																			backgroundColor: "#10B981",
-																			color: "#C3BCC2",
-																		}}
-																	>
-																		Join
-																	</button>
 																</div>
-															</div>
-														))}
+															)
+														)}
 													</div>
 												)}
 
@@ -1425,7 +1471,7 @@ export default function ClientProgramPage() {
 															className="text-base mb-4"
 															style={{ color: "#F59E0B" }}
 														>
-															Take it easy and recover. You've earned it!
+															Take it easy and recover. You&apos;ve earned it!
 														</p>
 														<button
 															onClick={() => setActiveTab("calendar")}
@@ -1511,75 +1557,89 @@ export default function ClientProgramPage() {
 									{(() => {
 										const now = new Date()
 										const upcomingLessons = clientLessons
-											.filter((lesson: any) => new Date(lesson.date) > now)
+											.filter(
+												(lesson: { date: string }) =>
+													new Date(lesson.date) > now
+											)
 											.slice(0, 5)
 
 										return (
 											<div className="space-y-4">
 												{upcomingLessons.length > 0 ? (
-													upcomingLessons.map((lesson: any, index: number) => (
-														<div
-															key={index}
-															className="rounded-xl p-6 transition-all duration-200 hover:scale-102 shadow-lg border"
-															style={{
-																backgroundColor: "#2B3038",
-																borderColor: "#606364",
-																borderWidth: "1px",
-															}}
-														>
-															<div className="flex items-center justify-between">
-																<div className="flex-1">
-																	<div className="flex items-center gap-3 mb-2">
-																		<div
-																			className="p-2 rounded-full"
-																			style={{ backgroundColor: "#4A5A70" }}
-																		>
-																			<CalendarClock
-																				className="h-4 w-4"
+													upcomingLessons.map(
+														(
+															lesson: {
+																id: string
+																date: string
+																title: string
+																status: string
+																coach?: { name?: string }
+															},
+															index: number
+														) => (
+															<div
+																key={index}
+																className="rounded-xl p-6 transition-all duration-200 hover:scale-102 shadow-lg border"
+																style={{
+																	backgroundColor: "#2B3038",
+																	borderColor: "#606364",
+																	borderWidth: "1px",
+																}}
+															>
+																<div className="flex items-center justify-between">
+																	<div className="flex-1">
+																		<div className="flex items-center gap-3 mb-2">
+																			<div
+																				className="p-2 rounded-full"
+																				style={{ backgroundColor: "#4A5A70" }}
+																			>
+																				<CalendarClock
+																					className="h-4 w-4"
+																					style={{ color: "#C3BCC2" }}
+																				/>
+																			</div>
+																			<h4
+																				className="text-lg font-semibold"
 																				style={{ color: "#C3BCC2" }}
-																			/>
+																			>
+																				{format(
+																					new Date(lesson.date),
+																					"MMM d, h:mm a"
+																				)}
+																			</h4>
 																		</div>
-																		<h4
-																			className="text-lg font-semibold"
-																			style={{ color: "#C3BCC2" }}
+																		<p
+																			className="text-base mb-2"
+																			style={{ color: "#ABA4AA" }}
 																		>
-																			{format(
-																				new Date(lesson.date),
-																				"MMM d, h:mm a"
-																			)}
-																		</h4>
+																			{lesson.title || "Lesson with Coach"}
+																		</p>
+																		<div className="flex items-center gap-2">
+																			<User
+																				className="h-4 w-4"
+																				style={{ color: "#ABA4AA" }}
+																			/>
+																			<span
+																				className="text-sm"
+																				style={{ color: "#ABA4AA" }}
+																			>
+																				{lesson.coach?.name || "Coach"}
+																			</span>
+																		</div>
 																	</div>
-																	<p
-																		className="text-base mb-2"
-																		style={{ color: "#ABA4AA" }}
+																	<button
+																		className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105"
+																		style={{
+																			backgroundColor: "#4A5A70",
+																			color: "#C3BCC2",
+																		}}
 																	>
-																		{lesson.title || "Lesson with Coach"}
-																	</p>
-																	<div className="flex items-center gap-2">
-																		<User
-																			className="h-4 w-4"
-																			style={{ color: "#ABA4AA" }}
-																		/>
-																		<span
-																			className="text-sm"
-																			style={{ color: "#ABA4AA" }}
-																		>
-																			{lesson.coach?.name || "Coach"}
-																		</span>
-																	</div>
+																		Details
+																	</button>
 																</div>
-																<button
-																	className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105"
-																	style={{
-																		backgroundColor: "#4A5A70",
-																		color: "#C3BCC2",
-																	}}
-																>
-																	Details
-																</button>
 															</div>
-														</div>
-													))
+														)
+													)
 												) : (
 													<div className="text-center py-12">
 														<CalendarX
@@ -1827,24 +1887,34 @@ export default function ClientProgramPage() {
 													</div>
 													{lessonsForDay
 														.slice(0, 2)
-														.map((lesson: any, lessonIndex: number) => (
-															<div
-																key={lessonIndex}
-																className="p-2 md:p-4 rounded-xl md:rounded-2xl"
-																style={{
-																	background:
-																		"linear-gradient(135deg, #10B981, #059669)",
-																	border: "1px solid #059669",
-																}}
-															>
-																<div className="font-bold text-white text-xs md:text-sm">
-																	{format(new Date(lesson.date), "h:mm a")}
+														.map(
+															(
+																lesson: {
+																	id: string
+																	date: string
+																	title: string
+																	status: string
+																},
+																lessonIndex: number
+															) => (
+																<div
+																	key={lessonIndex}
+																	className="p-2 md:p-4 rounded-xl md:rounded-2xl"
+																	style={{
+																		background:
+																			"linear-gradient(135deg, #10B981, #059669)",
+																		border: "1px solid #059669",
+																	}}
+																>
+																	<div className="font-bold text-white text-xs md:text-sm">
+																		{format(new Date(lesson.date), "h:mm a")}
+																	</div>
+																	<div className="text-xs text-green-100 truncate">
+																		{lesson.title || "Lesson"}
+																	</div>
 																</div>
-																<div className="text-xs text-green-100 truncate">
-																	{lesson.title || "Lesson"}
-																</div>
-															</div>
-														))}
+															)
+														)}
 													{lessonsForDay.length > 2 && (
 														<div className="text-center">
 															<span className="text-xs md:text-sm text-gray-400">
@@ -2316,7 +2386,9 @@ export default function ClientProgramPage() {
 												<Textarea
 													placeholder="Add a note about your workout..."
 													value={noteToCoach}
-													onChange={(e) => setNoteToCoach(e.target.value)}
+													onChange={(
+														e: React.ChangeEvent<HTMLTextAreaElement>
+													) => setNoteToCoach(e.target.value)}
 													className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl"
 													rows={4}
 												/>
@@ -2474,7 +2546,9 @@ export default function ClientProgramPage() {
 										<Textarea
 											placeholder="Add your comment about this exercise..."
 											value={commentText}
-											onChange={(e) => setCommentText(e.target.value)}
+											onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+												setCommentText(e.target.value)
+											}
 											className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl min-h-[120px]"
 											rows={4}
 										/>

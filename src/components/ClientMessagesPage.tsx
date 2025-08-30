@@ -10,7 +10,6 @@ import {
 	Send,
 	Paperclip,
 	File,
-	Check,
 	CheckCheck,
 	X,
 	ArrowLeft,
