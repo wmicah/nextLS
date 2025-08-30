@@ -8,21 +8,15 @@ import {
 	Users,
 	Trophy,
 	Target,
-	Calendar,
-	Clock,
 	Star,
 	Activity,
 	Zap,
 	ArrowUp,
 	ArrowDown,
 	Minus,
-	Eye,
 	PlayCircle,
 	CheckCircle,
-	Settings,
 	Goal,
-	BarChart,
-	LineChart,
 	Edit,
 	Save,
 	X,
@@ -31,7 +25,7 @@ import Sidebar from "./Sidebar"
 
 export default function AnalyticsDashboard() {
 	const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">("30d")
-	const [selectedMetric, setSelectedMetric] = useState<string>("overview")
+	// const [selectedMetric, setSelectedMetric] = useState<string>("overview")
 	const [showGoals, setShowGoals] = useState(false)
 	const [isEditingGoals, setIsEditingGoals] = useState(false)
 	const [editingGoals, setEditingGoals] = useState({
@@ -98,8 +92,8 @@ export default function AnalyticsDashboard() {
 	}
 
 	const formatPercentage = (value: number) => `${value.toFixed(1)}%`
-	const formatNumber = (value: number) => value.toLocaleString()
-	const formatCurrency = (value: number) => `$${value.toLocaleString()}`
+	// const formatNumber = (value: number) => value.toLocaleString()
+	// const formatCurrency = (value: number) => `$${value.toLocaleString()}`
 
 	const getTrendIcon = (trend: number) => {
 		if (trend > 0) return <ArrowUp className="h-4 w-4 text-green-400" />
@@ -760,8 +754,9 @@ export default function AnalyticsDashboard() {
 							<div className="text-center">
 								<p className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
 									{
-										clientProgress.filter((c: any) => c.totalWorkouts > 0)
-											.length
+										clientProgress.filter(
+											(c: { totalWorkouts: number }) => c.totalWorkouts > 0
+										).length
 									}
 								</p>
 								<p className="text-xs" style={{ color: "#ABA4AA" }}>
@@ -771,7 +766,8 @@ export default function AnalyticsDashboard() {
 							<div className="text-center">
 								<p className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
 									{clientProgress.reduce(
-										(sum: number, c: any) => sum + c.completedWorkouts,
+										(sum: number, c: { completedWorkouts: number }) =>
+											sum + c.completedWorkouts,
 										0
 									)}
 								</p>
@@ -784,7 +780,7 @@ export default function AnalyticsDashboard() {
 									{clientProgress.length > 0
 										? formatPercentage(
 												clientProgress.reduce(
-													(sum: number, c: any) =>
+													(sum: number, c: { workoutCompletionRate: number }) =>
 														sum + c.workoutCompletionRate,
 													0
 												) / clientProgress.length
@@ -803,53 +799,61 @@ export default function AnalyticsDashboard() {
 								scrollbarColor: "#606364 #2A2F2F",
 							}}
 						>
-							{clientProgress.map((client: any) => (
-								<div
-									key={client.id}
-									className="flex items-center justify-between p-3 rounded-lg"
-									style={{ backgroundColor: "#2A2F2F" }}
-								>
-									<div className="flex items-center gap-3">
-										<div
-											className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium"
-											style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-										>
-											{client.name.charAt(0).toUpperCase()}
+							{clientProgress.map(
+								(client: {
+									id: string
+									name: string
+									totalWorkouts: number
+									completedWorkouts: number
+									workoutCompletionRate: number
+								}) => (
+									<div
+										key={client.id}
+										className="flex items-center justify-between p-3 rounded-lg"
+										style={{ backgroundColor: "#2A2F2F" }}
+									>
+										<div className="flex items-center gap-3">
+											<div
+												className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium"
+												style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+											>
+												{client.name.charAt(0).toUpperCase()}
+											</div>
+											<div>
+												<p className="font-medium" style={{ color: "#C3BCC2" }}>
+													{client.name}
+												</p>
+												<p className="text-sm" style={{ color: "#ABA4AA" }}>
+													{client.completedWorkouts}/{client.totalWorkouts}{" "}
+													workouts completed
+													{client.programsCompleted > 0 && (
+														<span className="ml-2">
+															• {client.programsCompleted} programs completed
+														</span>
+													)}
+												</p>
+											</div>
 										</div>
-										<div>
-											<p className="font-medium" style={{ color: "#C3BCC2" }}>
-												{client.name}
+										<div className="text-right">
+											<p
+												className="font-bold text-lg"
+												style={{ color: "#C3BCC2" }}
+											>
+												{formatPercentage(client.workoutCompletionRate)}
 											</p>
-											<p className="text-sm" style={{ color: "#ABA4AA" }}>
-												{client.completedWorkouts}/{client.totalWorkouts}{" "}
-												workouts completed
-												{client.programsCompleted > 0 && (
-													<span className="ml-2">
-														• {client.programsCompleted} programs completed
-													</span>
-												)}
+											<p
+												className={`text-xs flex items-center gap-1 ${getTrendColor(
+													client.trend
+												)}`}
+											>
+												{getTrendIcon(client.trend)}
+												{client.trend > 0 ? "+" : ""}
+												{client.trend}%
 											</p>
 										</div>
 									</div>
-									<div className="text-right">
-										<p
-											className="font-bold text-lg"
-											style={{ color: "#C3BCC2" }}
-										>
-											{formatPercentage(client.workoutCompletionRate)}
-										</p>
-										<p
-											className={`text-xs flex items-center gap-1 ${getTrendColor(
-												client.trend
-											)}`}
-										>
-											{getTrendIcon(client.trend)}
-											{client.trend > 0 ? "+" : ""}
-											{client.trend}%
-										</p>
-									</div>
-								</div>
-							))}
+								)
+							)}
 						</div>
 					</div>
 
@@ -866,46 +870,55 @@ export default function AnalyticsDashboard() {
 							Program Performance
 						</h3>
 						<div className="space-y-4">
-							{programPerformance.slice(0, 5).map((program: any) => (
-								<div
-									key={program.id}
-									className="p-3 rounded-lg"
-									style={{ backgroundColor: "#2A2F2F" }}
-								>
-									<div className="flex items-center justify-between mb-2">
-										<p className="font-medium" style={{ color: "#C3BCC2" }}>
-											{program.title}
-										</p>
-										<p
-											className="text-sm font-bold"
-											style={{ color: "#C3BCC2" }}
-										>
-											{formatPercentage(program.completionRate)}
-										</p>
-									</div>
-									<div className="flex items-center justify-between text-sm">
-										<span style={{ color: "#ABA4AA" }}>
-											{program.activeClients} active clients
-										</span>
-										<span style={{ color: "#ABA4AA" }}>
-											{formatPercentage(program.averageProgress)} avg progress
-										</span>
-									</div>
-									<div
-										className="w-full bg-gray-700 rounded-full h-2 mt-2"
-										style={{ backgroundColor: "#606364" }}
-									>
+							{programPerformance
+								.slice(0, 5)
+								.map(
+									(program: {
+										id: string
+										title: string
+										completionRate: number
+									}) => (
 										<div
-											className="h-2 rounded-full transition-all duration-300"
-											style={{
-												width: `${program.completionRate}%`,
-												background:
-													"linear-gradient(to right, #4A5A70, #606364)",
-											}}
-										></div>
-									</div>
-								</div>
-							))}
+											key={program.id}
+											className="p-3 rounded-lg"
+											style={{ backgroundColor: "#2A2F2F" }}
+										>
+											<div className="flex items-center justify-between mb-2">
+												<p className="font-medium" style={{ color: "#C3BCC2" }}>
+													{program.title}
+												</p>
+												<p
+													className="text-sm font-bold"
+													style={{ color: "#C3BCC2" }}
+												>
+													{formatPercentage(program.completionRate)}
+												</p>
+											</div>
+											<div className="flex items-center justify-between text-sm">
+												<span style={{ color: "#ABA4AA" }}>
+													{program.activeClients} active clients
+												</span>
+												<span style={{ color: "#ABA4AA" }}>
+													{formatPercentage(program.averageProgress)} avg
+													progress
+												</span>
+											</div>
+											<div
+												className="w-full bg-gray-700 rounded-full h-2 mt-2"
+												style={{ backgroundColor: "#606364" }}
+											>
+												<div
+													className="h-2 rounded-full transition-all duration-300"
+													style={{
+														width: `${program.completionRate}%`,
+														background:
+															"linear-gradient(to right, #4A5A70, #606364)",
+													}}
+												></div>
+											</div>
+										</div>
+									)
+								)}
 						</div>
 					</div>
 				</div>

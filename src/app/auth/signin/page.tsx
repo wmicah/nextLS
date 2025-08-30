@@ -19,7 +19,7 @@ export default function SignInPage() {
 	const [email, setEmail] = useState("")
 	const [password, setPassword] = useState("")
 	const [showPassword, setShowPassword] = useState(false)
-	const [isLoading, setIsLoading] = useState(false)
+	const [isLoading] = useState(false)
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-950 to-black flex items-center justify-center p-4">
@@ -96,7 +96,7 @@ export default function SignInPage() {
 
 						<div className="mt-6 text-center">
 							<p className="text-zinc-400 text-sm">
-								Don't have an account?{" "}
+								Don&apos;t have an account?{" "}
 								<Link
 									href="/auth/signup"
 									className="text-sky-400 hover:text-sky-300 font-medium"

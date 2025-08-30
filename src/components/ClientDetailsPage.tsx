@@ -4,24 +4,13 @@ import { trpc } from "@/app/_trpc/client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
-	User,
 	Mail,
 	Phone,
 	Calendar,
-	Clock,
-	Target,
-	TrendingUp,
 	Activity,
 	Edit,
 	ArrowLeft,
 	Dumbbell,
-	Award,
-	Star,
-	Sparkles,
-	Zap,
-	Crown,
-	Trophy,
-	BarChart3,
 	MessageCircle,
 	Plus,
 } from "lucide-react"
@@ -206,7 +195,11 @@ export default function ClientDetailsPage({
 									style={{ backgroundColor: "#2A2F2F" }}
 								>
 									<div className="text-2xl font-bold text-white">
-										{clientWorkouts.filter((w: any) => w.completed).length}
+										{
+											clientWorkouts.filter(
+												(w: { completed: boolean }) => w.completed
+											).length
+										}
 									</div>
 									<div className="text-xs text-gray-400">Completed</div>
 								</div>
@@ -406,42 +399,54 @@ export default function ClientDetailsPage({
 
 					{clientWorkouts.length > 0 ? (
 						<div className="space-y-3">
-							{clientWorkouts.slice(0, 5).map((workout: any) => (
-								<div
-									key={workout.id}
-									className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-opacity-80 hover:scale-[1.02] hover:shadow-lg transition-all duration-200 border border-transparent hover:border-sky-500/20"
-									style={{ backgroundColor: "#2A2F2F" }}
-									onClick={() => {
-										// Navigate to workout details page
-										router.push(`/workouts/${workout.id}`)
-									}}
-								>
-									<div className="flex items-center gap-3">
-										<Dumbbell className="h-5 w-5 text-gray-400" />
-										<div>
-											<div className="text-sm font-medium text-white">
-												{workout.title}
+							{clientWorkouts
+								.slice(0, 5)
+								.map(
+									(workout: {
+										id: string
+										title: string
+										createdAt: string
+										completed: boolean
+									}) => (
+										<div
+											key={workout.id}
+											className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-opacity-80 hover:scale-[1.02] hover:shadow-lg transition-all duration-200 border border-transparent hover:border-sky-500/20"
+											style={{ backgroundColor: "#2A2F2F" }}
+											onClick={() => {
+												// Navigate to workout details page
+												router.push(`/workouts/${workout.id}`)
+											}}
+										>
+											<div className="flex items-center gap-3">
+												<Dumbbell className="h-5 w-5 text-gray-400" />
+												<div>
+													<div className="text-sm font-medium text-white">
+														{workout.title}
+													</div>
+													<div className="text-xs text-gray-400">
+														{workout.createdAt
+															? format(
+																	new Date(workout.createdAt),
+																	"MMM dd, yyyy"
+															  )
+															: "N/A"}
+													</div>
+												</div>
 											</div>
-											<div className="text-xs text-gray-400">
-												{workout.createdAt
-													? format(new Date(workout.createdAt), "MMM dd, yyyy")
-													: "N/A"}
+											<div className="flex items-center gap-2">
+												{workout.completed ? (
+													<span className="text-xs px-2 py-1 rounded-full text-green-400 bg-green-400 bg-opacity-10">
+														Completed
+													</span>
+												) : (
+													<span className="text-xs px-2 py-1 rounded-full text-yellow-400 bg-yellow-400 bg-opacity-10">
+														Pending
+													</span>
+												)}
 											</div>
 										</div>
-									</div>
-									<div className="flex items-center gap-2">
-										{workout.completed ? (
-											<span className="text-xs px-2 py-1 rounded-full text-green-400 bg-green-400 bg-opacity-10">
-												Completed
-											</span>
-										) : (
-											<span className="text-xs px-2 py-1 rounded-full text-yellow-400 bg-yellow-400 bg-opacity-10">
-												Pending
-											</span>
-										)}
-									</div>
-								</div>
-							))}
+									)
+								)}
 						</div>
 					) : (
 						<div className="text-center py-8">
@@ -464,49 +469,57 @@ export default function ClientDetailsPage({
 							Assigned Programs
 						</h3>
 						<div className="space-y-3">
-							{assignedPrograms.map((assignment: any) => (
-								<div
-									key={assignment.id}
-									className="flex items-center justify-between p-3 rounded-lg"
-									style={{ backgroundColor: "#2A2F2F" }}
-								>
-									<div className="flex items-center gap-3">
-										<div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
-											<span className="text-white font-bold text-sm">
-												{assignment.program.sport.charAt(0).toUpperCase()}
-											</span>
-										</div>
-										<div>
-											<div className="text-sm font-medium text-white">
-												{assignment.program.title}
+							{assignedPrograms.map(
+								(assignment: {
+									id: string
+									program: { sport: string; title: string; level: string }
+									progress: number
+									assignedAt: string
+								}) => (
+									<div
+										key={assignment.id}
+										className="flex items-center justify-between p-3 rounded-lg"
+										style={{ backgroundColor: "#2A2F2F" }}
+									>
+										<div className="flex items-center gap-3">
+											<div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
+												<span className="text-white font-bold text-sm">
+													{assignment.program.sport.charAt(0).toUpperCase()}
+												</span>
 											</div>
-											<div className="text-xs text-gray-400">
-												{assignment.program.sport} • {assignment.program.level}
+											<div>
+												<div className="text-sm font-medium text-white">
+													{assignment.program.title}
+												</div>
+												<div className="text-xs text-gray-400">
+													{assignment.program.sport} •{" "}
+													{assignment.program.level}
+												</div>
+											</div>
+										</div>
+										<div className="flex items-center gap-2">
+											<div className="text-right">
+												<div className="text-sm text-white">
+													{assignment.progress}% Complete
+												</div>
+												<div className="text-xs text-gray-400">
+													Assigned{" "}
+													{format(
+														new Date(assignment.assignedAt),
+														"MMM dd, yyyy"
+													)}
+												</div>
+											</div>
+											<div className="w-16 bg-gray-600 rounded-full h-2">
+												<div
+													className="bg-sky-500 h-2 rounded-full transition-all duration-300"
+													style={{ width: `${assignment.progress}%` }}
+												></div>
 											</div>
 										</div>
 									</div>
-									<div className="flex items-center gap-2">
-										<div className="text-right">
-											<div className="text-sm text-white">
-												{assignment.progress}% Complete
-											</div>
-											<div className="text-xs text-gray-400">
-												Assigned{" "}
-												{format(
-													new Date(assignment.assignedAt),
-													"MMM dd, yyyy"
-												)}
-											</div>
-										</div>
-										<div className="w-16 bg-gray-600 rounded-full h-2">
-											<div
-												className="bg-sky-500 h-2 rounded-full transition-all duration-300"
-												style={{ width: `${assignment.progress}%` }}
-											></div>
-										</div>
-									</div>
-								</div>
-							))}
+								)
+							)}
 						</div>
 					</div>
 				)}
@@ -588,7 +601,3 @@ export default function ClientDetailsPage({
 		</Sidebar>
 	)
 }
-
-
-
-

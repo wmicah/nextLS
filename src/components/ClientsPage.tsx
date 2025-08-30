@@ -4,7 +4,6 @@ import { useState } from "react"
 import { trpc } from "@/app/_trpc/client"
 import {
 	Plus,
-	User,
 	Calendar,
 	Edit,
 	Trash2,
@@ -16,18 +15,12 @@ import {
 	Activity,
 	Star,
 	Sparkles,
-	ArrowRight,
-	Mail,
-	Phone,
-	Target,
 	Award,
-	Dumbbell,
-	BookOpen,
-	Eye,
-	MoreHorizontal,
 	ChevronDown,
 	ChevronUp,
 	Archive,
+	Mail,
+	Phone,
 } from "lucide-react"
 import { format } from "date-fns"
 import AddClientModal from "./AddClientModal"

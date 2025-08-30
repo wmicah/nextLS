@@ -9,19 +9,14 @@ import {
 	BookOpen,
 	Video,
 	FileText,
-	Download,
 	Eye,
 	Plus,
 	Filter,
 	Grid3X3,
 	List,
 	Sparkles,
-	TrendingUp,
-	Clock,
 	Users,
-	Zap,
 	Target,
-	Award,
 } from "lucide-react"
 
 import YouTubePlayer from "./YouTubePlayer"
@@ -54,10 +49,22 @@ export default function LibraryPage() {
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 	const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false)
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
-	const [selectedItem, setSelectedItem] = useState<any>(null)
+	const [selectedItem, setSelectedItem] = useState<{
+		id: string
+		title: string
+		type: string
+		isYoutube?: boolean
+		youtubeId?: string
+	} | null>(null)
 	const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false)
 
-	const handleItemClick = (item: any) => {
+	const handleItemClick = (item: {
+		id: string
+		title: string
+		type: string
+		isYoutube?: boolean
+		youtubeId?: string
+	}) => {
 		setSelectedItem(item)
 		setIsVideoViewerOpen(true)
 	}
@@ -958,200 +965,225 @@ export default function LibraryPage() {
 					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						{clientVideoSubmissions.map((submission: any, index: number) => (
-							<div
-								key={submission.id}
-								className="group relative p-4 rounded-xl border cursor-pointer transition-all duration-300 transform hover:scale-105"
-								style={{
-									backgroundColor: "#353A3A",
-									borderColor: "#606364",
-									animationDelay: `${index * 30}ms`,
-								}}
-								onClick={() =>
-									handleItemClick({
-										...submission,
-										type: "video",
-										isClientSubmission: true,
-									})
-								}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.backgroundColor = "#606364"
-									e.currentTarget.style.borderColor = "#ABA4AA"
-									e.currentTarget.style.boxShadow =
-										"0 6px 15px rgba(0, 0, 0, 0.2)"
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.backgroundColor = "#353A3A"
-									e.currentTarget.style.borderColor = "#606364"
-									e.currentTarget.style.boxShadow =
-										"0 2px 4px rgba(0, 0, 0, 0.1)"
-								}}
-							>
-								<div className="relative flex items-center gap-4">
-									<div
-										className="w-16 h-16 rounded-xl flex items-center justify-center text-xl flex-shrink-0 overflow-hidden relative"
-										style={{ backgroundColor: "#606364" }}
-									>
-										{submission.thumbnail ? (
-											<img
-												src={submission.thumbnail}
-												alt="Video thumbnail"
-												className="w-full h-full object-cover"
-											/>
-										) : submission.videoUrl ? (
-											<div>🎥</div>
-										) : (
-											<div>💬</div>
-										)}
+						{clientVideoSubmissions.map(
+							(
+								submission: {
+									id: string
+									title: string
+									thumbnail: string
+									clientName: string
+									createdAt: string
+								},
+								index: number
+							) => (
+								<div
+									key={submission.id}
+									className="group relative p-4 rounded-xl border cursor-pointer transition-all duration-300 transform hover:scale-105"
+									style={{
+										backgroundColor: "#353A3A",
+										borderColor: "#606364",
+										animationDelay: `${index * 30}ms`,
+									}}
+									onClick={() =>
+										handleItemClick({
+											...submission,
+											type: "video",
+											isClientSubmission: true,
+										})
+									}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.backgroundColor = "#606364"
+										e.currentTarget.style.borderColor = "#ABA4AA"
+										e.currentTarget.style.boxShadow =
+											"0 6px 15px rgba(0, 0, 0, 0.2)"
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.backgroundColor = "#353A3A"
+										e.currentTarget.style.borderColor = "#606364"
+										e.currentTarget.style.boxShadow =
+											"0 2px 4px rgba(0, 0, 0, 0.1)"
+									}}
+								>
+									<div className="relative flex items-center gap-4">
+										<div
+											className="w-16 h-16 rounded-xl flex items-center justify-center text-xl flex-shrink-0 overflow-hidden relative"
+											style={{ backgroundColor: "#606364" }}
+										>
+											{submission.thumbnail ? (
+												<img
+													src={submission.thumbnail}
+													alt="Video thumbnail"
+													className="w-full h-full object-cover"
+												/>
+											) : submission.videoUrl ? (
+												<div>🎥</div>
+											) : (
+												<div>💬</div>
+											)}
 
-										{/* Play overlay - only show if there's a video */}
-										{submission.videoUrl && (
-											<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-												<div
-													className="w-8 h-8 rounded-full flex items-center justify-center"
-													style={{ backgroundColor: "#4A5A70" }}
-												>
-													<Play
-														className="h-4 w-4 ml-0.5"
-														style={{ color: "#C3BCC2" }}
-													/>
+											{/* Play overlay - only show if there's a video */}
+											{submission.videoUrl && (
+												<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+													<div
+														className="w-8 h-8 rounded-full flex items-center justify-center"
+														style={{ backgroundColor: "#4A5A70" }}
+													>
+														<Play
+															className="h-4 w-4 ml-0.5"
+															style={{ color: "#C3BCC2" }}
+														/>
+													</div>
 												</div>
-											</div>
-										)}
-									</div>
-
-									<div className="flex-1 min-w-0">
-										<div className="flex items-center gap-2 mb-2">
-											<span
-												className="px-2 py-0.5 text-xs font-medium rounded-full"
-												style={{
-													backgroundColor: submission.videoUrl
-														? "#10B981"
-														: "#F59E0B",
-													color: "#C3BCC2",
-												}}
-											>
-												{submission.videoUrl
-													? "Client Submission"
-													: "Client Comment"}
-											</span>
-											<span
-												className="px-2 py-0.5 text-xs font-medium rounded-full"
-												style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-											>
-												{submission.category}
-											</span>
-											<span
-												className="px-2 py-0.5 text-xs rounded-full border"
-												style={{
-													backgroundColor: "transparent",
-													borderColor: "#606364",
-													color: "#ABA4AA",
-												}}
-											>
-												{submission.difficulty}
-											</span>
+											)}
 										</div>
 
-										<h3
-											className="text-base font-bold mb-1 line-clamp-1"
-											style={{ color: "#C3BCC2" }}
-										>
-											{submission.title}
-										</h3>
+										<div className="flex-1 min-w-0">
+											<div className="flex items-center gap-2 mb-2">
+												<span
+													className="px-2 py-0.5 text-xs font-medium rounded-full"
+													style={{
+														backgroundColor: submission.videoUrl
+															? "#10B981"
+															: "#F59E0B",
+														color: "#C3BCC2",
+													}}
+												>
+													{submission.videoUrl
+														? "Client Submission"
+														: "Client Comment"}
+												</span>
+												<span
+													className="px-2 py-0.5 text-xs font-medium rounded-full"
+													style={{
+														backgroundColor: "#4A5A70",
+														color: "#C3BCC2",
+													}}
+												>
+													{submission.category}
+												</span>
+												<span
+													className="px-2 py-0.5 text-xs rounded-full border"
+													style={{
+														backgroundColor: "transparent",
+														borderColor: "#606364",
+														color: "#ABA4AA",
+													}}
+												>
+													{submission.difficulty}
+												</span>
+											</div>
 
-										<p
-											className="text-sm mb-2 line-clamp-1"
-											style={{ color: "#ABA4AA" }}
-										>
-											{submission.description || "No description provided"}
-										</p>
-
-										{submission.comment && (
-											<div
-												className="mb-2 p-3 rounded-lg border"
-												style={{
-													backgroundColor: "#2A3133",
-													borderColor: "#4A5A70",
-												}}
+											<h3
+												className="text-base font-bold mb-1 line-clamp-1"
+												style={{ color: "#C3BCC2" }}
 											>
-												<div className="flex items-center gap-2 mb-2">
-													{submission.client?.avatar ? (
-														<img
-															src={submission.client.avatar}
-															alt={submission.client.name}
-															className="w-6 h-6 rounded-full object-cover"
-														/>
-													) : (
-														<div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-bold">
-															{submission.client?.name?.charAt(0) || "C"}
-														</div>
-													)}
+												{submission.title}
+											</h3>
+
+											<p
+												className="text-sm mb-2 line-clamp-1"
+												style={{ color: "#ABA4AA" }}
+											>
+												{submission.description || "No description provided"}
+											</p>
+
+											{submission.comment && (
+												<div
+													className="mb-2 p-3 rounded-lg border"
+													style={{
+														backgroundColor: "#2A3133",
+														borderColor: "#4A5A70",
+													}}
+												>
+													<div className="flex items-center gap-2 mb-2">
+														{submission.client?.avatar ? (
+															<img
+																src={submission.client.avatar}
+																alt={submission.client.name}
+																className="w-6 h-6 rounded-full object-cover"
+															/>
+														) : (
+															<div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-bold">
+																{submission.client?.name?.charAt(0) || "C"}
+															</div>
+														)}
+														<span
+															className="text-xs font-semibold"
+															style={{ color: "#C3BCC2" }}
+														>
+															{submission.client?.name || "Unknown Client"}
+														</span>
+														<span
+															className="text-xs"
+															style={{ color: "#ABA4AA" }}
+														>
+															commented:
+														</span>
+													</div>
+													<p className="text-sm" style={{ color: "#ABA4AA" }}>
+														"{submission.comment}"
+													</p>
+												</div>
+											)}
+
+											<div className="flex items-center gap-4">
+												<div className="flex items-center gap-1">
+													<Users
+														className="h-3 w-3"
+														style={{ color: "#ABA4AA" }}
+													/>
 													<span
-														className="text-xs font-semibold"
-														style={{ color: "#C3BCC2" }}
+														style={{ color: "#ABA4AA" }}
+														className="text-xs"
 													>
 														{submission.client?.name || "Unknown Client"}
 													</span>
-													<span
-														className="text-xs"
+												</div>
+
+												<div className="flex items-center gap-1">
+													<Clock
+														className="h-3 w-3"
 														style={{ color: "#ABA4AA" }}
+													/>
+													<span
+														style={{ color: "#ABA4AA" }}
+														className="text-xs"
 													>
-														commented:
+														{new Date(
+															submission.createdAt
+														).toLocaleDateString()}
 													</span>
 												</div>
-												<p className="text-sm" style={{ color: "#ABA4AA" }}>
-													"{submission.comment}"
-												</p>
-											</div>
-										)}
-
-										<div className="flex items-center gap-4">
-											<div className="flex items-center gap-1">
-												<Users
-													className="h-3 w-3"
-													style={{ color: "#ABA4AA" }}
-												/>
-												<span style={{ color: "#ABA4AA" }} className="text-xs">
-													{submission.client?.name || "Unknown Client"}
-												</span>
-											</div>
-
-											<div className="flex items-center gap-1">
-												<Clock
-													className="h-3 w-3"
-													style={{ color: "#ABA4AA" }}
-												/>
-												<span style={{ color: "#ABA4AA" }} className="text-xs">
-													{new Date(submission.createdAt).toLocaleDateString()}
-												</span>
 											</div>
 										</div>
-									</div>
 
-									<div className="flex gap-2">
-										{submission.videoUrl && (
-											<button
-												onClick={(e) => {
-													e.stopPropagation()
-													window.open(submission.videoUrl, "_blank")
-												}}
-												className="p-2 rounded-lg transition-all duration-300 transform hover:scale-110"
-												style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-												onMouseEnter={(e) => {
-													e.currentTarget.style.backgroundColor = "#606364"
-												}}
-												onMouseLeave={(e) => {
-													e.currentTarget.style.backgroundColor = "#4A5A70"
-												}}
-											>
-												<Play className="h-4 w-4" />
-											</button>
-										)}
+										<div className="flex gap-2">
+											{submission.videoUrl && (
+												<button
+													onClick={(e) => {
+														e.stopPropagation()
+														window.open(submission.videoUrl, "_blank")
+													}}
+													className="p-2 rounded-lg transition-all duration-300 transform hover:scale-110"
+													style={{
+														backgroundColor: "#4A5A70",
+														color: "#C3BCC2",
+													}}
+													onMouseEnter={(e) => {
+														e.currentTarget.style.backgroundColor = "#606364"
+													}}
+													onMouseLeave={(e) => {
+														e.currentTarget.style.backgroundColor = "#4A5A70"
+													}}
+												>
+													<Play className="h-4 w-4" />
+												</button>
+											)}
+										</div>
 									</div>
 								</div>
-							</div>
-						))}
+							)
+						)}
 					</div>
 				</div>
 			)}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { trpc } from "@/app/_trpc/client"
 import {
 	Calendar,
@@ -91,7 +91,7 @@ export default function ClientSchedulePageClient() {
 
 	const getLessonsForDate = (date: Date) => {
 		const now = new Date()
-		const lessons = coachSchedule.filter((lesson: any) => {
+		const lessons = coachSchedule.filter((lesson: { date: string }) => {
 			const lessonDate = new Date(lesson.date)
 			// Compare only the date part, not the time
 			const lessonDateOnly = new Date(
@@ -116,7 +116,7 @@ export default function ClientSchedulePageClient() {
 	}
 
 	const getClientLessonsForDate = (date: Date) => {
-		const lessons = clientLessons.filter((lesson: any) => {
+		const lessons = clientLessons.filter((lesson: { date: string }) => {
 			const lessonDate = new Date(lesson.date)
 			// Compare only the date part, not the time
 			const lessonDateOnly = new Date(
@@ -136,7 +136,7 @@ export default function ClientSchedulePageClient() {
 
 		// Sort by time
 		return lessons.sort(
-			(a: any, b: any) =>
+			(a: { date: string }, b: { date: string }) =>
 				new Date(a.date).getTime() - new Date(b.date).getTime()
 		)
 	}
@@ -184,8 +184,8 @@ export default function ClientSchedulePageClient() {
 			return slots
 		}
 
-		let [_, startHour, startMinute, startPeriod] = startMatch
-		let [__, endHour, endMinute, endPeriod] = endMatch
+		const [, startHour, , startPeriod] = startMatch
+		const [, endHour, , endPeriod] = endMatch
 
 		let currentHour = parseInt(startHour)
 		if (startPeriod.toUpperCase() === "PM" && currentHour !== 12)
@@ -248,8 +248,8 @@ export default function ClientSchedulePageClient() {
 			return slots
 		}
 
-		let [_, startHour, startMinute, startPeriod] = startMatch
-		let [__, endHour, endMinute, endPeriod] = endMatch
+		const [, startHour, , startPeriod] = startMatch
+		const [, endHour, , endPeriod] = endMatch
 
 		let currentHour = parseInt(startHour)
 		if (startPeriod.toUpperCase() === "PM" && currentHour !== 12)
@@ -269,7 +269,7 @@ export default function ClientSchedulePageClient() {
 
 		// Get existing lessons for this date
 		const existingLessons = getLessonsForDate(date)
-		const bookedTimes = existingLessons.map((lesson: any) => {
+		const bookedTimes = existingLessons.map((lesson: { date: string }) => {
 			const lessonDate = new Date(lesson.date)
 			return format(lessonDate, "h:mm a")
 		})
@@ -389,11 +389,11 @@ export default function ClientSchedulePageClient() {
 					{(() => {
 						const today = new Date()
 						const now = new Date()
-						const todaysLessons = getLessonsForDate(today)
+						// const todaysLessons = getLessonsForDate(today)
 						const myTodaysLessons = getClientLessonsForDate(today)
 
 						const upcomingLessons = coachSchedule
-							.filter((lesson: any) => new Date(lesson.date) > now)
+							.filter((lesson: { date: string }) => new Date(lesson.date) > now)
 							.slice(0, 5)
 
 						return (
@@ -412,27 +412,32 @@ export default function ClientSchedulePageClient() {
 									{myTodaysLessons.length > 0 ? (
 										<div className="space-y-2">
 											{/* Show confirmed lessons first */}
-											{myTodaysLessons.map((lesson: any, index: number) => (
-												<div
-													key={`confirmed-${index}`}
-													className={`flex items-center justify-between p-3 rounded border-2 ${getStatusColor(
-														lesson.status
-													)}`}
-												>
-													<div className="flex-1">
-														<div className="font-medium">
-															{format(new Date(lesson.date), "h:mm a")}
+											{myTodaysLessons.map(
+												(
+													lesson: { status: string; date: string },
+													index: number
+												) => (
+													<div
+														key={`confirmed-${index}`}
+														className={`flex items-center justify-between p-3 rounded border-2 ${getStatusColor(
+															lesson.status
+														)}`}
+													>
+														<div className="flex-1">
+															<div className="font-medium">
+																{format(new Date(lesson.date), "h:mm a")}
+															</div>
+															<div className="text-sm opacity-80">
+																{lesson.title}
+															</div>
 														</div>
-														<div className="text-sm opacity-80">
-															{lesson.title}
+														<div className="flex items-center gap-2">
+															{getStatusIcon(lesson.status)}
+															<div className="text-xs">{lesson.status}</div>
 														</div>
 													</div>
-													<div className="flex items-center gap-2">
-														{getStatusIcon(lesson.status)}
-														<div className="text-xs">{lesson.status}</div>
-													</div>
-												</div>
-											))}
+												)
+											)}
 										</div>
 									) : (
 										<p className="text-gray-400 text-sm">
@@ -454,28 +459,37 @@ export default function ClientSchedulePageClient() {
 									</div>
 									{upcomingLessons.length > 0 ? (
 										<div className="space-y-2">
-											{upcomingLessons.map((lesson: any, index: number) => (
-												<div
-													key={index}
-													className="flex items-center justify-between p-3 rounded bg-sky-500/10 border border-sky-500/20"
-												>
-													<div className="flex-1">
-														<div className="font-medium text-sky-300">
-															{format(new Date(lesson.date), "MMM d, h:mm a")}
+											{upcomingLessons.map(
+												(
+													lesson: {
+														date: string
+														client?: { name?: string; email?: string }
+														title: string
+													},
+													index: number
+												) => (
+													<div
+														key={index}
+														className="flex items-center justify-between p-3 rounded bg-sky-500/10 border border-sky-500/20"
+													>
+														<div className="flex-1">
+															<div className="font-medium text-sky-300">
+																{format(new Date(lesson.date), "MMM d, h:mm a")}
+															</div>
+															<div className="text-sm text-sky-200">
+																{lesson.client?.name ||
+																	lesson.client?.email ||
+																	"Client"}
+															</div>
 														</div>
-														<div className="text-sm text-sky-200">
-															{lesson.client?.name ||
-																lesson.client?.email ||
-																"Client"}
+														<div className="flex items-center gap-2">
+															<div className="text-xs text-sky-400">
+																{lesson.title}
+															</div>
 														</div>
 													</div>
-													<div className="flex items-center gap-2">
-														<div className="text-xs text-sky-400">
-															{lesson.title}
-														</div>
-													</div>
-												</div>
-											))}
+												)
+											)}
 										</div>
 									) : (
 										<p className="text-gray-400 text-sm">
@@ -586,26 +600,35 @@ export default function ClientSchedulePageClient() {
 											<div className="space-y-1 mb-2">
 												{myLessonsForDay
 													.slice(0, 2)
-													.map((lesson: any, index: number) => (
-														<div
-															key={`my-${index}`}
-															className={`text-xs p-2 rounded border-2 ${getStatusColor(
-																lesson.status
-															)} shadow-md relative group`}
-														>
-															<div className="flex items-center justify-between">
-																<div className="flex-1">
-																	<div className="font-bold">
-																		{format(new Date(lesson.date), "h:mm a")}
+													.map(
+														(
+															lesson: {
+																status: string
+																date: string
+																title: string
+															},
+															index: number
+														) => (
+															<div
+																key={`my-${index}`}
+																className={`text-xs p-2 rounded border-2 ${getStatusColor(
+																	lesson.status
+																)} shadow-md relative group`}
+															>
+																<div className="flex items-center justify-between">
+																	<div className="flex-1">
+																		<div className="font-bold">
+																			{format(new Date(lesson.date), "h:mm a")}
+																		</div>
+																		<div className="truncate opacity-80 font-medium">
+																			{lesson.title}
+																		</div>
 																	</div>
-																	<div className="truncate opacity-80 font-medium">
-																		{lesson.title}
-																	</div>
+																	{getStatusIcon(lesson.status)}
 																</div>
-																{getStatusIcon(lesson.status)}
 															</div>
-														</div>
-													))}
+														)
+													)}
 												{myLessonsForDay.length > 2 && (
 													<div className="text-xs text-emerald-400 text-center py-1">
 														+{myLessonsForDay.length - 2} more
@@ -619,25 +642,33 @@ export default function ClientSchedulePageClient() {
 											<div className="space-y-1">
 												{coachLessonsForDay
 													.slice(0, 2)
-													.map((lesson: any, index: number) => (
-														<div
-															key={`coach-${index}`}
-															className="text-xs p-2 rounded bg-sky-500/40 text-sky-100 border-2 border-sky-400 shadow-md"
-														>
-															<div className="flex items-center justify-between">
-																<div className="flex-1">
-																	<div className="font-bold">
-																		{format(new Date(lesson.date), "h:mm a")}
-																	</div>
-																	<div className="truncate text-sky-200 font-medium">
-																		{lesson.client?.name ||
-																			lesson.client?.email ||
-																			"Client"}
+													.map(
+														(
+															lesson: {
+																date: string
+																client?: { name?: string; email?: string }
+															},
+															index: number
+														) => (
+															<div
+																key={`coach-${index}`}
+																className="text-xs p-2 rounded bg-sky-500/40 text-sky-100 border-2 border-sky-400 shadow-md"
+															>
+																<div className="flex items-center justify-between">
+																	<div className="flex-1">
+																		<div className="font-bold">
+																			{format(new Date(lesson.date), "h:mm a")}
+																		</div>
+																		<div className="truncate text-sky-200 font-medium">
+																			{lesson.client?.name ||
+																				lesson.client?.email ||
+																				"Client"}
+																		</div>
 																	</div>
 																</div>
 															</div>
-														</div>
-													))}
+														)
+													)}
 												{coachLessonsForDay.length > 2 && (
 													<div className="text-xs text-sky-400 text-center py-1">
 														+{coachLessonsForDay.length - 2} more
@@ -848,34 +879,44 @@ export default function ClientSchedulePageClient() {
 										const myDayLessons = getClientLessonsForDate(selectedDate)
 										return myDayLessons.length > 0 ? (
 											<div className="space-y-3">
-												{myDayLessons.map((lesson: any, index: number) => {
-													const lessonDate = new Date(lesson.date)
-													const isPast = lessonDate < new Date()
-													return (
-														<div
-															key={index}
-															className={`flex items-center justify-between p-4 rounded-lg border-2 ${getStatusColor(
-																lesson.status
-															)}`}
-														>
-															<div className="flex-1">
-																<div className="font-medium">
-																	{format(lessonDate, "h:mm a")}
+												{myDayLessons.map(
+													(
+														lesson: {
+															date: string
+															status: string
+															title: string
+															description: string
+														},
+														index: number
+													) => {
+														const lessonDate = new Date(lesson.date)
+														// const isPast = lessonDate < new Date()
+														return (
+															<div
+																key={index}
+																className={`flex items-center justify-between p-4 rounded-lg border-2 ${getStatusColor(
+																	lesson.status
+																)}`}
+															>
+																<div className="flex-1">
+																	<div className="font-medium">
+																		{format(lessonDate, "h:mm a")}
+																	</div>
+																	<div className="text-sm opacity-80">
+																		{lesson.title}
+																	</div>
+																	<div className="text-xs opacity-60">
+																		{lesson.description}
+																	</div>
 																</div>
-																<div className="text-sm opacity-80">
-																	{lesson.title}
-																</div>
-																<div className="text-xs opacity-60">
-																	{lesson.description}
+																<div className="flex items-center gap-2">
+																	{getStatusIcon(lesson.status)}
+																	<div className="text-xs">{lesson.status}</div>
 																</div>
 															</div>
-															<div className="flex items-center gap-2">
-																{getStatusIcon(lesson.status)}
-																<div className="text-xs">{lesson.status}</div>
-															</div>
-														</div>
-													)
-												})}
+														)
+													}
+												)}
 											</div>
 										) : (
 											<div className="text-center py-8">
@@ -901,39 +942,35 @@ export default function ClientSchedulePageClient() {
 										// Filter out the client's own lessons from coach's lessons section
 										const myLessons = getClientLessonsForDate(selectedDate)
 										const myClientIds = myLessons.map(
-											(lesson: any) => lesson.clientId
+											(lesson: { clientId: string }) => lesson.clientId
 										)
 										const otherClientLessons = coachDayLessons.filter(
-											(lesson: any) => !myClientIds.includes(lesson.clientId)
+											(lesson: { clientId: string }) =>
+												!myClientIds.includes(lesson.clientId)
 										)
 										return otherClientLessons.length > 0 ? (
 											<div className="space-y-3">
 												{otherClientLessons.map(
-													(lesson: any, index: number) => {
+													(
+														lesson: {
+															date: string
+															client?: { name?: string; email?: string }
+															title: string
+														},
+														index: number
+													) => {
 														const lessonDate = new Date(lesson.date)
-														const isPast = lessonDate < new Date()
+														// const isPast = lessonDate < new Date()
 														return (
 															<div
 																key={index}
-																className={`flex items-center justify-between p-4 rounded-lg border group ${
-																	isPast
-																		? "bg-gray-800/20 border-gray-600/30"
-																		: "bg-sky-500/10 border-sky-500/20"
-																}`}
+																className="flex items-center justify-between p-4 rounded-lg border group bg-sky-500/10 border-sky-500/20"
 															>
 																<div className="flex-1">
-																	<div
-																		className={`font-medium ${
-																			isPast ? "text-gray-400" : "text-sky-300"
-																		}`}
-																	>
+																	<div className="font-medium text-sky-300">
 																		{format(lessonDate, "h:mm a")}
 																	</div>
-																	<div
-																		className={`text-sm ${
-																			isPast ? "text-gray-500" : "text-sky-200"
-																		}`}
-																	>
+																	<div className="text-sm text-sky-200">
 																		{lesson.client?.name ||
 																			lesson.client?.email ||
 																			"Client"}

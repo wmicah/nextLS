@@ -39,8 +39,13 @@ export default function SchedulePageClient() {
 	const [showDayManagementModal, setShowDayManagementModal] = useState(false)
 	const [showRejectModal, setShowRejectModal] = useState(false)
 	const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-	const [selectedRequestToReject, setSelectedRequestToReject] =
-		useState<any>(null)
+	const [selectedRequestToReject, setSelectedRequestToReject] = useState<{
+		id: string
+		clientId: string
+		date: string
+		time: string
+		reason: string
+	} | null>(null)
 	const [rejectReason, setRejectReason] = useState("")
 	const [workingHours, setWorkingHours] = useState({
 		startTime: "9:00 AM", // Default value
@@ -167,7 +172,7 @@ export default function SchedulePageClient() {
 
 	const getLessonsForDate = (date: Date) => {
 		const now = new Date()
-		const lessons = coachSchedule.filter((lesson: any) => {
+		const lessons = coachSchedule.filter((lesson: { date: string }) => {
 			const lessonDate = new Date(lesson.date)
 			// Compare only the date part, not the time
 			const lessonDateOnly = new Date(
@@ -192,7 +197,7 @@ export default function SchedulePageClient() {
 	}
 
 	const getAllLessonsForDate = (date: Date) => {
-		const lessons = coachSchedule.filter((lesson: any) => {
+		const lessons = coachSchedule.filter((lesson: { date: string }) => {
 			const lessonDate = new Date(lesson.date)
 			// Compare only the date part, not the time
 			const lessonDateOnly = new Date(
@@ -212,7 +217,7 @@ export default function SchedulePageClient() {
 
 		// Sort by time
 		return lessons.sort(
-			(a: any, b: any) =>
+			(a: { date: string }, b: { date: string }) =>
 				new Date(a.date).getTime() - new Date(b.date).getTime()
 		)
 	}
@@ -240,7 +245,7 @@ export default function SchedulePageClient() {
 		}
 
 		const selectedClient = clients.find(
-			(c: any) => c.id === scheduleForm.clientId
+			(c: { id: string }) => c.id === scheduleForm.clientId
 		)
 
 		if (!selectedClient) {
@@ -259,7 +264,7 @@ export default function SchedulePageClient() {
 			return
 		}
 
-		let [_, hour, minute, period] = timeMatch
+		const [, hour, , period] = timeMatch
 		let hour24 = parseInt(hour)
 
 		// Convert to 24-hour format
@@ -304,7 +309,13 @@ export default function SchedulePageClient() {
 		}
 	}
 
-	const handleRejectRequest = (request: any) => {
+	const handleRejectRequest = (request: {
+		id: string
+		clientId: string
+		date: string
+		time: string
+		reason: string
+	}) => {
 		setSelectedRequestToReject(request)
 		setRejectReason("")
 		setShowRejectModal(true)
@@ -323,15 +334,24 @@ export default function SchedulePageClient() {
 	}
 
 	// Helper functions to determine lesson types
-	const isClientRequest = (lesson: any) => {
+	const isClientRequest = (lesson: { status: string }) => {
 		return lesson.status === "PENDING"
 	}
 
-	const isCoachScheduled = (lesson: any) => {
+	const isCoachScheduled = (lesson: { status: string }) => {
 		return true // All lessons in coachSchedule are coach-scheduled (confirmed)
 	}
 
-	const handleApproveRequest = (request: any, e: React.MouseEvent) => {
+	const handleApproveRequest = (
+		request: {
+			id: string
+			clientId: string
+			date: string
+			time: string
+			reason: string
+		},
+		e: React.MouseEvent
+	) => {
 		e.stopPropagation()
 		approveScheduleRequestMutation.mutate({
 			eventId: request.id,
@@ -364,8 +384,8 @@ export default function SchedulePageClient() {
 			return slots
 		}
 
-		let [_, startHour, startMinute, startPeriod] = startMatch
-		let [__, endHour, endMinute, endPeriod] = endMatch
+		const [, startHour, , startPeriod] = startMatch
+		const [, endHour, , endPeriod] = endMatch
 
 		let currentHour = parseInt(startHour)
 		if (startPeriod.toUpperCase() === "PM" && currentHour !== 12)
@@ -430,8 +450,8 @@ export default function SchedulePageClient() {
 			return slots
 		}
 
-		let [_, startHour, startMinute, startPeriod] = startMatch
-		let [__, endHour, endMinute, endPeriod] = endMatch
+		const [, startHour, , startPeriod] = startMatch
+		const [, endHour, , endPeriod] = endMatch
 
 		let currentHour = parseInt(startHour)
 		if (startPeriod.toUpperCase() === "PM" && currentHour !== 12)
@@ -451,7 +471,7 @@ export default function SchedulePageClient() {
 
 		// Get existing lessons for this date
 		const existingLessons = getAllLessonsForDate(date)
-		const bookedTimes = existingLessons.map((lesson: any) => {
+		const bookedTimes = existingLessons.map((lesson: { date: string }) => {
 			const lessonDate = new Date(lesson.date)
 			return format(lessonDate, "h:mm a")
 		})
@@ -580,63 +600,70 @@ export default function SchedulePageClient() {
 								</h2>
 							</div>
 							<div className="space-y-3">
-								{pendingRequests.map((request: any) => (
-									<div
-										key={request.id}
-										className="flex items-center justify-between p-3 rounded-lg border border-orange-500/20 bg-orange-500/10"
-									>
-										<div className="flex-1">
-											<div className="font-medium text-orange-300">
-												{request.client?.name ||
-													request.client?.email ||
-													"Client"}
-											</div>
-											<div className="text-sm text-orange-200">
-												{format(
-													new Date(request.date),
-													"MMM d, yyyy 'at' h:mm a"
+								{pendingRequests.map(
+									(request: {
+										id: string
+										client?: { name?: string; email?: string }
+										date: string
+										description?: string
+									}) => (
+										<div
+											key={request.id}
+											className="flex items-center justify-between p-3 rounded-lg border border-orange-500/20 bg-orange-500/10"
+										>
+											<div className="flex-1">
+												<div className="font-medium text-orange-300">
+													{request.client?.name ||
+														request.client?.email ||
+														"Client"}
+												</div>
+												<div className="text-sm text-orange-200">
+													{format(
+														new Date(request.date),
+														"MMM d, yyyy 'at' h:mm a"
+													)}
+												</div>
+												{request.description && (
+													<div className="text-xs text-orange-100 mt-1">
+														Reason: {request.description}
+													</div>
 												)}
 											</div>
-											{request.description && (
-												<div className="text-xs text-orange-100 mt-1">
-													Reason: {request.description}
-												</div>
-											)}
+											<div className="flex items-center gap-2">
+												<button
+													onClick={() =>
+														approveScheduleRequestMutation.mutate({
+															eventId: request.id,
+														})
+													}
+													disabled={approveScheduleRequestMutation.isPending}
+													className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+													style={{
+														backgroundColor: "#10B981",
+														color: "#FFFFFF",
+													}}
+												>
+													{approveScheduleRequestMutation.isPending
+														? "Approving..."
+														: "Approve"}
+												</button>
+												<button
+													onClick={() => handleRejectRequest(request)}
+													disabled={rejectScheduleRequestMutation.isPending}
+													className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+													style={{
+														backgroundColor: "#EF4444",
+														color: "#FFFFFF",
+													}}
+												>
+													{rejectScheduleRequestMutation.isPending
+														? "Rejecting..."
+														: "Reject"}
+												</button>
+											</div>
 										</div>
-										<div className="flex items-center gap-2">
-											<button
-												onClick={() =>
-													approveScheduleRequestMutation.mutate({
-														eventId: request.id,
-													})
-												}
-												disabled={approveScheduleRequestMutation.isPending}
-												className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-												style={{
-													backgroundColor: "#10B981",
-													color: "#FFFFFF",
-												}}
-											>
-												{approveScheduleRequestMutation.isPending
-													? "Approving..."
-													: "Approve"}
-											</button>
-											<button
-												onClick={() => handleRejectRequest(request)}
-												disabled={rejectScheduleRequestMutation.isPending}
-												className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-												style={{
-													backgroundColor: "#EF4444",
-													color: "#FFFFFF",
-												}}
-											>
-												{rejectScheduleRequestMutation.isPending
-													? "Rejecting..."
-													: "Reject"}
-											</button>
-										</div>
-									</div>
-								))}
+									)
+								)}
 							</div>
 						</div>
 					)}
@@ -647,7 +674,7 @@ export default function SchedulePageClient() {
 						const now = new Date()
 						const todaysLessons = getLessonsForDate(today)
 						const upcomingLessons = coachSchedule
-							.filter((lesson: any) => new Date(lesson.date) > now)
+							.filter((lesson: { date: string }) => new Date(lesson.date) > now)
 							.slice(0, 5)
 
 						return (
@@ -665,37 +692,46 @@ export default function SchedulePageClient() {
 									</div>
 									{todaysLessons.length > 0 ? (
 										<div className="space-y-2">
-											{todaysLessons.map((lesson: any, index: number) => (
-												<div
-													key={index}
-													className="flex items-center justify-between p-3 rounded bg-emerald-500/10 border border-emerald-500/20 group"
-												>
-													<div className="flex-1">
-														<div className="font-medium text-emerald-300">
-															{format(new Date(lesson.date), "h:mm a")}
+											{todaysLessons.map(
+												(
+													lesson: {
+														date: string
+														client?: { name?: string; email?: string }
+														title: string
+													},
+													index: number
+												) => (
+													<div
+														key={index}
+														className="flex items-center justify-between p-3 rounded bg-emerald-500/10 border border-emerald-500/20 group"
+													>
+														<div className="flex-1">
+															<div className="font-medium text-emerald-300">
+																{format(new Date(lesson.date), "h:mm a")}
+															</div>
+															<div className="text-sm text-emerald-200">
+																{lesson.client?.name ||
+																	lesson.client?.email ||
+																	"Client"}
+															</div>
 														</div>
-														<div className="text-sm text-emerald-200">
-															{lesson.client?.name ||
-																lesson.client?.email ||
-																"Client"}
+														<div className="flex items-center gap-2">
+															<div className="text-xs text-emerald-400">
+																{lesson.title}
+															</div>
+															<button
+																onClick={() =>
+																	handleDeleteLesson(lesson.id, lesson.title)
+																}
+																className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
+																title="Delete lesson"
+															>
+																<Trash2 className="h-4 w-4" />
+															</button>
 														</div>
 													</div>
-													<div className="flex items-center gap-2">
-														<div className="text-xs text-emerald-400">
-															{lesson.title}
-														</div>
-														<button
-															onClick={() =>
-																handleDeleteLesson(lesson.id, lesson.title)
-															}
-															className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
-															title="Delete lesson"
-														>
-															<Trash2 className="h-4 w-4" />
-														</button>
-													</div>
-												</div>
-											))}
+												)
+											)}
 										</div>
 									) : (
 										<p className="text-gray-400 text-sm">
@@ -717,37 +753,47 @@ export default function SchedulePageClient() {
 									</div>
 									{upcomingLessons.length > 0 ? (
 										<div className="space-y-2">
-											{upcomingLessons.map((lesson: any, index: number) => (
-												<div
-													key={index}
-													className="flex items-center justify-between p-3 rounded bg-sky-500/10 border border-sky-500/20 group"
-												>
-													<div className="flex-1">
-														<div className="font-medium text-sky-300">
-															{format(new Date(lesson.date), "MMM d, h:mm a")}
+											{upcomingLessons.map(
+												(
+													lesson: {
+														id: string
+														date: string
+														client?: { name?: string; email?: string }
+														title: string
+													},
+													index: number
+												) => (
+													<div
+														key={index}
+														className="flex items-center justify-between p-3 rounded bg-sky-500/10 border border-sky-500/20 group"
+													>
+														<div className="flex-1">
+															<div className="font-medium text-sky-300">
+																{format(new Date(lesson.date), "MMM d, h:mm a")}
+															</div>
+															<div className="text-sm text-sky-200">
+																{lesson.client?.name ||
+																	lesson.client?.email ||
+																	"Client"}
+															</div>
 														</div>
-														<div className="text-sm text-sky-200">
-															{lesson.client?.name ||
-																lesson.client?.email ||
-																"Client"}
+														<div className="flex items-center gap-2">
+															<div className="text-xs text-sky-400">
+																{lesson.title}
+															</div>
+															<button
+																onClick={() =>
+																	handleDeleteLesson(lesson.id, lesson.title)
+																}
+																className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
+																title="Delete lesson"
+															>
+																<Trash2 className="h-4 w-4" />
+															</button>
 														</div>
 													</div>
-													<div className="flex items-center gap-2">
-														<div className="text-xs text-sky-400">
-															{lesson.title}
-														</div>
-														<button
-															onClick={() =>
-																handleDeleteLesson(lesson.id, lesson.title)
-															}
-															className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
-															title="Delete lesson"
-														>
-															<Trash2 className="h-4 w-4" />
-														</button>
-													</div>
-												</div>
-											))}
+												)
+											)}
 										</div>
 									) : (
 										<p className="text-gray-400 text-sm">
@@ -822,10 +868,12 @@ export default function SchedulePageClient() {
 								const isPast = day < new Date(new Date().setHours(0, 0, 0, 0))
 								const lessonsForDay = getLessonsForDate(day)
 
-								const pendingForDay = pendingRequests.filter((request: any) => {
-									const requestDate = new Date(request.date)
-									return isSameDay(requestDate, day)
-								})
+								const pendingForDay = pendingRequests.filter(
+									(request: { date: string }) => {
+										const requestDate = new Date(request.date)
+										return isSameDay(requestDate, day)
+									}
+								)
 								const hasLessons = lessonsForDay.length > 0
 								const hasPending = pendingForDay.length > 0
 
@@ -860,52 +908,61 @@ export default function SchedulePageClient() {
 											<div className="space-y-1 mb-2">
 												{pendingForDay
 													.slice(0, 2)
-													.map((request: any, index: number) => (
-														<div
-															key={`pending-${index}`}
-															className="text-xs p-2 rounded bg-orange-500/40 text-orange-100 border-2 border-orange-400 shadow-md relative group"
-														>
-															<div className="flex items-center justify-between">
-																<div className="flex-1">
-																	<div className="font-bold">
-																		{format(new Date(request.date), "h:mm a")}
+													.map(
+														(
+															request: {
+																id: string
+																date: string
+																client?: { name?: string; email?: string }
+															},
+															index: number
+														) => (
+															<div
+																key={`pending-${index}`}
+																className="text-xs p-2 rounded bg-orange-500/40 text-orange-100 border-2 border-orange-400 shadow-md relative group"
+															>
+																<div className="flex items-center justify-between">
+																	<div className="flex-1">
+																		<div className="font-bold">
+																			{format(new Date(request.date), "h:mm a")}
+																		</div>
+																		<div className="truncate text-orange-200 font-medium">
+																			{request.client?.name ||
+																				request.client?.email ||
+																				"Client"}
+																		</div>
 																	</div>
-																	<div className="truncate text-orange-200 font-medium">
-																		{request.client?.name ||
-																			request.client?.email ||
-																			"Client"}
+																	{/* Accept/Reject buttons - only for client requests */}
+																	<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+																		<button
+																			onClick={(e) =>
+																				handleApproveRequest(request, e)
+																			}
+																			disabled={
+																				approveScheduleRequestMutation.isPending
+																			}
+																			className="p-1 rounded hover:bg-green-500/30 text-green-300 hover:text-green-200 transition-colors"
+																			title="Approve request"
+																		>
+																			<CheckCircle className="h-3 w-3" />
+																		</button>
+																		<button
+																			onClick={(e) =>
+																				handleRejectRequestInline(request, e)
+																			}
+																			disabled={
+																				rejectScheduleRequestMutation.isPending
+																			}
+																			className="p-1 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200 transition-colors"
+																			title="Reject request"
+																		>
+																			<XCircle className="h-3 w-3" />
+																		</button>
 																	</div>
-																</div>
-																{/* Accept/Reject buttons - only for client requests */}
-																<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-																	<button
-																		onClick={(e) =>
-																			handleApproveRequest(request, e)
-																		}
-																		disabled={
-																			approveScheduleRequestMutation.isPending
-																		}
-																		className="p-1 rounded hover:bg-green-500/30 text-green-300 hover:text-green-200 transition-colors"
-																		title="Approve request"
-																	>
-																		<CheckCircle className="h-3 w-3" />
-																	</button>
-																	<button
-																		onClick={(e) =>
-																			handleRejectRequestInline(request, e)
-																		}
-																		disabled={
-																			rejectScheduleRequestMutation.isPending
-																		}
-																		className="p-1 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200 transition-colors"
-																		title="Reject request"
-																	>
-																		<XCircle className="h-3 w-3" />
-																	</button>
 																</div>
 															</div>
-														</div>
-													))}
+														)
+													)}
 												{pendingForDay.length > 2 && (
 													<div className="text-xs text-orange-400 text-center py-1">
 														+{pendingForDay.length - 2} more pending
@@ -919,35 +976,48 @@ export default function SchedulePageClient() {
 											<div className="space-y-1">
 												{lessonsForDay
 													.slice(0, 3)
-													.map((lesson: any, index: number) => (
-														<div
-															key={index}
-															className="text-xs p-2 rounded bg-emerald-500/40 text-emerald-100 border-2 border-emerald-400 shadow-md relative group"
-														>
-															<div className="flex items-center justify-between">
-																<div className="flex-1">
-																	<div className="font-bold">
-																		{format(new Date(lesson.date), "h:mm a")}
+													.map(
+														(
+															lesson: {
+																id: string
+																date: string
+																client?: { name?: string; email?: string }
+																title: string
+															},
+															index: number
+														) => (
+															<div
+																key={index}
+																className="text-xs p-2 rounded bg-emerald-500/40 text-emerald-100 border-2 border-emerald-400 shadow-md relative group"
+															>
+																<div className="flex items-center justify-between">
+																	<div className="flex-1">
+																		<div className="font-bold">
+																			{format(new Date(lesson.date), "h:mm a")}
+																		</div>
+																		<div className="truncate text-emerald-200 font-medium">
+																			{lesson.client?.name ||
+																				lesson.client?.email ||
+																				"Client"}
+																		</div>
 																	</div>
-																	<div className="truncate text-emerald-200 font-medium">
-																		{lesson.client?.name ||
-																			lesson.client?.email ||
-																			"Client"}
-																	</div>
+																	<button
+																		onClick={(e) => {
+																			e.stopPropagation()
+																			handleDeleteLesson(
+																				lesson.id,
+																				lesson.title
+																			)
+																		}}
+																		className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200"
+																		title="Delete lesson"
+																	>
+																		<Trash2 className="h-3 w-3" />
+																	</button>
 																</div>
-																<button
-																	onClick={(e) => {
-																		e.stopPropagation()
-																		handleDeleteLesson(lesson.id, lesson.title)
-																	}}
-																	className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200"
-																	title="Delete lesson"
-																>
-																	<Trash2 className="h-3 w-3" />
-																</button>
 															</div>
-														</div>
-													))}
+														)
+													)}
 												{lessonsForDay.length > 3 && (
 													<div className="text-xs text-gray-400 text-center py-1">
 														+{lessonsForDay.length - 3} more lessons
@@ -1159,11 +1229,17 @@ export default function SchedulePageClient() {
 											}}
 										>
 											<option value="">Select a client</option>
-											{clients.map((client: any) => (
-												<option key={client.id} value={client.id}>
-													{client.name || client.email}
-												</option>
-											))}
+											{clients.map(
+												(client: {
+													id: string
+													name?: string
+													email?: string
+												}) => (
+													<option key={client.id} value={client.id}>
+														{client.name || client.email}
+													</option>
+												)
+											)}
 										</select>
 									</div>
 
@@ -1330,63 +1406,76 @@ export default function SchedulePageClient() {
 										const dayLessons = getAllLessonsForDate(selectedDate)
 										return dayLessons.length > 0 ? (
 											<div className="space-y-3">
-												{dayLessons.map((lesson: any, index: number) => {
-													const lessonDate = new Date(lesson.date)
-													const isPast = lessonDate < new Date()
-													return (
-														<div
-															key={index}
-															className={`flex items-center justify-between p-4 rounded-lg border group ${
-																isPast
-																	? "bg-gray-800/20 border-gray-600/30"
-																	: "bg-emerald-500/10 border-emerald-500/20"
-															}`}
-														>
-															<div className="flex-1">
-																<div
-																	className={`font-medium ${
-																		isPast
-																			? "text-gray-400"
-																			: "text-emerald-300"
-																	}`}
-																>
-																	{format(lessonDate, "h:mm a")}
+												{dayLessons.map(
+													(
+														lesson: {
+															id: string
+															date: string
+															client?: { name?: string; email?: string }
+															title: string
+														},
+														index: number
+													) => {
+														const lessonDate = new Date(lesson.date)
+														const isPast = lessonDate < new Date()
+														return (
+															<div
+																key={index}
+																className={`flex items-center justify-between p-4 rounded-lg border group ${
+																	isPast
+																		? "bg-gray-800/20 border-gray-600/30"
+																		: "bg-emerald-500/10 border-emerald-500/20"
+																}`}
+															>
+																<div className="flex-1">
+																	<div
+																		className={`font-medium ${
+																			isPast
+																				? "text-gray-400"
+																				: "text-emerald-300"
+																		}`}
+																	>
+																		{format(lessonDate, "h:mm a")}
+																	</div>
+																	<div
+																		className={`text-sm ${
+																			isPast
+																				? "text-gray-500"
+																				: "text-emerald-200"
+																		}`}
+																	>
+																		{lesson.client?.name ||
+																			lesson.client?.email ||
+																			"Client"}
+																	</div>
+																	<div
+																		className={`text-xs ${
+																			isPast
+																				? "text-gray-600"
+																				: "text-emerald-400"
+																		}`}
+																	>
+																		{lesson.title}
+																	</div>
 																</div>
-																<div
-																	className={`text-sm ${
-																		isPast
-																			? "text-gray-500"
-																			: "text-emerald-200"
-																	}`}
-																>
-																	{lesson.client?.name ||
-																		lesson.client?.email ||
-																		"Client"}
-																</div>
-																<div
-																	className={`text-xs ${
-																		isPast
-																			? "text-gray-600"
-																			: "text-emerald-400"
-																	}`}
-																>
-																	{lesson.title}
-																</div>
+																{!isPast && (
+																	<button
+																		onClick={() =>
+																			handleDeleteLesson(
+																				lesson.id,
+																				lesson.title
+																			)
+																		}
+																		className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
+																		title="Delete lesson"
+																	>
+																		<Trash2 className="h-4 w-4" />
+																	</button>
+																)}
 															</div>
-															{!isPast && (
-																<button
-																	onClick={() =>
-																		handleDeleteLesson(lesson.id, lesson.title)
-																	}
-																	className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
-																	title="Delete lesson"
-																>
-																	<Trash2 className="h-4 w-4" />
-																</button>
-															)}
-														</div>
-													)
-												})}
+														)
+													}
+												)}
 											</div>
 										) : (
 											<div className="text-center py-8">
@@ -1588,7 +1677,7 @@ export default function SchedulePageClient() {
 								{/* Pending Requests Section */}
 								{(() => {
 									const dayPendingRequests = pendingRequests.filter(
-										(request: any) => {
+										(request: { date: string }) => {
 											const requestDate = new Date(request.date)
 											const targetDate = selectedDate
 											return (
@@ -1610,7 +1699,15 @@ export default function SchedulePageClient() {
 											</div>
 											<div className="space-y-3">
 												{dayPendingRequests.map(
-													(request: any, index: number) => (
+													(
+														request: {
+															id: string
+															client?: { name?: string; email?: string }
+															date: string
+															description?: string
+														},
+														index: number
+													) => (
 														<div
 															key={index}
 															className="flex items-center justify-between p-4 rounded-lg border border-orange-500/20 bg-orange-500/10"
@@ -1707,7 +1804,10 @@ export default function SchedulePageClient() {
 								{(() => {
 									const dayConfirmedLessons = getAllLessonsForDate(
 										selectedDate
-									).filter((lesson: any) => lesson.status === "CONFIRMED")
+									).filter(
+										(lesson: { status: string }) =>
+											lesson.status === "CONFIRMED"
+									)
 									return dayConfirmedLessons.length > 0 ? (
 										<div className="mb-8">
 											<div className="flex items-center gap-3 mb-4">
@@ -1718,7 +1818,15 @@ export default function SchedulePageClient() {
 											</div>
 											<div className="space-y-3">
 												{dayConfirmedLessons.map(
-													(lesson: any, index: number) => (
+													(
+														lesson: {
+															id: string
+															date: string
+															client?: { name?: string; email?: string }
+															title?: string
+														},
+														index: number
+													) => (
 														<div
 															key={index}
 															className="flex items-center justify-between p-4 rounded-lg border border-green-500/20 bg-green-500/10"
@@ -1778,38 +1886,49 @@ export default function SchedulePageClient() {
 												</h3>
 											</div>
 											<div className="space-y-3">
-												{dayAllLessons.map((lesson: any, index: number) => (
-													<div
-														key={index}
-														className="flex items-center justify-between p-4 rounded-lg border border-sky-500/20 bg-sky-500/10"
-													>
-														<div className="flex-1">
-															<div className="font-medium text-sky-300">
-																{format(new Date(lesson.date), "h:mm a")}
-															</div>
-															<div className="text-sm text-sky-200">
-																{lesson.client?.name ||
-																	lesson.client?.email ||
-																	"Client"}
-															</div>
-															{lesson.title && (
-																<div className="text-xs text-sky-100 mt-1">
-																	{lesson.title}
+												{dayAllLessons.map(
+													(
+														lesson: {
+															id: string
+															date: string
+															client?: { name?: string; email?: string }
+															title?: string
+															status: string
+														},
+														index: number
+													) => (
+														<div
+															key={index}
+															className="flex items-center justify-between p-4 rounded-lg border border-sky-500/20 bg-sky-500/10"
+														>
+															<div className="flex-1">
+																<div className="font-medium text-sky-300">
+																	{format(new Date(lesson.date), "h:mm a")}
 																</div>
-															)}
+																<div className="text-sm text-sky-200">
+																	{lesson.client?.name ||
+																		lesson.client?.email ||
+																		"Client"}
+																</div>
+																{lesson.title && (
+																	<div className="text-xs text-sky-100 mt-1">
+																		{lesson.title}
+																	</div>
+																)}
+															</div>
+															<div className="flex items-center gap-2">
+																<Users className="h-4 w-4 text-sky-400" />
+																<span className="text-xs text-sky-300">
+																	{lesson.status === "CONFIRMED"
+																		? isCoachScheduled(lesson)
+																			? "Coach Scheduled"
+																			: "Confirmed"
+																		: lesson.status}
+																</span>
+															</div>
 														</div>
-														<div className="flex items-center gap-2">
-															<Users className="h-4 w-4 text-sky-400" />
-															<span className="text-xs text-sky-300">
-																{lesson.status === "CONFIRMED"
-																	? isCoachScheduled(lesson)
-																		? "Coach Scheduled"
-																		: "Confirmed"
-																	: lesson.status}
-															</span>
-														</div>
-													</div>
-												))}
+													)
+												)}
 											</div>
 										</div>
 									) : (

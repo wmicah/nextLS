@@ -3,7 +3,9 @@ import { redirect } from "next/navigation"
 import { db } from "@/db"
 import SettingsPageClient from "@/components/SettingsPageClient"
 
-interface SettingsPageProps {}
+interface SettingsPageProps {
+	// Add props here if needed in the future
+}
 
 export default async function SettingsPage({}: SettingsPageProps) {
 	const { getUser } = getKindeServerSession()

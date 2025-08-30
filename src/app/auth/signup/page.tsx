@@ -20,7 +20,7 @@ export default function SignUpPage() {
 	const [email, setEmail] = useState("")
 	const [password, setPassword] = useState("")
 	const [showPassword, setShowPassword] = useState(false)
-	const [isLoading, setIsLoading] = useState(false)
+	const [isLoading] = useState(false)
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-950 to-black flex items-center justify-center p-4">

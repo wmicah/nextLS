@@ -9,14 +9,10 @@ import {
 	Calendar,
 	MessageCircle,
 	Upload,
-	Bell,
 	TrendingUp,
 	Target,
 	Clock,
 	Loader2,
-	ChevronRight,
-	User,
-	BookOpen,
 	BarChart3,
 } from "lucide-react"
 
@@ -40,8 +36,8 @@ export default function ClientDashboard() {
 		trpc.progress.getClientProgress.useQuery()
 	const { data: upcomingEvents = [], isLoading: eventsLoading } =
 		trpc.events.getUpcoming.useQuery()
-	const { data: conversations = [], isLoading: messagesLoading } =
-		trpc.messaging.getConversations.useQuery()
+	// const { data: conversations = [], isLoading: messagesLoading } =
+	// 	trpc.messaging.getConversations.useQuery()
 	const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery()
 
 	const [completedWorkouts, setCompletedWorkouts] = useState<string[]>([])
@@ -53,7 +49,7 @@ export default function ClientDashboard() {
 			// Refetch today's workouts to get updated completion status
 			// The query will automatically refetch due to the mutation
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			console.error("Failed to mark workout as complete:", error)
 		},
 	})
@@ -74,7 +70,7 @@ export default function ClientDashboard() {
 				workoutId,
 				completed: !isCurrentlyCompleted,
 			})
-		} catch (error) {
+		} catch {
 			// Revert optimistic update on error
 			setCompletedWorkouts((prev) =>
 				isCurrentlyCompleted

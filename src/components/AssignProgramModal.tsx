@@ -3,15 +3,15 @@
 import { useState, useEffect } from "react"
 import { trpc } from "@/app/_trpc/client"
 import { useUIStore } from "@/lib/stores/uiStore"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Calendar, Users, Target, Clock, CheckCircle, X } from "lucide-react"
+// import { Button } from "@/components/ui/button"
+// import { Input } from "@/components/ui/input"
+// import { Label } from "@/components/ui/label"
+// import { Checkbox } from "@/components/ui/checkbox"
+// import { ScrollArea } from "@/components/ui/scroll-area"
+// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+// import { Card, CardContent } from "@/components/ui/card"
+// import { Badge } from "@/components/ui/badge"
+import { Calendar, Users, Target, X } from "lucide-react"
 import { format } from "date-fns"
 
 interface AssignProgramModalProps {
@@ -63,10 +63,10 @@ export default function AssignProgramModal({
 	isOpen,
 	onClose,
 	programId,
-	programTitle,
-	clientId,
-	clientName,
-}: AssignProgramModalProps) {
+}: // programTitle,
+// clientId,
+// clientName,
+AssignProgramModalProps) {
 	const [selectedProgram, setSelectedProgram] = useState<string>(
 		programId || ""
 	)
@@ -91,12 +91,10 @@ export default function AssignProgramModal({
 	const utils = trpc.useUtils()
 
 	// Get all programs
-	const { data: programs = [], isLoading: programsLoading } =
-		trpc.programs.list.useQuery()
+	const { data: programs = [] } = trpc.programs.list.useQuery()
 
 	// Get all active clients (exclude archived)
-	const { data: clients = [], isLoading: clientsLoading } =
-		trpc.clients.list.useQuery({ archived: false })
+	const { data: clients = [] } = trpc.clients.list.useQuery({ archived: false })
 
 	// Get selected program details
 	const { data: selectedProgramData } = trpc.programs.getById.useQuery(

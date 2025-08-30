@@ -2,8 +2,8 @@
 
 import { useState, useRef } from "react"
 import { Mic, Square, Play, Pause, Trash2, Save } from "lucide-react"
-import { UploadButton } from "@uploadthing/react"
-import type { OurFileRouter } from "@/app/api/uploadthing/core"
+// import { UploadButton } from "@uploadthing/react"
+// import type { OurFileRouter } from "@/app/api/uploadthing/core"
 
 interface AudioRecorderProps {
 	onSaveAudio: (audioData: {

@@ -91,10 +91,11 @@ export default function ProgramsPage() {
 				description: "Your new program has been created successfully.",
 			})
 		},
-		onError: (error: any) => {
+		onError: (error: unknown) => {
 			toast({
 				title: "Error",
-				description: error.message,
+				description:
+					error instanceof Error ? error.message : "An error occurred",
 				variant: "destructive",
 			})
 		},
@@ -108,10 +109,11 @@ export default function ProgramsPage() {
 				description: "The program has been deleted successfully.",
 			})
 		},
-		onError: (error: any) => {
+		onError: (error: unknown) => {
 			toast({
 				title: "Error",
-				description: error.message,
+				description:
+					error instanceof Error ? error.message : "An error occurred",
 				variant: "destructive",
 			})
 		},

@@ -27,17 +27,19 @@ import MessageFileUpload from "./MessageFileUpload"
 import MessageNotification from "./MessageNotification"
 import ProfilePictureUploader from "./ProfilePictureUploader"
 
-interface ClientMessagesPageProps {}
+interface ClientMessagesPageProps {
+	// Add props here if needed in the future
+}
 
 export default function ClientMessagesPage({}: ClientMessagesPageProps) {
-	const router = useRouter()
+	// const router = useRouter()
 	const [selectedConversation, setSelectedConversation] = useState<
 		string | null
 	>(null)
 	const [searchTerm, setSearchTerm] = useState("")
 	const [messageText, setMessageText] = useState("")
-	const [isTyping, setIsTyping] = useState(false)
-	const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+	// const [isTyping, setIsTyping] = useState(false)
+	// const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 	const [showFileUpload, setShowFileUpload] = useState(false)
 	const [showCreateModal, setShowCreateModal] = useState(false)
 	const [clientSearchTerm, setClientSearchTerm] = useState("")
@@ -51,7 +53,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 		}
 	} | null>(null)
 	const messagesEndRef = useRef<HTMLDivElement>(null)
-	const fileInputRef = useRef<HTMLInputElement>(null)
+	// const fileInputRef = useRef<HTMLInputElement>(null)
 
 	// Get current user info
 	const { data: currentUser } = trpc.user.getProfile.useQuery()
@@ -133,7 +135,15 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 		})
 	}
 
-	const handleFileSelect = (file: File, uploadData: any) => {
+	const handleFileSelect = (
+		file: File,
+		uploadData: {
+			attachmentUrl: string
+			attachmentType: string
+			attachmentName: string
+			attachmentSize: number
+		}
+	) => {
 		setSelectedFile({ file, uploadData })
 		setShowFileUpload(false)
 	}
@@ -142,35 +152,51 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 		createConversationMutation.mutate({ otherClientId })
 	}
 
-	const filteredConversations = conversations.filter((conversation: any) => {
-		if (!searchTerm) return true
+	const filteredConversations = conversations.filter(
+		(conversation: {
+			id: string
+			type: string
+			client1?: { id: string; name?: string; email?: string }
+			client2?: { id: string; name?: string; email?: string }
+			coach?: { name?: string; email?: string }
+		}) => {
+			if (!searchTerm) return true
 
-		// For client-client conversations, check both client names
-		if (conversation.type === "CLIENT_CLIENT") {
-			const client1Name =
-				conversation.client1?.name || conversation.client1?.email || ""
-			const client2Name =
-				conversation.client2?.name || conversation.client2?.email || ""
+			// For client-client conversations, check both client names
+			if (conversation.type === "CLIENT_CLIENT") {
+				const client1Name =
+					conversation.client1?.name || conversation.client1?.email || ""
+				const client2Name =
+					conversation.client2?.name || conversation.client2?.email || ""
+				return (
+					client1Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+					client2Name.toLowerCase().includes(searchTerm.toLowerCase())
+				)
+			}
+
+			// For coach-client conversations, check coach name
+			const coachName =
+				conversation.coach?.name || conversation.coach?.email || ""
+			return coachName.toLowerCase().includes(searchTerm.toLowerCase())
+		}
+	)
+
+	const filteredClients = otherClients.filter(
+		(client: {
+			id: string
+			name?: string
+			email?: string
+			avatar?: string
+			userId?: string
+		}) => {
+			if (!clientSearchTerm) return true
+			const searchLower = clientSearchTerm.toLowerCase()
 			return (
-				client1Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				client2Name.toLowerCase().includes(searchTerm.toLowerCase())
+				client.name?.toLowerCase().includes(searchLower) ||
+				client.email?.toLowerCase().includes(searchLower)
 			)
 		}
-
-		// For coach-client conversations, check coach name
-		const coachName =
-			conversation.coach?.name || conversation.coach?.email || ""
-		return coachName.toLowerCase().includes(searchTerm.toLowerCase())
-	})
-
-	const filteredClients = otherClients.filter((client: any) => {
-		if (!clientSearchTerm) return true
-		const searchLower = clientSearchTerm.toLowerCase()
-		return (
-			client.name?.toLowerCase().includes(searchLower) ||
-			client.email?.toLowerCase().includes(searchLower)
-		)
-	})
+	)
 
 	return (
 		<ClientSidebar
@@ -322,111 +348,135 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 									</p>
 								</div>
 							) : (
-								filteredConversations.map((conversation: any) => {
-									// Determine the other participant
-									let otherParticipant
-									let conversationType
+								filteredConversations.map(
+									(conversation: {
+										id: string
+										type: string
+										client1?: {
+											id: string
+											name?: string
+											email?: string
+											settings?: { avatarUrl?: string }
+										}
+										client2?: {
+											id: string
+											name?: string
+											email?: string
+											settings?: { avatarUrl?: string }
+										}
+										coach?: {
+											name?: string
+											email?: string
+											settings?: { avatarUrl?: string }
+										}
+										messages: Array<{ createdAt: string; content: string }>
+										_count?: { messages: number }
+									}) => {
+										// Determine the other participant
+										let otherParticipant
+										let conversationType
 
-									if (conversation.type === "CLIENT_CLIENT") {
-										// For client-client conversations, show the other client
-										otherParticipant =
-											conversation.client1?.id === currentUser?.id
-												? conversation.client2
-												: conversation.client1
-										conversationType = "Client"
-									} else {
-										// For coach-client conversations, show the coach
-										otherParticipant = conversation.coach
-										conversationType = "Coach"
-									}
+										if (conversation.type === "CLIENT_CLIENT") {
+											// For client-client conversations, show the other client
+											otherParticipant =
+												conversation.client1?.id === currentUser?.id
+													? conversation.client2
+													: conversation.client1
+											conversationType = "Client"
+										} else {
+											// For coach-client conversations, show the coach
+											otherParticipant = conversation.coach
+											conversationType = "Coach"
+										}
 
-									const lastMessage = conversation.messages[0]
-									const unreadCount = conversation._count?.messages || 0
+										const lastMessage = conversation.messages[0]
+										const unreadCount = conversation._count?.messages || 0
 
-									return (
-										<div
-											key={conversation.id}
-											className={`p-4 cursor-pointer transition-all duration-200 border-b ${
-												selectedConversation === conversation.id
-													? "bg-blue-500/10 border-blue-500/20"
-													: "border-gray-700 hover:bg-gray-800/50"
-											}`}
-											onClick={() => setSelectedConversation(conversation.id)}
-										>
-											<div className="flex items-center gap-3">
-												<ProfilePictureUploader
-													currentAvatarUrl={
-														otherParticipant?.settings?.avatarUrl
-													}
-													userName={
-														otherParticipant?.name ||
-														otherParticipant?.email ||
-														"User"
-													}
-													onAvatarChange={() => {}}
-													size="md"
-													readOnly={true}
-													className="flex-shrink-0"
-												/>
-												<div className="flex-1 min-w-0">
-													<div className="flex items-center justify-between">
-														<p
-															className="font-medium truncate"
-															style={{ color: "#C3BCC2" }}
-														>
-															{otherParticipant?.name ||
-																otherParticipant?.email?.split("@")[0] ||
-																"Unknown"}
-														</p>
-														{lastMessage && (
-															<span
-																className="text-xs flex-shrink-0 ml-2"
-																style={{ color: "#ABA4AA" }}
+										return (
+											<div
+												key={conversation.id}
+												className={`p-4 cursor-pointer transition-all duration-200 border-b ${
+													selectedConversation === conversation.id
+														? "bg-blue-500/10 border-blue-500/20"
+														: "border-gray-700 hover:bg-gray-800/50"
+												}`}
+												onClick={() => setSelectedConversation(conversation.id)}
+											>
+												<div className="flex items-center gap-3">
+													<ProfilePictureUploader
+														currentAvatarUrl={
+															otherParticipant?.settings?.avatarUrl
+														}
+														userName={
+															otherParticipant?.name ||
+															otherParticipant?.email ||
+															"User"
+														}
+														onAvatarChange={() => {}}
+														size="md"
+														readOnly={true}
+														className="flex-shrink-0"
+													/>
+													<div className="flex-1 min-w-0">
+														<div className="flex items-center justify-between">
+															<p
+																className="font-medium truncate"
+																style={{ color: "#C3BCC2" }}
 															>
-																{format(
-																	new Date(lastMessage.createdAt),
-																	"HH:mm"
-																)}
-															</span>
-														)}
-													</div>
-													<div className="flex items-center justify-between">
-														<div className="flex items-center gap-2">
-															<span
-																className="text-xs px-2 py-1 rounded-full"
-																style={{
-																	backgroundColor:
-																		conversation.type === "CLIENT_CLIENT"
-																			? "#4A5A70"
-																			: "#E0E0E0",
-																	color:
-																		conversation.type === "CLIENT_CLIENT"
-																			? "#C3BCC2"
-																			: "#000000",
-																}}
-															>
-																{conversationType}
-															</span>
+																{otherParticipant?.name ||
+																	otherParticipant?.email?.split("@")[0] ||
+																	"Unknown"}
+															</p>
 															{lastMessage && (
-																<p
-																	className="text-sm truncate"
+																<span
+																	className="text-xs flex-shrink-0 ml-2"
 																	style={{ color: "#ABA4AA" }}
 																>
-																	{lastMessage.content}
-																</p>
+																	{format(
+																		new Date(lastMessage.createdAt),
+																		"HH:mm"
+																	)}
+																</span>
 															)}
 														</div>
-														{unreadCount > 0 && (
-															<span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-																{unreadCount}
-															</span>
-														)}
+														<div className="flex items-center justify-between">
+															<div className="flex items-center gap-2">
+																<span
+																	className="text-xs px-2 py-1 rounded-full"
+																	style={{
+																		backgroundColor:
+																			conversation.type === "CLIENT_CLIENT"
+																				? "#4A5A70"
+																				: "#E0E0E0",
+																		color:
+																			conversation.type === "CLIENT_CLIENT"
+																				? "#C3BCC2"
+																				: "#000000",
+																	}}
+																>
+																	{conversationType}
+																</span>
+																{lastMessage && (
+																	<p
+																		className="text-sm truncate"
+																		style={{ color: "#ABA4AA" }}
+																	>
+																		{lastMessage.content}
+																	</p>
+																)}
+															</div>
+															{unreadCount > 0 && (
+																<span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+																	{unreadCount}
+																</span>
+															)}
+														</div>
 													</div>
 												</div>
 											</div>
-										</div>
-									)
-								})
+										)
+									}
+								)
 							)}
 						</div>
 					</div>
@@ -457,7 +507,16 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 											<ProfilePictureUploader
 												currentAvatarUrl={(() => {
 													const conversation = conversations.find(
-														(c: any) => c.id === selectedConversation
+														(c: {
+															id: string
+															type: string
+															client1?: { id: string }
+															client2?: {
+																id: string
+																settings?: { avatarUrl?: string }
+															}
+															coach?: { settings?: { avatarUrl?: string } }
+														}) => c.id === selectedConversation
 													)
 													if (conversation?.type === "CLIENT_CLIENT") {
 														const otherClient =
@@ -471,7 +530,21 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 												})()}
 												userName={(() => {
 													const conversation = conversations.find(
-														(c: any) => c.id === selectedConversation
+														(c: {
+															id: string
+															type: string
+															client1?: {
+																id: string
+																name?: string
+																email?: string
+															}
+															client2?: {
+																id: string
+																name?: string
+																email?: string
+															}
+															coach?: { name?: string; email?: string }
+														}) => c.id === selectedConversation
 													)
 													if (conversation?.type === "CLIENT_CLIENT") {
 														const otherClient =
@@ -501,7 +574,21 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 												>
 													{(() => {
 														const conversation = conversations.find(
-															(c: any) => c.id === selectedConversation
+															(c: {
+																id: string
+																type: string
+																client1?: {
+																	id: string
+																	name?: string
+																	email?: string
+																}
+																client2?: {
+																	id: string
+																	name?: string
+																	email?: string
+																}
+																coach?: { name?: string; email?: string }
+															}) => c.id === selectedConversation
 														)
 														if (conversation?.type === "CLIENT_CLIENT") {
 															const otherClient =
@@ -525,7 +612,8 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 												<p className="text-sm" style={{ color: "#ABA4AA" }}>
 													{(() => {
 														const conversation = conversations.find(
-															(c: any) => c.id === selectedConversation
+															(c: { id: string; type: string }) =>
+																c.id === selectedConversation
 														)
 														return conversation?.type === "CLIENT_CLIENT"
 															? "Client"
@@ -547,69 +635,83 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 
 								{/* Messages */}
 								<div className="flex-1 overflow-y-auto p-6 space-y-4">
-									{messages.map((message: any) => {
-										const isCurrentUser = message.sender.id === currentUser?.id
+									{messages.map(
+										(message: {
+											id: string
+											sender: { id: string }
+											content: string
+											createdAt: string
+											isRead: boolean
+											attachmentUrl?: string
+											attachmentType?: string
+											attachmentName?: string
+										}) => {
+											const isCurrentUser =
+												message.sender.id === currentUser?.id
 
-										return (
-											<div
-												key={message.id}
-												className={`flex ${
-													isCurrentUser ? "justify-end" : "justify-start"
-												}`}
-											>
+											return (
 												<div
-													className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-														isCurrentUser
-															? "bg-blue-500 text-white"
-															: "bg-gray-700 text-gray-100"
+													key={message.id}
+													className={`flex ${
+														isCurrentUser ? "justify-end" : "justify-start"
 													}`}
 												>
-													<p className="text-sm">{message.content}</p>
-													{message.attachmentUrl && (
-														<div className="mt-2">
-															{message.attachmentType?.startsWith("image/") ? (
-																<img
-																	src={message.attachmentUrl}
-																	alt="Attachment"
-																	className="max-w-full rounded-lg"
-																/>
-															) : (
-																<a
-																	href={message.attachmentUrl}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	className="flex items-center gap-2 text-sm underline"
-																>
-																	<File className="h-4 w-4" />
-																	{message.attachmentName || "Attachment"}
-																</a>
-															)}
-														</div>
-													)}
-													<div className="flex items-center justify-end gap-1 mt-2">
-														<span
-															className={`text-xs ${
-																isCurrentUser
-																	? "text-blue-100"
-																	: "text-gray-400"
-															}`}
-														>
-															{format(new Date(message.createdAt), "HH:mm")}
-														</span>
-														{isCurrentUser && (
-															<CheckCheck
-																className={`h-3 w-3 ${
-																	message.isRead
-																		? "text-blue-300"
+													<div
+														className={`max-w-[70%] px-4 py-3 rounded-2xl ${
+															isCurrentUser
+																? "bg-blue-500 text-white"
+																: "bg-gray-700 text-gray-100"
+														}`}
+													>
+														<p className="text-sm">{message.content}</p>
+														{message.attachmentUrl && (
+															<div className="mt-2">
+																{message.attachmentType?.startsWith(
+																	"image/"
+																) ? (
+																	<img
+																		src={message.attachmentUrl}
+																		alt="Attachment"
+																		className="max-w-full rounded-lg"
+																	/>
+																) : (
+																	<a
+																		href={message.attachmentUrl}
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		className="flex items-center gap-2 text-sm underline"
+																	>
+																		<File className="h-4 w-4" />
+																		{message.attachmentName || "Attachment"}
+																	</a>
+																)}
+															</div>
+														)}
+														<div className="flex items-center justify-end gap-1 mt-2">
+															<span
+																className={`text-xs ${
+																	isCurrentUser
+																		? "text-blue-100"
 																		: "text-gray-400"
 																}`}
-															/>
-														)}
+															>
+																{format(new Date(message.createdAt), "HH:mm")}
+															</span>
+															{isCurrentUser && (
+																<CheckCheck
+																	className={`h-3 w-3 ${
+																		message.isRead
+																			? "text-blue-300"
+																			: "text-gray-400"
+																	}`}
+																/>
+															)}
+														</div>
 													</div>
 												</div>
-											</div>
-										)
-									})}
+											)
+										}
+									)}
 									<div ref={messagesEndRef} />
 								</div>
 
@@ -644,7 +746,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 												onKeyDown={(e) => {
 													if (e.key === "Enter" && !e.shiftKey) {
 														e.preventDefault()
-														handleSendMessage(e as any)
+														handleSendMessage(e as React.FormEvent)
 													}
 												}}
 											/>
@@ -771,68 +873,76 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 											</p>
 										</div>
 									) : (
-										filteredClients.map((client: any) => (
-											<button
-												key={client.id}
-												onClick={() => handleCreateConversation(client.id)}
-												disabled={createConversationMutation.isPending}
-												className="w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-												style={{
-													borderColor: "#606364",
-													color: "#C3BCC2",
-												}}
-												onMouseEnter={(e) => {
-													if (!createConversationMutation.isPending) {
-														e.currentTarget.style.backgroundColor = "#3A4040"
-													}
-												}}
-												onMouseLeave={(e) => {
-													if (!createConversationMutation.isPending) {
-														e.currentTarget.style.backgroundColor =
-															"transparent"
-													}
-												}}
-											>
-												{createConversationMutation.isPending && (
-													<div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
-														<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-													</div>
-												)}
-												<div className="flex items-center gap-3">
-													<ProfilePictureUploader
-														currentAvatarUrl={client.avatar}
-														userName={client.name || client.email || "User"}
-														onAvatarChange={() => {}}
-														size="sm"
-														readOnly={true}
-														className="flex-shrink-0"
-													/>
-													<div className="text-left">
-														<p
-															className="font-medium"
-															style={{ color: "#C3BCC2" }}
-														>
-															{client.name ||
-																client.email?.split("@")[0] ||
-																"Unknown"}
-														</p>
-														<div className="flex items-center gap-2">
+										filteredClients.map(
+											(client: {
+												id: string
+												name?: string
+												email?: string
+												avatar?: string
+												userId?: string
+											}) => (
+												<button
+													key={client.id}
+													onClick={() => handleCreateConversation(client.id)}
+													disabled={createConversationMutation.isPending}
+													className="w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+													style={{
+														borderColor: "#606364",
+														color: "#C3BCC2",
+													}}
+													onMouseEnter={(e) => {
+														if (!createConversationMutation.isPending) {
+															e.currentTarget.style.backgroundColor = "#3A4040"
+														}
+													}}
+													onMouseLeave={(e) => {
+														if (!createConversationMutation.isPending) {
+															e.currentTarget.style.backgroundColor =
+																"transparent"
+														}
+													}}
+												>
+													{createConversationMutation.isPending && (
+														<div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
+															<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+														</div>
+													)}
+													<div className="flex items-center gap-3">
+														<ProfilePictureUploader
+															currentAvatarUrl={client.avatar}
+															userName={client.name || client.email || "User"}
+															onAvatarChange={() => {}}
+															size="sm"
+															readOnly={true}
+															className="flex-shrink-0"
+														/>
+														<div className="text-left">
 															<p
-																className="text-sm"
-																style={{ color: "#ABA4AA" }}
+																className="font-medium"
+																style={{ color: "#C3BCC2" }}
 															>
-																{client.email || "No email"}
+																{client.name ||
+																	client.email?.split("@")[0] ||
+																	"Unknown"}
 															</p>
-															{!client.userId && (
-																<span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-																	No Account
-																</span>
-															)}
+															<div className="flex items-center gap-2">
+																<p
+																	className="text-sm"
+																	style={{ color: "#ABA4AA" }}
+																>
+																	{client.email || "No email"}
+																</p>
+																{!client.userId && (
+																	<span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+																		No Account
+																	</span>
+																)}
+															</div>
 														</div>
 													</div>
-												</div>
-											</button>
-										))
+												</button>
+											)
+										)
 									)}
 								</div>
 							</div>
