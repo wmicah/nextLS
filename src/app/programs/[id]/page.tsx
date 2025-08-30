@@ -111,7 +111,13 @@ export default function ProgramEditorPage() {
 
 		window.addEventListener("keydown", handleKeyDown)
 		return () => window.removeEventListener("keydown", handleKeyDown)
-	}, [selectedDays])
+	}, [
+		selectedDays,
+		handleCopy,
+		handleDeleteSelected,
+		handlePaste,
+		handleSelectAll,
+	])
 
 	// Remove auto-save - only save when user explicitly clicks save
 

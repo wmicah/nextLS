@@ -42,14 +42,14 @@ export default function ClientDetailsPage({
 		trpc.workouts.getClientWorkouts.useQuery({
 			clientId: clientId,
 		})
-	const { data: clientProgress = [] } =
-		trpc.progress.getClientProgressById.useQuery({
-			clientId: clientId,
-		})
-	const { data: assignedVideos = [] } =
-		trpc.library.getClientAssignedVideos.useQuery({
-			clientId: clientId,
-		})
+	// const { data: clientProgress = [] } =
+	// 	trpc.progress.getClientProgressById.useQuery({
+	// 		clientId: clientId,
+	// 	})
+	// const { data: assignedVideos = [] } =
+	// 	trpc.library.getClientAssignedVideos.useQuery({
+	// 		clientId: clientId,
+	// 	})
 	const { data: assignedPrograms = [] } =
 		trpc.clients.getAssignedPrograms.useQuery({
 			clientId: clientId,
@@ -77,7 +77,7 @@ export default function ClientDetailsPage({
 							Client Not Found
 						</h2>
 						<p className="text-gray-400 mb-4">
-							The client you're looking for doesn't exist.
+							The client you&apos;re looking for doesn&apos;t exist.
 						</p>
 						<Link
 							href="/dashboard"
@@ -229,8 +229,8 @@ export default function ClientDetailsPage({
 										</span>
 									</div>
 									<p className="text-xs text-gray-400 mt-1">
-										This client hasn't signed up yet. They'll see their assigned
-										content once they create an account.
+										This client hasn&apos;t signed up yet. They&apos;ll see
+										their assigned content once they create an account.
 									</p>
 								</div>
 							)}

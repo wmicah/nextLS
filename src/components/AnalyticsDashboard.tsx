@@ -431,7 +431,9 @@ export default function AnalyticsDashboard() {
 						].map((range) => (
 							<button
 								key={range.value}
-								onClick={() => setTimeRange(range.value as any)}
+								onClick={() =>
+									setTimeRange(range.value as "7d" | "30d" | "90d" | "1y")
+								}
 								className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
 									timeRange === range.value ? "shadow-lg" : ""
 								}`}

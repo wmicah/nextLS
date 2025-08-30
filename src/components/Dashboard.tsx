@@ -104,9 +104,11 @@ export default function Dashboard() {
 		)
 	}
 
-	const upcomingLessons = clients.filter((c: any) => c.nextLessonDate).length
+	const upcomingLessons = clients.filter(
+		(c: { nextLessonDate?: string }) => c.nextLessonDate
+	).length
 	const activeWorkouts = clients.filter(
-		(c: any) => c.lastCompletedWorkout
+		(c: { lastCompletedWorkout?: string }) => c.lastCompletedWorkout
 	).length
 
 	return (
@@ -586,169 +588,185 @@ export default function Dashboard() {
 					</div>
 				) : (
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						{clients.map((client: any, index: number) => (
-							<div
-								key={client.id}
-								className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-								style={{
-									backgroundColor: "#353A3A",
-									borderColor: "#606364",
-									animationDelay: `${index * 100}ms`,
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.backgroundColor = "#3A4040"
-									e.currentTarget.style.borderColor = "#4A5A70"
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.backgroundColor = "#353A3A"
-									e.currentTarget.style.borderColor = "#606364"
-								}}
-							>
+						{clients.map(
+							(
+								client: {
+									id: string
+									name?: string
+									email?: string
+									avatar?: string
+									nextLessonDate?: string
+									lastCompletedWorkout?: string
+								},
+								index: number
+							) => (
 								<div
-									className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+									key={client.id}
+									className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
 									style={{
-										background:
-											"linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+										backgroundColor: "#353A3A",
+										borderColor: "#606364",
+										animationDelay: `${index * 100}ms`,
 									}}
-								/>
-								<div className="relative p-6">
-									<div className="flex items-center justify-between mb-4">
-										<ProfilePictureUploader
-											currentAvatarUrl={
-												client.user?.settings?.avatarUrl || client.avatar
-											}
-											userName={client.name}
-											onAvatarChange={() => {}}
-											size="md"
-											readOnly={true}
-											className="flex-shrink-0"
-										/>
-										{/* Debug: {client.avatar ? `Avatar: ${client.avatar}` : 'No avatar'} */}
-										<div className="flex items-center gap-2">
-											<button
-												className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
-												style={{ color: "#ABA4AA" }}
-												onMouseEnter={(e) => {
-													e.currentTarget.style.color = "#C3BCC2"
-													e.currentTarget.style.backgroundColor = "#3A4040"
-												}}
-												onMouseLeave={(e) => {
-													e.currentTarget.style.color = "#ABA4AA"
-													e.currentTarget.style.backgroundColor = "transparent"
-												}}
-											>
-												<Edit className="h-4 w-4" />
-											</button>
-											<button
-												onClick={(e) => {
-													e.stopPropagation()
-													handleDeleteClient(client.id, client.name)
-												}}
-												disabled={deletingClientId === client.id}
-												className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
-												style={{ color: "#ABA4AA" }}
-												onMouseEnter={(e) => {
-													if (!e.currentTarget.disabled) {
-														e.currentTarget.style.color = "#EF4444"
+									onMouseEnter={(e) => {
+										e.currentTarget.style.backgroundColor = "#3A4040"
+										e.currentTarget.style.borderColor = "#4A5A70"
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.backgroundColor = "#353A3A"
+										e.currentTarget.style.borderColor = "#606364"
+									}}
+								>
+									<div
+										className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+										style={{
+											background:
+												"linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+										}}
+									/>
+									<div className="relative p-6">
+										<div className="flex items-center justify-between mb-4">
+											<ProfilePictureUploader
+												currentAvatarUrl={
+													client.user?.settings?.avatarUrl || client.avatar
+												}
+												userName={client.name}
+												onAvatarChange={() => {}}
+												size="md"
+												readOnly={true}
+												className="flex-shrink-0"
+											/>
+											{/* Debug: {client.avatar ? `Avatar: ${client.avatar}` : 'No avatar'} */}
+											<div className="flex items-center gap-2">
+												<button
+													className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
+													style={{ color: "#ABA4AA" }}
+													onMouseEnter={(e) => {
+														e.currentTarget.style.color = "#C3BCC2"
 														e.currentTarget.style.backgroundColor = "#3A4040"
-													}
-												}}
-												onMouseLeave={(e) => {
-													if (!e.currentTarget.disabled) {
+													}}
+													onMouseLeave={(e) => {
 														e.currentTarget.style.color = "#ABA4AA"
 														e.currentTarget.style.backgroundColor =
 															"transparent"
-													}
-												}}
-											>
-												{deletingClientId === client.id ? (
-													<div
-														className="animate-spin rounded-full h-4 w-4 border-b-2"
-														style={{ borderColor: "#EF4444" }}
-													></div>
-												) : (
-													<Trash2 className="h-4 w-4" />
-												)}
-											</button>
-										</div>
-									</div>
-									<div>
-										<h3
-											className="text-lg font-bold mb-2"
-											style={{ color: "#C3BCC2" }}
-										>
-											{client.name}
-										</h3>
-										<p className="text-sm mb-3" style={{ color: "#ABA4AA" }}>
-											Added {format(new Date(client.createdAt), "MMM d, yyyy")}
-										</p>
-										<div className="grid grid-cols-2 gap-3 mb-4">
-											<div
-												className="rounded-lg p-3"
-												style={{ backgroundColor: "#3A4040" }}
-											>
-												<p
-													className="text-xs font-medium mb-1"
+													}}
+												>
+													<Edit className="h-4 w-4" />
+												</button>
+												<button
+													onClick={(e) => {
+														e.stopPropagation()
+														handleDeleteClient(client.id, client.name)
+													}}
+													disabled={deletingClientId === client.id}
+													className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
 													style={{ color: "#ABA4AA" }}
+													onMouseEnter={(e) => {
+														if (!e.currentTarget.disabled) {
+															e.currentTarget.style.color = "#EF4444"
+															e.currentTarget.style.backgroundColor = "#3A4040"
+														}
+													}}
+													onMouseLeave={(e) => {
+														if (!e.currentTarget.disabled) {
+															e.currentTarget.style.color = "#ABA4AA"
+															e.currentTarget.style.backgroundColor =
+																"transparent"
+														}
+													}}
 												>
-													Next Lesson
-												</p>
-												<p
-													className="text-sm font-semibold"
-													style={{ color: "#C3BCC2" }}
-												>
-													{client.nextLessonDate
-														? format(new Date(client.nextLessonDate), "MMM d")
-														: "Not scheduled"}
-												</p>
-											</div>
-											<div
-												className="rounded-lg p-3"
-												style={{ backgroundColor: "#3A4040" }}
-											>
-												<p
-													className="text-xs font-medium mb-1"
-													style={{ color: "#ABA4AA" }}
-												>
-													Last Workout
-												</p>
-												<p
-													className="text-sm font-semibold truncate"
-													style={{ color: "#C3BCC2" }}
-												>
-													{client.lastCompletedWorkout || "None"}
-												</p>
+													{deletingClientId === client.id ? (
+														<div
+															className="animate-spin rounded-full h-4 w-4 border-b-2"
+															style={{ borderColor: "#EF4444" }}
+														></div>
+													) : (
+														<Trash2 className="h-4 w-4" />
+													)}
+												</button>
 											</div>
 										</div>
-										<div className="flex items-center justify-between">
-											<span
-												className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium`}
-												style={{
-													backgroundColor: client.nextLessonDate
-														? "#10B981"
-														: "#3A4040",
-													color: client.nextLessonDate ? "#DCFCE7" : "#C3BCC2",
-													borderColor: client.nextLessonDate
-														? "#059669"
-														: "#4A5A70",
-												}}
+										<div>
+											<h3
+												className="text-lg font-bold mb-2"
+												style={{ color: "#C3BCC2" }}
 											>
-												{client.nextLessonDate ? "🔥 Active" : "💤 Available"}
-											</span>
-											<Link
-												href={`/clients/${client.id}`}
-												className="flex items-center gap-1 text-xs font-medium group"
-												style={{ color: "#4A5A70" }}
-												onClick={(e) => e.stopPropagation()}
-											>
-												View Details
-												<ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform duration-200" />
-											</Link>
+												{client.name}
+											</h3>
+											<p className="text-sm mb-3" style={{ color: "#ABA4AA" }}>
+												Added{" "}
+												{format(new Date(client.createdAt), "MMM d, yyyy")}
+											</p>
+											<div className="grid grid-cols-2 gap-3 mb-4">
+												<div
+													className="rounded-lg p-3"
+													style={{ backgroundColor: "#3A4040" }}
+												>
+													<p
+														className="text-xs font-medium mb-1"
+														style={{ color: "#ABA4AA" }}
+													>
+														Next Lesson
+													</p>
+													<p
+														className="text-sm font-semibold"
+														style={{ color: "#C3BCC2" }}
+													>
+														{client.nextLessonDate
+															? format(new Date(client.nextLessonDate), "MMM d")
+															: "Not scheduled"}
+													</p>
+												</div>
+												<div
+													className="rounded-lg p-3"
+													style={{ backgroundColor: "#3A4040" }}
+												>
+													<p
+														className="text-xs font-medium mb-1"
+														style={{ color: "#ABA4AA" }}
+													>
+														Last Workout
+													</p>
+													<p
+														className="text-sm font-semibold truncate"
+														style={{ color: "#C3BCC2" }}
+													>
+														{client.lastCompletedWorkout || "None"}
+													</p>
+												</div>
+											</div>
+											<div className="flex items-center justify-between">
+												<span
+													className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium`}
+													style={{
+														backgroundColor: client.nextLessonDate
+															? "#10B981"
+															: "#3A4040",
+														color: client.nextLessonDate
+															? "#DCFCE7"
+															: "#C3BCC2",
+														borderColor: client.nextLessonDate
+															? "#059669"
+															: "#4A5A70",
+													}}
+												>
+													{client.nextLessonDate ? "🔥 Active" : "💤 Available"}
+												</span>
+												<Link
+													href={`/clients/${client.id}`}
+													className="flex items-center gap-1 text-xs font-medium group"
+													style={{ color: "#4A5A70" }}
+													onClick={(e) => e.stopPropagation()}
+												>
+													View Details
+													<ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform duration-200" />
+												</Link>
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-						))}
+							)
+						)}
 					</div>
 				)}
 

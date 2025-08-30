@@ -264,7 +264,7 @@ export default function SchedulePageClient() {
 			return
 		}
 
-		const [, hour, , period] = timeMatch
+		const [, hour, minute, period] = timeMatch
 		let hour24 = parseInt(hour)
 
 		// Convert to 24-hour format
@@ -334,9 +334,9 @@ export default function SchedulePageClient() {
 	}
 
 	// Helper functions to determine lesson types
-	const isClientRequest = (lesson: { status: string }) => {
-		return lesson.status === "PENDING"
-	}
+	// const isClientRequest = (lesson: { status: string }) => {
+	// 	return lesson.status === "PENDING"
+	// }
 
 	const isCoachScheduled = (lesson: { status: string }) => {
 		return true // All lessons in coachSchedule are coach-scheduled (confirmed)
@@ -358,7 +358,16 @@ export default function SchedulePageClient() {
 		})
 	}
 
-	const handleRejectRequestInline = (request: any, e: React.MouseEvent) => {
+	const handleRejectRequestInline = (
+		request: {
+			id: string
+			clientId: string
+			date: string
+			time: string
+			reason: string
+		},
+		e: React.MouseEvent
+	) => {
 		e.stopPropagation()
 		handleRejectRequest(request)
 	}
@@ -687,7 +696,7 @@ export default function SchedulePageClient() {
 									<div className="flex items-center gap-3 mb-3">
 										<Calendar className="h-5 w-5 text-emerald-400" />
 										<h3 className="text-lg font-semibold text-white">
-											Today's Upcoming Lessons
+											Today&apos;s Upcoming Lessons
 										</h3>
 									</div>
 									{todaysLessons.length > 0 ? (
@@ -906,63 +915,61 @@ export default function SchedulePageClient() {
 										{/* Pending Requests */}
 										{hasPending && (
 											<div className="space-y-1 mb-2">
-												{pendingForDay
-													.slice(0, 2)
-													.map(
-														(
-															request: {
-																id: string
-																date: string
-																client?: { name?: string; email?: string }
-															},
-															index: number
-														) => (
-															<div
-																key={`pending-${index}`}
-																className="text-xs p-2 rounded bg-orange-500/40 text-orange-100 border-2 border-orange-400 shadow-md relative group"
-															>
-																<div className="flex items-center justify-between">
-																	<div className="flex-1">
-																		<div className="font-bold">
-																			{format(new Date(request.date), "h:mm a")}
-																		</div>
-																		<div className="truncate text-orange-200 font-medium">
-																			{request.client?.name ||
-																				request.client?.email ||
-																				"Client"}
-																		</div>
+												{pendingForDay.slice(0, 2).map(
+													(
+														request: {
+															id: string
+															date: string
+															client?: { name?: string; email?: string }
+														},
+														index: number
+													) => (
+														<div
+															key={`pending-${index}`}
+															className="text-xs p-2 rounded bg-orange-500/40 text-orange-100 border-2 border-orange-400 shadow-md relative group"
+														>
+															<div className="flex items-center justify-between">
+																<div className="flex-1">
+																	<div className="font-bold">
+																		{format(new Date(request.date), "h:mm a")}
 																	</div>
-																	{/* Accept/Reject buttons - only for client requests */}
-																	<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-																		<button
-																			onClick={(e) =>
-																				handleApproveRequest(request, e)
-																			}
-																			disabled={
-																				approveScheduleRequestMutation.isPending
-																			}
-																			className="p-1 rounded hover:bg-green-500/30 text-green-300 hover:text-green-200 transition-colors"
-																			title="Approve request"
-																		>
-																			<CheckCircle className="h-3 w-3" />
-																		</button>
-																		<button
-																			onClick={(e) =>
-																				handleRejectRequestInline(request, e)
-																			}
-																			disabled={
-																				rejectScheduleRequestMutation.isPending
-																			}
-																			className="p-1 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200 transition-colors"
-																			title="Reject request"
-																		>
-																			<XCircle className="h-3 w-3" />
-																		</button>
+																	<div className="truncate text-orange-200 font-medium">
+																		{request.client?.name ||
+																			request.client?.email ||
+																			"Client"}
 																	</div>
 																</div>
+																{/* Accept/Reject buttons - only for client requests */}
+																<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+																	<button
+																		onClick={(e) =>
+																			handleApproveRequest(request, e)
+																		}
+																		disabled={
+																			approveScheduleRequestMutation.isPending
+																		}
+																		className="p-1 rounded hover:bg-green-500/30 text-green-300 hover:text-green-200 transition-colors"
+																		title="Approve request"
+																	>
+																		<CheckCircle className="h-3 w-3" />
+																	</button>
+																	<button
+																		onClick={(e) =>
+																			handleRejectRequestInline(request, e)
+																		}
+																		disabled={
+																			rejectScheduleRequestMutation.isPending
+																		}
+																		className="p-1 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200 transition-colors"
+																		title="Reject request"
+																	>
+																		<XCircle className="h-3 w-3" />
+																	</button>
+																</div>
 															</div>
-														)
-													)}
+														</div>
+													)
+												)}
 												{pendingForDay.length > 2 && (
 													<div className="text-xs text-orange-400 text-center py-1">
 														+{pendingForDay.length - 2} more pending
@@ -974,50 +981,45 @@ export default function SchedulePageClient() {
 										{/* Confirmed Lessons */}
 										{hasLessons && (
 											<div className="space-y-1">
-												{lessonsForDay
-													.slice(0, 3)
-													.map(
-														(
-															lesson: {
-																id: string
-																date: string
-																client?: { name?: string; email?: string }
-																title: string
-															},
-															index: number
-														) => (
-															<div
-																key={index}
-																className="text-xs p-2 rounded bg-emerald-500/40 text-emerald-100 border-2 border-emerald-400 shadow-md relative group"
-															>
-																<div className="flex items-center justify-between">
-																	<div className="flex-1">
-																		<div className="font-bold">
-																			{format(new Date(lesson.date), "h:mm a")}
-																		</div>
-																		<div className="truncate text-emerald-200 font-medium">
-																			{lesson.client?.name ||
-																				lesson.client?.email ||
-																				"Client"}
-																		</div>
+												{lessonsForDay.slice(0, 3).map(
+													(
+														lesson: {
+															id: string
+															date: string
+															client?: { name?: string; email?: string }
+															title: string
+														},
+														index: number
+													) => (
+														<div
+															key={index}
+															className="text-xs p-2 rounded bg-emerald-500/40 text-emerald-100 border-2 border-emerald-400 shadow-md relative group"
+														>
+															<div className="flex items-center justify-between">
+																<div className="flex-1">
+																	<div className="font-bold">
+																		{format(new Date(lesson.date), "h:mm a")}
 																	</div>
-																	<button
-																		onClick={(e) => {
-																			e.stopPropagation()
-																			handleDeleteLesson(
-																				lesson.id,
-																				lesson.title
-																			)
-																		}}
-																		className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200"
-																		title="Delete lesson"
-																	>
-																		<Trash2 className="h-3 w-3" />
-																	</button>
+																	<div className="truncate text-emerald-200 font-medium">
+																		{lesson.client?.name ||
+																			lesson.client?.email ||
+																			"Client"}
+																	</div>
 																</div>
+																<button
+																	onClick={(e) => {
+																		e.stopPropagation()
+																		handleDeleteLesson(lesson.id, lesson.title)
+																	}}
+																	className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-1 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200"
+																	title="Delete lesson"
+																>
+																	<Trash2 className="h-3 w-3" />
+																</button>
 															</div>
-														)
-													)}
+														</div>
+													)
+												)}
 												{lessonsForDay.length > 3 && (
 													<div className="text-xs text-gray-400 text-center py-1">
 														+{lessonsForDay.length - 3} more lessons
@@ -1577,7 +1579,7 @@ export default function SchedulePageClient() {
 									</div>
 									{selectedRequestToReject.description && (
 										<div className="text-sm text-gray-300 mb-4">
-											<strong>Client's Reason:</strong>{" "}
+											<strong>Client&apos;s Reason:</strong>{" "}
 											{selectedRequestToReject.description}
 										</div>
 									)}

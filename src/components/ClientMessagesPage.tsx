@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
+// import { useRouter } from "next/navigation"
 import { trpc } from "@/app/_trpc/client"
 import {
 	Search,
@@ -9,13 +9,7 @@ import {
 	MoreVertical,
 	Send,
 	Paperclip,
-	Image as ImageIcon,
 	File,
-	Video,
-	Archive,
-	Trash2,
-	User,
-	Clock,
 	Check,
 	CheckCheck,
 	X,

@@ -349,7 +349,8 @@ export default function ClientSchedulePageClient() {
 							<div>
 								<h1 className="text-3xl font-bold text-white">My Schedule</h1>
 								<p className="text-gray-400">
-									View your coach's availability and request schedule changes
+									View your coach&apos;s availability and request schedule
+									changes
 								</p>
 							</div>
 						</div>
@@ -376,7 +377,7 @@ export default function ClientSchedulePageClient() {
 						<div className="flex items-center gap-3 mb-2">
 							<Clock className="h-5 w-5 text-sky-400" />
 							<h2 className="text-lg font-semibold text-white">
-								Coach's Working Hours
+								Coach&apos;s Working Hours
 							</h2>
 						</div>
 						<p className="text-gray-300">
@@ -454,7 +455,7 @@ export default function ClientSchedulePageClient() {
 									<div className="flex items-center gap-3 mb-3">
 										<Users className="h-5 w-5 text-sky-400" />
 										<h3 className="text-lg font-semibold text-white">
-											Coach's Upcoming Lessons
+											Coach&apos;s Upcoming Lessons
 										</h3>
 									</div>
 									{upcomingLessons.length > 0 ? (
@@ -530,7 +531,9 @@ export default function ClientSchedulePageClient() {
 						</div>
 						<div className="flex items-center gap-2">
 							<div className="w-4 h-4 rounded bg-sky-500 border-2 border-sky-400"></div>
-							<span className="text-white font-medium">Coach's Lessons</span>
+							<span className="text-white font-medium">
+								Coach&apos;s Lessons
+							</span>
 						</div>
 						<div className="flex items-center gap-2">
 							<div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400"></div>
@@ -598,37 +601,35 @@ export default function ClientSchedulePageClient() {
 										{/* My Confirmed Lessons */}
 										{hasMyLessons && (
 											<div className="space-y-1 mb-2">
-												{myLessonsForDay
-													.slice(0, 2)
-													.map(
-														(
-															lesson: {
-																status: string
-																date: string
-																title: string
-															},
-															index: number
-														) => (
-															<div
-																key={`my-${index}`}
-																className={`text-xs p-2 rounded border-2 ${getStatusColor(
-																	lesson.status
-																)} shadow-md relative group`}
-															>
-																<div className="flex items-center justify-between">
-																	<div className="flex-1">
-																		<div className="font-bold">
-																			{format(new Date(lesson.date), "h:mm a")}
-																		</div>
-																		<div className="truncate opacity-80 font-medium">
-																			{lesson.title}
-																		</div>
+												{myLessonsForDay.slice(0, 2).map(
+													(
+														lesson: {
+															status: string
+															date: string
+															title: string
+														},
+														index: number
+													) => (
+														<div
+															key={`my-${index}`}
+															className={`text-xs p-2 rounded border-2 ${getStatusColor(
+																lesson.status
+															)} shadow-md relative group`}
+														>
+															<div className="flex items-center justify-between">
+																<div className="flex-1">
+																	<div className="font-bold">
+																		{format(new Date(lesson.date), "h:mm a")}
 																	</div>
-																	{getStatusIcon(lesson.status)}
+																	<div className="truncate opacity-80 font-medium">
+																		{lesson.title}
+																	</div>
 																</div>
+																{getStatusIcon(lesson.status)}
 															</div>
-														)
-													)}
+														</div>
+													)
+												)}
 												{myLessonsForDay.length > 2 && (
 													<div className="text-xs text-emerald-400 text-center py-1">
 														+{myLessonsForDay.length - 2} more
@@ -640,35 +641,33 @@ export default function ClientSchedulePageClient() {
 										{/* Coach's Lessons */}
 										{hasCoachLessons && (
 											<div className="space-y-1">
-												{coachLessonsForDay
-													.slice(0, 2)
-													.map(
-														(
-															lesson: {
-																date: string
-																client?: { name?: string; email?: string }
-															},
-															index: number
-														) => (
-															<div
-																key={`coach-${index}`}
-																className="text-xs p-2 rounded bg-sky-500/40 text-sky-100 border-2 border-sky-400 shadow-md"
-															>
-																<div className="flex items-center justify-between">
-																	<div className="flex-1">
-																		<div className="font-bold">
-																			{format(new Date(lesson.date), "h:mm a")}
-																		</div>
-																		<div className="truncate text-sky-200 font-medium">
-																			{lesson.client?.name ||
-																				lesson.client?.email ||
-																				"Client"}
-																		</div>
+												{coachLessonsForDay.slice(0, 2).map(
+													(
+														lesson: {
+															date: string
+															client?: { name?: string; email?: string }
+														},
+														index: number
+													) => (
+														<div
+															key={`coach-${index}`}
+															className="text-xs p-2 rounded bg-sky-500/40 text-sky-100 border-2 border-sky-400 shadow-md"
+														>
+															<div className="flex items-center justify-between">
+																<div className="flex-1">
+																	<div className="font-bold">
+																		{format(new Date(lesson.date), "h:mm a")}
+																	</div>
+																	<div className="truncate text-sky-200 font-medium">
+																		{lesson.client?.name ||
+																			lesson.client?.email ||
+																			"Client"}
 																	</div>
 																</div>
 															</div>
-														)
-													)}
+														</div>
+													)
+												)}
 												{coachLessonsForDay.length > 2 && (
 													<div className="text-xs text-sky-400 text-center py-1">
 														+{coachLessonsForDay.length - 2} more
@@ -933,7 +932,7 @@ export default function ClientSchedulePageClient() {
 								<div className="mb-6">
 									<div className="flex items-center justify-between mb-4">
 										<h3 className="text-lg font-semibold text-white">
-											Coach's Scheduled Lessons
+											Coach&apos;s Scheduled Lessons
 										</h3>
 									</div>
 
@@ -960,7 +959,7 @@ export default function ClientSchedulePageClient() {
 														index: number
 													) => {
 														const lessonDate = new Date(lesson.date)
-														// const isPast = lessonDate < new Date()
+														const isPast = lessonDate < new Date()
 														return (
 															<div
 																key={index}

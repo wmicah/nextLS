@@ -39,25 +39,25 @@ interface Client {
 	}[]
 }
 
-interface Program {
-	id: string
-	title: string
-	description: string | null
-	sport: string
-	level: string
-	duration: number
-	status: string
-	assignments?: {
-		id: string
-		clientId: string
-		progress: number
-		client: {
-			id: string
-			name: string
-			email: string | null
-		}
-	}[]
-}
+// interface Program {
+// 	id: string
+// 	title: string
+// 	description: string | null
+// 	sport: string
+// 	level: string
+// 	duration: number
+// 	status: string
+// // 	assignments?: {
+// 		id: string
+// 		clientId: string
+// 		progress: number
+// 		client: {
+// 			id: string
+// 			name: string
+// 			email: string | null
+// 		}
+// 	}[]
+// }
 
 export default function AssignProgramModal({
 	isOpen,

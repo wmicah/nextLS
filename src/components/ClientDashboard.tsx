@@ -49,7 +49,7 @@ export default function ClientDashboard() {
 			// Refetch today's workouts to get updated completion status
 			// The query will automatically refetch due to the mutation
 		},
-		onError: (error: Error) => {
+		onError: (error: unknown) => {
 			console.error("Failed to mark workout as complete:", error)
 		},
 	})
@@ -202,7 +202,7 @@ export default function ClientDashboard() {
 											style={{ color: "#C3BCC2" }}
 										/>
 									</div>
-									<span>Ready to crush today's training?</span>
+									<span>Ready to crush today&apos;s training?</span>
 								</div>
 							</div>
 							<div className="text-right">
@@ -256,7 +256,7 @@ export default function ClientDashboard() {
 									className="text-xl font-bold mb-3"
 									style={{ color: "#C3BCC2" }}
 								>
-									Today's Drills
+									Today&apos;s Drills
 								</h3>
 								<p className="text-base" style={{ color: "#ABA4AA" }}>
 									{todaysWorkoutCount > 0 ? "Ready to go!" : "No drills today"}
@@ -296,7 +296,7 @@ export default function ClientDashboard() {
 									className="text-xl font-bold mb-3"
 									style={{ color: "#C3BCC2" }}
 								>
-									Today's Progress
+									Today&apos;s Progress
 								</h3>
 								<p className="text-base" style={{ color: "#ABA4AA" }}>
 									{weeklyProgress > 0 ? "Great work!" : "Let's get started"}
@@ -424,7 +424,7 @@ export default function ClientDashboard() {
 											className="text-3xl font-bold"
 											style={{ color: "#C3BCC2" }}
 										>
-											Today's Plan
+											Today&apos;s Plan
 										</h2>
 									</div>
 									<div
