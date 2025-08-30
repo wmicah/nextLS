@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/db"
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+import { verifyLessonToken } from "@/lib/jwt"
 
 export async function GET(
 	request: NextRequest,
@@ -9,16 +9,20 @@ export async function GET(
 	try {
 		const token = params.token
 
-		// TODO: Implement proper token verification
-		// For now, we'll use a simple approach
-		// In production, you'd want to use JWT or similar
-
-		// Extract lesson ID from token (this is a simplified approach)
-		const lessonId = token // In real implementation, decode the token
+		// Verify the JWT token
+		let tokenPayload
+		try {
+			tokenPayload = await verifyLessonToken(token)
+		} catch (error) {
+			return NextResponse.json(
+				{ error: "Invalid or expired token" },
+				{ status: 401 }
+			)
+		}
 
 		// Find the lesson
 		const lesson = await db.event.findUnique({
-			where: { id: lessonId },
+			where: { id: tokenPayload.lessonId },
 			include: {
 				client: true,
 				coach: true,
@@ -27,6 +31,14 @@ export async function GET(
 
 		if (!lesson) {
 			return NextResponse.json({ error: "Lesson not found" }, { status: 404 })
+		}
+
+		// Verify the lesson belongs to the client in the token
+		if (lesson.clientId !== tokenPayload.clientId) {
+			return NextResponse.json(
+				{ error: "Unauthorized access" },
+				{ status: 403 }
+			)
 		}
 
 		// Return a simple confirmation page
@@ -86,31 +98,54 @@ export async function POST(
 		const token = params.token
 		const { action } = await request.json() // "accept" or "decline"
 
-		// TODO: Implement proper token verification
-		const lessonId = token
+		// Verify the JWT token
+		let tokenPayload
+		try {
+			tokenPayload = await verifyLessonToken(token)
+		} catch (error) {
+			return NextResponse.json(
+				{ error: "Invalid or expired token" },
+				{ status: 401 }
+			)
+		}
 
 		const lesson = await db.event.findUnique({
-			where: { id: lessonId },
+			where: { id: tokenPayload.lessonId },
 		})
 
 		if (!lesson) {
 			return NextResponse.json({ error: "Lesson not found" }, { status: 404 })
 		}
 
+		// Verify the lesson belongs to the client in the token
+		if (lesson.clientId !== tokenPayload.clientId) {
+			return NextResponse.json(
+				{ error: "Unauthorized access" },
+				{ status: 403 }
+			)
+		}
+
 		if (action === "accept") {
 			// Update lesson status to confirmed
 			await db.event.update({
-				where: { id: lessonId },
+				where: { id: tokenPayload.lessonId },
 				data: {
-					// Add a status field to the Event model if needed
-					// For now, we'll just update the description
-					description: "Lesson confirmed by client",
+					status: "CONFIRMED",
+					description: lesson.description
+						? `${lesson.description} - Confirmed by client`
+						: "Confirmed by client",
 				},
 			})
 		} else if (action === "decline") {
-			// Delete the lesson or mark as declined
-			await db.event.delete({
-				where: { id: lessonId },
+			// Update lesson status to declined instead of deleting
+			await db.event.update({
+				where: { id: tokenPayload.lessonId },
+				data: {
+					status: "DECLINED",
+					description: lesson.description
+						? `${lesson.description} - Declined by client`
+						: "Declined by client",
+				},
 			})
 		}
 

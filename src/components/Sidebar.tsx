@@ -19,59 +19,15 @@ import {
 	FiChevronLeft,
 	FiChevronRight,
 	FiBarChart2,
+	FiVideo,
 } from "react-icons/fi"
 import { LogOut, Settings, UserIcon, MessageCircle } from "lucide-react"
+import MessagePopup from "./MessagePopup"
+import NotificationPopup from "./NotificationPopup"
+import ProfilePictureUploader from "./ProfilePictureUploader"
+import ClientSearchModal from "./ClientSearchModal"
 
-const navLinks = [
-	{
-		name: "Dashboard",
-		icon: <FiHome />,
-		href: "/dashboard",
-		description: "Overview & analytics",
-		badge: null,
-		gradient: "from-blue-500 to-cyan-500",
-	},
-	{
-		name: "Analytics",
-		icon: <FiBarChart2 />,
-		href: "/analytics",
-		description: "Data insights",
-		badge: null,
-		gradient: "from-emerald-500 to-teal-500",
-	},
-	{
-		name: "Clients",
-		icon: <FiUsers />,
-		href: "/clients",
-		description: "Manage athletes",
-		badge: null,
-		gradient: "from-green-500 to-emerald-500",
-	},
-	{
-		name: "Library",
-		icon: <FiBookOpen />,
-		href: "/library",
-		description: "Training resources",
-		badge: null,
-		gradient: "from-purple-500 to-pink-500",
-	},
-	{
-		name: "Programs",
-		icon: <FiClipboard />,
-		href: "/programs",
-		description: "Workout plans",
-		badge: null,
-		gradient: "from-orange-500 to-red-500",
-	},
-	{
-		name: "Schedule",
-		icon: <FiCalendar />,
-		href: "/schedule",
-		description: "Lesson planning",
-		badge: null,
-		gradient: "from-indigo-500 to-purple-500",
-	},
-]
+// navLinks will be defined inside the component to access unreadCount
 
 const bottomLinks = [
 	{ name: "Settings", icon: <FiSettings />, href: "/settings" },
@@ -93,6 +49,8 @@ export default function Sidebar({ user, children }: SidebarProps) {
 	const [userDropdownOpen, setUserDropdownOpen] = useState(false)
 	const [isLoggingOut, setIsLoggingOut] = useState(false)
 	const [showRecentMessages, setShowRecentMessages] = useState(false)
+	const [showNotifications, setShowNotifications] = useState(false)
+	const [showClientSearch, setShowClientSearch] = useState(false)
 	const [isAnimating, setIsAnimating] = useState(false)
 	const [hoveredLink, setHoveredLink] = useState<string | null>(null)
 	const dropdownRef = useRef<HTMLDivElement>(null)
@@ -104,9 +62,91 @@ export default function Sidebar({ user, children }: SidebarProps) {
 		undefined,
 		{
 			enabled: showRecentMessages,
-			refetchInterval: 5000,
+			refetchInterval: 10000, // Increased from 5s to 10s for better performance
+			staleTime: 5000, // Add stale time to reduce unnecessary refetches
 		}
 	)
+
+	// Get unread notification count
+	const { data: unreadNotificationCount = 0 } =
+		trpc.notifications.getUnreadCount.useQuery()
+
+	// Get user settings for avatar
+	const { data: userSettings } = trpc.settings.getSettings.useQuery()
+
+	// Define navLinks inside component to access unreadCount
+	const navLinks = [
+		{
+			name: "Dashboard",
+			icon: <FiHome />,
+			href: "/dashboard",
+			description: "Overview & analytics",
+			badge: null,
+			gradient: "from-blue-500 to-cyan-500",
+		},
+
+		{
+			name: "Clients",
+			icon: <FiUsers />,
+			href: "/clients",
+			description: "Manage athletes",
+			badge: null,
+			gradient: "from-green-500 to-emerald-500",
+		},
+		{
+			name: "Library",
+			icon: <FiBookOpen />,
+			href: "/library",
+			description: "Training resources",
+			badge: null,
+			gradient: "from-purple-500 to-pink-500",
+		},
+		{
+			name: "Programs",
+			icon: <FiClipboard />,
+			href: "/programs",
+			description: "Workout plans",
+			badge: null,
+			gradient: "from-orange-500 to-red-500",
+		},
+		{
+			name: "Schedule",
+			icon: <FiCalendar />,
+			href: "/schedule",
+			description: "Lesson planning",
+			badge: null,
+			gradient: "from-indigo-500 to-purple-500",
+		},
+		{
+			name: "Analytics",
+			icon: <FiBarChart2 />,
+			href: "/analytics",
+			description: "Data insights",
+			badge: null,
+			gradient: "from-emerald-500 to-teal-500",
+		},
+		{
+			name: "Videos",
+			icon: <FiVideo />,
+			href: "/videos",
+			description: "Video feedback system",
+			badge: null,
+			gradient: "from-red-500 to-pink-500",
+		},
+	]
+
+	// Keyboard shortcut for client search (Cmd/Ctrl + K)
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+				e.preventDefault()
+				setShowClientSearch(true)
+			}
+		}
+
+		document.addEventListener("keydown", handleKeyDown)
+		return () => document.removeEventListener("keydown", handleKeyDown)
+	}, [])
 
 	// ---- Persist sidebar open/closed state
 	useEffect(() => {
@@ -167,6 +207,22 @@ export default function Sidebar({ user, children }: SidebarProps) {
 		}
 	}
 
+	const handleNotificationClick = (e: React.MouseEvent) => {
+		e.preventDefault()
+		e.stopPropagation()
+		if (showNotifications) {
+			setIsAnimating(true)
+			setTimeout(() => {
+				setShowNotifications(false)
+				setIsAnimating(false)
+			}, 200)
+		} else {
+			setShowNotifications(true)
+			setIsAnimating(true)
+			setTimeout(() => setIsAnimating(false), 300)
+		}
+	}
+
 	const handleLogout = async () => {
 		setIsLoggingOut(true)
 		setUserDropdownOpen(false)
@@ -176,11 +232,6 @@ export default function Sidebar({ user, children }: SidebarProps) {
 			console.error("Logout failed:", error)
 			setIsLoggingOut(false)
 		}
-	}
-
-	const handleProfileClick = () => {
-		setUserDropdownOpen(false)
-		router.push("/profile")
 	}
 
 	const handleSettingsClick = () => {
@@ -235,13 +286,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
 			{/* Mobile hamburger button */}
 			<button
 				onClick={toggleMobileSidebar}
-				className="fixed top-4 left-4 z-30 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-lg"
-				style={{
-					backgroundColor: "#141718",
-					color: "#C3BCC2",
-					boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
-					border: "1px solid #606364",
-				}}
+				className="fixed top-4 left-4 z-30 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-lg bg-sidebar text-sidebar-foreground border border-sidebar-border"
 				aria-label={isMobileOpen ? "Close sidebar" : "Open sidebar"}
 			>
 				{isMobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
@@ -257,17 +302,11 @@ export default function Sidebar({ user, children }: SidebarProps) {
 
 			{/* Sidebar */}
 			<aside
-				className={`flex flex-col justify-between h-screen fixed left-0 top-0 z-20 transition-[width,transform] duration-500 ease-in-out backdrop-blur-sm ${
+				className={`flex flex-col justify-between h-screen fixed left-0 top-0 z-20 transition-[width,transform] duration-500 ease-in-out backdrop-blur-sm bg-sidebar text-sidebar-foreground shadow-lg ${
 					isOpen ? "md:w-64" : "md:w-20"
 				} ${
 					isMobileOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full"
 				} md:translate-x-0`}
-				style={{
-					backgroundColor: "#141718",
-					color: "#ABA4AA",
-					borderRight: "1px solid #606364",
-					boxShadow: "4px 0 25px rgba(0, 0, 0, 0.4)",
-				}}
 			>
 				<div>
 					{/* Header */}
@@ -281,12 +320,11 @@ export default function Sidebar({ user, children }: SidebarProps) {
 						/>
 
 						<span
-							className={`hover:scale-105 transition-all duration-500 cursor-default whitespace-nowrap relative z-10 ${
+							className={`hover:scale-105 transition-all duration-500 cursor-default whitespace-nowrap relative z-10 text-sidebar-foreground ${
 								isOpen
 									? "opacity-100 translate-x-0 delay-150"
 									: "opacity-0 -translate-x-4"
 							}`}
-							style={{ color: "#C3BCC2" }}
 						>
 							<div className="flex items-center gap-2">
 								{/* Logo is a secondary toggle via double-click */}
@@ -306,12 +344,11 @@ export default function Sidebar({ user, children }: SidebarProps) {
 							</div>
 						</span>
 						<span
-							className={`hover:scale-105 transition-all duration-500 cursor-default absolute z-10 ${
+							className={`hover:scale-105 transition-all duration-500 cursor-default absolute z-10 text-sidebar-foreground ${
 								isOpen
 									? "opacity-0 translate-x-4"
 									: "opacity-100 translate-x-0 delay-150"
 							}`}
-							style={{ color: "#C3BCC2" }}
 						>
 							<div
 								className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer"
@@ -469,45 +506,168 @@ export default function Sidebar({ user, children }: SidebarProps) {
 							isOpen ? "grid-cols-4" : "grid-cols-1 place-items-center"
 						}`}
 					>
-						{bottomLinks.map((link) => (
-							<Link
-								key={link.name}
-								href={link.href}
-								className="text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl"
-								style={{ color: "#606364" }}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.color = "#4A5A70"
-									e.currentTarget.style.backgroundColor =
-										"rgba(74, 90, 112, 0.1)"
-									e.currentTarget.style.borderColor = "#4A5A70"
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.color = "#606364"
-									e.currentTarget.style.backgroundColor = "transparent"
-									e.currentTarget.style.borderColor = "transparent"
-								}}
-							>
-								{link.icon}
+						{bottomLinks.map((link) => {
+							// Special handling for search
+							if (link.name === "Search") {
+								return (
+									<div key={link.name} className="relative">
+										<button
+											onClick={() => setShowClientSearch(true)}
+											className="text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl"
+											style={{ color: "#606364" }}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.color = "#4A5A70"
+												e.currentTarget.style.backgroundColor =
+													"rgba(74, 90, 112, 0.1)"
+												e.currentTarget.style.borderColor = "#4A5A70"
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.color = "#606364"
+												e.currentTarget.style.backgroundColor = "transparent"
+												e.currentTarget.style.borderColor = "transparent"
+											}}
+											aria-label="Jump to client"
+											title="Jump to Client (⌘K)"
+										>
+											{link.icon}
 
-								{!isOpen && (
-									<div
-										className="absolute left-full ml-4 px-3 py-2 text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-lg border"
-										style={{
-											backgroundColor: "#353A3A",
-											color: "#C3BCC2",
-											borderColor: "#606364",
-											transform: "translateY(-50%)",
-											top: "50%",
-										}}
-									>
-										{link.name}
-										<div className="absolute right-full top-1/2 transform -translate-y-1/2">
-											<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
-										</div>
+											{!isOpen && (
+												<div
+													className="absolute left-full ml-4 px-3 py-2 text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-lg border"
+													style={{
+														backgroundColor: "#353A3A",
+														color: "#C3BCC2",
+														borderColor: "#606364",
+														transform: "translateY(-50%)",
+														top: "50%",
+													}}
+												>
+													Jump to Client
+													<div className="absolute right-full top-1/2 transform -translate-y-1/2">
+														<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
+													</div>
+												</div>
+											)}
+										</button>
 									</div>
-								)}
-							</Link>
-						))}
+								)
+							}
+
+							// Special handling for notifications
+							if (link.name === "Notifications") {
+								return (
+									<div key={link.name} className="relative">
+										<button
+											onClick={handleNotificationClick}
+											className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl ${
+												showNotifications ? "scale-110" : ""
+											}`}
+											style={{ color: "#606364" }}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.color = "#4A5A70"
+												e.currentTarget.style.backgroundColor =
+													"rgba(74, 90, 112, 0.1)"
+												e.currentTarget.style.borderColor = "#4A5A70"
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.color = "#606364"
+												e.currentTarget.style.backgroundColor = "transparent"
+												e.currentTarget.style.borderColor = "transparent"
+											}}
+											aria-label="Toggle notifications"
+											title="Notifications"
+										>
+											<div className="relative">
+												{link.icon}
+												{unreadNotificationCount > 0 && (
+													<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+														{unreadNotificationCount > 9
+															? "9+"
+															: unreadNotificationCount}
+													</span>
+												)}
+											</div>
+
+											{!isOpen && !showNotifications && (
+												<div
+													className="absolute left-full ml-4 px-3 py-2 text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-lg border"
+													style={{
+														backgroundColor: "#353A3A",
+														color: "#C3BCC2",
+														borderColor: "#606364",
+														transform: "translateY(-50%)",
+														top: "50%",
+													}}
+												>
+													{link.name}
+													{unreadNotificationCount > 0 && (
+														<span className="ml-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
+															{unreadNotificationCount}
+														</span>
+													)}
+													<div className="absolute right-full top-1/2 transform -translate-y-1/2">
+														<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
+													</div>
+												</div>
+											)}
+										</button>
+
+										{/* Notification Popup */}
+										<NotificationPopup
+											isOpen={showNotifications}
+											onClose={() => {
+												setIsAnimating(true)
+												setTimeout(() => {
+													setShowNotifications(false)
+													setIsAnimating(false)
+												}, 200)
+											}}
+										/>
+									</div>
+								)
+							}
+
+							// Regular links
+							return (
+								<Link
+									key={link.name}
+									href={link.href}
+									className="text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl"
+									style={{ color: "#606364" }}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.color = "#4A5A70"
+										e.currentTarget.style.backgroundColor =
+											"rgba(74, 90, 112, 0.1)"
+										e.currentTarget.style.borderColor = "#4A5A70"
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.color = "#606364"
+										e.currentTarget.style.backgroundColor = "transparent"
+										e.currentTarget.style.borderColor = "transparent"
+									}}
+								>
+									{link.icon}
+
+									{!isOpen && (
+										<div
+											className="absolute left-full ml-4 px-3 py-2 text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-lg border"
+											style={{
+												backgroundColor: "#353A3A",
+												color: "#C3BCC2",
+												borderColor: "#606364",
+												transform: "translateY(-50%)",
+												top: "50%",
+											}}
+										>
+											{link.name}
+											<div className="absolute right-full top-1/2 transform -translate-y-1/2">
+												<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
+											</div>
+										</div>
+									)}
+								</Link>
+							)
+						})}
 
 						{/* Messages Button with Popup */}
 						<div className="relative" ref={messagePopupRef}>
@@ -567,7 +727,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
 							{/* Recent Messages Popup with Animation */}
 							{showRecentMessages && (
 								<div
-									className={`absolute bottom-full mb-2 w-80 h-96 rounded-xl shadow-xl border ${
+									className={`absolute bottom-full mb-2 w-96 h-96 rounded-xl shadow-xl border ${
 										isOpen ? "left-0" : "left-12"
 									} ${
 										isAnimating && !showRecentMessages
@@ -811,17 +971,13 @@ export default function Sidebar({ user, children }: SidebarProps) {
 								disabled={isLoggingOut}
 								className="rounded-full w-12 h-12 flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-110 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
 								style={{
-									backgroundColor: "#4A5A70",
 									boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
-									border: "2px solid transparent",
 								}}
 								onMouseEnter={(e) => {
-									e.currentTarget.style.borderColor = "#606364"
 									e.currentTarget.style.boxShadow =
 										"0 6px 25px rgba(0, 0, 0, 0.5)"
 								}}
 								onMouseLeave={(e) => {
-									e.currentTarget.style.borderColor = "transparent"
 									e.currentTarget.style.boxShadow =
 										"0 4px 20px rgba(0, 0, 0, 0.4)"
 								}}
@@ -831,7 +987,13 @@ export default function Sidebar({ user, children }: SidebarProps) {
 								{isLoggingOut ? (
 									<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
 								) : (
-									userInitials
+									<ProfilePictureUploader
+										currentAvatarUrl={userSettings?.avatarUrl}
+										userName={user?.name || authData?.user?.name || "User"}
+										onAvatarChange={() => {}} // No-op for sidebar
+										size="sm"
+										readOnly={true}
+									/>
 								)}
 
 								{/* User tooltip when collapsed and dropdown closed */}
@@ -899,12 +1061,13 @@ export default function Sidebar({ user, children }: SidebarProps) {
 										className="flex items-center gap-3 pb-3 border-b"
 										style={{ borderColor: "#606364" }}
 									>
-										<div
-											className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-											style={{ backgroundColor: "#4A5A70" }}
-										>
-											{userInitials}
-										</div>
+										<ProfilePictureUploader
+											currentAvatarUrl={userSettings?.avatarUrl}
+											userName={user?.name || authData?.user?.name || "User"}
+											onAvatarChange={() => {}} // No-op for dropdown
+											size="sm"
+											readOnly={true}
+										/>
 										<div>
 											<p className="font-medium" style={{ color: "#C3BCC2" }}>
 												{user?.name || authData?.user?.name || "User"}
@@ -916,24 +1079,6 @@ export default function Sidebar({ user, children }: SidebarProps) {
 									</div>
 
 									<div className="mt-3 space-y-1">
-										<button
-											onClick={handleProfileClick}
-											className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-											style={{ color: "#ABA4AA" }}
-											onMouseEnter={(e) => {
-												e.currentTarget.style.backgroundColor = "#606364"
-												e.currentTarget.style.color = "#C3BCC2"
-											}}
-											onMouseLeave={(e) => {
-												e.currentTarget.style.backgroundColor = "transparent"
-												e.currentTarget.style.color = "#ABA4AA"
-											}}
-											role="menuitem"
-										>
-											<UserIcon className="h-4 w-4" />
-											<span className="text-sm">Profile</span>
-										</button>
-
 										<button
 											onClick={handleSettingsClick}
 											className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
@@ -1017,6 +1162,12 @@ export default function Sidebar({ user, children }: SidebarProps) {
 			>
 				{children}
 			</div>
+
+			{/* Client Search Modal */}
+			<ClientSearchModal
+				isOpen={showClientSearch}
+				onClose={() => setShowClientSearch(false)}
+			/>
 
 			{/* Add custom keyframes for animations */}
 			<style jsx>{`

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { trpc } from "@/app/_trpc/client"
 import { useUIStore } from "@/lib/stores/uiStore"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import ProfilePictureUploader from "./ProfilePictureUploader"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -50,6 +51,26 @@ interface Client {
 	updatedAt: string
 	nextLessonDate: string | null
 	lastCompletedWorkout: string | null
+	// Pitching Information
+	age?: number | null
+	height?: string | null
+	dominantHand?: string | null
+	movementStyle?: string | null
+	reachingAbility?: string | null
+	averageSpeed?: number | null
+	topSpeed?: number | null
+	dropSpinRate?: number | null
+	changeupSpinRate?: number | null
+	riseSpinRate?: number | null
+	curveSpinRate?: number | null
+	user?: {
+		id: string
+		name: string | null
+		email: string
+		settings: {
+			avatarUrl: string | null
+		} | null
+	} | null
 	programAssignments?: {
 		id: string
 		programId: string
@@ -83,6 +104,19 @@ export default function ClientProfileModal({
 
 	const [isEditing, setIsEditing] = useState(false)
 	const [editedNotes, setEditedNotes] = useState(clientNotes || "")
+	const [editedPitchingData, setEditedPitchingData] = useState({
+		age: "",
+		height: "",
+		dominantHand: "",
+		movementStyle: "",
+		reachingAbility: "",
+		averageSpeed: "",
+		topSpeed: "",
+		dropSpinRate: "",
+		changeupSpinRate: "",
+		riseSpinRate: "",
+		curveSpinRate: "",
+	})
 	const [isUpdating, setIsUpdating] = useState(false)
 
 	const { addToast } = useUIStore()
@@ -93,6 +127,25 @@ export default function ClientProfileModal({
 		{ id: clientId },
 		{ enabled: isOpen && !!clientId }
 	)
+
+	// Update editedPitchingData when client data is loaded
+	useEffect(() => {
+		if (client) {
+			setEditedPitchingData({
+				age: client.age?.toString() || "",
+				height: client.height || "",
+				dominantHand: client.dominantHand || "",
+				movementStyle: client.movementStyle || "",
+				reachingAbility: client.reachingAbility || "",
+				averageSpeed: client.averageSpeed?.toString() || "",
+				topSpeed: client.topSpeed?.toString() || "",
+				dropSpinRate: client.dropSpinRate?.toString() || "",
+				changeupSpinRate: client.changeupSpinRate?.toString() || "",
+				riseSpinRate: client.riseSpinRate?.toString() || "",
+				curveSpinRate: client.curveSpinRate?.toString() || "",
+			})
+		}
+	}, [client])
 
 	// Update client notes mutation
 	const updateClientMutation = trpc.clients.update.useMutation({
@@ -125,9 +178,68 @@ export default function ClientProfileModal({
 		})
 	}
 
+	const handleSavePitchingData = () => {
+		setIsUpdating(true)
+		updateClientMutation.mutate({
+			id: clientId,
+			age: editedPitchingData.age
+				? parseInt(editedPitchingData.age)
+				: undefined,
+			height: editedPitchingData.height.trim() || undefined,
+			dominantHand:
+				(editedPitchingData.dominantHand as "RIGHT" | "LEFT") || undefined,
+			movementStyle:
+				(editedPitchingData.movementStyle as "AIRPLANE" | "HELICOPTER") ||
+				undefined,
+			reachingAbility:
+				(editedPitchingData.reachingAbility as "REACHER" | "NON_REACHER") ||
+				undefined,
+			averageSpeed: editedPitchingData.averageSpeed
+				? parseFloat(editedPitchingData.averageSpeed)
+				: undefined,
+			topSpeed: editedPitchingData.topSpeed
+				? parseFloat(editedPitchingData.topSpeed)
+				: undefined,
+			dropSpinRate: editedPitchingData.dropSpinRate
+				? parseInt(editedPitchingData.dropSpinRate)
+				: undefined,
+			changeupSpinRate: editedPitchingData.changeupSpinRate
+				? parseInt(editedPitchingData.changeupSpinRate)
+				: undefined,
+			riseSpinRate: editedPitchingData.riseSpinRate
+				? parseInt(editedPitchingData.riseSpinRate)
+				: undefined,
+			curveSpinRate: editedPitchingData.curveSpinRate
+				? parseInt(editedPitchingData.curveSpinRate)
+				: undefined,
+		})
+	}
+
 	const handleCancelEdit = () => {
 		setIsEditing(false)
 		setEditedNotes(clientNotes || "")
+		if (client) {
+			setEditedPitchingData({
+				age: client.age?.toString() || "",
+				height: client.height || "",
+				dominantHand: client.dominantHand || "",
+				movementStyle: client.movementStyle || "",
+				reachingAbility: client.reachingAbility || "",
+				averageSpeed: client.averageSpeed?.toString() || "",
+				topSpeed: client.topSpeed?.toString() || "",
+				dropSpinRate: client.dropSpinRate?.toString() || "",
+				changeupSpinRate: client.changeupSpinRate?.toString() || "",
+				riseSpinRate: client.riseSpinRate?.toString() || "",
+				curveSpinRate: client.curveSpinRate?.toString() || "",
+			})
+		}
+	}
+
+	const handlePitchingInputChange = (
+		e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+	) => {
+		const { name, value } = e.target
+		setEditedPitchingData((prev) => ({ ...prev, [name]: value }))
 	}
 
 	if (!isOpen) {
@@ -209,14 +321,16 @@ export default function ClientProfileModal({
 									}}
 								>
 									<div className="flex items-center gap-3 mb-4">
-										<div className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0">
-											<span
-												className="text-white font-bold text-xl rounded-full w-full h-full flex items-center justify-center"
-												style={{ backgroundColor: "#4A5A70" }}
-											>
-												{clientName.charAt(0).toUpperCase()}
-											</span>
-										</div>
+										<ProfilePictureUploader
+											currentAvatarUrl={
+												client?.user?.settings?.avatarUrl || client?.avatar
+											}
+											userName={clientName}
+											onAvatarChange={() => {}} // No-op for profile modal
+											size="lg"
+											readOnly={true}
+											className="flex-shrink-0"
+										/>
 										<div>
 											<h2
 												className="text-2xl font-bold"
@@ -308,6 +422,466 @@ export default function ClientProfileModal({
 											</div>
 										</div>
 									</div>
+								</div>
+
+								{/* Pitching Information Section */}
+								<div
+									className="rounded-2xl shadow-xl border p-6"
+									style={{
+										backgroundColor: "#2A2F2F",
+										borderColor: "#606364",
+									}}
+								>
+									<div className="flex items-center gap-2 mb-4">
+										<Target className="h-5 w-5" style={{ color: "#C3BCC2" }} />
+										<h3 className="font-bold" style={{ color: "#C3BCC2" }}>
+											Pitching Information
+										</h3>
+									</div>
+									{isEditing ? (
+										<div className="space-y-4">
+											<div className="grid grid-cols-2 gap-4">
+												<div>
+													<label
+														htmlFor="age"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Age
+													</label>
+													<input
+														type="number"
+														id="age"
+														name="age"
+														value={editedPitchingData.age}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														placeholder="Age"
+													/>
+												</div>
+												<div>
+													<label
+														htmlFor="height"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Height
+													</label>
+													<input
+														type="text"
+														id="height"
+														name="height"
+														value={editedPitchingData.height}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														placeholder="e.g., 6'2&quot;, 185cm"
+													/>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-2 gap-4">
+												<div>
+													<label
+														htmlFor="dominantHand"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Dominant Hand
+													</label>
+													<select
+														id="dominantHand"
+														name="dominantHand"
+														value={editedPitchingData.dominantHand}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+													>
+														<option value="">Select hand</option>
+														<option value="RIGHT">Right</option>
+														<option value="LEFT">Left</option>
+													</select>
+												</div>
+												<div>
+													<label
+														htmlFor="movementStyle"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Movement Style
+													</label>
+													<select
+														id="movementStyle"
+														name="movementStyle"
+														value={editedPitchingData.movementStyle}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+													>
+														<option value="">Select style</option>
+														<option value="AIRPLANE">Airplane</option>
+														<option value="HELICOPTER">Helicopter</option>
+													</select>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-2 gap-4">
+												<div>
+													<label
+														htmlFor="reachingAbility"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Reaching Ability
+													</label>
+													<select
+														id="reachingAbility"
+														name="reachingAbility"
+														value={editedPitchingData.reachingAbility}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+													>
+														<option value="">Select ability</option>
+														<option value="REACHER">Reacher</option>
+														<option value="NON_REACHER">Non Reacher</option>
+													</select>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-2 gap-4">
+												<div>
+													<label
+														htmlFor="averageSpeed"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Average Speed (mph)
+													</label>
+													<input
+														type="number"
+														step="0.1"
+														id="averageSpeed"
+														name="averageSpeed"
+														value={editedPitchingData.averageSpeed}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														placeholder="0.0"
+													/>
+												</div>
+												<div>
+													<label
+														htmlFor="topSpeed"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Top Speed (mph)
+													</label>
+													<input
+														type="number"
+														step="0.1"
+														id="topSpeed"
+														name="topSpeed"
+														value={editedPitchingData.topSpeed}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														placeholder="0.0"
+													/>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-2 gap-4">
+												<div>
+													<label
+														htmlFor="dropSpinRate"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Drop Spin Rate (rpm)
+													</label>
+													<input
+														type="number"
+														id="dropSpinRate"
+														name="dropSpinRate"
+														value={editedPitchingData.dropSpinRate}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														placeholder="0"
+													/>
+												</div>
+												<div>
+													<label
+														htmlFor="changeupSpinRate"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Changeup Spin Rate (rpm)
+													</label>
+													<input
+														type="number"
+														id="changeupSpinRate"
+														name="changeupSpinRate"
+														value={editedPitchingData.changeupSpinRate}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														placeholder="0"
+													/>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-2 gap-4">
+												<div>
+													<label
+														htmlFor="riseSpinRate"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Rise Spin Rate (rpm)
+													</label>
+													<input
+														type="number"
+														id="riseSpinRate"
+														name="riseSpinRate"
+														value={editedPitchingData.riseSpinRate}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														placeholder="0"
+													/>
+												</div>
+												<div>
+													<label
+														htmlFor="curveSpinRate"
+														className="block text-sm font-medium mb-2"
+														style={{ color: "#C3BCC2" }}
+													>
+														Curve Spin Rate (rpm)
+													</label>
+													<input
+														type="number"
+														id="curveSpinRate"
+														name="curveSpinRate"
+														value={editedPitchingData.curveSpinRate}
+														onChange={handlePitchingInputChange}
+														className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+														style={{
+															backgroundColor: "#353A3A",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														placeholder="0"
+													/>
+												</div>
+											</div>
+
+											<div className="flex gap-3 pt-4">
+												<button
+													onClick={handleSavePitchingData}
+													disabled={isUpdating}
+													className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+													style={{
+														backgroundColor: "#4A5A70",
+														color: "#FFFFFF",
+													}}
+												>
+													{isUpdating ? "Saving..." : "Save Pitching Data"}
+												</button>
+											</div>
+										</div>
+									) : (
+										<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+											{client?.age && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">Age</div>
+													<div className="text-sm font-medium text-white">
+														{client.age}
+													</div>
+												</div>
+											)}
+											{client?.height && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Height
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.height}
+													</div>
+												</div>
+											)}
+											{client?.dominantHand && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Dominant Hand
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.dominantHand === "RIGHT" ? "Right" : "Left"}
+													</div>
+												</div>
+											)}
+											{client?.movementStyle && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Movement Style
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.movementStyle === "AIRPLANE"
+															? "Airplane"
+															: "Helicopter"}
+													</div>
+												</div>
+											)}
+											{client?.reachingAbility && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Reaching Ability
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.reachingAbility === "REACHER"
+															? "Reacher"
+															: "Non Reacher"}
+													</div>
+												</div>
+											)}
+											{client?.averageSpeed && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Average Speed
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.averageSpeed} mph
+													</div>
+												</div>
+											)}
+											{client?.topSpeed && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Top Speed
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.topSpeed} mph
+													</div>
+												</div>
+											)}
+											{client?.dropSpinRate && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Drop Spin Rate
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.dropSpinRate} rpm
+													</div>
+												</div>
+											)}
+											{client?.changeupSpinRate && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Changeup Spin Rate
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.changeupSpinRate} rpm
+													</div>
+												</div>
+											)}
+											{client?.riseSpinRate && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Rise Spin Rate
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.riseSpinRate} rpm
+													</div>
+												</div>
+											)}
+											{client?.curveSpinRate && (
+												<div
+													className="p-3 rounded-lg"
+													style={{ backgroundColor: "#353A3A" }}
+												>
+													<div className="text-xs text-gray-400 mb-1">
+														Curve Spin Rate
+													</div>
+													<div className="text-sm font-medium text-white">
+														{client.curveSpinRate} rpm
+													</div>
+												</div>
+											)}
+										</div>
+									)}
 								</div>
 
 								{/* Notes Section */}

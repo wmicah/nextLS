@@ -35,6 +35,12 @@ interface DayColumnProps {
 
 // Draggable Exercise Item Component
 function SortableExerciseItem({ exercise, onDelete }: any) {
+	// Defensive check to ensure exercise has an ID
+	if (!exercise?.id) {
+		console.warn("Exercise without ID:", exercise)
+		return null
+	}
+
 	const {
 		attributes,
 		listeners,
@@ -362,13 +368,23 @@ export default function DayColumn({
 	const handleDragEnd = (event: DragEndEvent) => {
 		const { active, over } = event
 
-		if (active.id !== over?.id && day.drills && currentWeekData) {
+		// Defensive checks to prevent errors with undefined IDs
+		if (!active?.id || !over?.id || !day.drills || !currentWeekData) {
+			return
+		}
+
+		if (active.id !== over.id) {
 			const oldIndex = day.drills.findIndex(
 				(drill: any) => drill.id === active.id
 			)
 			const newIndex = day.drills.findIndex(
-				(drill: any) => drill.id === over?.id
+				(drill: any) => drill.id === over.id
 			)
+
+			// Additional defensive check for valid indices
+			if (oldIndex === -1 || newIndex === -1) {
+				return
+			}
 
 			const reorderedDrills = arrayMove(day.drills, oldIndex, newIndex)
 
@@ -537,17 +553,21 @@ export default function DayColumn({
 						onDragEnd={handleDragEnd}
 					>
 						<SortableContext
-							items={day.drills.map((drill: any) => drill.id)}
+							items={day.drills
+								.filter((drill: any) => drill.id)
+								.map((drill: any) => drill.id)}
 							strategy={verticalListSortingStrategy}
 						>
 							<div className="space-y-4">
-								{day.drills.map((exercise: any) => (
-									<SortableExerciseItem
-										key={exercise.id}
-										exercise={exercise}
-										onDelete={handleDeleteExercise}
-									/>
-								))}
+								{day.drills
+									.filter((exercise: any) => exercise.id)
+									.map((exercise: any) => (
+										<SortableExerciseItem
+											key={exercise.id}
+											exercise={exercise}
+											onDelete={handleDeleteExercise}
+										/>
+									))}
 							</div>
 						</SortableContext>
 					</DndContext>

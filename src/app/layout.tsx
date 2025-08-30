@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar"
 import Providers from "@/components/Providers"
 import ConditionalNavbar from "@/components/ConditionalNavbar"
 import Toast from "@/components/common/Toast"
+import { ThemeProvider } from "@/contexts/ThemeContext"
 
 const inter = Inter({ subsets: ["latin"] })
 // const poppins = Poppins({
@@ -26,15 +27,20 @@ export default function RootLayout({
 	children: React.ReactNode
 }) {
 	return (
-		<html lang="en" className={`light`}>
+		<html lang="en">
 			<Providers>
-				<body
-					className={cn("min-h-screen font-sans antialiased", inter.className)}
-				>
-					<ConditionalNavbar />
-					{children}
-					<Toast />
-				</body>
+				<ThemeProvider>
+					<body
+						className={cn(
+							"min-h-screen font-sans antialiased bg-background text-foreground",
+							inter.className
+						)}
+					>
+						<ConditionalNavbar />
+						{children}
+						<Toast />
+					</body>
+				</ThemeProvider>
 			</Providers>
 		</html>
 	)

@@ -81,6 +81,7 @@ export default function CreateProgramModal({
 	onClose,
 	onSubmit,
 }: CreateProgramModalProps) {
+	console.log("CreateProgramModal render - isOpen:", isOpen)
 	const [activeTab, setActiveTab] = useState("details")
 	const initializedRef = useRef(false)
 	const [isDrillSelectionOpen, setIsDrillSelectionOpen] = useState(false)
@@ -319,20 +320,44 @@ export default function CreateProgramModal({
 	}
 
 	const handleFormSubmit = (data: ProgramFormData) => {
-		// Ensure weeks are properly initialized
+		// Ensure weeks are properly initialized and fill empty days with rest days
 		const validWeeks = weeks.slice(0, data.duration).map((week, weekIndex) => ({
 			...week,
 			weekNumber: weekIndex + 1,
-			days: week.days.map((day, dayIndex) => ({
-				...day,
-				dayNumber: dayIndex + 1,
-				drills: day.drills.map((drill, drillIndex) => ({
-					...drill,
-					order: drillIndex + 1,
-					title: drill.title || "Untitled Drill",
-					videoUrl: drill.videoUrl || "",
-				})),
-			})),
+			days: week.days.map((day, dayIndex) => {
+				// If the day has no drills, make it a rest day
+				if (day.drills.length === 0) {
+					return {
+						...day,
+						dayNumber: dayIndex + 1,
+						title: "Rest Day",
+						description: "Recovery and rest day",
+						drills: [
+							{
+								order: 1,
+								title: "Rest Day",
+								description:
+									"Take this day to recover and rest. No specific exercises required.",
+								duration: "",
+								videoUrl: "",
+								notes: "This is an automatically generated rest day.",
+							},
+						],
+					}
+				}
+
+				// If the day has drills, keep them as is
+				return {
+					...day,
+					dayNumber: dayIndex + 1,
+					drills: day.drills.map((drill, drillIndex) => ({
+						...drill,
+						order: drillIndex + 1,
+						title: drill.title || "Untitled Drill",
+						videoUrl: drill.videoUrl || "",
+					})),
+				}
+			}),
 		}))
 
 		const formData = {
@@ -527,6 +552,15 @@ export default function CreateProgramModal({
 								</Button>
 							</div>
 
+							<div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+								<p className="text-sm text-blue-300">
+									💡 <strong>Auto Rest Days:</strong> Any day without drills
+									will automatically be converted to a "Rest Day" when you save
+									the program. This ensures every day has content for your
+									clients.
+								</p>
+							</div>
+
 							<div className="space-y-4">
 								{Array.from({ length: watchedDuration }, (_, weekIndex) => {
 									const week = weeks[weekIndex] || {
@@ -576,9 +610,19 @@ export default function CreateProgramModal({
 															className="border border-gray-600 rounded-lg p-4"
 														>
 															<div className="flex items-center justify-between mb-3">
-																<h4 className="text-white font-medium">
-																	Day {day.dayNumber}
-																</h4>
+																<div className="flex items-center gap-2">
+																	<h4 className="text-white font-medium">
+																		Day {day.dayNumber}
+																	</h4>
+																	{day.drills.length === 0 && (
+																		<Badge
+																			variant="outline"
+																			className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-xs"
+																		>
+																			Will be Rest Day
+																		</Badge>
+																	)}
+																</div>
 																<Button
 																	size="sm"
 																	onClick={() => addDrill(weekIndex, dayIndex)}

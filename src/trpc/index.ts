@@ -3,6 +3,7 @@ import { publicProcedure, router } from "./trpc"
 import { TRPCError } from "@trpc/server"
 import { db } from "@/db"
 import { z } from "zod"
+import { format } from "date-fns"
 import {
 	extractYouTubeVideoId,
 	extractPlaylistId,
@@ -11,6 +12,7 @@ import {
 	fetchPlaylistVideos,
 } from "@/lib/youtube"
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils"
+import { sendClientJoinNotification } from "@/lib/notification-utils"
 
 export const appRouter = router({
 	authCallback: publicProcedure.query(
@@ -171,8 +173,135 @@ export const appRouter = router({
 					})
 				}
 
+				// If client is joining a coach, create notification and client record
+				if (input.role === "CLIENT" && input.coachId) {
+					// Verify the coach exists
+					const coach = await db.user.findFirst({
+						where: { id: input.coachId, role: "COACH" },
+					})
+
+					if (!coach) {
+						throw new TRPCError({
+							code: "NOT_FOUND",
+							message: "Coach not found",
+						})
+					}
+
+					// Create or update client record
+					await db.client.upsert({
+						where: { userId: user.id },
+						update: {
+							coachId: input.coachId,
+							name: updatedUser.name || "New Client",
+							email: updatedUser.email,
+						},
+						create: {
+							userId: user.id,
+							coachId: input.coachId,
+							name: updatedUser.name || "New Client",
+							email: updatedUser.email,
+						},
+					})
+
+					// Create notification for the coach
+					await db.notification.create({
+						data: {
+							userId: input.coachId,
+							type: "CLIENT_JOIN_REQUEST",
+							title: "New Client Request",
+							message: `${
+								updatedUser.name || "A new client"
+							} wants to join your coaching program.`,
+							data: {
+								clientId: user.id,
+								clientName: updatedUser.name,
+								clientEmail: updatedUser.email,
+							},
+						},
+					})
+
+					// Send email notification to coach
+					try {
+						await sendClientJoinNotification(
+							coach.email,
+							coach.name || "Coach",
+							updatedUser.name || "New Client",
+							updatedUser.email
+						)
+					} catch (error) {
+						console.error("Failed to send email notification:", error)
+						// Don't fail the whole request if email fails
+					}
+				}
+
 				return updatedUser
 			}),
+
+		// Get notifications for the current user
+		getNotifications: publicProcedure
+			.input(
+				z.object({
+					limit: z.number().optional().default(10),
+					unreadOnly: z.boolean().optional().default(false),
+				})
+			)
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const whereClause: any = { userId: user.id }
+
+				if (input.unreadOnly) {
+					whereClause.isRead = false
+				}
+
+				const notifications = await db.notification.findMany({
+					where: whereClause,
+					orderBy: { createdAt: "desc" },
+					take: input.limit,
+				})
+
+				return notifications
+			}),
+
+		// Mark notification as read
+		markNotificationRead: publicProcedure
+			.input(z.object({ notificationId: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const notification = await db.notification.update({
+					where: {
+						id: input.notificationId,
+						userId: user.id, // Ensure user owns the notification
+					},
+					data: { isRead: true },
+				})
+
+				return notification
+			}),
+
+		// Get unread notification count
+		getUnreadCount: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			const count = await db.notification.count({
+				where: {
+					userId: user.id,
+					isRead: false,
+				},
+			})
+
+			return count
+		}),
 
 		updateWorkingHours: publicProcedure
 			.input(
@@ -304,7 +433,47 @@ export const appRouter = router({
 
 				const clients = await db.client.findMany({
 					where: whereClause,
-					include: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						phone: true,
+						notes: true,
+						coachId: true,
+						createdAt: true,
+						updatedAt: true,
+						nextLessonDate: true,
+						lastCompletedWorkout: true,
+						avatar: true,
+						dueDate: true,
+						lastActivity: true,
+						updates: true,
+						userId: true,
+						archived: true,
+						archivedAt: true,
+						age: true,
+						height: true,
+						dominantHand: true,
+						movementStyle: true,
+						reachingAbility: true,
+						averageSpeed: true,
+						topSpeed: true,
+						dropSpinRate: true,
+						changeupSpinRate: true,
+						riseSpinRate: true,
+						curveSpinRate: true,
+						user: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								settings: {
+									select: {
+										avatarUrl: true,
+									},
+								},
+							},
+						},
 						programAssignments: {
 							include: {
 								program: {
@@ -355,6 +524,48 @@ export const appRouter = router({
 						gte: new Date(),
 					},
 				},
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					phone: true,
+					notes: true,
+					coachId: true,
+					createdAt: true,
+					updatedAt: true,
+					nextLessonDate: true,
+					lastCompletedWorkout: true,
+					avatar: true,
+					dueDate: true,
+					lastActivity: true,
+					updates: true,
+					userId: true,
+					archived: true,
+					archivedAt: true,
+					age: true,
+					height: true,
+					dominantHand: true,
+					movementStyle: true,
+					reachingAbility: true,
+					averageSpeed: true,
+					topSpeed: true,
+					dropSpinRate: true,
+					changeupSpinRate: true,
+					riseSpinRate: true,
+					curveSpinRate: true,
+					user: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							settings: {
+								select: {
+									avatarUrl: true,
+								},
+							},
+						},
+					},
+				},
 				orderBy: { nextLessonDate: "asc" },
 			})
 		}),
@@ -386,6 +597,48 @@ export const appRouter = router({
 						{ nextLessonDate: { lt: new Date() } },
 					],
 				},
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					phone: true,
+					notes: true,
+					coachId: true,
+					createdAt: true,
+					updatedAt: true,
+					nextLessonDate: true,
+					lastCompletedWorkout: true,
+					avatar: true,
+					dueDate: true,
+					lastActivity: true,
+					updates: true,
+					userId: true,
+					archived: true,
+					archivedAt: true,
+					age: true,
+					height: true,
+					dominantHand: true,
+					movementStyle: true,
+					reachingAbility: true,
+					averageSpeed: true,
+					topSpeed: true,
+					dropSpinRate: true,
+					changeupSpinRate: true,
+					riseSpinRate: true,
+					curveSpinRate: true,
+					user: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+							settings: {
+								select: {
+									avatarUrl: true,
+								},
+							},
+						},
+					},
+				},
 				orderBy: { nextLessonDate: "asc" },
 			})
 		}),
@@ -399,6 +652,18 @@ export const appRouter = router({
 					notes: z.string().optional().or(z.literal("")),
 					nextLessonDate: z.string().optional(),
 					lastCompletedWorkout: z.string().optional(),
+					// Client physical information
+					age: z.number().int().positive().optional(),
+					height: z.string().optional(),
+					dominantHand: z.enum(["RIGHT", "LEFT"]).optional(),
+					movementStyle: z.enum(["AIRPLANE", "HELICOPTER"]).optional(),
+					reachingAbility: z.enum(["REACHER", "NON_REACHER"]).optional(),
+					averageSpeed: z.number().positive().optional(),
+					topSpeed: z.number().positive().optional(),
+					dropSpinRate: z.number().int().positive().optional(),
+					changeupSpinRate: z.number().int().positive().optional(),
+					riseSpinRate: z.number().int().positive().optional(),
+					curveSpinRate: z.number().int().positive().optional(),
 				})
 			)
 			.mutation(async ({ input }) => {
@@ -430,6 +695,18 @@ export const appRouter = router({
 							? new Date(input.nextLessonDate)
 							: null,
 						lastCompletedWorkout: input.lastCompletedWorkout || null,
+						// Client physical information
+						age: input.age || null,
+						height: input.height || null,
+						dominantHand: input.dominantHand || null,
+						movementStyle: input.movementStyle || null,
+						reachingAbility: input.reachingAbility || null,
+						averageSpeed: input.averageSpeed || null,
+						topSpeed: input.topSpeed || null,
+						dropSpinRate: input.dropSpinRate || null,
+						changeupSpinRate: input.changeupSpinRate || null,
+						riseSpinRate: input.riseSpinRate || null,
+						curveSpinRate: input.curveSpinRate || null,
 					},
 				})
 
@@ -605,7 +882,43 @@ export const appRouter = router({
 						coachId: user.id,
 						archived: false, // Only allow access to active clients
 					},
-					include: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						phone: true,
+						notes: true,
+						coachId: true,
+						createdAt: true,
+						updatedAt: true,
+						nextLessonDate: true,
+						lastCompletedWorkout: true,
+						avatar: true,
+						dueDate: true,
+						lastActivity: true,
+						updates: true,
+						userId: true,
+						archived: true,
+						archivedAt: true,
+						age: true,
+						height: true,
+						dominantHand: true,
+						movementStyle: true,
+						reachingAbility: true,
+						averageSpeed: true,
+						topSpeed: true,
+						dropSpinRate: true,
+						changeupSpinRate: true,
+						riseSpinRate: true,
+						curveSpinRate: true,
+						user: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								settings: { select: { avatarUrl: true } },
+							},
+						},
 						programAssignments: {
 							include: {
 								program: {
@@ -701,6 +1014,18 @@ export const appRouter = router({
 					notes: z.string().optional().or(z.literal("")),
 					nextLessonDate: z.string().optional(),
 					lastCompletedWorkout: z.string().optional(),
+					// Client physical information
+					age: z.number().int().positive().optional(),
+					height: z.string().optional(),
+					dominantHand: z.enum(["RIGHT", "LEFT"]).optional(),
+					movementStyle: z.enum(["AIRPLANE", "HELICOPTER"]).optional(),
+					reachingAbility: z.enum(["REACHER", "NON_REACHER"]).optional(),
+					averageSpeed: z.number().positive().optional(),
+					topSpeed: z.number().positive().optional(),
+					dropSpinRate: z.number().int().positive().optional(),
+					changeupSpinRate: z.number().int().positive().optional(),
+					riseSpinRate: z.number().int().positive().optional(),
+					curveSpinRate: z.number().int().positive().optional(),
 				})
 			)
 			.mutation(async ({ input }) => {
@@ -780,6 +1105,61 @@ export const appRouter = router({
 
 				return updatedClient
 			}),
+
+		getOtherClients: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a CLIENT
+			const dbUser = await db.user.findFirst({
+				where: { id: user.id, role: "CLIENT" },
+			})
+
+			if (!dbUser) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only clients can access other clients",
+				})
+			}
+
+			// Get the current client's coach
+			const currentClient = await db.client.findFirst({
+				where: { userId: user.id },
+				select: { coachId: true },
+			})
+
+			if (!currentClient) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Client profile not found",
+				})
+			}
+
+			// Get other clients with the same coach (excluding current user)
+			const otherClients = await db.client.findMany({
+				where: {
+					coachId: currentClient.coachId,
+					archived: false,
+				},
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					userId: true,
+					avatar: true,
+				},
+				orderBy: { name: "asc" },
+			})
+
+			// Filter out the current user after fetching
+			const filteredClients = otherClients.filter(
+				(client) => client.userId !== user.id
+			)
+
+			return filteredClients
+		}),
 	}),
 
 	library: router({
@@ -880,6 +1260,46 @@ export const appRouter = router({
 				documents: documentCount,
 			}
 		}),
+
+		getClientCommentsForVideo: publicProcedure
+			.input(z.object({ videoId: z.string() }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can access this endpoint",
+					})
+				}
+
+				// Get client video submissions that reference this library item
+				const comments = await db.clientVideoSubmission.findMany({
+					where: {
+						coachId: user.id,
+						drillId: input.videoId, // This links to the library item
+						comment: { not: null }, // Only get submissions with comments
+					},
+					include: {
+						client: {
+							select: {
+								name: true,
+								avatar: true,
+							},
+						},
+					},
+					orderBy: { createdAt: "desc" },
+				})
+
+				return comments
+			}),
 
 		getAssignedVideos: publicProcedure.query(async () => {
 			const { getUser } = getKindeServerSession()
@@ -1584,6 +2004,48 @@ export const appRouter = router({
 					resources: createdResources,
 				}
 			}),
+
+		getClientVideoSubmissions: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a COACH
+			const coach = await db.user.findFirst({
+				where: { id: user.id, role: "COACH" },
+			})
+
+			if (!coach) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only coaches can view client video submissions",
+				})
+			}
+
+			// Get client video submissions for this coach
+			const submissions = await db.clientVideoSubmission.findMany({
+				where: {
+					coachId: user.id,
+					isPublic: true, // Only show public submissions in library
+				},
+				include: {
+					client: {
+						select: {
+							name: true,
+							email: true,
+						},
+					},
+					drill: {
+						select: {
+							title: true,
+						},
+					},
+				},
+				orderBy: { createdAt: "desc" },
+			})
+
+			return submissions
+		}),
 	}),
 
 	messaging: router({
@@ -1600,34 +2062,160 @@ export const appRouter = router({
 
 			if (!userRole?.role) throw new TRPCError({ code: "UNAUTHORIZED" })
 
-			const conversations = await db.conversation.findMany({
-				where:
-					userRole.role === "COACH"
-						? { coachId: user.id }
-						: { clientId: user.id },
-				include: {
-					coach: { select: { id: true, name: true, email: true } },
-					client: { select: { id: true, name: true, email: true } },
-					messages: {
-						orderBy: { createdAt: "desc" },
-						take: 1,
-						include: {
-							sender: { select: { id: true, name: true } },
-						},
+			// Get conversations based on user role
+			let conversations
+
+			if (userRole.role === "COACH") {
+				// Coaches see all conversations with their clients
+				conversations = await db.conversation.findMany({
+					where: {
+						type: "COACH_CLIENT",
+						coachId: user.id,
 					},
-					_count: {
-						select: {
-							messages: {
-								where: {
-									isRead: false,
-									senderId: { not: user.id },
+					include: {
+						coach: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								settings: { select: { avatarUrl: true } },
+							},
+						},
+						client: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								settings: { select: { avatarUrl: true } },
+							},
+						},
+						messages: {
+							orderBy: { createdAt: "desc" },
+							take: 1,
+							include: {
+								sender: { select: { id: true, name: true } },
+							},
+						},
+						_count: {
+							select: {
+								messages: {
+									where: {
+										isRead: false,
+										senderId: { not: user.id },
+									},
 								},
 							},
 						},
 					},
-				},
-				orderBy: { updatedAt: "desc" },
-			})
+					orderBy: { updatedAt: "desc" },
+					take: 50, // Limit for coaches
+				})
+			} else {
+				// Clients see conversations with their coach AND other clients with the same coach
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+					select: { coachId: true },
+				})
+
+				if (!client)
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+
+				// Get coach-client conversations
+				const coachClientConversations = await db.conversation.findMany({
+					where: {
+						type: "COACH_CLIENT",
+						clientId: user.id,
+					},
+					include: {
+						coach: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								settings: { select: { avatarUrl: true } },
+							},
+						},
+						client: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								settings: { select: { avatarUrl: true } },
+							},
+						},
+						messages: {
+							orderBy: { createdAt: "desc" },
+							take: 1,
+							include: {
+								sender: { select: { id: true, name: true } },
+							},
+						},
+						_count: {
+							select: {
+								messages: {
+									where: {
+										isRead: false,
+										senderId: { not: user.id },
+									},
+								},
+							},
+						},
+					},
+					orderBy: { updatedAt: "desc" },
+				})
+
+				// Get client-client conversations where this user is either client1 or client2
+				const clientClientConversations = await db.conversation.findMany({
+					where: {
+						type: "CLIENT_CLIENT",
+						OR: [{ client1Id: user.id }, { client2Id: user.id }],
+					},
+					include: {
+						client1: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								settings: { select: { avatarUrl: true } },
+							},
+						},
+						client2: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								settings: { select: { avatarUrl: true } },
+							},
+						},
+						messages: {
+							orderBy: { createdAt: "desc" },
+							take: 1,
+							include: {
+								sender: { select: { id: true, name: true } },
+							},
+						},
+						_count: {
+							select: {
+								messages: {
+									where: {
+										isRead: false,
+										senderId: { not: user.id },
+									},
+								},
+							},
+						},
+					},
+					orderBy: { updatedAt: "desc" },
+				})
+
+				conversations = [
+					...coachClientConversations,
+					...clientClientConversations,
+				]
+			}
 
 			return conversations
 		}),
@@ -1643,7 +2231,12 @@ export const appRouter = router({
 				const conversation = await db.conversation.findFirst({
 					where: {
 						id: input.conversationId,
-						OR: [{ coachId: user.id }, { clientId: user.id }],
+						OR: [
+							{ coachId: user.id },
+							{ clientId: user.id },
+							{ client1Id: user.id },
+							{ client2Id: user.id },
+						],
 					},
 				})
 
@@ -1671,10 +2264,26 @@ export const appRouter = router({
 
 		sendMessage: publicProcedure
 			.input(
-				z.object({
-					conversationId: z.string(),
-					content: z.string().min(1).max(1000),
-				})
+				z
+					.object({
+						conversationId: z.string(),
+						content: z.string().max(1000),
+						attachmentUrl: z.string().optional(),
+						attachmentType: z.string().optional(),
+						attachmentName: z.string().optional(),
+						attachmentSize: z.number().optional(),
+					})
+					.refine(
+						(data) => {
+							// Either content must have at least 1 character OR there must be an attachment
+							return data.content.length > 0 || data.attachmentUrl
+						},
+						{
+							message:
+								"Message must contain either text content or a file attachment",
+							path: ["content"],
+						}
+					)
 			)
 			.mutation(async ({ input }) => {
 				const { getUser } = getKindeServerSession()
@@ -1685,7 +2294,12 @@ export const appRouter = router({
 				const conversation = await db.conversation.findFirst({
 					where: {
 						id: input.conversationId,
-						OR: [{ coachId: user.id }, { clientId: user.id }],
+						OR: [
+							{ coachId: user.id },
+							{ clientId: user.id },
+							{ client1Id: user.id },
+							{ client2Id: user.id },
+						],
 					},
 				})
 
@@ -1696,6 +2310,10 @@ export const appRouter = router({
 						conversationId: input.conversationId,
 						senderId: user.id,
 						content: input.content,
+						attachmentUrl: input.attachmentUrl,
+						attachmentType: input.attachmentType,
+						attachmentName: input.attachmentName,
+						attachmentSize: input.attachmentSize,
 					},
 					include: {
 						sender: { select: { id: true, name: true, email: true } },
@@ -1776,6 +2394,293 @@ export const appRouter = router({
 				})
 
 				return conversation
+			}),
+
+		createConversationWithClient: publicProcedure
+			.input(
+				z.object({
+					clientId: z.string(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify current user is a COACH
+				const currentUser = await db.user.findUnique({
+					where: { id: user.id },
+					select: { role: true },
+				})
+
+				if (currentUser?.role !== "COACH") {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can create conversations with clients",
+					})
+				}
+
+				// Get the client
+				const client = await db.client.findUnique({
+					where: { id: input.clientId },
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						userId: true,
+						coachId: true,
+					},
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client not found",
+					})
+				}
+
+				// Verify the client belongs to this coach
+				if (client.coachId !== user.id) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Client not found",
+					})
+				}
+
+				let clientUserId: string
+
+				// If client doesn't have a user account, create one
+				if (!client.userId) {
+					const newClientUser = await db.user.create({
+						data: {
+							email: client.email || `client-${client.id}@placeholder.com`,
+							name: client.name,
+							role: "CLIENT",
+						},
+					})
+
+					// Update the client to link to the new user
+					await db.client.update({
+						where: { id: client.id },
+						data: { userId: newClientUser.id },
+					})
+
+					clientUserId = newClientUser.id
+				} else {
+					clientUserId = client.userId
+				}
+
+				// Check if conversation already exists
+				const existingConversation = await db.conversation.findUnique({
+					where: {
+						coachId_clientId: {
+							coachId: user.id,
+							clientId: clientUserId,
+						},
+					},
+				})
+
+				if (existingConversation) {
+					return existingConversation
+				}
+
+				// Create the conversation
+				const conversation = await db.conversation.create({
+					data: {
+						coachId: user.id,
+						clientId: clientUserId,
+					},
+					include: {
+						coach: { select: { id: true, name: true, email: true } },
+						client: { select: { id: true, name: true, email: true } },
+					},
+				})
+
+				return conversation
+			}),
+
+		createConversationWithAnotherClient: publicProcedure
+			.input(
+				z.object({
+					otherClientId: z.string(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify current user is a CLIENT
+				const currentUser = await db.user.findUnique({
+					where: { id: user.id },
+					select: { role: true },
+				})
+
+				if (currentUser?.role !== "CLIENT") {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can create conversations with other clients",
+					})
+				}
+
+				// Get the current client's coach
+				const currentClient = await db.client.findFirst({
+					where: { userId: user.id },
+					select: { coachId: true },
+				})
+
+				if (!currentClient) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Get the other client and verify they have the same coach
+				const otherClient = await db.client.findFirst({
+					where: {
+						id: input.otherClientId,
+						coachId: currentClient.coachId, // Must have same coach
+					},
+					select: {
+						id: true,
+						userId: true,
+						coachId: true,
+					},
+				})
+
+				if (!otherClient) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Other client not found or doesn't share the same coach",
+					})
+				}
+
+				if (!otherClient.userId) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message:
+							"Other client doesn't have a user account. They need to create an account first to receive messages.",
+					})
+				}
+
+				// Ensure we order the client IDs consistently to avoid duplicates
+				const client1Id =
+					user.id < otherClient.userId ? user.id : otherClient.userId
+				const client2Id =
+					user.id < otherClient.userId ? otherClient.userId : user.id
+
+				// Check if conversation already exists
+				const existingConversation = await db.conversation.findUnique({
+					where: {
+						client1Id_client2Id: {
+							client1Id,
+							client2Id,
+						},
+					},
+				})
+
+				if (existingConversation) {
+					return existingConversation
+				}
+
+				// Create the conversation
+				const conversation = await db.conversation.create({
+					data: {
+						type: "CLIENT_CLIENT",
+						client1Id,
+						client2Id,
+					},
+					include: {
+						client1: { select: { id: true, name: true, email: true } },
+						client2: { select: { id: true, name: true, email: true } },
+					},
+				})
+
+				return conversation
+			}),
+
+		getConversation: publicProcedure
+			.input(z.object({ conversationId: z.string() }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const conversation = await db.conversation.findFirst({
+					where: {
+						id: input.conversationId,
+						OR: [{ coachId: user.id }, { clientId: user.id }],
+					},
+					include: {
+						coach: { select: { id: true, name: true, email: true } },
+						client: { select: { id: true, name: true, email: true } },
+					},
+				})
+
+				if (!conversation) throw new TRPCError({ code: "FORBIDDEN" })
+
+				return conversation
+			}),
+
+		markAsRead: publicProcedure
+			.input(z.object({ conversationId: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user has access to this conversation
+				const conversation = await db.conversation.findFirst({
+					where: {
+						id: input.conversationId,
+						OR: [{ coachId: user.id }, { clientId: user.id }],
+					},
+				})
+
+				if (!conversation) throw new TRPCError({ code: "FORBIDDEN" })
+
+				// Mark all unread messages as read
+				await db.message.updateMany({
+					where: {
+						conversationId: input.conversationId,
+						senderId: { not: user.id },
+						isRead: false,
+					},
+					data: { isRead: true },
+				})
+
+				return { success: true }
+			}),
+
+		deleteConversation: publicProcedure
+			.input(z.object({ conversationId: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user has access to this conversation
+				const conversation = await db.conversation.findFirst({
+					where: {
+						id: input.conversationId,
+						OR: [{ coachId: user.id }, { clientId: user.id }],
+					},
+				})
+
+				if (!conversation) throw new TRPCError({ code: "FORBIDDEN" })
+
+				// Delete the conversation and all its messages
+				await db.conversation.delete({
+					where: { id: input.conversationId },
+				})
+
+				return { success: true }
 			}),
 
 		getUnreadCount: publicProcedure.query(async () => {
@@ -1868,6 +2773,58 @@ export const appRouter = router({
 					},
 					orderBy: { date: "desc" },
 				})
+			}),
+
+		markComplete: publicProcedure
+			.input(
+				z.object({
+					workoutId: z.string(),
+					completed: z.boolean(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can mark workouts as complete",
+					})
+				}
+
+				// Find the assigned workout
+				const assignedWorkout = await db.assignedWorkout.findFirst({
+					where: {
+						id: input.workoutId,
+						clientId: user.id,
+					},
+				})
+
+				if (!assignedWorkout) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Workout not found or not assigned to you",
+					})
+				}
+
+				// Update the workout completion status
+				const updatedWorkout = await db.assignedWorkout.update({
+					where: { id: input.workoutId },
+					data: {
+						completed: input.completed,
+						completedAt: input.completed ? new Date() : null,
+					},
+				})
+
+				return updatedWorkout
 			}),
 	}),
 
@@ -1964,6 +2921,59 @@ export const appRouter = router({
 				orderBy: { date: "asc" },
 			})
 		}),
+
+		createConfirmationToken: publicProcedure
+			.input(z.object({ lessonId: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can create lesson confirmation tokens",
+					})
+				}
+
+				// Find the lesson and verify it belongs to this coach
+				const lesson = await db.event.findFirst({
+					where: {
+						id: input.lessonId,
+						coachId: user.id,
+					},
+					include: {
+						client: true,
+					},
+				})
+
+				if (!lesson) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Lesson not found",
+					})
+				}
+
+				// Import the JWT utility
+				const { createLessonToken } = await import("@/lib/jwt")
+
+				// Create the confirmation token
+				const token = await createLessonToken({
+					lessonId: lesson.id,
+					clientId: lesson.clientId,
+					coachId: lesson.coachId,
+				})
+
+				return {
+					token,
+					confirmationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/lesson/confirm/${token}`,
+				}
+			}),
 	}),
 
 	workoutTemplates: router({
@@ -2139,12 +3149,13 @@ export const appRouter = router({
 					})
 				}
 
-				// Create the lesson (using Event model)
+				// Create the lesson (using Event model) - automatically CONFIRMED when coach schedules
 				const lesson = await db.event.create({
 					data: {
-						title: `Lesson with ${client.name}`,
+						title: `Lesson with ${client.name || client.email || "Client"}`,
 						description: "Scheduled lesson",
 						date: lessonDate,
+						status: "CONFIRMED", // Coach-scheduled lessons are automatically confirmed
 						clientId: input.clientId, // Use Client.id directly
 						coachId: user.id,
 					},
@@ -2155,6 +3166,21 @@ export const appRouter = router({
 					where: { id: input.clientId },
 					data: { nextLessonDate: lessonDate },
 				})
+
+				// Create notification for the client
+				if (client.userId) {
+					await db.notification.create({
+						data: {
+							userId: client.userId,
+							type: "LESSON_SCHEDULED",
+							title: "New Lesson Scheduled",
+							message: `Your coach has scheduled a lesson for ${format(
+								lessonDate,
+								"MMM d, yyyy 'at' h:mm a"
+							)}`,
+						},
+					})
+				}
 
 				// TODO: Send email notification if requested
 				if (input.sendEmail && client.email) {
@@ -2479,10 +3505,11 @@ export const appRouter = router({
 				const monthEnd = new Date(input.year, input.month + 1, 0, 23, 59, 59)
 				const now = new Date()
 
-				// Get all events (lessons) for the coach in the specified month
+				// Get all CONFIRMED events (lessons) for the coach in the specified month
 				const events = await db.event.findMany({
 					where: {
 						coachId: user.id,
+						status: "CONFIRMED", // Only return confirmed lessons
 						date: {
 							gte: monthStart,
 							lte: monthEnd,
@@ -2610,8 +3637,38 @@ export const appRouter = router({
 		create: publicProcedure
 			.input(
 				z.object({
-					name: z.string().min(1, "Program name is required"),
+					title: z.string().min(1, "Program title is required"),
 					description: z.string().optional(),
+					sport: z.string().min(1, "Sport is required"),
+					level: z.enum(["Beginner", "Intermediate", "Advanced"]),
+					duration: z.number().min(1, "Duration must be at least 1 week"),
+					weeks: z.array(
+						z.object({
+							weekNumber: z.number(),
+							title: z.string().min(1, "Week title is required"),
+							description: z.string().optional(),
+							days: z.array(
+								z.object({
+									dayNumber: z.number(),
+									title: z.string().min(1, "Day title is required"),
+									description: z.string().optional(),
+									drills: z.array(
+										z.object({
+											order: z.number(),
+											title: z.string().min(1, "Drill title is required"),
+											description: z.string().optional(),
+											duration: z.string().optional(),
+											videoUrl: z.string().optional(),
+											notes: z.string().optional(),
+											sets: z.number().optional(),
+											reps: z.number().optional(),
+											tempo: z.string().optional(),
+										})
+									),
+								})
+							),
+						})
+					),
 				})
 			)
 			.mutation(async ({ input }) => {
@@ -2632,15 +3689,61 @@ export const appRouter = router({
 					})
 				}
 
-				// Create the program
+				// Create the program with all its structure
 				const program = await db.program.create({
 					data: {
-						title: input.name,
+						title: input.title,
 						description: input.description || "",
-						sport: "General", // Default sport
-						level: "Beginner", // Default level
-						duration: 1, // Default duration
+						sport: input.sport,
+						level: input.level,
+						duration: input.duration,
 						coachId: user.id,
+						weeks: {
+							create: input.weeks.map((week) => ({
+								weekNumber: week.weekNumber,
+								title: week.title,
+								description: week.description || "",
+								days: {
+									create: week.days.map((day) => {
+										// Check if this is a rest day (only has one drill with "Rest Day" title)
+										const isRestDay =
+											day.drills.length === 1 &&
+											day.drills[0].title === "Rest Day"
+
+										return {
+											dayNumber: day.dayNumber,
+											title: day.title,
+											description: day.description || "",
+											isRestDay: isRestDay,
+											drills: {
+												create: day.drills.map((drill) => ({
+													order: drill.order,
+													title: drill.title,
+													description: drill.description || "",
+													duration: drill.duration || "",
+													videoUrl: drill.videoUrl || "",
+													notes: drill.notes || "",
+													sets: null, // Optional field, set to null if not provided
+													reps: null, // Optional field, set to null if not provided
+													tempo: null, // Optional field, set to null if not provided
+												})),
+											},
+										}
+									}),
+								},
+							})),
+						},
+					},
+					include: {
+						weeks: {
+							include: {
+								days: {
+									include: {
+										drills: true,
+									},
+								},
+							},
+						},
 					},
 				})
 
@@ -3548,7 +4651,7 @@ export const appRouter = router({
 				z.object({
 					programId: z.string(),
 					clientIds: z.array(z.string()),
-					startDate: z.string().optional(),
+					startDate: z.string(),
 				})
 			)
 			.mutation(async ({ input }) => {
@@ -3575,6 +4678,16 @@ export const appRouter = router({
 						id: input.programId,
 						coachId: user.id,
 					},
+					include: {
+						weeks: {
+							include: {
+								days: {
+									orderBy: { dayNumber: "asc" },
+								},
+							},
+							orderBy: { weekNumber: "asc" },
+						},
+					},
 				})
 
 				if (!program) {
@@ -3590,6 +4703,24 @@ export const appRouter = router({
 						id: { in: input.clientIds },
 						coachId: user.id,
 					},
+					include: {
+						programAssignments: {
+							include: {
+								program: {
+									include: {
+										weeks: {
+											include: {
+												days: {
+													orderBy: { dayNumber: "asc" },
+												},
+											},
+											orderBy: { weekNumber: "asc" },
+										},
+									},
+								},
+							},
+						},
+					},
 				})
 
 				if (clients.length !== input.clientIds.length) {
@@ -3599,19 +4730,81 @@ export const appRouter = router({
 					})
 				}
 
-				// Create assignments
+				// Check for conflicts and limits for each client
 				const assignments = []
-				for (const clientId of input.clientIds) {
-					const assignment = await db.programAssignment.create({
-						data: {
-							programId: input.programId,
-							clientId,
-							startDate: input.startDate
-								? new Date(input.startDate)
-								: new Date(),
-						},
+				const errors = []
+
+				for (const client of clients) {
+					// Check if client already has 5 programs assigned
+					if (client.programAssignments.length >= 5) {
+						errors.push(
+							`${client.name} already has 5 programs assigned. Please unassign a program first.`
+						)
+						continue
+					}
+
+					// Check if this specific program is already assigned to this client
+					const existingAssignment = client.programAssignments.find(
+						(assignment) => assignment.programId === input.programId
+					)
+					if (existingAssignment) {
+						errors.push(`${client.name} already has this program assigned.`)
+						continue
+					}
+
+					// Check for time conflicts with existing programs
+					// Parse the date string and create a date at midnight in local timezone
+					const [year, month, day] = input.startDate.split("-").map(Number)
+					const startDate = new Date(year, month - 1, day, 0, 0, 0, 0)
+
+					console.log("Assignment startDate input:", input.startDate)
+					console.log("Parsed startDate:", startDate)
+					console.log("startDate.toISOString():", startDate.toISOString())
+					const programEndDate = new Date(
+						startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
+					)
+
+					for (const existingAssignment of client.programAssignments) {
+						const existingStartDate = existingAssignment.assignedAt
+						const existingEndDate = new Date(
+							existingStartDate.getTime() +
+								existingAssignment.program.duration * 7 * 24 * 60 * 60 * 1000
+						)
+
+						// Check if date ranges overlap
+						if (
+							(startDate <= existingEndDate &&
+								programEndDate >= existingStartDate) ||
+							(existingStartDate <= programEndDate &&
+								existingEndDate >= startDate)
+						) {
+							errors.push(
+								`${
+									client.name
+								} has a conflicting program from ${existingStartDate.toLocaleDateString()} to ${existingEndDate.toLocaleDateString()}. Please choose a different start date.`
+							)
+							break
+						}
+					}
+
+					// If no conflicts, create the assignment
+					if (!errors.some((error) => error.includes(client.name))) {
+						const assignment = await db.programAssignment.create({
+							data: {
+								programId: input.programId,
+								clientId: client.id,
+								startDate,
+							},
+						})
+						assignments.push(assignment)
+					}
+				}
+
+				if (errors.length > 0) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: errors.join(" "),
 					})
-					assignments.push(assignment)
 				}
 
 				return assignments
@@ -3855,6 +5048,168 @@ export const appRouter = router({
 			}),
 	}),
 
+	notifications: router({
+		getNotifications: publicProcedure
+			.input(
+				z.object({
+					limit: z.number().optional().default(20),
+					unreadOnly: z.boolean().optional().default(false),
+				})
+			)
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const whereClause: any = { userId: user.id }
+
+				if (input.unreadOnly) {
+					whereClause.isRead = false
+				}
+
+				const notifications = await db.notification.findMany({
+					where: whereClause,
+					orderBy: { createdAt: "desc" },
+					take: input.limit,
+				})
+
+				return notifications
+			}),
+
+		getUnreadCount: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			const count = await db.notification.count({
+				where: {
+					userId: user.id,
+					isRead: false,
+				},
+			})
+
+			return count
+		}),
+
+		markAsRead: publicProcedure
+			.input(z.object({ notificationId: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const notification = await db.notification.update({
+					where: {
+						id: input.notificationId,
+						userId: user.id,
+					},
+					data: { isRead: true },
+				})
+
+				return notification
+			}),
+
+		markAllAsRead: publicProcedure.mutation(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			await db.notification.updateMany({
+				where: {
+					userId: user.id,
+					isRead: false,
+				},
+				data: { isRead: true },
+			})
+
+			return { success: true }
+		}),
+
+		createNotification: publicProcedure
+			.input(
+				z.object({
+					userId: z.string(),
+					type: z.enum([
+						"MESSAGE",
+						"WORKOUT_ASSIGNED",
+						"WORKOUT_COMPLETED",
+						"LESSON_SCHEDULED",
+						"LESSON_CANCELLED",
+						"PROGRAM_ASSIGNED",
+						"PROGRESS_UPDATE",
+						"CLIENT_JOIN_REQUEST",
+						"SYSTEM",
+					]),
+					title: z.string(),
+					message: z.string(),
+					data: z.any().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify the current user is a COACH and can create notifications for clients
+				const currentUser = await db.user.findUnique({
+					where: { id: user.id },
+					select: { role: true },
+				})
+
+				if (currentUser?.role !== "COACH") {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can create notifications",
+					})
+				}
+
+				// Verify the target user exists and is a client of this coach
+				const targetUser = await db.user.findUnique({
+					where: { id: input.userId },
+					select: { role: true },
+				})
+
+				if (!targetUser || targetUser.role !== "CLIENT") {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Target user not found or is not a client",
+					})
+				}
+
+				// Check if the client belongs to this coach
+				const client = await db.client.findFirst({
+					where: {
+						userId: input.userId,
+						coachId: user.id,
+					},
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Can only create notifications for your own clients",
+					})
+				}
+
+				const notification = await db.notification.create({
+					data: {
+						userId: input.userId,
+						type: input.type,
+						title: input.title,
+						message: input.message,
+						data: input.data,
+					},
+				})
+
+				return notification
+			}),
+	}),
+
 	// Library Resources
 	libraryResources: router({
 		getAll: publicProcedure.query(async () => {
@@ -3946,13 +5301,46 @@ export const appRouter = router({
 						break
 				}
 
-				// Get active clients count
-				const activeClients = await db.client.count({
+				// Get all active clients (not just those in programs)
+				const allActiveClients = await db.client.findMany({
 					where: {
 						coachId: user.id,
 						archived: false,
 					},
+					include: {
+						programAssignments: {
+							include: {
+								program: true,
+							},
+						},
+					},
 				})
+
+				const activeClients = allActiveClients.length
+
+				// Debug: Log what we found
+				console.log(`Analytics Debug - Coach ${user.id}:`)
+				console.log(
+					`- Total clients: ${await db.client.count({
+						where: { coachId: user.id },
+					})}`
+				)
+				console.log(`- Clients in programs: ${activeClients}`)
+				console.log(
+					`- Program assignments: ${await db.programAssignment.count({
+						where: { program: { coachId: user.id } },
+					})}`
+				)
+				console.log(
+					`- Assigned workouts: ${await db.assignedWorkout.count({
+						where: { coachId: user.id },
+					})}`
+				)
+				console.log(
+					`- Completed workouts: ${await db.assignedWorkout.count({
+						where: { coachId: user.id, completed: true },
+					})}`
+				)
 
 				// Get previous period active clients for trend calculation
 				const previousActiveClients = await db.client.count({
@@ -3970,6 +5358,25 @@ export const appRouter = router({
 						? ((activeClients - previousActiveClients) /
 								previousActiveClients) *
 						  100
+						: 0
+
+				// Get workout completion data
+				const assignedWorkouts = await db.assignedWorkout.findMany({
+					where: {
+						coachId: user.id,
+						scheduledDate: {
+							gte: currentPeriodStart,
+						},
+					},
+				})
+
+				const completedWorkouts = assignedWorkouts.filter(
+					(workout) => workout.completed
+				).length
+
+				const workoutCompletionRate =
+					assignedWorkouts.length > 0
+						? (completedWorkouts / assignedWorkouts.length) * 100
 						: 0
 
 				// Get program assignments and calculate average progress
@@ -3992,7 +5399,7 @@ export const appRouter = router({
 						  ) / programAssignments.length
 						: 0
 
-				// Calculate completion rate
+				// Calculate program completion rate
 				const completedPrograms = programAssignments.filter(
 					(assignment) => assignment.progress >= 100
 				).length
@@ -4001,16 +5408,15 @@ export const appRouter = router({
 						? (completedPrograms / programAssignments.length) * 100
 						: 0
 
-				// Calculate retention rate (clients who have been active in the last 30 days)
+				// Calculate retention rate (clients who have completed workouts in the last 30 days)
 				const thirtyDaysAgo = new Date()
 				thirtyDaysAgo.setDate(now.getDate() - 30)
 
-				const recentActivity = await db.programAssignment.findMany({
+				const recentWorkoutActivity = await db.assignedWorkout.findMany({
 					where: {
-						program: {
-							coachId: user.id,
-						},
-						updatedAt: {
+						coachId: user.id,
+						completed: true,
+						completedAt: {
 							gte: thirtyDaysAgo,
 						},
 					},
@@ -4020,7 +5426,7 @@ export const appRouter = router({
 				})
 
 				const uniqueActiveClients = new Set(
-					recentActivity.map((a) => a.clientId)
+					recentWorkoutActivity.map((a) => a.clientId)
 				).size
 				const retentionRate =
 					activeClients > 0 ? (uniqueActiveClients / activeClients) * 100 : 0
@@ -4032,6 +5438,16 @@ export const appRouter = router({
 							coachId: user.id,
 						},
 						updatedAt: {
+							gte: previousPeriodStart,
+							lt: currentPeriodStart,
+						},
+					},
+				})
+
+				const previousPeriodWorkouts = await db.assignedWorkout.findMany({
+					where: {
+						coachId: user.id,
+						scheduledDate: {
 							gte: previousPeriodStart,
 							lt: currentPeriodStart,
 						},
@@ -4055,6 +5471,14 @@ export const appRouter = router({
 						  100
 						: 0
 
+				const previousCompletedWorkouts = previousPeriodWorkouts.filter(
+					(workout) => workout.completed
+				).length
+				const previousWorkoutCompletionRate =
+					previousPeriodWorkouts.length > 0
+						? (previousCompletedWorkouts / previousPeriodWorkouts.length) * 100
+						: 0
+
 				const averageProgressTrend =
 					previousAverageProgress > 0
 						? ((averageProgress - previousAverageProgress) /
@@ -4069,7 +5493,61 @@ export const appRouter = router({
 						  100
 						: 0
 
-				const retentionRateTrend = 1.8 // Mock trend data for now
+				const workoutCompletionRateTrend =
+					previousWorkoutCompletionRate > 0
+						? ((workoutCompletionRate - previousWorkoutCompletionRate) /
+								previousWorkoutCompletionRate) *
+						  100
+						: 0
+
+				// Calculate retention trend based on workout completion
+				const previousRetentionWorkouts = await db.assignedWorkout.findMany({
+					where: {
+						coachId: user.id,
+						completed: true,
+						completedAt: {
+							gte: previousPeriodStart,
+							lt: currentPeriodStart,
+						},
+					},
+					select: {
+						clientId: true,
+					},
+				})
+
+				const previousUniqueActiveClients = new Set(
+					previousRetentionWorkouts.map((a) => a.clientId)
+				).size
+				const previousRetentionRate =
+					previousActiveClients > 0
+						? (previousUniqueActiveClients / previousActiveClients) * 100
+						: 0
+
+				const retentionRateTrend =
+					previousRetentionRate > 0
+						? ((retentionRate - previousRetentionRate) /
+								previousRetentionRate) *
+						  100
+						: 0
+
+				// If no real data exists, provide meaningful defaults
+				const hasRealData = activeClients > 0 || assignedWorkouts.length > 0
+
+				if (!hasRealData) {
+					console.log("No real analytics data found - using demo data")
+					return {
+						activeClients: 0,
+						activeClientsTrend: 0,
+						averageProgress: 0,
+						averageProgressTrend: 0,
+						completionRate: 0,
+						completionRateTrend: 0,
+						workoutCompletionRate: 0,
+						workoutCompletionRateTrend: 0,
+						retentionRate: 0,
+						retentionRateTrend: 0,
+					}
+				}
 
 				return {
 					activeClients,
@@ -4078,6 +5556,8 @@ export const appRouter = router({
 					averageProgressTrend,
 					completionRate,
 					completionRateTrend,
+					workoutCompletionRate,
+					workoutCompletionRateTrend,
 					retentionRate,
 					retentionRateTrend,
 				}
@@ -4103,7 +5583,7 @@ export const appRouter = router({
 					})
 				}
 
-				// Get clients with their program assignments
+				// Get all active clients with their program data
 				const clients = await db.client.findMany({
 					where: {
 						coachId: user.id,
@@ -4118,8 +5598,20 @@ export const appRouter = router({
 					},
 				})
 
+				// Get workout data for all clients
+				const clientIds = clients.map((client) => client.id)
+				const assignedWorkouts = await db.assignedWorkout.findMany({
+					where: {
+						coachId: user.id,
+						clientId: {
+							in: clientIds,
+						},
+					},
+				})
+
 				// Calculate progress for each client
 				const clientProgress = clients.map((client) => {
+					// Program progress
 					const totalProgress = client.programAssignments.reduce(
 						(sum, assignment) => sum + assignment.progress,
 						0
@@ -4133,26 +5625,38 @@ export const appRouter = router({
 						(assignment) => assignment.progress >= 100
 					).length
 
-					// Calculate trend based on recent activity
-					const recentAssignments = client.programAssignments.filter(
-						(assignment) => {
-							const thirtyDaysAgo = new Date()
-							thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-							return assignment.updatedAt >= thirtyDaysAgo
-						}
+					// Workout completion data
+					const clientWorkouts = assignedWorkouts.filter(
+						(workout) => workout.clientId === client.id
 					)
+					const completedWorkouts = clientWorkouts.filter(
+						(workout) => workout.completed
+					).length
+					const workoutCompletionRate =
+						clientWorkouts.length > 0
+							? (completedWorkouts / clientWorkouts.length) * 100
+							: 0
 
-					const recentProgress =
-						recentAssignments.length > 0
-							? recentAssignments.reduce(
-									(sum, assignment) => sum + assignment.progress,
-									0
-							  ) / recentAssignments.length
+					// Calculate trend based on recent workout activity
+					const thirtyDaysAgo = new Date()
+					thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+					const recentWorkouts = clientWorkouts.filter(
+						(workout) => workout.scheduledDate >= thirtyDaysAgo
+					)
+					const recentCompletedWorkouts = recentWorkouts.filter(
+						(workout) => workout.completed
+					).length
+					const recentWorkoutRate =
+						recentWorkouts.length > 0
+							? (recentCompletedWorkouts / recentWorkouts.length) * 100
 							: 0
 
 					const trend =
-						averageProgress > 0
-							? ((recentProgress - averageProgress) / averageProgress) * 100
+						workoutCompletionRate > 0
+							? ((recentWorkoutRate - workoutCompletionRate) /
+									workoutCompletionRate) *
+							  100
 							: 0
 
 					return {
@@ -4160,12 +5664,17 @@ export const appRouter = router({
 						name: client.name,
 						progress: averageProgress,
 						programsCompleted,
+						workoutCompletionRate,
+						totalWorkouts: clientWorkouts.length,
+						completedWorkouts,
 						trend,
 					}
 				})
 
-				// Sort by progress (highest first)
-				return clientProgress.sort((a, b) => b.progress - a.progress)
+				// Sort by workout completion rate (highest first) - most important metric
+				return clientProgress.sort(
+					(a, b) => b.workoutCompletionRate - a.workoutCompletionRate
+				)
 			}),
 
 		getProgramPerformance: publicProcedure
@@ -4271,19 +5780,2465 @@ export const appRouter = router({
 						break
 				}
 
-				// Get message response rate (simplified for now since we don't have full messaging system)
-				const messageResponseRate = 85.5 // Mock data - you can implement real messaging analytics later
+				// Get real workout completion data
+				const assignedWorkouts = await db.assignedWorkout.findMany({
+					where: {
+						coachId: user.id,
+						scheduledDate: {
+							gte: periodStart,
+						},
+					},
+				})
 
-				// Get video engagement (simplified for now)
-				const videoEngagement = 78.2 // Mock data - you can implement real video analytics later
+				const completedWorkouts = assignedWorkouts.filter(
+					(workout) => workout.completed
+				).length
 
-				// Get workout completion rate (simplified for now)
-				const workoutCompletion = 92.1 // Mock data - you can implement real workout analytics later
+				const workoutCompletion =
+					assignedWorkouts.length > 0
+						? (completedWorkouts / assignedWorkouts.length) * 100
+						: 0
+
+				// Get video engagement from client video submissions
+				const videoSubmissions = await db.clientVideoSubmission.findMany({
+					where: {
+						coachId: user.id,
+						createdAt: {
+							gte: periodStart,
+						},
+					},
+				})
+
+				// Calculate video engagement based on submissions vs assigned videos
+				const videoAssignments = await db.videoAssignment.findMany({
+					where: {
+						assignedAt: {
+							gte: periodStart,
+						},
+					},
+					include: {
+						client: {
+							include: {
+								clients: true,
+							},
+						},
+					},
+				})
+
+				// Filter assignments for clients of this coach
+				const coachVideoAssignments = videoAssignments.filter(
+					(assignment) => assignment.client.clients?.[0]?.coachId === user.id
+				)
+
+				const videoEngagement =
+					coachVideoAssignments.length > 0
+						? (videoSubmissions.length / coachVideoAssignments.length) * 100
+						: 0
 
 				return {
-					messageResponseRate,
 					videoEngagement,
 					workoutCompletion,
+				}
+			}),
+	}),
+
+	// Analytics Goals Management
+	analyticsGoals: router({
+		getGoals: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a COACH
+			const coach = await db.user.findFirst({
+				where: { id: user.id, role: "COACH" },
+			})
+
+			if (!coach) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only coaches can access analytics goals",
+				})
+			}
+
+			const settings = await db.userSettings.findUnique({
+				where: { userId: user.id },
+			})
+
+			// Return default goals if no custom goals are set
+			const defaultGoals = {
+				activeClients: Math.max(
+					5,
+					await db.client.count({
+						where: { coachId: user.id, archived: false },
+					})
+				),
+				workoutCompletion: 75,
+				programProgress: 70,
+				clientRetention: 85,
+			}
+
+			return settings?.analyticsGoals
+				? (settings.analyticsGoals as typeof defaultGoals)
+				: defaultGoals
+		}),
+
+		updateGoals: publicProcedure
+			.input(
+				z.object({
+					activeClients: z.number().min(1).max(1000),
+					workoutCompletion: z.number().min(0).max(100),
+					programProgress: z.number().min(0).max(100),
+					clientRetention: z.number().min(0).max(100),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can update analytics goals",
+					})
+				}
+
+				const existingSettings = await db.userSettings.findUnique({
+					where: { userId: user.id },
+				})
+
+				if (existingSettings) {
+					await db.userSettings.update({
+						where: { userId: user.id },
+						data: { analyticsGoals: input },
+					})
+				} else {
+					await db.userSettings.create({
+						data: {
+							userId: user.id,
+							analyticsGoals: input,
+						},
+					})
+				}
+
+				return input
+			}),
+	}),
+
+	settings: router({
+		getSettings: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			const settings = await db.userSettings.findUnique({
+				where: { userId: user.id },
+			})
+
+			if (!settings) {
+				// Create default settings if they don't exist
+				const defaultSettings = await db.userSettings.create({
+					data: {
+						userId: user.id,
+					},
+				})
+				return defaultSettings
+			}
+
+			return settings
+		}),
+
+		updateSettings: publicProcedure
+			.input(
+				z.object({
+					// Profile settings
+					phone: z.string().optional(),
+					location: z.string().optional(),
+					bio: z.string().optional(),
+					avatarUrl: z.string().optional(),
+
+					// Notification preferences
+					emailNotifications: z.boolean().optional(),
+					pushNotifications: z.boolean().optional(),
+					soundNotifications: z.boolean().optional(),
+					newClientNotifications: z.boolean().optional(),
+					messageNotifications: z.boolean().optional(),
+					scheduleNotifications: z.boolean().optional(),
+
+					// Messaging settings
+					defaultWelcomeMessage: z.string().optional(),
+					messageRetentionDays: z.number().optional(),
+					maxFileSizeMB: z.number().optional(),
+
+					// Client management settings
+					defaultLessonDuration: z.number().optional(),
+					autoArchiveDays: z.number().optional(),
+					requireClientEmail: z.boolean().optional(),
+
+					// Schedule settings
+					timezone: z.string().optional(),
+					workingDays: z.array(z.string()).optional(),
+
+					// Privacy & Security
+					twoFactorEnabled: z.boolean().optional(),
+
+					// Appearance settings
+					compactSidebar: z.boolean().optional(),
+					showAnimations: z.boolean().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Check if settings exist
+				const existingSettings = await db.userSettings.findUnique({
+					where: { userId: user.id },
+				})
+
+				if (existingSettings) {
+					// Update existing settings
+					const updatedSettings = await db.userSettings.update({
+						where: { userId: user.id },
+						data: {
+							...input,
+							workingDays: input.workingDays
+								? (JSON.stringify(input.workingDays) as any)
+								: undefined,
+						},
+					})
+					return updatedSettings
+				} else {
+					// Create new settings
+					const newSettings = await db.userSettings.create({
+						data: {
+							userId: user.id,
+							...input,
+							workingDays: input.workingDays
+								? (JSON.stringify(input.workingDays) as any)
+								: undefined,
+						},
+					})
+					return newSettings
+				}
+			}),
+
+		updateProfile: publicProcedure
+			.input(
+				z.object({
+					name: z.string().optional(),
+					phone: z.string().optional(),
+					location: z.string().optional(),
+					bio: z.string().optional(),
+					avatarUrl: z.string().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Update user profile
+				const updatedUser = await db.user.update({
+					where: { id: user.id },
+					data: {
+						name: input.name,
+					},
+				})
+
+				// Update or create settings
+				const existingSettings = await db.userSettings.findUnique({
+					where: { userId: user.id },
+				})
+
+				if (existingSettings) {
+					await db.userSettings.update({
+						where: { userId: user.id },
+						data: {
+							phone: input.phone,
+							location: input.location,
+							bio: input.bio,
+							avatarUrl: input.avatarUrl,
+						},
+					})
+				} else {
+					await db.userSettings.create({
+						data: {
+							userId: user.id,
+							phone: input.phone,
+							location: input.location,
+							bio: input.bio,
+							avatarUrl: input.avatarUrl,
+						},
+					})
+				}
+
+				return updatedUser
+			}),
+	}),
+
+	exportData: publicProcedure.mutation(async () => {
+		const { getUser } = getKindeServerSession()
+		const user = await getUser()
+
+		if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+		// Get all user data
+		const userData = await db.user.findUnique({
+			where: { id: user.id },
+			include: {
+				settings: true,
+				clients: true,
+				programs: true,
+				libraryResources: true,
+				notifications: true,
+				coachConversations: {
+					include: {
+						messages: true,
+					},
+				},
+			},
+		})
+
+		if (!userData) throw new TRPCError({ code: "NOT_FOUND" })
+
+		return {
+			success: true,
+			data: userData,
+			exportedAt: new Date().toISOString(),
+		}
+	}),
+
+	deleteAccount: publicProcedure.mutation(async () => {
+		const { getUser } = getKindeServerSession()
+		const user = await getUser()
+
+		if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+		// Delete user and all associated data (cascade will handle related records)
+		await db.user.delete({
+			where: { id: user.id },
+		})
+
+		return { success: true }
+	}),
+
+	// Video Feedback System
+	videos: router({
+		list: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			const videos = await db.video.findMany({
+				where: {
+					OR: [
+						{ uploadedBy: user.id },
+						{
+							clientId: {
+								in: await db.client
+									.findMany({ where: { coachId: user.id } })
+									.then((clients) => clients.map((c) => c.id)),
+							},
+						},
+					],
+				},
+				include: {
+					uploader: { select: { name: true, email: true } },
+					client: { select: { name: true, email: true } },
+					feedback: { include: { coach: { select: { name: true } } } },
+					annotations: { include: { coach: { select: { name: true } } } },
+					audioNotes: { include: { coach: { select: { name: true } } } },
+				},
+				orderBy: { createdAt: "desc" },
+			})
+
+			return videos
+		}),
+
+		getById: publicProcedure
+			.input(z.object({ id: z.string() }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const video = await db.video.findFirst({
+					where: {
+						id: input.id,
+						OR: [
+							{ uploadedBy: user.id },
+							{
+								clientId: {
+									in: await db.client
+										.findMany({ where: { coachId: user.id } })
+										.then((clients) => clients.map((c) => c.id)),
+								},
+							},
+						],
+					},
+					include: {
+						uploader: { select: { name: true, email: true } },
+						client: { select: { name: true, email: true } },
+						feedback: { include: { coach: { select: { name: true } } } },
+						annotations: { include: { coach: { select: { name: true } } } },
+						audioNotes: { include: { coach: { select: { name: true } } } },
+					},
+				})
+
+				if (!video) throw new TRPCError({ code: "NOT_FOUND" })
+
+				return video
+			}),
+
+		create: publicProcedure
+			.input(
+				z.object({
+					title: z.string(),
+					description: z.string().optional(),
+					url: z.string(),
+					thumbnail: z.string().optional(),
+					duration: z.number().optional(),
+					fileSize: z.number().optional(),
+					clientId: z.string().optional(),
+					category: z
+						.enum([
+							"BULLPEN",
+							"PRACTICE",
+							"GAME_FOOTAGE",
+							"REFERENCE",
+							"COMPARISON",
+							"OTHER",
+						])
+						.optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const video = await db.video.create({
+					data: {
+						...input,
+						uploadedBy: user.id,
+					},
+					include: {
+						uploader: { select: { name: true, email: true } },
+						client: { select: { name: true, email: true } },
+					},
+				})
+
+				return video
+			}),
+
+		update: publicProcedure
+			.input(
+				z.object({
+					id: z.string(),
+					title: z.string().optional(),
+					description: z.string().optional(),
+					status: z.enum(["PENDING_REVIEW", "REVIEWED", "ARCHIVED"]).optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const video = await db.video.update({
+					where: { id: input.id },
+					data: input,
+					include: {
+						uploader: { select: { name: true, email: true } },
+						client: { select: { name: true, email: true } },
+					},
+				})
+
+				return video
+			}),
+
+		delete: publicProcedure
+			.input(z.object({ id: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				await db.video.delete({
+					where: { id: input.id },
+				})
+
+				return { success: true }
+			}),
+
+		// Video Annotations
+		createAnnotation: publicProcedure
+			.input(
+				z.object({
+					videoId: z.string(),
+					type: z.enum([
+						"PEN",
+						"HIGHLIGHT",
+						"ARROW",
+						"CIRCLE",
+						"TEXT",
+						"ERASE",
+					]),
+					data: z.any(),
+					timestamp: z.number(),
+					duration: z.number().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const annotation = await db.videoAnnotation.create({
+					data: {
+						...input,
+						coachId: user.id,
+					},
+					include: {
+						coach: { select: { name: true } },
+					},
+				})
+
+				return annotation
+			}),
+
+		deleteAnnotation: publicProcedure
+			.input(z.object({ id: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Get user from database to check role
+				const dbUser = await db.user.findUnique({
+					where: { id: user.id },
+					select: { role: true },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "User not found in database",
+					})
+				}
+
+				// Check if user is a coach
+				if (dbUser.role !== "COACH") {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can delete annotations",
+					})
+				}
+
+				// Check if annotation exists and belongs to this coach
+				const annotation = await db.videoAnnotation.findUnique({
+					where: { id: input.id },
+					select: { coachId: true },
+				})
+
+				if (!annotation) {
+					throw new TRPCError({ code: "NOT_FOUND" })
+				}
+
+				if (annotation.coachId !== user.id) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "You can only delete your own annotations",
+					})
+				}
+
+				await db.videoAnnotation.delete({
+					where: { id: input.id },
+				})
+
+				return { success: true }
+			}),
+
+		// Video Audio Notes
+		createAudioNote: publicProcedure
+			.input(
+				z.object({
+					videoId: z.string(),
+					url: z.string(),
+					duration: z.number(),
+					timestamp: z.number(),
+					title: z.string().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const audioNote = await db.videoAudioNote.create({
+					data: {
+						...input,
+						coachId: user.id,
+					},
+					include: {
+						coach: { select: { name: true } },
+					},
+				})
+
+				return audioNote
+			}),
+
+		deleteAudioNote: publicProcedure
+			.input(z.object({ id: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				await db.videoAudioNote.delete({
+					where: { id: input.id },
+				})
+
+				return { success: true }
+			}),
+
+		// Video Feedback
+		createFeedback: publicProcedure
+			.input(
+				z.object({
+					videoId: z.string(),
+					feedback: z.string(),
+					rating: z.number().min(1).max(5).optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const feedback = await db.videoFeedback.create({
+					data: {
+						...input,
+						coachId: user.id,
+					},
+					include: {
+						coach: { select: { name: true } },
+					},
+				})
+
+				return feedback
+			}),
+
+		updateFeedback: publicProcedure
+			.input(
+				z.object({
+					id: z.string(),
+					feedback: z.string().optional(),
+					rating: z.number().min(1).max(5).optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const feedback = await db.videoFeedback.update({
+					where: { id: input.id },
+					data: input,
+					include: {
+						coach: { select: { name: true } },
+					},
+				})
+
+				return feedback
+			}),
+
+		deleteFeedback: publicProcedure
+			.input(z.object({ id: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Get user from database to check role
+				const dbUser = await db.user.findUnique({
+					where: { id: user.id },
+					select: { role: true },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "User not found in database",
+					})
+				}
+
+				// Check if user is a coach
+				if (dbUser.role !== "COACH") {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can delete feedback",
+					})
+				}
+
+				// Check if feedback exists and belongs to this coach
+				const feedback = await db.videoFeedback.findUnique({
+					where: { id: input.id },
+					select: { coachId: true },
+				})
+
+				if (!feedback) {
+					throw new TRPCError({ code: "NOT_FOUND" })
+				}
+
+				if (feedback.coachId !== user.id) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "You can only delete your own feedback",
+					})
+				}
+
+				await db.videoFeedback.delete({
+					where: { id: input.id },
+				})
+
+				return { success: true }
+			}),
+
+		// Get annotations for a video
+		getAnnotations: publicProcedure
+			.input(z.object({ videoId: z.string() }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const annotations = await db.videoAnnotation.findMany({
+					where: { videoId: input.videoId },
+					include: {
+						coach: { select: { name: true } },
+					},
+					orderBy: { createdAt: "desc" },
+				})
+
+				return annotations
+			}),
+
+		// Screen Recording procedures
+		createScreenRecording: publicProcedure
+			.input(
+				z.object({
+					videoId: z.string(),
+					title: z.string(),
+					description: z.string().optional(),
+					videoUrl: z.string(),
+					audioUrl: z.string(),
+					duration: z.number(),
+					maxDuration: z.number().default(300), // 5 minutes default
+					annotations: z.any().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Get user from database to check role
+				const dbUser = await db.user.findUnique({
+					where: { id: user.id },
+					select: { role: true },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "User not found in database",
+					})
+				}
+
+				// Check if user is a coach
+				if (dbUser.role !== "COACH") {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can create screen recordings",
+					})
+				}
+
+				// Validate duration limit
+				if (input.duration > input.maxDuration) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: `Recording duration (${input.duration}s) exceeds maximum allowed duration (${input.maxDuration}s)`,
+					})
+				}
+
+				const screenRecording = await db.screenRecording.create({
+					data: {
+						...input,
+						coachId: user.id,
+					},
+					include: {
+						coach: { select: { name: true } },
+						video: { select: { title: true } },
+					},
+				})
+
+				return screenRecording
+			}),
+
+		getScreenRecordings: publicProcedure
+			.input(z.object({ videoId: z.string() }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				const screenRecordings = await db.screenRecording.findMany({
+					where: { videoId: input.videoId },
+					include: {
+						coach: { select: { name: true } },
+					},
+					orderBy: { createdAt: "desc" },
+				})
+
+				return screenRecordings
+			}),
+
+		deleteScreenRecording: publicProcedure
+			.input(z.object({ id: z.string() }))
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Get user from database to check role
+				const dbUser = await db.user.findUnique({
+					where: { id: user.id },
+					select: { role: true },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "User not found in database",
+					})
+				}
+
+				// Check if user is a coach
+				if (dbUser.role !== "COACH") {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can delete screen recordings",
+					})
+				}
+
+				// Check if recording exists and belongs to this coach
+				const recording = await db.screenRecording.findUnique({
+					where: { id: input.id },
+					select: { coachId: true },
+				})
+
+				if (!recording) {
+					throw new TRPCError({ code: "NOT_FOUND" })
+				}
+
+				if (recording.coachId !== user.id) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "You can only delete your own screen recordings",
+					})
+				}
+
+				await db.screenRecording.delete({
+					where: { id: input.id },
+				})
+
+				return { success: true }
+			}),
+	}),
+
+	clientRouter: router({
+		getAssignedPrograms: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a CLIENT
+			const dbUser = await db.user.findFirst({
+				where: { id: user.id, role: "CLIENT" },
+			})
+
+			if (!dbUser) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only clients can access this endpoint",
+				})
+			}
+
+			// Get client's assigned programs
+			const client = await db.client.findFirst({
+				where: { userId: user.id },
+				include: {
+					coach: { select: { name: true } },
+					programAssignments: {
+						include: {
+							program: true,
+						},
+						orderBy: { assignedAt: "desc" },
+					},
+				},
+			})
+
+			if (!client || client.programAssignments.length === 0) {
+				return []
+			}
+
+			const currentDate = new Date()
+			const programs = client.programAssignments.map((assignment) => {
+				const program = assignment.program
+				const startDate = new Date(assignment.assignedAt)
+				const weeksDiff = Math.floor(
+					(currentDate.getTime() - startDate.getTime()) /
+						(7 * 24 * 60 * 60 * 1000)
+				)
+				const currentWeek = Math.min(weeksDiff + 1, program.duration)
+				const overallProgress = Math.min(
+					(currentWeek / program.duration) * 100,
+					100
+				)
+
+				return {
+					id: program.id,
+					title: program.title,
+					description: program.description,
+					startDate: assignment.assignedAt.toISOString(),
+					endDate: new Date(
+						startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
+					).toISOString(),
+					currentWeek,
+					totalWeeks: program.duration,
+					overallProgress,
+					coachName: client.coach.name,
+					assignmentId: assignment.id,
+				}
+			})
+
+			return programs
+		}),
+
+		// Keep the old query for backward compatibility
+		getAssignedProgram: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a CLIENT
+			const dbUser = await db.user.findFirst({
+				where: { id: user.id, role: "CLIENT" },
+			})
+
+			if (!dbUser) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only clients can access this endpoint",
+				})
+			}
+
+			// Get client's assigned programs
+			const client = await db.client.findFirst({
+				where: { userId: user.id },
+				include: {
+					coach: { select: { name: true } },
+					programAssignments: {
+						include: {
+							program: true,
+						},
+						orderBy: { assignedAt: "desc" },
+					},
+				},
+			})
+
+			if (!client || client.programAssignments.length === 0) {
+				return null
+			}
+
+			// If multiple programs are assigned, return information about all of them
+			if (client.programAssignments.length > 1) {
+				const programs = client.programAssignments.map((assignment) => {
+					const program = assignment.program
+					const startDate =
+						assignment.startDate || new Date(assignment.assignedAt)
+					const currentDate = new Date()
+					const weeksDiff = Math.floor(
+						(currentDate.getTime() - startDate.getTime()) /
+							(7 * 24 * 60 * 60 * 1000)
+					)
+					const currentWeek = Math.min(weeksDiff + 1, program.duration)
+					const overallProgress = Math.min(
+						(currentWeek / program.duration) * 100,
+						100
+					)
+
+					return {
+						id: program.id,
+						title: program.title,
+						description: program.description,
+						startDate: startDate.toISOString(),
+						endDate: new Date(
+							startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
+						).toISOString(),
+						currentWeek,
+						totalWeeks: program.duration,
+						overallProgress,
+						coachName: client.coach.name,
+						assignmentId: assignment.id,
+						assignedAt: assignment.assignedAt.toISOString(),
+					}
+				})
+
+				// Return the most recent program as primary, but include all programs
+				return {
+					...programs[0],
+					allPrograms: programs,
+					totalPrograms: programs.length,
+				}
+			}
+
+			// Single program assignment (original behavior)
+			const assignment = client.programAssignments[0]
+			const program = assignment.program
+
+			// Calculate current week and progress
+			const startDate = assignment.startDate || new Date(assignment.assignedAt)
+			const currentDate = new Date()
+			const weeksDiff = Math.floor(
+				(currentDate.getTime() - startDate.getTime()) /
+					(7 * 24 * 60 * 60 * 1000)
+			)
+			const currentWeek = Math.min(weeksDiff + 1, program.duration)
+			const overallProgress = Math.min(
+				(currentWeek / program.duration) * 100,
+				100
+			)
+
+			return {
+				id: program.id,
+				title: program.title,
+				description: program.description,
+				startDate: startDate.toISOString(),
+				endDate: new Date(
+					startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
+				).toISOString(),
+				currentWeek,
+				totalWeeks: program.duration,
+				overallProgress,
+				coachName: client.coach.name,
+				allPrograms: [
+					{
+						id: program.id,
+						title: program.title,
+						description: program.description,
+						startDate: startDate.toISOString(),
+						endDate: new Date(
+							startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
+						).toISOString(),
+						currentWeek,
+						totalWeeks: program.duration,
+						overallProgress,
+						coachName: client.coach.name,
+						assignmentId: assignment.id,
+						assignedAt: assignment.assignedAt.toISOString(),
+					},
+				],
+				totalPrograms: 1,
+			}
+		}),
+
+		getProgramCalendar: publicProcedure
+			.input(
+				z.object({
+					year: z.number(),
+					month: z.number(),
+					viewMode: z.enum(["month", "week"]),
+				})
+			)
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client's assigned programs
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+					include: {
+						programAssignments: {
+							include: {
+								program: {
+									include: {
+										weeks: {
+											include: {
+												days: {
+													include: {
+														drills: {
+															include: {
+																completions: {
+																	where: {
+																		clientId: user.id,
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							orderBy: { assignedAt: "desc" },
+						},
+					},
+				})
+
+				if (!client || client.programAssignments.length === 0) {
+					return {}
+				}
+
+				// Build calendar data for the requested month
+				const calendarData: Record<string, any> = {}
+
+				// Process all assigned programs
+				client.programAssignments.forEach((assignment) => {
+					const program = assignment.program
+					const startDate =
+						assignment.startDate || new Date(assignment.assignedAt)
+
+					// Get all days in the program
+					program.weeks.forEach((week: any) => {
+						week.days.forEach((day: any) => {
+							// Calculate the day date by adding the appropriate number of days
+							const dayDate = new Date(startDate)
+							const daysToAdd = (week.weekNumber - 1) * 7 + (day.dayNumber - 1)
+							dayDate.setDate(startDate.getDate() + daysToAdd)
+
+							const dateString = dayDate.toISOString().split("T")[0]
+
+							// Debug logging for first few days
+							if (week.weekNumber === 1 && day.dayNumber <= 3) {
+								console.log(`Week ${week.weekNumber}, Day ${day.dayNumber}:`, {
+									startDate: startDate.toISOString(),
+									daysToAdd,
+									dayDate: dayDate.toISOString(),
+									dateString,
+								})
+							}
+
+							// Only include days in the requested month
+							if (
+								dayDate.getFullYear() === input.year &&
+								dayDate.getMonth() + 1 === input.month
+							) {
+								const drills = day.drills.map((drill: any) => ({
+									id: drill.id,
+									title: drill.title,
+									sets: drill.sets,
+									reps: drill.reps,
+									tempo: drill.tempo,
+									tags: drill.tags ? JSON.parse(drill.tags) : [],
+									videoUrl: drill.videoUrl,
+									completed: drill.completions && drill.completions.length > 0,
+								}))
+
+								const completedDrills = drills.filter(
+									(drill: any) => drill.completed
+								).length
+
+								// Check if this day already has content from another program
+								if (calendarData[dateString]) {
+									// Merge drills from multiple programs
+									calendarData[dateString].drills = [
+										...calendarData[dateString].drills,
+										...drills,
+									]
+									calendarData[dateString].completedDrills += completedDrills
+									calendarData[dateString].totalDrills += drills.length
+									calendarData[dateString].expectedTime += drills.reduce(
+										(total: number, drill: any) =>
+											total + (drill.sets || 0) * 2,
+										0
+									)
+									// If either day is a rest day, keep it as rest day
+									calendarData[dateString].isRestDay =
+										calendarData[dateString].isRestDay || day.isRestDay
+								} else {
+									// Create entry for this program day
+									calendarData[dateString] = {
+										date: dateString,
+										drills,
+										isRestDay: day.isRestDay || drills.length === 0, // Mark as rest day if no drills or explicitly marked as rest
+										expectedTime: drills.reduce(
+											(total: number, drill: any) =>
+												total + (drill.sets || 0) * 2,
+											0
+										), // Rough estimate
+										completedDrills,
+										totalDrills: drills.length,
+									}
+								}
+							}
+						})
+					})
+				})
+
+				// Don't fill empty days with rest days - leave them blank
+
+				return calendarData
+			}),
+
+		markDrillComplete: publicProcedure
+			.input(
+				z.object({
+					drillId: z.string(),
+					completed: z.boolean(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client record
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				if (input.completed) {
+					// Mark drill as complete
+					await db.drillCompletion.create({
+						data: {
+							drillId: input.drillId,
+							clientId: client.id,
+						},
+					})
+				} else {
+					// Mark drill as incomplete (remove completion record)
+					await db.drillCompletion.deleteMany({
+						where: {
+							drillId: input.drillId,
+							clientId: client.id,
+						},
+					})
+				}
+
+				return { success: true }
+			}),
+
+		sendNoteToCoach: publicProcedure
+			.input(
+				z.object({
+					date: z.string(),
+					note: z.string(),
+					drillId: z.string().optional(),
+					drillTitle: z.string().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client's coach
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+					include: { coach: { select: { name: true } } },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Create a message in the messaging system to send to the coach
+				const conversation = await db.conversation.findFirst({
+					where: {
+						coachId: client.coachId,
+						clientId: user.id,
+					},
+				})
+
+				if (!conversation) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Conversation with coach not found",
+					})
+				}
+
+				// Create the message
+				const message = await db.message.create({
+					data: {
+						conversationId: conversation.id,
+						senderId: user.id,
+						content: input.drillTitle
+							? `**${input.drillTitle}** - ${input.note}`
+							: input.note,
+					},
+				})
+
+				// Create a notification for the coach
+				await db.notification.create({
+					data: {
+						userId: client.coachId,
+						type: "MESSAGE",
+						title: `New message from ${client.name}`,
+						message: input.drillTitle
+							? `Client feedback on "${
+									input.drillTitle
+							  }": ${input.note.substring(0, 100)}${
+									input.note.length > 100 ? "..." : ""
+							  }`
+							: `Client note: ${input.note.substring(0, 100)}${
+									input.note.length > 100 ? "..." : ""
+							  }`,
+						data: {
+							messageId: message.id,
+							conversationId: conversation.id,
+							drillId: input.drillId || undefined,
+							drillTitle: input.drillTitle || undefined,
+						},
+					},
+				})
+
+				return { success: true, messageId: message.id }
+			}),
+
+		getClientLessons: publicProcedure
+			.input(
+				z.object({
+					month: z.number(),
+					year: z.number(),
+				})
+			)
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client record to find their coach
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Get client's CONFIRMED lessons for the specified month (excluding Schedule Request lessons and lessons for other clients)
+				const lessons = await db.event.findMany({
+					where: {
+						clientId: client.id,
+						status: "CONFIRMED", // Only return confirmed lessons
+						NOT: {
+							OR: [
+								{
+									title: {
+										contains: "Schedule Request",
+									},
+								},
+								{
+									title: {
+										contains: "test user 2",
+									},
+								},
+							],
+						},
+						date: {
+							gte: new Date(input.year, input.month, 1),
+							lt: new Date(input.year, input.month + 1, 1),
+						},
+					},
+					include: {
+						coach: { select: { name: true } },
+					},
+					orderBy: { date: "asc" },
+				})
+
+				return lessons
+			}),
+
+		// Get client's pending schedule requests
+		getClientPendingRequests: publicProcedure
+			.input(
+				z.object({
+					month: z.number(),
+					year: z.number(),
+				})
+			)
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client record to find their coach
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Get client's PENDING schedule requests for the specified month
+				const pendingRequests = await db.event.findMany({
+					where: {
+						clientId: client.id,
+						status: "PENDING", // Only return pending requests
+						date: {
+							gte: new Date(input.year, input.month, 1),
+							lt: new Date(input.year, input.month + 1, 1),
+						},
+					},
+					include: {
+						coach: { select: { name: true } },
+					},
+					orderBy: { date: "asc" },
+				})
+
+				return pendingRequests
+			}),
+
+		// Get coach's schedule for client to view
+		getCoachScheduleForClient: publicProcedure
+			.input(
+				z.object({
+					month: z.number(),
+					year: z.number(),
+				})
+			)
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client record to find their coach
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Calculate month start and end dates
+				const monthStart = new Date(input.year, input.month, 1)
+				const monthEnd = new Date(input.year, input.month + 1, 0, 23, 59, 59)
+				const now = new Date()
+
+				// Get all events (lessons) for the coach in the specified month
+				const events = await db.event.findMany({
+					where: {
+						coachId: client.coachId,
+						date: {
+							gte: monthStart,
+							lte: monthEnd,
+							gt: now, // Only return future lessons
+						},
+					},
+					include: {
+						client: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+							},
+						},
+					},
+					orderBy: {
+						date: "asc",
+					},
+				})
+
+				// Filter out this client's own pending requests from the coach's schedule
+				const filteredEvents = events.filter(
+					(event) =>
+						!(event.clientId === client.id && event.status === "PENDING")
+				)
+
+				return filteredEvents
+			}),
+
+		// Get pending schedule requests for coach
+		getPendingScheduleRequests: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a COACH
+			const coach = await db.user.findFirst({
+				where: { id: user.id, role: "COACH" },
+			})
+
+			if (!coach) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only coaches can view pending schedule requests",
+				})
+			}
+
+			// Get all pending events for this coach (only client-requested lessons)
+			const pendingRequests = await db.event.findMany({
+				where: {
+					coachId: user.id,
+					status: "PENDING",
+					// Only include lessons that were requested by clients
+					description: {
+						contains: "Client requested",
+					},
+				},
+				include: {
+					client: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+						},
+					},
+				},
+				orderBy: {
+					date: "asc",
+				},
+			})
+
+			return pendingRequests
+		}),
+
+		// Fix incorrectly pending coach-scheduled lessons (one-time fix)
+		fixPendingCoachLessons: publicProcedure.mutation(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a COACH
+			const coach = await db.user.findFirst({
+				where: { id: user.id, role: "COACH" },
+			})
+
+			if (!coach) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only coaches can fix lessons",
+				})
+			}
+
+			// Update all pending lessons that were created by the coach to confirmed status
+			const updatedLessons = await db.event.updateMany({
+				where: {
+					coachId: user.id,
+					status: "PENDING",
+					description: "Scheduled lesson",
+				},
+				data: {
+					status: "CONFIRMED",
+				},
+			})
+
+			return { updatedCount: updatedLessons.count }
+		}),
+
+		// Fix confirmed lessons that still have "Schedule Request" in title
+		fixConfirmedLessonTitles: publicProcedure.mutation(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a COACH
+			const coach = await db.user.findFirst({
+				where: { id: user.id, role: "COACH" },
+			})
+
+			if (!coach) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only coaches can fix lessons",
+				})
+			}
+
+			// Find all confirmed lessons that still have "Schedule Request" in title
+			const lessonsToFix = await db.event.findMany({
+				where: {
+					coachId: user.id,
+					status: "CONFIRMED",
+					title: {
+						contains: "Schedule Request",
+					},
+				},
+				include: {
+					client: {
+						select: {
+							name: true,
+							email: true,
+						},
+					},
+				},
+			})
+
+			// Update each lesson's title
+			const updatePromises = lessonsToFix.map((lesson) =>
+				db.event.update({
+					where: { id: lesson.id },
+					data: {
+						title: `Lesson with ${
+							lesson.client.name || lesson.client.email || "Client"
+						}`,
+					},
+				})
+			)
+
+			await Promise.all(updatePromises)
+
+			return { updatedCount: lessonsToFix.length }
+		}),
+
+		// Approve a schedule request (COACH ONLY)
+		approveScheduleRequest: publicProcedure
+			.input(
+				z.object({
+					eventId: z.string(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can approve schedule requests",
+					})
+				}
+
+				// Find the event and verify it belongs to this coach
+				const event = await db.event.findFirst({
+					where: {
+						id: input.eventId,
+						coachId: user.id,
+						status: "PENDING",
+					},
+					include: {
+						client: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								userId: true, // Include userId to get the User.id for notifications
+							},
+						},
+					},
+				})
+
+				if (!event) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Schedule request not found or already processed",
+					})
+				}
+
+				// Update the event status to CONFIRMED and change the title
+				const updatedEvent = await db.event.update({
+					where: { id: input.eventId },
+					data: {
+						status: "CONFIRMED",
+						title: `Lesson with ${
+							event.client.name || event.client.email || "Client"
+						}`,
+					},
+				})
+
+				// Create notification for the client
+				if (event.client.userId) {
+					await db.notification.create({
+						data: {
+							userId: event.client.userId,
+							type: "LESSON_SCHEDULED",
+							title: "Schedule Request Approved",
+							message: `Your schedule request for ${format(
+								new Date(event.date),
+								"MMM d, yyyy 'at' h:mm a"
+							)} has been approved!`,
+							data: {
+								eventId: event.id,
+								coachId: user.id,
+								coachName: coach.name,
+							},
+						},
+					})
+				}
+
+				return updatedEvent
+			}),
+
+		// Reject a schedule request (COACH ONLY)
+		rejectScheduleRequest: publicProcedure
+			.input(
+				z.object({
+					eventId: z.string(),
+					reason: z.string().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const coach = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!coach) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can reject schedule requests",
+					})
+				}
+
+				// Find the event and verify it belongs to this coach
+				const event = await db.event.findFirst({
+					where: {
+						id: input.eventId,
+						coachId: user.id,
+						status: "PENDING",
+					},
+					include: {
+						client: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								userId: true, // Include userId to get the User.id for notifications
+							},
+						},
+					},
+				})
+
+				if (!event) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Schedule request not found or already processed",
+					})
+				}
+
+				// Update the event status to DECLINED
+				const updatedEvent = await db.event.update({
+					where: { id: input.eventId },
+					data: { status: "DECLINED" },
+				})
+
+				// Create notification for the client
+				if (event.client.userId) {
+					await db.notification.create({
+						data: {
+							userId: event.client.userId,
+							type: "LESSON_CANCELLED",
+							title: "Schedule Request Declined",
+							message: `Your schedule request for ${format(
+								new Date(event.date),
+								"MMM d, yyyy 'at' h:mm a"
+							)} has been declined.${
+								input.reason ? ` Reason: ${input.reason}` : ""
+							}`,
+							data: {
+								eventId: event.id,
+								coachId: user.id,
+								coachName: coach.name,
+								reason: input.reason,
+							},
+						},
+					})
+				}
+
+				return updatedEvent
+			}),
+
+		// Request a schedule change
+		requestScheduleChange: publicProcedure
+			.input(
+				z.object({
+					requestedDate: z.string(),
+					requestedTime: z.string(),
+					reason: z.string().optional(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can request schedule changes",
+					})
+				}
+
+				// Get client record to find their coach
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Parse the requested date and time
+				const dateStr = input.requestedDate
+				const timeStr = input.requestedTime
+
+				// Parse the time string (e.g., "2:00 PM")
+				const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
+				if (!timeMatch) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "Invalid time format",
+					})
+				}
+
+				let [_, hour, minute, period] = timeMatch
+				let hour24 = parseInt(hour)
+
+				// Convert to 24-hour format
+				if (period.toUpperCase() === "PM" && hour24 !== 12) {
+					hour24 += 12
+				} else if (period.toUpperCase() === "AM" && hour24 === 12) {
+					hour24 = 0
+				}
+
+				// Create the full date string
+				const fullDateStr = `${dateStr}T${hour24
+					.toString()
+					.padStart(2, "0")}:${minute}:00`
+				const requestedDateTime = new Date(fullDateStr)
+
+				// Validate the date
+				if (isNaN(requestedDateTime.getTime())) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "Invalid date/time combination",
+					})
+				}
+
+				// Check if the requested time is in the past
+				const now = new Date()
+				if (requestedDateTime <= now) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "Cannot request lessons in the past",
+					})
+				}
+
+				// Check if the requested time slot is already booked
+				const existingLesson = await db.event.findFirst({
+					where: {
+						coachId: client.coachId,
+						date: requestedDateTime,
+					},
+				})
+
+				if (existingLesson) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "This time slot is already booked",
+					})
+				}
+
+				// Create a schedule change request
+				const scheduleRequest = await db.event.create({
+					data: {
+						title: `Schedule Request - ${client.name}`,
+						description: input.reason || "Client requested schedule change",
+						date: requestedDateTime,
+						clientId: client.id,
+						coachId: client.coachId,
+						status: "PENDING", // New status field for pending requests
+					},
+				})
+
+				// Create notification for the coach
+				await db.notification.create({
+					data: {
+						userId: client.coachId,
+						type: "SCHEDULE_REQUEST",
+						title: "New Schedule Request",
+						message: `${
+							client.name
+						} has requested a schedule change for ${format(
+							requestedDateTime,
+							"MMM d, yyyy 'at' h:mm a"
+						)}`,
+						data: {
+							eventId: scheduleRequest.id,
+							clientId: client.id,
+							clientName: client.name,
+							requestedDate: requestedDateTime,
+							reason: input.reason,
+						},
+					},
+				})
+
+				return scheduleRequest
+			}),
+
+		getVideoSubmissions: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a CLIENT
+			const dbUser = await db.user.findFirst({
+				where: { id: user.id, role: "CLIENT" },
+			})
+
+			if (!dbUser) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only clients can access this endpoint",
+				})
+			}
+
+			// Get client record
+			const client = await db.client.findFirst({
+				where: { userId: user.id },
+			})
+
+			if (!client) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Client profile not found",
+				})
+			}
+
+			// Get client's video submissions
+			const submissions = await db.clientVideoSubmission.findMany({
+				where: { clientId: client.id },
+				orderBy: { createdAt: "desc" },
+			})
+
+			return submissions
+		}),
+
+		getVideoSubmissionByDrill: publicProcedure
+			.input(z.object({ drillId: z.string() }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client record
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Get video submission for specific drill
+				const submission = await db.clientVideoSubmission.findFirst({
+					where: {
+						clientId: client.id,
+						drillId: input.drillId,
+					},
+				})
+
+				return submission
+			}),
+
+		getClientVideoSubmissions: publicProcedure.query(async () => {
+			const { getUser } = getKindeServerSession()
+			const user = await getUser()
+			if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+			// Verify user is a COACH
+			const dbUser = await db.user.findFirst({
+				where: { id: user.id, role: "COACH" },
+			})
+
+			if (!dbUser) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "Only coaches can access this endpoint",
+				})
+			}
+
+			// Get coach's client video submissions
+			const submissions = await db.clientVideoSubmission.findMany({
+				where: { coachId: user.id },
+				include: {
+					client: {
+						select: {
+							name: true,
+							email: true,
+						},
+					},
+					drill: {
+						select: {
+							title: true,
+						},
+					},
+				},
+				orderBy: { createdAt: "desc" },
+			})
+
+			return submissions
+		}),
+
+		getClientVideoSubmissionById: publicProcedure
+			.input(z.object({ id: z.string() }))
+			.query(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a COACH
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "COACH" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only coaches can access this endpoint",
+					})
+				}
+
+				// Get specific client video submission
+				const submission = await db.clientVideoSubmission.findFirst({
+					where: {
+						id: input.id,
+						coachId: user.id,
+					},
+					include: {
+						client: {
+							select: {
+								name: true,
+								email: true,
+							},
+						},
+						drill: {
+							select: {
+								title: true,
+							},
+						},
+					},
+				})
+
+				if (!submission) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client video submission not found",
+					})
+				}
+
+				return submission
+			}),
+
+		submitVideo: publicProcedure
+			.input(
+				z.object({
+					title: z.string(),
+					description: z.string().optional(),
+					comment: z.string().optional(),
+					videoUrl: z.string(),
+					thumbnail: z.string().optional(),
+					drillId: z.string().optional(),
+					isPublic: z.boolean().default(false),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client record
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Create video submission
+				const videoSubmission = await db.clientVideoSubmission.create({
+					data: {
+						clientId: client.id,
+						coachId: client.coachId,
+						title: input.title,
+						description: input.description,
+						comment: input.comment,
+						videoUrl: input.videoUrl,
+						thumbnail: input.thumbnail,
+						drillId: input.drillId,
+						isPublic: input.isPublic,
+					},
+				})
+
+				return { success: true, videoSubmission }
+			}),
+
+		addVideoComment: publicProcedure
+			.input(
+				z.object({
+					videoSubmissionId: z.string(),
+					comment: z.string(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can add comments to videos",
+					})
+				}
+
+				// Get client record
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Verify the video submission belongs to this client
+				const videoSubmission = await db.clientVideoSubmission.findFirst({
+					where: {
+						id: input.videoSubmissionId,
+						clientId: client.id,
+					},
+				})
+
+				if (!videoSubmission) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Video submission not found or doesn't belong to you",
+					})
+				}
+
+				// Update the video submission with the comment
+				const updatedSubmission = await db.clientVideoSubmission.update({
+					where: { id: input.videoSubmissionId },
+					data: { comment: input.comment },
+				})
+
+				// Create a notification for the coach
+				await db.notification.create({
+					data: {
+						userId: client.coachId,
+						type: "MESSAGE",
+						title: `New video comment from ${client.name}`,
+						message: `Client added a comment to their video submission: "${input.comment.substring(
+							0,
+							100
+						)}${input.comment.length > 100 ? "..." : ""}"`,
+						data: {
+							videoSubmissionId: input.videoSubmissionId,
+							clientId: client.id,
+							clientName: client.name,
+						},
+					},
+				})
+
+				return { success: true, videoSubmission: updatedSubmission }
+			}),
+
+		addCommentToDrill: publicProcedure
+			.input(
+				z.object({
+					drillId: z.string(),
+					comment: z.string(),
+				})
+			)
+			.mutation(async ({ input }) => {
+				const { getUser } = getKindeServerSession()
+				const user = await getUser()
+				if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" })
+
+				// Verify user is a CLIENT
+				const dbUser = await db.user.findFirst({
+					where: { id: user.id, role: "CLIENT" },
+				})
+
+				if (!dbUser) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: "Only clients can access this endpoint",
+					})
+				}
+
+				// Get client record
+				const client = await db.client.findFirst({
+					where: { userId: user.id },
+				})
+
+				if (!client) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Client profile not found",
+					})
+				}
+
+				// Find video submission for this drill
+				const videoSubmission = await db.clientVideoSubmission.findFirst({
+					where: {
+						clientId: client.id,
+						drillId: input.drillId,
+					},
+				})
+
+				if (videoSubmission) {
+					// Update existing video submission with comment
+					const updatedSubmission = await db.clientVideoSubmission.update({
+						where: { id: videoSubmission.id },
+						data: { comment: input.comment },
+					})
+
+					// Create notification for coach
+					await db.notification.create({
+						data: {
+							userId: client.coachId,
+							type: "MESSAGE",
+							title: `New video comment from ${client.name}`,
+							message: `Client added a comment to their video submission: "${input.comment.substring(
+								0,
+								100
+							)}${input.comment.length > 100 ? "..." : ""}"`,
+							data: {
+								videoSubmissionId: videoSubmission.id,
+								clientId: client.id,
+								clientName: client.name,
+							},
+						},
+					})
+
+					return {
+						success: true,
+						videoSubmission: updatedSubmission,
+						type: "video_comment",
+					}
+				} else {
+					// No video submission found, create one with just the comment
+					const newVideoSubmission = await db.clientVideoSubmission.create({
+						data: {
+							clientId: client.id,
+							coachId: client.coachId,
+							title: `Comment for Drill ${input.drillId}`,
+							description: "Client feedback and comments",
+							comment: input.comment,
+							videoUrl: "", // Empty since no video was uploaded
+							drillId: input.drillId,
+							isPublic: false,
+						},
+					})
+
+					// Create notification for coach
+					await db.notification.create({
+						data: {
+							userId: client.coachId,
+							type: "MESSAGE",
+							title: `New client comment from ${client.name}`,
+							message: `Client added a comment for drill ${
+								input.drillId
+							}: "${input.comment.substring(0, 100)}${
+								input.comment.length > 100 ? "..." : ""
+							}"`,
+							data: {
+								videoSubmissionId: newVideoSubmission.id,
+								clientId: client.id,
+								clientName: client.name,
+							},
+						},
+					})
+
+					return {
+						success: true,
+						videoSubmission: newVideoSubmission,
+						type: "video_comment",
+					}
 				}
 			}),
 	}),

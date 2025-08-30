@@ -34,6 +34,7 @@ import AddClientModal from "./AddClientModal"
 import Sidebar from "./Sidebar"
 import ClientScheduler from "./ClientScheduler"
 import ClientProfileModal from "./ClientProfileModal"
+import ProfilePictureUploader from "./ProfilePictureUploader"
 
 interface Client {
 	id: string
@@ -53,6 +54,26 @@ interface Client {
 	userId?: string | null
 	archived: boolean
 	archivedAt: string | null
+	// Pitching Information
+	age?: number | null
+	height?: string | null
+	dominantHand?: string | null
+	movementStyle?: string | null
+	reachingAbility?: string | null
+	averageSpeed?: number | null
+	topSpeed?: number | null
+	dropSpinRate?: number | null
+	changeupSpinRate?: number | null
+	riseSpinRate?: number | null
+	curveSpinRate?: number | null
+	user?: {
+		id: string
+		name: string | null
+		email: string
+		settings: {
+			avatarUrl: string | null
+		} | null
+	} | null
 	programAssignments?: {
 		id: string
 		programId: string
@@ -894,8 +915,11 @@ export default function ClientsPage() {
 													style={{
 														backgroundColor: "#353A3A",
 														borderColor: "#606364",
+														animationName: "fadeInUp",
+														animationDuration: "0.6s",
+														animationTimingFunction: "ease-out",
+														animationFillMode: "forwards",
 														animationDelay: `${index * 100}ms`,
-														animation: "fadeInUp 0.6s ease-out forwards",
 													}}
 													onClick={() => handleOpenProfile(client)}
 													onMouseEnter={(e) => {
@@ -916,15 +940,15 @@ export default function ClientsPage() {
 													/>
 													<div className="relative p-6">
 														<div className="flex items-center justify-between mb-4">
-															<div
-																className="w-12 h-12 rounded-xl flex items-center justify-center"
-																style={{ backgroundColor: "#4A5A70" }}
-															>
-																<User
-																	className="h-6 w-6"
-																	style={{ color: "#C3BCC2" }}
-																/>
-															</div>
+															<ProfilePictureUploader
+																currentAvatarUrl={
+																	client.user?.settings?.avatarUrl ||
+																	client.avatar
+																}
+																userName={client.name}
+																onAvatarChange={() => {}} // No-op for client cards
+																readOnly={true}
+															/>
 															<div className="flex items-center gap-1">
 																<button
 																	className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
@@ -942,69 +966,30 @@ export default function ClientsPage() {
 																>
 																	<Edit className="h-4 w-4" />
 																</button>
-																{activeTab === "active" ? (
-																	<button
-																		onClick={(e) => {
-																			e.stopPropagation()
+																<button
+																	onClick={(e) => {
+																		e.stopPropagation()
+																		if (activeTab === "active") {
 																			handleArchiveClient(
 																				client.id,
 																				client.name
 																			)
-																		}}
-																		className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
-																		style={{ color: "#ABA4AA" }}
-																		onMouseEnter={(e) => {
-																			e.currentTarget.style.color = "#F59E0B"
-																			e.currentTarget.style.backgroundColor =
-																				"#3A4040"
-																		}}
-																		onMouseLeave={(e) => {
-																			e.currentTarget.style.color = "#ABA4AA"
-																			e.currentTarget.style.backgroundColor =
-																				"transparent"
-																		}}
-																	>
-																		<Archive className="h-4 w-4" />
-																	</button>
-																) : (
-																	<button
-																		onClick={(e) => {
-																			e.stopPropagation()
+																		} else {
 																			handleUnarchiveClient(
 																				client.id,
 																				client.name
 																			)
-																		}}
-																		className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
-																		style={{ color: "#ABA4AA" }}
-																		onMouseEnter={(e) => {
-																			e.currentTarget.style.color = "#10B981"
-																			e.currentTarget.style.backgroundColor =
-																				"#3A4040"
-																		}}
-																		onMouseLeave={(e) => {
-																			e.currentTarget.style.color = "#ABA4AA"
-																			e.currentTarget.style.backgroundColor =
-																				"transparent"
-																		}}
-																	>
-																		<Archive className="h-4 w-4" />
-																	</button>
-																)}
-																<button
-																	onClick={(e) => {
-																		e.stopPropagation()
-																		handleArchiveClientFromDelete(
-																			client.id,
-																			client.name
-																		)
+																		}
 																	}}
 																	disabled={archivingClientId === client.id}
 																	className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
 																	style={{ color: "#ABA4AA" }}
 																	onMouseEnter={(e) => {
 																		if (!e.currentTarget.disabled) {
-																			e.currentTarget.style.color = "#F59E0B"
+																			e.currentTarget.style.color =
+																				activeTab === "active"
+																					? "#F59E0B"
+																					: "#10B981"
 																			e.currentTarget.style.backgroundColor =
 																				"#3A4040"
 																		}
@@ -1020,7 +1005,12 @@ export default function ClientsPage() {
 																	{archivingClientId === client.id ? (
 																		<div
 																			className="animate-spin rounded-full h-4 w-4 border-b-2"
-																			style={{ borderColor: "#F59E0B" }}
+																			style={{
+																				borderColor:
+																					activeTab === "active"
+																						? "#F59E0B"
+																						: "#10B981",
+																			}}
 																		></div>
 																	) : (
 																		<Archive className="h-4 w-4" />
@@ -1086,6 +1076,8 @@ export default function ClientsPage() {
 																	</p>
 																</div>
 															</div>
+
+															{/* Pitching Information */}
 
 															{/* Program Assignments */}
 															{client.programAssignments &&
@@ -1260,8 +1252,11 @@ export default function ClientsPage() {
 													style={{
 														backgroundColor: "#353A3A",
 														borderColor: "#606364",
+														animationName: "fadeInUp",
+														animationDuration: "0.6s",
+														animationTimingFunction: "ease-out",
+														animationFillMode: "forwards",
 														animationDelay: `${index * 50}ms`,
-														animation: "fadeInUp 0.6s ease-out forwards",
 													}}
 													onClick={() => {
 														console.log("Card clicked for client:", client.name)
@@ -1286,21 +1281,17 @@ export default function ClientsPage() {
 													<div className="relative p-6">
 														<div className="flex items-center justify-between">
 															<div className="flex items-center gap-4">
-																<div
-																	className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
-																	style={{ backgroundColor: "#4A5A70" }}
-																>
-																	<span
-																		className="font-bold text-xl"
-																		style={{ color: "#C3BCC2" }}
-																	>
-																		{client.name
-																			.split(" ")
-																			.map((n: string) => n[0])
-																			.join("")
-																			.toUpperCase()}
-																	</span>
-																</div>
+																<ProfilePictureUploader
+																	currentAvatarUrl={
+																		client.user?.settings?.avatarUrl ||
+																		client.avatar
+																	}
+																	userName={client.name}
+																	onAvatarChange={() => {}} // No-op for client cards
+																	size="md"
+																	readOnly={true}
+																	className="flex-shrink-0"
+																/>
 																<div>
 																	<h3
 																		className="text-xl font-bold mb-2"
@@ -1431,69 +1422,30 @@ export default function ClientsPage() {
 																	>
 																		<Edit className="h-4 w-4" />
 																	</button>
-																	{activeTab === "active" ? (
-																		<button
-																			onClick={(e) => {
-																				e.stopPropagation()
+																	<button
+																		onClick={(e) => {
+																			e.stopPropagation()
+																			if (activeTab === "active") {
 																				handleArchiveClient(
 																					client.id,
 																					client.name
 																				)
-																			}}
-																			className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
-																			style={{ color: "#ABA4AA" }}
-																			onMouseEnter={(e) => {
-																				e.currentTarget.style.color = "#F59E0B"
-																				e.currentTarget.style.backgroundColor =
-																					"#3A4040"
-																			}}
-																			onMouseLeave={(e) => {
-																				e.currentTarget.style.color = "#ABA4AA"
-																				e.currentTarget.style.backgroundColor =
-																					"transparent"
-																			}}
-																		>
-																			<Archive className="h-4 w-4" />
-																		</button>
-																	) : (
-																		<button
-																			onClick={(e) => {
-																				e.stopPropagation()
+																			} else {
 																				handleUnarchiveClient(
 																					client.id,
 																					client.name
 																				)
-																			}}
-																			className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
-																			style={{ color: "#ABA4AA" }}
-																			onMouseEnter={(e) => {
-																				e.currentTarget.style.color = "#10B981"
-																				e.currentTarget.style.backgroundColor =
-																					"#3A4040"
-																			}}
-																			onMouseLeave={(e) => {
-																				e.currentTarget.style.color = "#ABA4AA"
-																				e.currentTarget.style.backgroundColor =
-																					"transparent"
-																			}}
-																		>
-																			<Archive className="h-4 w-4" />
-																		</button>
-																	)}
-																	<button
-																		onClick={(e) => {
-																			e.stopPropagation()
-																			handleArchiveClientFromDelete(
-																				client.id,
-																				client.name
-																			)
+																			}
 																		}}
 																		disabled={archivingClientId === client.id}
 																		className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
 																		style={{ color: "#ABA4AA" }}
 																		onMouseEnter={(e) => {
 																			if (!e.currentTarget.disabled) {
-																				e.currentTarget.style.color = "#F59E0B"
+																				e.currentTarget.style.color =
+																					activeTab === "active"
+																						? "#F59E0B"
+																						: "#10B981"
 																				e.currentTarget.style.backgroundColor =
 																					"#3A4040"
 																			}
@@ -1509,7 +1461,12 @@ export default function ClientsPage() {
 																		{archivingClientId === client.id ? (
 																			<div
 																				className="animate-spin rounded-full h-4 w-4 border-b-2"
-																				style={{ borderColor: "#F59E0B" }}
+																				style={{
+																					borderColor:
+																						activeTab === "active"
+																							? "#F59E0B"
+																							: "#10B981",
+																				}}
 																			></div>
 																		) : (
 																			<Archive className="h-4 w-4" />

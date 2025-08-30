@@ -24,23 +24,41 @@ import {
 	Zap,
 	Crown,
 	Trophy,
+	Bell,
 	Target as TargetIcon,
 	TrendingUp as TrendingUpIcon,
 } from "lucide-react"
 import { format } from "date-fns"
 import AddClientModal from "./AddClientModal"
 import Sidebar from "./Sidebar"
+import ProfilePictureUploader from "./ProfilePictureUploader"
 
 export default function Dashboard() {
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 	const [deletingClientId, setDeletingClientId] = useState<string | null>(null)
 
+	// Get user profile to check role
+	const { data: userProfile } = trpc.user.getProfile.useQuery()
+
+	// Only fetch clients data if user is a coach
 	const {
 		data: clients = [],
 		isLoading,
 		error,
-	} = trpc.clients.list.useQuery({ archived: false })
-	const { data: stats } = trpc.library.getStats.useQuery()
+	} = trpc.clients.list.useQuery(
+		{ archived: false },
+		{
+			enabled: userProfile?.role === "COACH",
+		}
+	)
+
+	// Debug: Log client data to see if avatar field is present
+	console.log("Clients data:", clients)
+	console.log("First client user data:", clients[0]?.user)
+	console.log("First client avatar URL:", clients[0]?.user?.settings?.avatarUrl)
+	const { data: stats } = trpc.library.getStats.useQuery(undefined, {
+		enabled: userProfile?.role === "COACH",
+	})
 	const utils = trpc.useUtils()
 
 	const deleteClient = trpc.clients.delete.useMutation({
@@ -76,6 +94,12 @@ export default function Dashboard() {
 				</div>
 			</Sidebar>
 		)
+	}
+
+	// If user is not a coach, redirect to client dashboard
+	if (userProfile?.role === "CLIENT") {
+		window.location.href = "/client-dashboard"
+		return null
 	}
 
 	if (error) {
@@ -466,6 +490,9 @@ export default function Dashboard() {
 					</div>
 				</div>
 
+				{/* Recent Notifications Section */}
+				<RecentNotificationsSection />
+
 				{/* Enhanced Athletes Section */}
 				<div className="flex items-center justify-between mb-6">
 					<div>
@@ -594,12 +621,17 @@ export default function Dashboard() {
 								/>
 								<div className="relative p-6">
 									<div className="flex items-center justify-between mb-4">
-										<div
-											className="w-12 h-12 rounded-xl flex items-center justify-center"
-											style={{ backgroundColor: "#4A5A70" }}
-										>
-											<User className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-										</div>
+										<ProfilePictureUploader
+											currentAvatarUrl={
+												client.user?.settings?.avatarUrl || client.avatar
+											}
+											userName={client.name}
+											onAvatarChange={() => {}}
+											size="md"
+											readOnly={true}
+											className="flex-shrink-0"
+										/>
+										{/* Debug: {client.avatar ? `Avatar: ${client.avatar}` : 'No avatar'} */}
 										<div className="flex items-center gap-2">
 											<button
 												className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
@@ -737,5 +769,117 @@ export default function Dashboard() {
 				/>
 			</div>
 		</Sidebar>
+	)
+}
+
+// Recent Notifications Section Component
+function RecentNotificationsSection() {
+	const { data: notifications = [] } =
+		trpc.notifications.getNotifications.useQuery({
+			limit: 3,
+			unreadOnly: false,
+		})
+
+	const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery()
+
+	if (notifications.length === 0) {
+		return null // Don't show section if no notifications
+	}
+
+	return (
+		<div
+			className="rounded-2xl shadow-xl border mb-8 relative overflow-hidden group"
+			style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+		>
+			<div
+				className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+				style={{
+					background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+				}}
+			/>
+			<div className="relative p-6">
+				<div className="flex items-center justify-between mb-6">
+					<h3
+						className="text-xl font-bold flex items-center gap-3"
+						style={{ color: "#C3BCC2" }}
+					>
+						<div
+							className="w-8 h-8 rounded-lg flex items-center justify-center"
+							style={{ backgroundColor: "#4A5A70" }}
+						>
+							<Bell className="h-4 w-4" style={{ color: "#C3BCC2" }} />
+						</div>
+						Recent Notifications
+						{unreadCount > 0 && (
+							<span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 ml-2">
+								{unreadCount}
+							</span>
+						)}
+					</h3>
+					<Link
+						href="/notifications"
+						className="text-sm text-blue-400 hover:text-blue-300 font-medium"
+					>
+						View All
+					</Link>
+				</div>
+				<div className="space-y-3">
+					{notifications.slice(0, 3).map((notification) => (
+						<div
+							key={notification.id}
+							className={`p-3 rounded-lg transition-colors ${
+								!notification.isRead
+									? "bg-blue-500/10 border-l-2 border-blue-500"
+									: ""
+							}`}
+							style={{
+								backgroundColor: !notification.isRead
+									? "#4A5A70"
+									: "transparent",
+							}}
+						>
+							<div className="flex items-start gap-3">
+								<div className="flex-shrink-0 mt-1">
+									{notification.type === "CLIENT_JOIN_REQUEST" ? (
+										<User className="h-4 w-4 text-green-400" />
+									) : (
+										<Bell className="h-4 w-4 text-gray-400" />
+									)}
+								</div>
+								<div className="flex-1 min-w-0">
+									<p
+										className={`text-sm font-medium ${
+											!notification.isRead ? "font-semibold" : ""
+										}`}
+										style={{ color: "#C3BCC2" }}
+									>
+										{notification.title}
+									</p>
+									<p
+										className="text-xs mt-1 line-clamp-2"
+										style={{ color: "#ABA4AA" }}
+									>
+										{notification.message}
+									</p>
+									<div className="flex items-center justify-between mt-2">
+										<span className="text-xs" style={{ color: "#ABA4AA" }}>
+											{new Date(notification.createdAt).toLocaleDateString()}
+										</span>
+										{notification.type === "CLIENT_JOIN_REQUEST" && (
+											<Link
+												href="/clients"
+												className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+											>
+												View Client
+											</Link>
+										)}
+									</div>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+		</div>
 	)
 }

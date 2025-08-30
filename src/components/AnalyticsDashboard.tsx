@@ -17,13 +17,15 @@ import {
 	ArrowDown,
 	Minus,
 	Eye,
-	MessageCircle,
 	PlayCircle,
 	CheckCircle,
 	Settings,
 	Goal,
 	BarChart,
 	LineChart,
+	Edit,
+	Save,
+	X,
 } from "lucide-react"
 import Sidebar from "./Sidebar"
 
@@ -31,6 +33,13 @@ export default function AnalyticsDashboard() {
 	const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">("30d")
 	const [selectedMetric, setSelectedMetric] = useState<string>("overview")
 	const [showGoals, setShowGoals] = useState(false)
+	const [isEditingGoals, setIsEditingGoals] = useState(false)
+	const [editingGoals, setEditingGoals] = useState({
+		activeClients: 5,
+		workoutCompletion: 75,
+		programProgress: 70,
+		clientRetention: 85,
+	})
 
 	// Fetch analytics data
 	const { data: analyticsData, isLoading } =
@@ -53,13 +62,27 @@ export default function AnalyticsDashboard() {
 			timeRange,
 		})
 
-	// Mock goals data (you can make this real later)
-	const goals = {
-		activeClients: 20,
-		averageProgress: 75,
-		completionRate: 85,
-		retentionRate: 90,
-	}
+	// Fetch real goals data
+	const {
+		data: goals = {
+			activeClients: Math.max(analyticsData?.activeClients || 0, 5), // At least 5 clients
+			workoutCompletion: Math.max(
+				analyticsData?.workoutCompletionRate || 0,
+				70
+			), // At least 70%
+			programProgress: Math.max(analyticsData?.averageProgress || 0, 60), // At least 60%
+			clientRetention: Math.max(analyticsData?.retentionRate || 0, 80), // At least 80%
+		},
+		refetch: refetchGoals,
+	} = trpc.analyticsGoals.getGoals.useQuery()
+
+	// Update goals mutation
+	const updateGoalsMutation = trpc.analyticsGoals.updateGoals.useMutation({
+		onSuccess: () => {
+			refetchGoals()
+			setIsEditingGoals(false)
+		},
+	})
 
 	if (isLoading) {
 		return (
@@ -97,6 +120,30 @@ export default function AnalyticsDashboard() {
 		if (percentage >= 80)
 			return { status: "on-track", color: "text-yellow-400" }
 		return { status: "needs-attention", color: "text-red-400" }
+	}
+
+	const handleStartEditingGoals = () => {
+		setEditingGoals({
+			activeClients: goals.activeClients,
+			workoutCompletion: goals.workoutCompletion,
+			programProgress: goals.programProgress,
+			clientRetention: goals.clientRetention,
+		})
+		setIsEditingGoals(true)
+	}
+
+	const handleSaveGoals = () => {
+		updateGoalsMutation.mutate(editingGoals)
+	}
+
+	const handleCancelEditingGoals = () => {
+		setIsEditingGoals(false)
+		setEditingGoals({
+			activeClients: goals.activeClients,
+			workoutCompletion: goals.workoutCompletion,
+			programProgress: goals.programProgress,
+			clientRetention: goals.clientRetention,
+		})
 	}
 
 	return (
@@ -181,38 +228,104 @@ export default function AnalyticsDashboard() {
 							className="rounded-2xl shadow-xl border p-6"
 							style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
 						>
-							<h3
-								className="text-xl font-bold mb-4 flex items-center gap-2"
-								style={{ color: "#C3BCC2" }}
-							>
-								<Target className="h-5 w-5" style={{ color: "#4A5A70" }} />
-								Performance Goals
-							</h3>
+							<div className="flex items-center justify-between mb-4">
+								<h3
+									className="text-xl font-bold flex items-center gap-2"
+									style={{ color: "#C3BCC2" }}
+								>
+									<Target className="h-5 w-5" style={{ color: "#4A5A70" }} />
+									Performance Goals
+								</h3>
+								{!isEditingGoals ? (
+									<button
+										onClick={handleStartEditingGoals}
+										className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+										style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.backgroundColor = "#606364"
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.backgroundColor = "#4A5A70"
+										}}
+									>
+										<Edit className="h-4 w-4" />
+										Edit Goals
+									</button>
+								) : (
+									<div className="flex items-center gap-2">
+										<button
+											onClick={handleSaveGoals}
+											disabled={updateGoalsMutation.isLoading}
+											className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+											style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
+											onMouseEnter={(e) => {
+												if (!updateGoalsMutation.isLoading) {
+													e.currentTarget.style.backgroundColor = "#059669"
+												}
+											}}
+											onMouseLeave={(e) => {
+												if (!updateGoalsMutation.isLoading) {
+													e.currentTarget.style.backgroundColor = "#10B981"
+												}
+											}}
+										>
+											<Save className="h-4 w-4" />
+											{updateGoalsMutation.isLoading ? "Saving..." : "Save"}
+										</button>
+										<button
+											onClick={handleCancelEditingGoals}
+											className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+											style={{ backgroundColor: "#EF4444", color: "#FFFFFF" }}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.backgroundColor = "#DC2626"
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.backgroundColor = "#EF4444"
+											}}
+										>
+											<X className="h-4 w-4" />
+											Cancel
+										</button>
+									</div>
+								)}
+							</div>
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 								{[
 									{
 										title: "Active Clients",
 										current: analyticsData?.activeClients || 0,
-										goal: goals.activeClients,
+										goal: isEditingGoals
+											? editingGoals.activeClients
+											: goals.activeClients,
 										icon: <Users className="h-5 w-5" />,
+										key: "activeClients",
 									},
 									{
-										title: "Average Progress",
+										title: "Workout Completion",
+										current: analyticsData?.workoutCompletionRate || 0,
+										goal: isEditingGoals
+											? editingGoals.workoutCompletion
+											: goals.workoutCompletion,
+										icon: <CheckCircle className="h-5 w-5" />,
+										key: "workoutCompletion",
+									},
+									{
+										title: "Program Progress",
 										current: analyticsData?.averageProgress || 0,
-										goal: goals.averageProgress,
+										goal: isEditingGoals
+											? editingGoals.programProgress
+											: goals.programProgress,
 										icon: <TrendingUp className="h-5 w-5" />,
+										key: "programProgress",
 									},
 									{
-										title: "Completion Rate",
-										current: analyticsData?.completionRate || 0,
-										goal: goals.completionRate,
-										icon: <Trophy className="h-5 w-5" />,
-									},
-									{
-										title: "Retention Rate",
+										title: "Client Retention",
 										current: analyticsData?.retentionRate || 0,
-										goal: goals.retentionRate,
+										goal: isEditingGoals
+											? editingGoals.clientRetention
+											: goals.clientRetention,
 										icon: <Star className="h-5 w-5" />,
+										key: "clientRetention",
 									},
 								].map((metric, index) => {
 									const status = getGoalStatus(metric.current, metric.goal)
@@ -248,13 +361,39 @@ export default function AnalyticsDashboard() {
 														? formatPercentage(metric.current)
 														: metric.current}
 												</span>
-												<span className="text-sm" style={{ color: "#ABA4AA" }}>
-													/{" "}
-													{metric.title.includes("Rate") ||
-													metric.title.includes("Progress")
-														? formatPercentage(metric.goal)
-														: metric.goal}
-												</span>
+												{isEditingGoals ? (
+													<input
+														type="number"
+														value={metric.goal}
+														onChange={(e) => {
+															const value = parseFloat(e.target.value) || 0
+															setEditingGoals((prev) => ({
+																...prev,
+																[metric.key]: value,
+															}))
+														}}
+														className="w-16 px-2 py-1 text-sm rounded border"
+														style={{
+															backgroundColor: "#2A2F2F",
+															borderColor: "#606364",
+															color: "#C3BCC2",
+														}}
+														min={0}
+														max={metric.key === "activeClients" ? 1000 : 100}
+														step={metric.key === "activeClients" ? 1 : 0.1}
+													/>
+												) : (
+													<span
+														className="text-sm"
+														style={{ color: "#ABA4AA" }}
+													>
+														/{" "}
+														{metric.title.includes("Rate") ||
+														metric.title.includes("Progress")
+															? formatPercentage(metric.goal)
+															: metric.goal}
+													</span>
+												)}
 											</div>
 											<div
 												className="w-full bg-gray-700 rounded-full h-2 mt-2"
@@ -325,6 +464,83 @@ export default function AnalyticsDashboard() {
 						))}
 					</div>
 				</div>
+
+				{/* No Data Notice */}
+				{(!analyticsData?.activeClients ||
+					analyticsData.activeClients === 0) && (
+					<div className="mb-6">
+						<div
+							className="rounded-2xl border p-6 text-center"
+							style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+						>
+							<div
+								className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+								style={{ backgroundColor: "#4A5A70" }}
+							>
+								<BarChart3 className="h-8 w-8" style={{ color: "#C3BCC2" }} />
+							</div>
+							<h3
+								className="text-xl font-bold mb-2"
+								style={{ color: "#C3BCC2" }}
+							>
+								No Analytics Data Available
+							</h3>
+							<p className="text-lg mb-4" style={{ color: "#ABA4AA" }}>
+								To see meaningful analytics, you need to:
+							</p>
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left max-w-2xl mx-auto">
+								<div className="flex items-start gap-3">
+									<div
+										className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+										style={{ backgroundColor: "#10B981" }}
+									>
+										<span className="text-white font-bold text-sm">1</span>
+									</div>
+									<div>
+										<p className="font-medium" style={{ color: "#C3BCC2" }}>
+											Assign clients to programs
+										</p>
+										<p className="text-sm" style={{ color: "#ABA4AA" }}>
+											Create programs and assign them to your clients
+										</p>
+									</div>
+								</div>
+								<div className="flex items-start gap-3">
+									<div
+										className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+										style={{ backgroundColor: "#F59E0B" }}
+									>
+										<span className="text-white font-bold text-sm">2</span>
+									</div>
+									<div>
+										<p className="font-medium" style={{ color: "#C3BCC2" }}>
+											Assign workouts to clients
+										</p>
+										<p className="text-sm" style={{ color: "#ABA4AA" }}>
+											Create and assign workout templates to your clients
+										</p>
+									</div>
+								</div>
+								<div className="flex items-start gap-3">
+									<div
+										className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+										style={{ backgroundColor: "#8B5CF6" }}
+									>
+										<span className="text-white font-bold text-sm">3</span>
+									</div>
+									<div>
+										<p className="font-medium" style={{ color: "#C3BCC2" }}>
+											Track client progress
+										</p>
+										<p className="text-sm" style={{ color: "#ABA4AA" }}>
+											Have clients complete workouts and update their progress
+										</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
 
 				{/* Key Metrics Cards */}
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -423,7 +639,7 @@ export default function AnalyticsDashboard() {
 						</div>
 					</div>
 
-					{/* Program Completion Rate */}
+					{/* Workout Completion Rate */}
 					<div
 						className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
 						style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
@@ -440,30 +656,36 @@ export default function AnalyticsDashboard() {
 									className="w-12 h-12 rounded-xl flex items-center justify-center"
 									style={{ backgroundColor: "#F59E0B" }}
 								>
-									<Trophy className="h-6 w-6" style={{ color: "#C3BCC2" }} />
+									<CheckCircle
+										className="h-6 w-6"
+										style={{ color: "#C3BCC2" }}
+									/>
 								</div>
-								{getTrendIcon(analyticsData?.completionRateTrend || 0)}
+								{getTrendIcon(analyticsData?.workoutCompletionRateTrend || 0)}
 							</div>
 							<div>
 								<p
 									className="text-sm font-medium mb-1"
 									style={{ color: "#ABA4AA" }}
 								>
-									Completion Rate
+									Workout Completion
 								</p>
 								<p
 									className="text-3xl font-bold mb-1"
 									style={{ color: "#C3BCC2" }}
 								>
-									{formatPercentage(analyticsData?.completionRate || 0)}
+									{formatPercentage(analyticsData?.workoutCompletionRate || 0)}
 								</p>
 								<p
 									className={`text-xs flex items-center gap-1 ${getTrendColor(
-										analyticsData?.completionRateTrend || 0
+										analyticsData?.workoutCompletionRateTrend || 0
 									)}`}
 								>
-									{analyticsData?.completionRateTrend || 0 > 0 ? "+" : ""}
-									{analyticsData?.completionRateTrend || 0}% from last period
+									{analyticsData?.workoutCompletionRateTrend || 0 > 0
+										? "+"
+										: ""}
+									{analyticsData?.workoutCompletionRateTrend || 0}% from last
+									period
 								</p>
 							</div>
 						</div>
@@ -527,11 +749,61 @@ export default function AnalyticsDashboard() {
 							className="text-xl font-bold mb-4 flex items-center gap-2"
 							style={{ color: "#C3BCC2" }}
 						>
-							<Target className="h-5 w-5" style={{ color: "#4A5A70" }} />
-							Client Progress Overview
+							<CheckCircle className="h-5 w-5" style={{ color: "#4A5A70" }} />
+							Client Workout Completion ({clientProgress.length} clients)
 						</h3>
-						<div className="space-y-4">
-							{clientProgress.slice(0, 5).map((client: any) => (
+						{/* Summary Stats */}
+						<div
+							className="grid grid-cols-3 gap-4 mb-4 p-3 rounded-lg"
+							style={{ backgroundColor: "#2A2F2F" }}
+						>
+							<div className="text-center">
+								<p className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
+									{
+										clientProgress.filter((c: any) => c.totalWorkouts > 0)
+											.length
+									}
+								</p>
+								<p className="text-xs" style={{ color: "#ABA4AA" }}>
+									Clients with Workouts
+								</p>
+							</div>
+							<div className="text-center">
+								<p className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
+									{clientProgress.reduce(
+										(sum: number, c: any) => sum + c.completedWorkouts,
+										0
+									)}
+								</p>
+								<p className="text-xs" style={{ color: "#ABA4AA" }}>
+									Total Completed
+								</p>
+							</div>
+							<div className="text-center">
+								<p className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
+									{clientProgress.length > 0
+										? formatPercentage(
+												clientProgress.reduce(
+													(sum: number, c: any) =>
+														sum + c.workoutCompletionRate,
+													0
+												) / clientProgress.length
+										  )
+										: "0%"}
+								</p>
+								<p className="text-xs" style={{ color: "#ABA4AA" }}>
+									Avg Completion Rate
+								</p>
+							</div>
+						</div>
+						<div
+							className="max-h-96 overflow-y-auto space-y-4 pr-2"
+							style={{
+								scrollbarWidth: "thin",
+								scrollbarColor: "#606364 #2A2F2F",
+							}}
+						>
+							{clientProgress.map((client: any) => (
 								<div
 									key={client.id}
 									className="flex items-center justify-between p-3 rounded-lg"
@@ -549,7 +821,13 @@ export default function AnalyticsDashboard() {
 												{client.name}
 											</p>
 											<p className="text-sm" style={{ color: "#ABA4AA" }}>
-												{client.programsCompleted} programs completed
+												{client.completedWorkouts}/{client.totalWorkouts}{" "}
+												workouts completed
+												{client.programsCompleted > 0 && (
+													<span className="ml-2">
+														• {client.programsCompleted} programs completed
+													</span>
+												)}
 											</p>
 										</div>
 									</div>
@@ -558,7 +836,7 @@ export default function AnalyticsDashboard() {
 											className="font-bold text-lg"
 											style={{ color: "#C3BCC2" }}
 										>
-											{formatPercentage(client.progress)}
+											{formatPercentage(client.workoutCompletionRate)}
 										</p>
 										<p
 											className={`text-xs flex items-center gap-1 ${getTrendColor(
@@ -645,27 +923,7 @@ export default function AnalyticsDashboard() {
 							<Activity className="h-5 w-5" style={{ color: "#4A5A70" }} />
 							Engagement Metrics
 						</h3>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-							<div className="text-center">
-								<div
-									className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
-									style={{ backgroundColor: "#4A5A70" }}
-								>
-									<MessageCircle
-										className="h-8 w-8"
-										style={{ color: "#C3BCC2" }}
-									/>
-								</div>
-								<p
-									className="text-2xl font-bold mb-1"
-									style={{ color: "#C3BCC2" }}
-								>
-									{engagementMetrics?.messageResponseRate || 0}%
-								</p>
-								<p className="text-sm" style={{ color: "#ABA4AA" }}>
-									Message Response Rate
-								</p>
-							</div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							<div className="text-center">
 								<div
 									className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"

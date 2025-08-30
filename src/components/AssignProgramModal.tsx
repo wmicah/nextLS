@@ -80,7 +80,10 @@ export default function AssignProgramModal({
 	const [selectedClients, setSelectedClients] = useState<string[]>(
 		clientId ? [clientId] : []
 	)
-	const [startDate, setStartDate] = useState<string>("")
+	const [startDate, setStartDate] = useState<string>(() => {
+		const today = new Date()
+		return today.toISOString().split("T")[0]
+	})
 	const [isAssigning, setIsAssigning] = useState(false)
 	const [viewMode, setViewMode] = useState<"assign" | "manage">("assign")
 
@@ -119,7 +122,8 @@ export default function AssignProgramModal({
 			onClose()
 			setSelectedProgram("")
 			setSelectedClients([])
-			setStartDate("")
+			const today = new Date()
+			setStartDate(today.toISOString().split("T")[0])
 
 			// Invalidate and refetch data
 			utils.clients.list.invalidate()
@@ -187,10 +191,19 @@ export default function AssignProgramModal({
 			return
 		}
 
+		if (!startDate) {
+			addToast({
+				type: "error",
+				title: "Start date required",
+				message: "Please select a start date for the program.",
+			})
+			return
+		}
+
 		const requestData = {
 			programId: selectedProgram,
 			clientIds: selectedClients,
-			startDate: startDate ? startDate + "T00:00:00.000Z" : undefined,
+			startDate: startDate,
 		}
 
 		console.log("Sending assignment request:", requestData)
@@ -236,9 +249,9 @@ export default function AssignProgramModal({
 
 	return (
 		<div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-			<div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+			<div className="bg-[#2B3038] rounded-2xl border border-gray-700/50 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
 				{/* Header - Fixed */}
-				<div className="sticky top-0 z-10 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700/50 px-6 py-4">
+				<div className="sticky top-0 z-10 bg-[#2B3038] border-b border-gray-700/50 px-6 py-4">
 					<div className="flex items-center justify-between">
 						<div>
 							<h3 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
@@ -274,7 +287,7 @@ export default function AssignProgramModal({
 				{/* Content - Scrollable */}
 				<div
 					className="p-6 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-700/30 [&::-webkit-scrollbar-thumb]:bg-gray-600/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500/50"
-					style={{ height: "calc(90vh - 120px)" }}
+					style={{ height: "calc(90vh - 120px)", backgroundColor: "#2B3038" }}
 				>
 					{/* Program Selection */}
 					<div className="mb-6">
@@ -284,7 +297,8 @@ export default function AssignProgramModal({
 						<select
 							value={selectedProgram}
 							onChange={(e) => setSelectedProgram(e.target.value)}
-							className="w-full p-4 rounded-xl bg-gray-800/50 border border-gray-600/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 placeholder-gray-400"
+							className="w-full p-4 rounded-xl border border-gray-600/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 placeholder-gray-400"
+							style={{ backgroundColor: "#2B3038" }}
 						>
 							<option value="">Choose a program...</option>
 							{programs.map((program) => (
@@ -297,7 +311,10 @@ export default function AssignProgramModal({
 
 					{/* Selected Program Details */}
 					{selectedProgramData && (
-						<div className="bg-gradient-to-r from-gray-800/50 to-gray-700/50 rounded-xl border border-gray-600/50 p-6 mb-6">
+						<div
+							className="rounded-xl border border-gray-600/50 p-6 mb-6"
+							style={{ backgroundColor: "#2B3038" }}
+						>
 							<div className="flex items-start justify-between">
 								<div className="flex-1">
 									<h4 className="text-xl font-semibold text-white mb-3">
@@ -336,14 +353,19 @@ export default function AssignProgramModal({
 							{/* Start Date */}
 							<div>
 								<label className="text-white text-sm font-medium mb-3 block">
-									Start Date (Optional)
+									Start Date <span className="text-red-400">*</span>
 								</label>
 								<input
 									type="date"
 									value={startDate}
 									onChange={(e) => setStartDate(e.target.value)}
-									className="w-full p-4 rounded-xl bg-gray-800/50 border border-gray-600/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+									required
+									className="w-full p-4 rounded-xl border border-gray-600/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+									style={{ backgroundColor: "#2B3038" }}
 								/>
+								<p className="text-gray-400 text-sm mt-2">
+									Choose when this program should start for the client
+								</p>
 							</div>
 
 							{/* Client Selection */}
@@ -362,7 +384,10 @@ export default function AssignProgramModal({
 									</button>
 								</div>
 
-								<div className="h-64 border border-gray-600/50 rounded-xl overflow-y-auto bg-gray-800/30 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-700/30 [&::-webkit-scrollbar-thumb]:bg-gray-600/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500/50">
+								<div
+									className="h-64 border border-gray-600/50 rounded-xl overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-700/30 [&::-webkit-scrollbar-thumb]:bg-gray-600/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500/50"
+									style={{ backgroundColor: "#2B3038" }}
+								>
 									<div className="p-4 space-y-3">
 										{clients.map((client: Client) => {
 											const isSelected = selectedClients.includes(client.id)
@@ -375,16 +400,21 @@ export default function AssignProgramModal({
 													key={client.id}
 													className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
 														isSelected
-															? "bg-blue-500/20 border-blue-500/50 shadow-lg"
-															: "bg-gray-700/30 border-gray-600/50 hover:bg-gray-700/50 hover:border-gray-500/50"
+															? "border-blue-500/50 shadow-lg"
+															: "border-gray-600/50 hover:border-gray-500/50"
 													}`}
+													style={{
+														backgroundColor: isSelected ? "#3B82F6" : "#2B3038",
+														opacity: isSelected ? 0.2 : 1,
+													}}
 													onClick={() => toggleClientSelection(client.id)}
 												>
 													<input
 														type="checkbox"
 														checked={isSelected}
 														onChange={() => toggleClientSelection(client.id)}
-														className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-gray-300 focus:ring-gray-500/50 focus:ring-2"
+														className="w-4 h-4 rounded border-gray-600 text-gray-300 focus:ring-gray-500/50 focus:ring-2"
+														style={{ backgroundColor: "#2B3038" }}
 													/>
 													<div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white font-semibold">
 														{client.name.charAt(0).toUpperCase()}
@@ -425,7 +455,8 @@ export default function AssignProgramModal({
 							<div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-600/50">
 								<button
 									onClick={onClose}
-									className="px-6 py-3 rounded-xl bg-gray-700/50 hover:bg-gray-600/50 text-white border border-gray-600/50 transition-all duration-200 hover:border-gray-500/50"
+									className="px-6 py-3 rounded-xl text-white border border-gray-600/50 transition-all duration-200 hover:border-gray-500/50"
+									style={{ backgroundColor: "#2B3038" }}
 								>
 									Cancel
 								</button>
@@ -453,7 +484,10 @@ export default function AssignProgramModal({
 									Current Assignments ({programAssignments.length})
 								</label>
 
-								<div className="h-64 border border-gray-600/50 rounded-xl overflow-y-auto bg-gray-800/30 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-700/30 [&::-webkit-scrollbar-thumb]:bg-gray-600/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500/50">
+								<div
+									className="h-64 border border-gray-600/50 rounded-xl overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-700/30 [&::-webkit-scrollbar-thumb]:bg-gray-600/50 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-500/50"
+									style={{ backgroundColor: "#2B3038" }}
+								>
 									<div className="p-4 space-y-3">
 										{programAssignments.length === 0 ? (
 											<div className="text-center py-8">
@@ -466,7 +500,8 @@ export default function AssignProgramModal({
 											programAssignments.map((assignment) => (
 												<div
 													key={assignment.id}
-													className="bg-gradient-to-r from-gray-800/50 to-gray-700/50 rounded-xl border border-gray-600/50 p-4"
+													className="rounded-xl border border-gray-600/50 p-4"
+													style={{ backgroundColor: "#2B3038" }}
 												>
 													<div className="flex items-center justify-between">
 														<div className="flex items-center gap-3">
@@ -541,7 +576,8 @@ export default function AssignProgramModal({
 									</button>
 									<button
 										onClick={onClose}
-										className="px-6 py-3 rounded-xl bg-gray-600/50 hover:bg-gray-700/50 text-white transition-all duration-200"
+										className="px-6 py-3 rounded-xl text-white transition-all duration-200"
+										style={{ backgroundColor: "#2B3038" }}
 									>
 										Close
 									</button>
