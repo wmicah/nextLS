@@ -1,68 +1,118 @@
 "use client"
 
-import VideoUpload from "@/components/VideoUpload"
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import Sidebar from "./Sidebar"
+import { useState } from "react"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { Textarea } from "./ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Upload, Video, FileText } from "lucide-react"
 
 export default function VideoUploadPage() {
-	return (
-		<Sidebar>
-			<div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-				{/* Hero Header */}
-				<div className="mb-8">
-					<div className="rounded-2xl border relative overflow-hidden group">
-						<div
-							className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-							style={{
-								background:
-									"linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-							}}
-						/>
-						<div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-4">
-									<Link
-										href="/videos"
-										className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105"
-										style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-									>
-										<ArrowLeft className="w-4 h-4" />
-										<span>Back to Videos</span>
-									</Link>
-									<div>
-										<h1
-											className="text-4xl font-bold mb-2"
-											style={{ color: "#C3BCC2" }}
-										>
-											Upload Video
-										</h1>
-										<p className="text-lg" style={{ color: "#ABA4AA" }}>
-											Upload bullpen or practice clips for review
-										</p>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
-				{/* Upload Component */}
-				<div className="max-w-4xl mx-auto">
-					<VideoUpload />
-				</div>
-			</div>
-		</Sidebar>
-	)
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setVideoFile(file)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!videoFile) return
+
+    setIsUploading(true)
+    // TODO: Implement video upload logic
+    console.log("Uploading video:", { title, description, videoFile })
+    
+    // Simulate upload delay
+    setTimeout(() => {
+      setIsUploading(false)
+      setTitle("")
+      setDescription("")
+      setVideoFile(null)
+    }, 2000)
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto">
+        <Card className="bg-[#2A3133] border-gray-600">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Video className="h-5 w-5" />
+              Upload Video
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="title" className="text-white">
+                  Video Title
+                </Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="bg-[#3A4245] border-gray-600 text-white"
+                  placeholder="Enter video title"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="description" className="text-white">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="bg-[#3A4245] border-gray-600 text-white"
+                  placeholder="Enter video description"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="video" className="text-white">
+                  Video File
+                </Label>
+                <Input
+                  id="video"
+                  type="file"
+                  accept="video/*"
+                  onChange={handleFileChange}
+                  className="bg-[#3A4245] border-gray-600 text-white"
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={!videoFile || isUploading}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {isUploading ? (
+                  <>
+                    <Upload className="h-4 w-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Video
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }
-
-
-
-
-
-
-
-<<<<<<< HEAD
-=======
-
->>>>>>> d7c42b1 (Re-initialize repository)
