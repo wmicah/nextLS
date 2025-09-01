@@ -47,20 +47,11 @@ interface DrillSelectionModalProps {
 
 const categories = [
 	"All",
-	"Batting",
-	"Pitching",
-	"Defense",
-	"Base Running",
-	"Mental",
-	"Conditioning",
-]
-
-const difficulties = [
-	"All",
-	"Beginner",
-	"Intermediate",
-	"Advanced",
-	"All Levels",
+	"Drive",
+	"Whip",
+	"Separation",
+	"Stability",
+	"Extension",
 ]
 
 export default function DrillSelectionModal({
@@ -70,7 +61,6 @@ export default function DrillSelectionModal({
 }: DrillSelectionModalProps) {
 	const [searchTerm, setSearchTerm] = useState("")
 	const [selectedCategory, setSelectedCategory] = useState("All")
-	const [selectedDifficulty, setSelectedDifficulty] = useState("All")
 	const [selectedDrill, setSelectedDrill] = useState<any>(null)
 	const [showConfigForm, setShowConfigForm] = useState(false)
 
@@ -86,7 +76,6 @@ export default function DrillSelectionModal({
 	const { data: libraryItems = [], isLoading } = trpc.library.list.useQuery({
 		search: searchTerm || undefined,
 		category: selectedCategory !== "All" ? selectedCategory : undefined,
-		difficulty: selectedDifficulty !== "All" ? selectedDifficulty : undefined,
 	})
 
 	const handleSelectDrill = (item: any) => {
@@ -376,25 +365,6 @@ export default function DrillSelectionModal({
 									))}
 								</SelectContent>
 							</Select>
-							<Select
-								value={selectedDifficulty}
-								onValueChange={setSelectedDifficulty}
-							>
-								<SelectTrigger className="w-full sm:w-40 bg-[#3A4245] border-gray-600">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent className="bg-[#3A4245] border-gray-600">
-									{difficulties.map((difficulty) => (
-										<SelectItem
-											key={difficulty}
-											value={difficulty}
-											className="text-white hover:bg-[#2A3133]"
-										>
-											{difficulty}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
 						</div>
 
 						{/* Drill List */}
@@ -426,12 +396,6 @@ export default function DrillSelectionModal({
 															className="bg-blue-500/10 text-blue-600 border-blue-500/20"
 														>
 															{item.category}
-														</Badge>
-														<Badge
-															variant="outline"
-															className="bg-green-500/10 text-green-600 border-green-500/20"
-														>
-															{item.difficulty}
 														</Badge>
 													</div>
 													{item.description && (
