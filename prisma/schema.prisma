@@ -102,7 +102,7 @@ model Client {
 model LibraryResource {
   id          String            @id @default(cuid())
   title       String
-  description String
+  description String?
   category    String
   difficulty  String
   type        String
@@ -318,7 +318,7 @@ model Program {
   id          String   @id @default(cuid())
   title       String
   description String?
-  sport       String   // e.g., "Softball", "Baseball", "General"
+  sport       String?  // e.g., "Softball", "Baseball", "General"
   level       String   // "Beginner", "Intermediate", "Advanced"
   status      ProgramStatus @default(DRAFT)
   duration    Int      // Number of weeks

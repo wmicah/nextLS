@@ -34,18 +34,10 @@ const categories = [
 	"Mental",
 	"Conditioning",
 ]
-const difficulties = [
-	"All",
-	"Beginner",
-	"Intermediate",
-	"Advanced",
-	"All Levels",
-]
 
 export default function LibraryPage() {
 	const [searchTerm, setSearchTerm] = useState("")
 	const [selectedCategory, setSelectedCategory] = useState("All")
-	const [selectedDifficulty, setSelectedDifficulty] = useState("All")
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 	const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false)
 	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
@@ -78,7 +70,6 @@ export default function LibraryPage() {
 	} = trpc.library.list.useQuery({
 		search: searchTerm || undefined,
 		category: selectedCategory !== "All" ? selectedCategory : undefined,
-		difficulty: selectedDifficulty !== "All" ? selectedDifficulty : undefined,
 	})
 
 	const { data: stats, refetch: refetchStats } =
@@ -394,29 +385,6 @@ export default function LibraryPage() {
 							</select>
 						</div>
 
-						<div className="relative">
-							<Target
-								className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-								style={{ color: "#606364" }}
-							/>
-							<select
-								value={selectedDifficulty}
-								onChange={(e) => setSelectedDifficulty(e.target.value)}
-								className="pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-300 appearance-none"
-								style={{
-									backgroundColor: "#606364",
-									borderColor: "#ABA4AA",
-									color: "#C3BCC2",
-								}}
-							>
-								{difficulties.map((difficulty) => (
-									<option key={difficulty} value={difficulty}>
-										{difficulty}
-									</option>
-								))}
-							</select>
-						</div>
-
 						<div
 							className="flex rounded-xl border overflow-hidden"
 							style={{ borderColor: "#606364" }}
@@ -527,9 +495,7 @@ export default function LibraryPage() {
 							className="text-center mb-8 max-w-md"
 							style={{ color: "#ABA4AA" }}
 						>
-							{searchTerm ||
-							selectedCategory !== "All" ||
-							selectedDifficulty !== "All"
+							{searchTerm || selectedCategory !== "All"
 								? "Try adjusting your search terms or filters"
 								: "Start building your library by uploading your first resource or importing from YouTube"}
 						</p>
@@ -549,14 +515,9 @@ export default function LibraryPage() {
 							</button>
 							<button
 								onClick={() => {
-									if (
-										searchTerm ||
-										selectedCategory !== "All" ||
-										selectedDifficulty !== "All"
-									) {
+									if (searchTerm || selectedCategory !== "All") {
 										setSearchTerm("")
 										setSelectedCategory("All")
-										setSelectedDifficulty("All")
 									} else {
 										setIsUploadModalOpen(true)
 									}
@@ -570,9 +531,7 @@ export default function LibraryPage() {
 									e.currentTarget.style.backgroundColor = "#4A5A70"
 								}}
 							>
-								{searchTerm ||
-								selectedCategory !== "All" ||
-								selectedDifficulty !== "All"
+								{searchTerm || selectedCategory !== "All"
 									? "Clear Filters"
 									: "Upload First Resource"}
 							</button>
@@ -830,16 +789,7 @@ export default function LibraryPage() {
 											>
 												{item.category}
 											</span>
-											<span
-												className="px-2 py-0.5 text-xs rounded-full border"
-												style={{
-													backgroundColor: "transparent",
-													borderColor: "#606364",
-													color: "#ABA4AA",
-												}}
-											>
-												{item.difficulty}
-											</span>
+
 											{item.isYoutube && (
 												<span
 													className="px-2 py-0.5 text-xs rounded-full"

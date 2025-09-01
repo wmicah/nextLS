@@ -39,7 +39,6 @@ import DrillSelectionModal from "./DrillSelectionModal"
 const programSchema = z.object({
 	title: z.string().min(1, "Title is required"),
 	description: z.string().optional(),
-	sport: z.string().min(1, "Sport is required"),
 	level: z.enum(["Drive", "Whip", "Separation", "Stability", "Extension"]),
 	duration: z.number().min(1, "Duration must be at least 1 week"),
 	weeks: z.array(
@@ -122,7 +121,6 @@ export default function CreateProgramModal({
 		defaultValues: {
 			title: "",
 			description: "",
-			sport: "",
 			level: "Drive",
 			duration: 1,
 			weeks: [],
@@ -436,23 +434,6 @@ export default function CreateProgramModal({
 										placeholder="Describe what this program covers..."
 										rows={3}
 									/>
-								</div>
-
-								<div>
-									<Label htmlFor="sport" className="text-white">
-										Sport
-									</Label>
-									<Input
-										id="sport"
-										{...register("sport")}
-										className="bg-[#3A4245] border-gray-600 text-white"
-										placeholder="e.g., Softball, Baseball, General"
-									/>
-									{errors.sport && (
-										<p className="text-red-400 text-sm mt-1">
-											{errors.sport.message}
-										</p>
-									)}
 								</div>
 
 								<div>

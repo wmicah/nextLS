@@ -1311,7 +1311,6 @@ export const appRouter = router({
 				z.object({
 					search: z.string().optional(),
 					category: z.string().optional(),
-					difficulty: z.string().optional(),
 					type: z.enum(["video", "document", "all"]).optional(),
 				})
 			)
@@ -1346,10 +1345,6 @@ export const appRouter = router({
 
 				if (input.category && input.category !== "All") {
 					where.category = input.category
-				}
-
-				if (input.difficulty && input.difficulty !== "All") {
-					where.difficulty = input.difficulty
 				}
 
 				if (input.type && input.type !== "all") {
@@ -1785,9 +1780,14 @@ export const appRouter = router({
 			.input(
 				z.object({
 					title: z.string().min(1).max(255),
-					description: z.string().min(1).max(1000),
-					category: z.string(),
-					difficulty: z.string(),
+					description: z.string().optional(),
+					category: z.enum([
+						"Drive",
+						"Whip",
+						"Separation",
+						"Stability",
+						"Extension",
+					]),
 					fileUrl: z.string().url(),
 					filename: z.string(),
 					contentType: z.string(),
@@ -1820,9 +1820,9 @@ export const appRouter = router({
 				const newResource = await db.libraryResource.create({
 					data: {
 						title: input.title,
-						description: input.description,
+						description: input.description || "",
 						category: input.category,
-						difficulty: input.difficulty as any,
+						difficulty: "All Levels", // Default value since we removed the field
 						type: type as any,
 						url: input.fileUrl,
 						filename: input.filename,
@@ -2876,7 +2876,13 @@ export const appRouter = router({
 					},
 				})
 
-				console.log("Client found:", client?.id, client?.name, "Coach:", client?.coach?.name)
+				console.log(
+					"Client found:",
+					client?.id,
+					client?.name,
+					"Coach:",
+					client?.coach?.name
+				)
 
 				if (!client) {
 					console.log("No client record found for user:", user.id)
@@ -2905,7 +2911,11 @@ export const appRouter = router({
 					},
 				})
 
-				console.log("Program assignment found:", programAssignment?.id, programAssignment?.program?.title)
+				console.log(
+					"Program assignment found:",
+					programAssignment?.id,
+					programAssignment?.program?.title
+				)
 
 				if (!programAssignment) {
 					console.log("No program assigned to client")
@@ -2913,31 +2923,47 @@ export const appRouter = router({
 				}
 
 				// Calculate which week and day we're on based on start date
-				const startDate = programAssignment.startDate || programAssignment.assignedAt
+				const startDate =
+					programAssignment.startDate || programAssignment.assignedAt
 				const today = new Date()
-				const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+				const daysSinceStart = Math.floor(
+					(today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+				)
 				const currentWeek = Math.floor(daysSinceStart / 7) + 1
 				const currentDay = (daysSinceStart % 7) + 1
 
-				console.log("Program progress:", { daysSinceStart, currentWeek, currentDay })
+				console.log("Program progress:", {
+					daysSinceStart,
+					currentWeek,
+					currentDay,
+				})
 
 				// Get today's program day
-				const currentWeekData = programAssignment.program.weeks.find(w => w.weekNumber === currentWeek)
+				const currentWeekData = programAssignment.program.weeks.find(
+					(w) => w.weekNumber === currentWeek
+				)
 				if (!currentWeekData) {
 					console.log("No week data found for week:", currentWeek)
 					return []
 				}
 
-				const todayProgramDay = currentWeekData.days.find(d => d.dayNumber === currentDay)
+				const todayProgramDay = currentWeekData.days.find(
+					(d) => d.dayNumber === currentDay
+				)
 				if (!todayProgramDay) {
 					console.log("No day data found for day:", currentDay)
 					return []
 				}
 
-				console.log("Today's program day:", todayProgramDay.title, "Drills:", todayProgramDay.drills.length)
+				console.log(
+					"Today's program day:",
+					todayProgramDay.title,
+					"Drills:",
+					todayProgramDay.drills.length
+				)
 
 				// Return the drills for today as "workouts"
-				return todayProgramDay.drills.map(drill => ({
+				return todayProgramDay.drills.map((drill) => ({
 					id: drill.id,
 					title: drill.title,
 					description: drill.description,
@@ -2945,7 +2971,6 @@ export const appRouter = router({
 					completed: false, // We'll track this separately
 					template: null, // Not using workout templates for program drills
 				}))
-
 			} catch (error) {
 				console.error("Get today's program error:", error)
 				return []
@@ -3972,8 +3997,13 @@ export const appRouter = router({
 				z.object({
 					title: z.string().min(1, "Program title is required"),
 					description: z.string().optional(),
-					sport: z.string().min(1, "Sport is required"),
-					level: z.enum(["Drive", "Whip", "Separation", "Stability", "Extension"]),
+					level: z.enum([
+						"Drive",
+						"Whip",
+						"Separation",
+						"Stability",
+						"Extension",
+					]),
 					duration: z.number().min(1, "Duration must be at least 1 week"),
 					weeks: z.array(
 						z.object({
@@ -4027,7 +4057,7 @@ export const appRouter = router({
 					data: {
 						title: input.title,
 						description: input.description || "",
-						sport: input.sport,
+						sport: "General", // Default value since sport field is removed from UI
 						level: input.level,
 						duration: input.duration,
 						coachId: user.id,
