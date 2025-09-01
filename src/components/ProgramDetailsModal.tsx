@@ -235,7 +235,7 @@ export default function ProgramDetailsModal({
 												variant="outline"
 												className="text-white border-gray-600"
 											>
-												{program.sport}
+												{program.sport || "General"}
 											</Badge>
 										</div>
 										<div className="flex items-center justify-between">

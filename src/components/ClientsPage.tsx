@@ -77,7 +77,7 @@ interface Client {
 			id: string
 			title: string
 			status: string
-			sport: string
+			sport: string | null
 			level: string
 		}
 	}[]
@@ -1109,8 +1109,9 @@ export default function ClientsPage() {
 																							{assignment.program.title}
 																						</p>
 																						<p className="text-xs text-gray-400">
-																							{assignment.program.sport} •{" "}
-																							{assignment.program.level}
+																							{assignment.program.sport ||
+																								"General"}{" "}
+																							• {assignment.program.level}
 																						</p>
 																					</div>
 																					<div className="text-right">

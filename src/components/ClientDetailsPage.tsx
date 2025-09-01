@@ -472,7 +472,11 @@ export default function ClientDetailsPage({
 							{assignedPrograms.map(
 								(assignment: {
 									id: string
-									program: { sport: string; title: string; level: string }
+									program: {
+										sport: string | null
+										title: string
+										level: string
+									}
 									progress: number
 									assignedAt: string
 								}) => (
@@ -484,7 +488,9 @@ export default function ClientDetailsPage({
 										<div className="flex items-center gap-3">
 											<div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
 												<span className="text-white font-bold text-sm">
-													{assignment.program.sport.charAt(0).toUpperCase()}
+													{(assignment.program.sport || "G")
+														.charAt(0)
+														.toUpperCase()}
 												</span>
 											</div>
 											<div>
@@ -492,7 +498,7 @@ export default function ClientDetailsPage({
 													{assignment.program.title}
 												</div>
 												<div className="text-xs text-gray-400">
-													{assignment.program.sport} •{" "}
+													{assignment.program.sport || "General"} •{" "}
 													{assignment.program.level}
 												</div>
 											</div>
