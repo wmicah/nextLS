@@ -544,9 +544,25 @@ export default function ProgramsPage() {
 								Your Programs
 							</h2>
 						</div>
-						<div className="text-sm" style={{ color: "#ABA4AA" }}>
-							{filteredPrograms.length}{" "}
-							{filteredPrograms.length === 1 ? "program" : "programs"} found
+						<div className="flex items-center gap-4">
+							<div className="text-sm" style={{ color: "#ABA4AA" }}>
+								{filteredPrograms.length}{" "}
+								{filteredPrograms.length === 1 ? "program" : "programs"} found
+							</div>
+							<button
+								onClick={() => setIsCreateModalOpen(true)}
+								className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+								style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.backgroundColor = "#606364"
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.backgroundColor = "#4A5A70"
+								}}
+							>
+								<Plus className="h-4 w-4" />
+								Create Program
+							</button>
 						</div>
 					</div>
 
