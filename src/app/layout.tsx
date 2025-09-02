@@ -7,7 +7,9 @@ import { Inter } from "next/font/google"
 import Providers from "@/components/Providers"
 import ConditionalNavbar from "@/components/ConditionalNavbar"
 import Toast from "@/components/common/Toast"
-import MessageNotification from "@/components/MessageNotification"
+
+import ChatbotWrapper from "@/components/Chatbot/ChatbotWrapper"
+import { ChatbotProvider } from "@/components/Chatbot/ChatbotContext"
 import { ThemeProvider } from "@/contexts/ThemeContext"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -63,6 +65,22 @@ export const metadata: Metadata = {
 	},
 }
 
+function RootLayoutContent({ children }: { children: React.ReactNode }) {
+	return (
+		<body
+			className={cn(
+				"min-h-screen font-sans antialiased bg-background text-foreground",
+				inter.className
+			)}
+		>
+			<ConditionalNavbar />
+			{children}
+			<Toast />
+			<ChatbotWrapper />
+		</body>
+	)
+}
+
 export default function RootLayout({
 	children,
 }: {
@@ -72,17 +90,9 @@ export default function RootLayout({
 		<html lang="en">
 			<Providers>
 				<ThemeProvider>
-					<body
-						className={cn(
-							"min-h-screen font-sans antialiased bg-background text-foreground",
-							inter.className
-						)}
-					>
-						<ConditionalNavbar />
-						{children}
-						<Toast />
-						<MessageNotification />
-					</body>
+					<ChatbotProvider>
+						<RootLayoutContent>{children}</RootLayoutContent>
+					</ChatbotProvider>
 				</ThemeProvider>
 			</Providers>
 		</html>

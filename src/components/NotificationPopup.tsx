@@ -1,21 +1,31 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { trpc } from "@/app/_trpc/client"
-import { format } from "date-fns"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import {
 	Bell,
-	MessageCircle,
-	Target,
-	Calendar,
-	BookOpen,
-	TrendingUp,
-	Settings,
 	X,
 	Check,
-	CheckCheck,
 	User,
+	MessageSquare,
+	Calendar,
+	FileText,
+	Users,
+	Target,
+	TrendingUp,
+	Play,
+	Plus,
+	Shield,
+	HelpCircle,
+	Info,
+	Star,
+	DollarSign,
+	MessageSquare as MessageIcon,
 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { trpc } from "@/app/_trpc/client"
 
 interface NotificationPopupProps {
 	isOpen: boolean
@@ -26,91 +36,96 @@ export default function NotificationPopup({
 	isOpen,
 	onClose,
 }: NotificationPopupProps) {
-	const [isAnimating, setIsAnimating] = useState(true)
+	const popupRef = useRef<HTMLDivElement>(null)
 
 	// Get notifications
 	const { data: notifications = [], refetch: refetchNotifications } =
-		trpc.notifications.getNotifications.useQuery(
-			{ limit: 10 },
-			{
-				enabled: isOpen,
-				refetchInterval: 10000, // Poll every 10 seconds
-			}
-		)
+		trpc.notifications.getNotifications.useQuery(undefined, {
+			enabled: isOpen,
+			refetchInterval: 5000, // Real-time updates every 5 seconds
+			staleTime: 2000, // Consider data stale after 2 seconds
+		})
 
 	// Get unread count
-	const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(undefined, {
-		refetchInterval: 3000, // Real-time updates every 3 seconds
-		staleTime: 1000, // Consider data stale after 1 second
-	})
+	const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(
+		undefined,
+		{
+			refetchInterval: 3000,
+			staleTime: 1000,
+		}
+	)
 
-	// Mutations
+	// Mark as read mutation
 	const markAsReadMutation = trpc.notifications.markAsRead.useMutation({
 		onSuccess: () => {
 			refetchNotifications()
 		},
 	})
 
+	// Mark all as read mutation
 	const markAllAsReadMutation = trpc.notifications.markAllAsRead.useMutation({
 		onSuccess: () => {
 			refetchNotifications()
 		},
 	})
 
-	// Animation handling
+	// Handle click outside to close
 	useEffect(() => {
-		if (isOpen) {
-			// Start with animation state true, then animate to visible
-			setIsAnimating(true)
-			const timer = setTimeout(() => {
-				setIsAnimating(false)
-			}, 100) // Slightly longer delay for smooth animation
-			return () => clearTimeout(timer)
-		} else {
-			// When closing, set to animating state for smooth exit
-			setIsAnimating(true)
-		}
-	}, [isOpen])
-
-	// Close on outside click
-	useEffect(() => {
-		if (!isOpen) return
-
-		function handleClickOutside(event: MouseEvent) {
-			const target = event.target as Element
+		const handleClickOutside = (event: MouseEvent) => {
+			const target = event.target as Node
 			if (isOpen && !target.closest("[data-notification-popup]")) {
 				onClose()
 			}
 		}
 
-		// Add a small delay to prevent the click that opened the popup from immediately closing it
-		const timeoutId = setTimeout(() => {
+		if (isOpen) {
 			document.addEventListener("mousedown", handleClickOutside)
-		}, 150)
+		}
 
 		return () => {
-			clearTimeout(timeoutId)
 			document.removeEventListener("mousedown", handleClickOutside)
 		}
 	}, [isOpen, onClose])
 
+	const handleMarkAsRead = (notificationId: string) => {
+		markAsReadMutation.mutate({ notificationId })
+	}
+
+	const handleMarkAllAsRead = () => {
+		markAllAsReadMutation.mutate()
+	}
+
 	// Get notification icon based on type
 	const getNotificationIcon = (type: string) => {
 		switch (type) {
-			case "MESSAGE":
-				return <MessageCircle className="h-4 w-4" />
-			case "WORKOUT_ASSIGNED":
-			case "WORKOUT_COMPLETED":
-				return <Target className="h-4 w-4" />
-			case "LESSON_SCHEDULED":
-			case "LESSON_CANCELLED":
-				return <Calendar className="h-4 w-4" />
-			case "PROGRAM_ASSIGNED":
-				return <BookOpen className="h-4 w-4" />
-			case "PROGRESS_UPDATE":
-				return <TrendingUp className="h-4 w-4" />
 			case "CLIENT_JOIN_REQUEST":
 				return <User className="h-4 w-4" />
+			case "MESSAGE":
+				return <MessageSquare className="h-4 w-4" />
+			case "SCHEDULE":
+				return <Calendar className="h-4 w-4" />
+			case "PROGRAM":
+				return <FileText className="h-4 w-4" />
+			case "CLIENT_ADDED":
+				return <Users className="h-4 w-4" />
+			case "TRAINING":
+				return <Target className="h-4 w-4" />
+			case "PROGRESS":
+				return <TrendingUp className="h-4 w-4" />
+			case "VIDEO":
+				return <Play className="h-4 w-4" />
+			case "ASSIGNMENT":
+				return <Plus className="h-4 w-4" />
+			case "SECURITY":
+				return <Shield className="h-4 w-4" />
+			case "HELP":
+				return <HelpCircle className="h-4 w-4" />
+			case "INFO":
+				return <Info className="h-4 w-4" />
+			case "FEATURES":
+				return <Star className="h-4 w-4" />
+			case "PRICING":
+				return <DollarSign className="h-4 w-4" />
 			default:
 				return <Bell className="h-4 w-4" />
 		}
@@ -119,24 +134,36 @@ export default function NotificationPopup({
 	// Get notification color based on type
 	const getNotificationColor = (type: string) => {
 		switch (type) {
-			case "MESSAGE":
-				return "text-blue-400"
-			case "WORKOUT_ASSIGNED":
-				return "text-green-400"
-			case "WORKOUT_COMPLETED":
-				return "text-emerald-400"
-			case "LESSON_SCHEDULED":
-				return "text-purple-400"
-			case "LESSON_CANCELLED":
-				return "text-red-400"
-			case "PROGRAM_ASSIGNED":
-				return "text-orange-400"
-			case "PROGRESS_UPDATE":
-				return "text-cyan-400"
 			case "CLIENT_JOIN_REQUEST":
-				return "text-green-400"
+				return "bg-blue-100 text-blue-800 border-blue-200"
+			case "MESSAGE":
+				return "bg-green-100 text-green-800 border-green-200"
+			case "SCHEDULE":
+				return "bg-purple-100 text-purple-800 border-purple-200"
+			case "PROGRAM":
+				return "bg-orange-100 text-orange-800 border-orange-200"
+			case "CLIENT_ADDED":
+				return "bg-indigo-100 text-indigo-800 border-indigo-200"
+			case "TRAINING":
+				return "bg-red-100 text-red-800 border-red-200"
+			case "PROGRESS":
+				return "bg-emerald-100 text-emerald-800 border-emerald-200"
+			case "VIDEO":
+				return "bg-cyan-100 text-cyan-800 border-cyan-200"
+			case "ASSIGNMENT":
+				return "bg-pink-100 text-pink-800 border-pink-200"
+			case "SECURITY":
+				return "bg-gray-100 text-gray-800 border-gray-200"
+			case "HELP":
+				return "bg-yellow-100 text-yellow-800 border-yellow-200"
+			case "INFO":
+				return "bg-slate-100 text-slate-800 border-slate-200"
+			case "FEATURES":
+				return "bg-amber-100 text-amber-800 border-amber-200"
+			case "PRICING":
+				return "bg-teal-100 text-teal-800 border-teal-200"
 			default:
-				return "text-gray-400"
+				return "bg-gray-100 text-gray-800 border-gray-200"
 		}
 	}
 
@@ -148,11 +175,10 @@ export default function NotificationPopup({
 			(now.getTime() - notificationDate.getTime()) / (1000 * 60 * 60)
 
 		if (diffInHours < 1) {
-			return "Just now"
+			const diffInMinutes = Math.floor(diffInHours * 60)
+			return `${diffInMinutes}m ago`
 		} else if (diffInHours < 24) {
-			return `${Math.floor(diffInHours)} hours ago`
-		} else if (diffInHours < 48) {
-			return "Yesterday"
+			return `${Math.floor(diffInHours)}h ago`
 		} else {
 			return format(notificationDate, "MMM d")
 		}
@@ -161,180 +187,192 @@ export default function NotificationPopup({
 	if (!isOpen) return null
 
 	return (
-		<div
-			data-notification-popup
-			className={`absolute bottom-full mb-2 w-80 max-h-96 bg-gray-800 rounded-lg shadow-xl border transition-all duration-200 ease-out ${
-				isAnimating ? "scale-95 opacity-0" : "scale-100 opacity-100"
-			}`}
-			style={{
-				backgroundColor: "#353A3A",
-				borderColor: "#606364",
-				border: "1px solid",
-				transformOrigin: "bottom center",
-			}}
-		>
-			{/* Header */}
-			<div className="p-4 border-b" style={{ borderColor: "#606364" }}>
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<Bell className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-						<h3 className="font-semibold" style={{ color: "#C3BCC2" }}>
-							Notifications
-						</h3>
-						{unreadCount > 0 && (
-							<span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-								{unreadCount}
-							</span>
-						)}
-					</div>
-					<div className="flex items-center gap-2">
-						{unreadCount > 0 && (
-							<button
-								onClick={() => markAllAsReadMutation.mutate()}
-								disabled={markAllAsReadMutation.isPending}
-								className="p-1 rounded transition-colors hover:bg-gray-600 disabled:opacity-50"
-								style={{ color: "#ABA4AA" }}
-								title="Mark all as read"
+		<AnimatePresence>
+			<motion.div
+				initial={{ opacity: 0, y: 10, scale: 0.95 }}
+				animate={{ opacity: 1, y: 0, scale: 1 }}
+				exit={{ opacity: 0, y: 10, scale: 0.95 }}
+				transition={{ duration: 0.2, ease: "easeOut" }}
+				className="absolute bottom-full right-0 mb-2 z-50"
+				data-notification-popup
+			>
+				<Card className="w-80 shadow-2xl border-0 bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden">
+					<CardHeader className="pb-3 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 text-white">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-2">
+								<Bell className="h-5 w-5" />
+								<CardTitle className="text-lg font-semibold">
+									Notifications
+								</CardTitle>
+								{unreadCount > 0 && (
+									<Badge variant="secondary" className="bg-white/20 text-white">
+										{unreadCount}
+									</Badge>
+								)}
+							</div>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={onClose}
+								className="h-8 w-8 p-0 text-white hover:bg-white/20"
 							>
-								<CheckCheck className="h-4 w-4" />
-							</button>
-						)}
-						<button
-							onClick={onClose}
-							className="p-1 rounded transition-colors hover:bg-gray-600"
-							style={{ color: "#ABA4AA" }}
-						>
-							<X className="h-4 w-4" />
-						</button>
-					</div>
-				</div>
-			</div>
+								<X className="h-4 w-4" />
+							</Button>
+						</div>
+					</CardHeader>
 
-			{/* Notifications List */}
-			<div className="max-h-80 overflow-y-auto">
-				{notifications.length === 0 ? (
-					<div className="p-4 text-center">
-						<Bell
-							className="h-8 w-8 mx-auto mb-2 opacity-50"
-							style={{ color: "#ABA4AA" }}
-						/>
-						<p className="text-sm" style={{ color: "#ABA4AA" }}>
-							No notifications yet
-						</p>
-					</div>
-				) : (
-					<div className="divide-y" style={{ borderColor: "#606364" }}>
-						{(notifications as any[]).map((notification) => (
-							<div
-								key={notification.id}
-								className={`p-4 transition-colors cursor-pointer ${
-									!notification.isRead
-										? "bg-blue-500/10 border-l-2 border-blue-500"
-										: ""
-								}`}
-								onClick={() => {
-									if (!notification.isRead) {
-										markAsReadMutation.mutate({
-											notificationId: notification.id,
-										})
-									}
-								}}
-								style={{
-									backgroundColor: !notification.isRead
-										? "#4A5A70"
-										: "transparent",
-								}}
-							>
-								<div className="flex items-start gap-3">
-									<div
-										className={`mt-1 ${getNotificationColor(
-											notification.type
-										)}`}
-									>
-										{getNotificationIcon(notification.type)}
-									</div>
-									<div className="flex-1 min-w-0">
-										<div className="flex items-start justify-between gap-2">
-											<h4
-												className={`text-sm font-medium ${
-													!notification.isRead ? "font-semibold" : ""
-												}`}
-												style={{ color: "#C3BCC2" }}
-											>
-												{notification.title}
-											</h4>
-											{!notification.isRead && (
-												<div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1" />
-											)}
-										</div>
-										<p
-											className="text-xs mt-1 line-clamp-2"
-											style={{ color: "#ABA4AA" }}
+					<CardContent className="p-0 max-h-96 overflow-y-auto">
+						{/* Notifications List */}
+						<div className="p-4">
+							{notifications.length === 0 ? (
+								<div className="text-center py-8">
+									<Bell className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+									<p className="text-gray-500 text-sm">No notifications yet</p>
+								</div>
+							) : (
+								<div className="space-y-3">
+									{(notifications as any[]).map((notification) => (
+										<div
+											key={notification.id}
+											className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md ${
+												!notification.isRead
+													? "bg-blue-50 border-blue-200"
+													: "bg-gray-50 border-gray-200"
+											}`}
+											onClick={() => {
+												if (!notification.isRead) {
+													handleMarkAsRead(notification.id)
+												}
+											}}
 										>
-											{notification.message}
-										</p>
-										<div className="flex items-center justify-between mt-2">
-											<span className="text-xs" style={{ color: "#ABA4AA" }}>
-												{formatNotificationTime(notification.createdAt)}
-											</span>
-											<div className="flex items-center gap-2">
-												{notification.type === "CLIENT_JOIN_REQUEST" && (
-													<button
-														onClick={(e) => {
-															e.stopPropagation()
-															// Navigate to clients page
-															window.location.href = "/clients"
-														}}
-														className="text-xs text-blue-400 hover:text-blue-300 font-medium"
-														title="View client"
-													>
-														View Client
-													</button>
-												)}
+											<div
+												className="flex items-start gap-3"
+												style={{
+													backgroundColor: !notification.isRead
+														? "rgba(59, 130, 246, 0.05)"
+														: "transparent",
+												}}
+											>
+												<div
+													className={`mt-1 p-2 rounded-full border ${getNotificationColor(
+														notification.type
+													)}`}
+												>
+													{getNotificationIcon(notification.type)}
+												</div>
+												<div className="flex-1 min-w-0">
+													<div className="flex items-center gap-2 mb-1">
+														<h4
+															className={`text-sm ${
+																!notification.isRead ? "font-semibold" : ""
+															} text-gray-800 truncate`}
+														>
+															{notification.title}
+														</h4>
+														{!notification.isRead && (
+															<div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
+														)}
+													</div>
+													<p className="text-xs text-gray-600 mb-2 line-clamp-2">
+														{notification.message}
+													</p>
+													<div className="flex items-center justify-between">
+														<span className="text-xs text-gray-500">
+															{formatNotificationTime(notification.createdAt)}
+														</span>
+														{notification.type === "CLIENT_JOIN_REQUEST" && (
+															<div className="flex gap-1">
+																<Button
+																	size="sm"
+																	variant="outline"
+																	className="h-6 px-2 text-xs"
+																>
+																	Accept
+																</Button>
+																<Button
+																	size="sm"
+																	variant="outline"
+																	className="h-6 px-2 text-xs"
+																>
+																	Decline
+																</Button>
+															</div>
+														)}
+													</div>
+												</div>
 												{!notification.isRead && (
-													<button
+													<Button
+														variant="ghost"
+														size="sm"
 														onClick={(e) => {
 															e.stopPropagation()
-															markAsReadMutation.mutate({
-																notificationId: notification.id,
-															})
+															handleMarkAsRead(notification.id)
 														}}
-														disabled={markAsReadMutation.isPending}
-														className="p-1 rounded transition-colors hover:bg-gray-600 disabled:opacity-50"
-														style={{ color: "#ABA4AA" }}
-														title="Mark as read"
+														className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
 													>
 														<Check className="h-3 w-3" />
-													</button>
+													</Button>
 												)}
 											</div>
 										</div>
-									</div>
+									))}
+								</div>
+							)}
+						</div>
+
+						{/* Footer Actions */}
+						{notifications.length > 0 && (
+							<div className="border-t border-gray-200 p-3 bg-gray-50">
+								<div className="flex items-center justify-between">
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={handleMarkAllAsRead}
+										className="text-xs text-gray-600 hover:text-gray-800"
+									>
+										Mark all as read
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => {
+											// Could navigate to a full notifications page here
+											console.log("View all notifications")
+										}}
+										className="text-xs text-blue-600 hover:text-blue-800"
+									>
+										View all notifications
+									</Button>
 								</div>
 							</div>
-						))}
-					</div>
-				)}
-			</div>
-
-			{/* Footer */}
-			{notifications.length > 0 && (
-				<div
-					className="p-3 border-t text-center"
-					style={{ borderColor: "#606364" }}
-				>
-					<button
-						onClick={() => {
-							// Could navigate to a full notifications page here
-							console.log("View all notifications")
-						}}
-						className="text-sm transition-colors hover:text-blue-400"
-						style={{ color: "#ABA4AA" }}
-					>
-						View all notifications
-					</button>
-				</div>
-			)}
-		</div>
+						)}
+					</CardContent>
+				</Card>
+			</motion.div>
+		</AnimatePresence>
 	)
+}
+
+// Helper function for date formatting
+function format(date: Date, format: string): string {
+	const months = [
+		"Jan",
+		"Feb",
+		"Mar",
+		"Apr",
+		"May",
+		"Jun",
+		"Jul",
+		"Aug",
+		"Sep",
+		"Oct",
+		"Nov",
+		"Dec",
+	]
+
+	if (format === "MMM d") {
+		return `${months[date.getMonth()]} ${date.getDate()}`
+	}
+
+	return date.toLocaleDateString()
 }
