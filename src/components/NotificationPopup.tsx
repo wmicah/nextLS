@@ -38,16 +38,19 @@ export default function NotificationPopup({
 }: NotificationPopupProps) {
 	const popupRef = useRef<HTMLDivElement>(null)
 
-	// Get notifications
+	// Get notifications from user router
 	const { data: notifications = [], refetch: refetchNotifications } =
-		trpc.notifications.getNotifications.useQuery(undefined, {
-			enabled: isOpen,
-			refetchInterval: 5000, // Real-time updates every 5 seconds
-			staleTime: 2000, // Consider data stale after 2 seconds
-		})
+		trpc.user.getNotifications.useQuery(
+			{ limit: 20, unreadOnly: false },
+			{
+				enabled: isOpen,
+				refetchInterval: 5000, // Real-time updates every 5 seconds
+				staleTime: 2000, // Consider data stale after 2 seconds
+			}
+		)
 
-	// Get unread count
-	const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(
+	// Get unread count from user router
+	const { data: unreadCount = 0 } = trpc.user.getUnreadCount.useQuery(
 		undefined,
 		{
 			refetchInterval: 3000,
@@ -55,15 +58,8 @@ export default function NotificationPopup({
 		}
 	)
 
-	// Mark as read mutation
-	const markAsReadMutation = trpc.notifications.markAsRead.useMutation({
-		onSuccess: () => {
-			refetchNotifications()
-		},
-	})
-
-	// Mark all as read mutation
-	const markAllAsReadMutation = trpc.notifications.markAllAsRead.useMutation({
+	// Mark as read mutation from user router
+	const markAsReadMutation = trpc.user.markNotificationRead.useMutation({
 		onSuccess: () => {
 			refetchNotifications()
 		},
@@ -72,7 +68,7 @@ export default function NotificationPopup({
 	// Handle click outside to close
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			const target = event.target as Node
+			const target = event.target as Element
 			if (isOpen && !target.closest("[data-notification-popup]")) {
 				onClose()
 			}
@@ -92,7 +88,8 @@ export default function NotificationPopup({
 	}
 
 	const handleMarkAllAsRead = () => {
-		markAllAsReadMutation.mutate()
+		// Mark all as read functionality would need to be implemented
+		console.log("Mark all as read")
 	}
 
 	// Get notification icon based on type

@@ -17,8 +17,8 @@ export default function MessageNotification({}: MessageNotificationProps) {
 	const [notification, setNotification] = useState<any>(null)
 	const audio = new Audio("/notification.mp3") // You'll need to add this file
 
-	// Get recent messages to check for new ones
-	const { data: recentMessages } = trpc.messages.getRecentMessages.useQuery(
+	// Get unread message count instead of recent messages
+	const { data: unreadCount } = trpc.messaging.getUnreadCount.useQuery(
 		undefined,
 		{
 			refetchInterval: 5000, // Check every 5 seconds
@@ -26,38 +26,37 @@ export default function MessageNotification({}: MessageNotificationProps) {
 		}
 	)
 
-	const lastMessageRef = useRef<any>(null)
+	const lastCountRef = useRef<number>(0)
 
 	useEffect(() => {
-		if (recentMessages && recentMessages.length > 0) {
-			const latestMessage = recentMessages[0]
+		if (unreadCount !== undefined && unreadCount > lastCountRef.current) {
+			// Show notification for new unread messages
+			if (!isMuted) {
+				setNotification({
+					id: Date.now(),
+					content: `You have ${unreadCount} unread message${
+						unreadCount > 1 ? "s" : ""
+					}`,
+				})
+				setIsVisible(true)
 
-			// Check if this is a new message (not the same as last one)
-			if (lastMessageRef.current?.id !== latestMessage.id) {
-				lastMessageRef.current = latestMessage
-
-				// Show notification for new messages
-				if (!isMuted) {
-					setNotification(latestMessage)
-					setIsVisible(true)
-
-					// Play sound
-					try {
-						audio.play().catch(() => {
-							// Ignore audio play errors
-						})
-					} catch (error) {
-						// Ignore audio errors
-					}
-
-					// Auto-hide after 5 seconds
-					setTimeout(() => {
-						setIsVisible(false)
-					}, 5000)
+				// Play sound
+				try {
+					audio.play().catch(() => {
+						// Ignore audio play errors
+					})
+				} catch (error) {
+					// Ignore audio errors
 				}
+
+				// Auto-hide after 5 seconds
+				setTimeout(() => {
+					setIsVisible(false)
+				}, 5000)
 			}
 		}
-	}, [recentMessages, isMuted, audio])
+		lastCountRef.current = unreadCount || 0
+	}, [unreadCount, isMuted, audio])
 
 	const handleClose = () => {
 		setIsVisible(false)
