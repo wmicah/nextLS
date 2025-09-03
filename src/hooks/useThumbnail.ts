@@ -1,11 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface ThumbnailData {
+  success: boolean;
   thumbnailUrl: string;
   thumbnailPath: string;
+  error?: string;
 }
 
-export const useThumbnail = (filename: string, videoType: 'master' | 'local', isVideo: boolean) => {
+export const useThumbnail = (
+  filename: string,
+  videoType: "master" | "local",
+  isVideo: boolean
+) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,28 +24,28 @@ export const useThumbnail = (filename: string, videoType: 'master' | 'local', is
         setIsGenerating(true);
         setError(null);
 
-        const response = await fetch('/api/generate-thumbnail', {
-          method: 'POST',
+        const response = await fetch("/api/generate-thumbnail", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ filename, videoType }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to generate thumbnail');
+          throw new Error("Failed to generate thumbnail");
         }
 
         const data: ThumbnailData = await response.json();
-        
+
         if (data.success) {
           setThumbnailUrl(data.thumbnailUrl);
         } else {
-          throw new Error(data.error || 'Thumbnail generation failed');
+          throw new Error(data.error || "Thumbnail generation failed");
         }
       } catch (err) {
-        console.error('Thumbnail generation error:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error("Thumbnail generation error:", err);
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setIsGenerating(false);
       }
@@ -58,6 +64,6 @@ export const useThumbnail = (filename: string, videoType: 'master' | 'local', is
       // Trigger regeneration by changing the dependency
       const newFilename = `${filename}?t=${Date.now()}`;
       setThumbnailUrl(null);
-    }
+    },
   };
 };

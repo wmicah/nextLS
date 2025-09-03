@@ -16,10 +16,14 @@ interface ChatRequest {
 	}
 }
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-	apiKey: process.env.OPENAI_API_KEY,
-})
+// Initialize OpenAI client conditionally
+function getOpenAIClient() {
+	const apiKey = process.env.OPENAI_API_KEY;
+	if (!apiKey) {
+		throw new Error('OPENAI_API_KEY environment variable is not set');
+	}
+	return new OpenAI({ apiKey });
+}
 
 // Comprehensive knowledge base for Next Level Softball platform
 const platformKnowledge = {
@@ -241,6 +245,7 @@ IMPORTANT: Only provide information about the Next Level Softball platform. Do n
 		]
 
 		// Call OpenAI API using standard chat completions with full platform knowledge
+		const openai = getOpenAIClient();
 		const completion = await openai.chat.completions.create({
 			model: "gpt-4o-mini ",
 			messages: [
