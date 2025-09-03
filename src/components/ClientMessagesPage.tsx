@@ -728,15 +728,15 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                           <div className='flex items-center'>
                             {pendingMessage.status === "sending" && (
                               <div className='flex items-center gap-1'>
-                                <div className='w-1 h-1 bg-blue-200 rounded-full animate-pulse'></div>
+                                <div className='w-1 h-1 bg-blue-200 rounded-full animate-pulse' />
                                 <div
                                   className='w-1 h-1 bg-blue-200 rounded-full animate-pulse'
                                   style={{ animationDelay: "0.2s" }}
-                                ></div>
+                                 />
                                 <div
                                   className='w-1 h-1 bg-blue-200 rounded-full animate-pulse'
                                   style={{ animationDelay: "0.4s" }}
-                                ></div>
+                                 />
                               </div>
                             )}
                             {pendingMessage.status === "sent" && (
@@ -826,7 +826,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                         }}
                       >
                         {sendMessageMutation.isPending ? (
-                          <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-black'></div>
+                          <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-black' />
                         ) : (
                           <Send className='h-5 w-5' />
                         )}
@@ -950,7 +950,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                       >
                         {createConversationMutation.isPending && (
                           <div className='absolute inset-0 bg-black/20 flex items-center justify-center rounded'>
-                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400'></div>
+                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400' />
                           </div>
                         )}
                         <div className='flex items-center gap-3'>

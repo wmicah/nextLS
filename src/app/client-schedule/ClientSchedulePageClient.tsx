@@ -517,27 +517,27 @@ export default function ClientSchedulePageClient() {
 					{/* Calendar Legend */}
 					<div className="flex items-center gap-6 mb-4 text-sm">
 						<div className="flex items-center gap-2">
-							<div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-400"></div>
+							<div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-400" />
 							<span className="text-white font-medium">
 								My Confirmed Lessons
 							</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="w-4 h-4 rounded bg-sky-500 border-2 border-sky-400"></div>
+							<div className="w-4 h-4 rounded bg-sky-500 border-2 border-sky-400" />
 							<span className="text-white font-medium">
 								Coach&apos;s Lessons
 							</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400"></div>
+							<div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
 							<span className="text-white font-medium">Today</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="w-4 h-4 rounded bg-gray-600 border-2 border-gray-500"></div>
+							<div className="w-4 h-4 rounded bg-gray-600 border-2 border-gray-500" />
 							<span className="text-gray-300 font-medium">Past Date</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="w-4 h-4 rounded bg-gray-700 border-2 border-gray-600"></div>
+							<div className="w-4 h-4 rounded bg-gray-700 border-2 border-gray-600" />
 							<span className="text-gray-400 font-medium">Other Month</span>
 						</div>
 					</div>
@@ -806,7 +806,7 @@ export default function ClientSchedulePageClient() {
 									>
 										{requestScheduleChangeMutation.isPending ? (
 											<>
-												<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+												<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
 												Requesting...
 											</>
 										) : (

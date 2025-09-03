@@ -105,7 +105,7 @@ export default function EditClientModal({
 	})
 
 	const checkEmail = async (email: string) => {
-		if (!email || !email.includes("@")) {
+		if (!email?.includes("@")) {
 			setEmailExists(null)
 			return
 		}

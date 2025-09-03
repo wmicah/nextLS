@@ -423,7 +423,7 @@ export default function DayColumn({
 				{/* Rest Day Display */}
 				<div className="text-center py-16">
 					<div className="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-						<div className="w-10 h-10 bg-orange-400 rounded-full"></div>
+						<div className="w-10 h-10 bg-orange-400 rounded-full" />
 					</div>
 					<div className="text-orange-300 text-xl font-medium mb-3">
 						Rest Day
@@ -505,7 +505,7 @@ export default function DayColumn({
 									}}
 									className="flex items-center gap-3 w-full px-3 py-3 text-sm text-white hover:bg-gray-700/50 rounded-lg transition-colors"
 								>
-									<div className="w-5 h-5 bg-orange-400 rounded-full"></div>
+									<div className="w-5 h-5 bg-orange-400 rounded-full" />
 									Set as Rest Day
 								</button>
 								<button
@@ -519,7 +519,7 @@ export default function DayColumn({
 									}}
 									className="flex items-center gap-3 w-full px-3 py-3 text-sm text-white hover:bg-gray-700/50 rounded-lg transition-colors"
 								>
-									<div className="w-5 h-5 bg-yellow-400 rounded-full"></div>
+									<div className="w-5 h-5 bg-yellow-400 rounded-full" />
 									Add Warmup
 								</button>
 							</div>
@@ -532,7 +532,7 @@ export default function DayColumn({
 			{day.warmupTitle && (
 				<div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-6">
 					<div className="flex items-center gap-3 mb-4">
-						<div className="w-5 h-5 bg-yellow-400 rounded-full"></div>
+						<div className="w-5 h-5 bg-yellow-400 rounded-full" />
 						<h5 className="text-lg font-medium text-yellow-300">Warmup</h5>
 					</div>
 					<h6 className="text-lg font-medium text-white">{day.warmupTitle}</h6>

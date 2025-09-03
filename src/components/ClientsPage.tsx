@@ -259,7 +259,7 @@ export default function ClientsPage() {
 					<div
 						className="animate-spin rounded-full h-8 w-8 border-b-2"
 						style={{ borderColor: "#4A5A70" }}
-					></div>
+					 />
 				</div>
 			</Sidebar>
 		)
@@ -728,19 +728,19 @@ export default function ClientsPage() {
 											<div
 												className="w-1.5 h-1.5 rounded-sm"
 												style={{ backgroundColor: "currentColor" }}
-											></div>
+											 />
 											<div
 												className="w-1.5 h-1.5 rounded-sm"
 												style={{ backgroundColor: "currentColor" }}
-											></div>
+											 />
 											<div
 												className="w-1.5 h-1.5 rounded-sm"
 												style={{ backgroundColor: "currentColor" }}
-											></div>
+											 />
 											<div
 												className="w-1.5 h-1.5 rounded-sm"
 												style={{ backgroundColor: "currentColor" }}
-											></div>
+											 />
 										</div>
 									</button>
 									<button
@@ -758,15 +758,15 @@ export default function ClientsPage() {
 											<div
 												className="w-full h-1 rounded-sm"
 												style={{ backgroundColor: "currentColor" }}
-											></div>
+											 />
 											<div
 												className="w-full h-1 rounded-sm"
 												style={{ backgroundColor: "currentColor" }}
-											></div>
+											 />
 											<div
 												className="w-full h-1 rounded-sm"
 												style={{ backgroundColor: "currentColor" }}
-											></div>
+											 />
 										</div>
 									</button>
 								</div>
@@ -1015,7 +1015,7 @@ export default function ClientsPage() {
 																					? "#F59E0B"
 																					: "#10B981",
 																		}}
-																	></div>
+																	 />
 																) : (
 																	<Archive className="h-4 w-4" />
 																)}
@@ -1419,7 +1419,7 @@ export default function ClientsPage() {
 																						? "#F59E0B"
 																						: "#10B981",
 																			}}
-																		></div>
+																		 />
 																	) : (
 																		<Archive className="h-4 w-4" />
 																	)}
@@ -1468,7 +1468,7 @@ export default function ClientsPage() {
 					<div
 						className="absolute inset-0 bg-black/60"
 						onClick={() => setIsFeedbackOpen(false)}
-					></div>
+					 />
 					<div
 						className="relative w-full max-w-lg rounded-xl md:rounded-2xl shadow-2xl border p-4 md:p-6 max-h-[90vh] overflow-y-auto"
 						style={{ backgroundColor: "#2B3038", borderColor: "#606364" }}

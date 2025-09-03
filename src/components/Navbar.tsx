@@ -31,7 +31,7 @@ const Navbar = () => {
 					{/* Logo */}
 					<Link href="/" className="flex items-center space-x-2 group">
 						<div className="relative">
-							<div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 opacity-0 group-hover:opacity-20 blur transition duration-300"></div>
+							<div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 opacity-0 group-hover:opacity-20 blur transition duration-300" />
 							<div className="relative font-bold text-xl tracking-tight text-white group-hover:text-sky-300 transition-colors duration-300">
 								Next Level Softball
 							</div>
@@ -45,12 +45,12 @@ const Navbar = () => {
 							className="relative px-4 py-2 text-sm font-medium text-white/90 hover:text-white transition-colors duration-200 group"
 						>
 							<span className="relative z-10">Pricing</span>
-							<div className="absolute inset-0 rounded-lg bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+							<div className="absolute inset-0 rounded-lg bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 						</Link>
 
 						<span className="relative px-4 py-2 text-sm font-medium text-white/90 hover:text-white transition-colors duration-200 group cursor-pointer">
 							<LoginLink className="relative z-10">Sign In</LoginLink>
-							<div className="absolute inset-0 rounded-lg bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+							<div className="absolute inset-0 rounded-lg bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 						</span>
 
 						<RegisterLink>
@@ -67,7 +67,7 @@ const Navbar = () => {
 						className="md:hidden relative p-2 text-white/90 hover:text-white transition-colors duration-200"
 					>
 						<div className="relative">
-							<div className="absolute -inset-2 rounded-lg bg-white/5 opacity-0 hover:opacity-100 transition-opacity duration-200"></div>
+							<div className="absolute -inset-2 rounded-lg bg-white/5 opacity-0 hover:opacity-100 transition-opacity duration-200" />
 							{isMobileMenuOpen ? (
 								<X className="h-5 w-5 relative z-10" />
 							) : (

@@ -74,7 +74,27 @@ export default function UploadResourceModal({
 	}
 
 	const uploadMutation = trpc.library.upload.useMutation({
-		onSuccess: () => {
+		onSuccess: (data) => {
+			// Trigger server-side thumbnail generation for video files
+			if (data.type === 'video' && data.filename) {
+				setTimeout(async () => {
+					try {
+						await fetch('/api/generate-thumbnail', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+							},
+							body: JSON.stringify({ 
+								filename: data.filename, 
+								videoType: 'local' 
+							}),
+						});
+					} catch (error) {
+						console.error('Thumbnail generation failed:', error);
+					}
+				}, 1000);
+			}
+			
 			onSuccess()
 			handleClose()
 		},
@@ -426,7 +446,7 @@ export default function UploadResourceModal({
 									<div
 										className="animate-spin rounded-full h-4 w-4 border-b-2"
 										style={{ borderColor: "#C3BCC2" }}
-									></div>
+									 />
 									Saving...
 								</>
 							) : (

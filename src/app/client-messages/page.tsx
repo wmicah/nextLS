@@ -7,7 +7,7 @@ const Page = async () => {
 	const { getUser } = getKindeServerSession()
 	const user = await getUser()
 
-	if (!user || !user.id) redirect("/auth-callback?origin=/client-messages")
+	if (!user?.id) redirect("/auth-callback?origin=/client-messages")
 
 	const dbUser = await db.user.findFirst({
 		where: {

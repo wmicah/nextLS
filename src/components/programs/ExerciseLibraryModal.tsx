@@ -66,6 +66,8 @@ export default function ExerciseLibraryModal({
 			document.addEventListener("keydown", handleEscape)
 			return () => document.removeEventListener("keydown", handleEscape)
 		}
+		
+		return undefined
 	}, [isOpen, onClose])
 
 	if (!isOpen) return null
@@ -157,7 +159,7 @@ export default function ExerciseLibraryModal({
 				<div className="overflow-y-auto max-h-[60vh] p-6">
 					{isLoading ? (
 						<div className="flex items-center justify-center py-12">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
 						</div>
 					) : filteredItems.length > 0 ? (
 						<div className="grid gap-4">

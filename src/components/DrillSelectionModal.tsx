@@ -371,7 +371,7 @@ export default function DrillSelectionModal({
 						<div className="space-y-3">
 							{isLoading ? (
 								<div className="flex items-center justify-center h-32">
-									<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+									<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
 								</div>
 							) : libraryItems.length === 0 ? (
 								<div className="text-center text-gray-400 py-8">

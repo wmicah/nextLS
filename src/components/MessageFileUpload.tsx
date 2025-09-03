@@ -190,7 +190,7 @@ export default function MessageFileUpload({
 				{uploading && (
 					<div className="mt-4 space-y-2">
 						<div className="flex items-center justify-center gap-2">
-							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
 							<span className="text-gray-300">
 								{uploadProgress > 0
 									? `Processing... ${uploadProgress}%`
@@ -202,7 +202,7 @@ export default function MessageFileUpload({
 								<div
 									className="bg-gray-400 h-2 rounded-full transition-all duration-300"
 									style={{ width: `${uploadProgress}%` }}
-								></div>
+								 />
 							</div>
 						)}
 					</div>

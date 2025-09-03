@@ -11,7 +11,7 @@ export default async function SettingsPage({}: SettingsPageProps) {
 	const { getUser } = getKindeServerSession()
 	const user = await getUser()
 
-	if (!user || !user.id) {
+	if (!user?.id) {
 		redirect("/auth-callback?origin=settings")
 	}
 

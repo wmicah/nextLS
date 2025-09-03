@@ -444,7 +444,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
 											</div>
 										</div>
 										<div className="absolute right-full top-1/2 transform -translate-y-1/2">
-											<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
+											<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]" />
 										</div>
 									</div>
 								)}
@@ -513,7 +513,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
 														</span>
 													)}
 													<div className="absolute right-full top-1/2 transform -translate-y-1/2">
-														<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
+														<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]" />
 													</div>
 												</div>
 											)}
@@ -566,7 +566,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
 										>
 											{link.name}
 											<div className="absolute right-full top-1/2 transform -translate-y-1/2">
-												<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
+												<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]" />
 											</div>
 										</div>
 									)}
@@ -619,7 +619,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
 											</span>
 										)}
 										<div className="absolute right-full top-1/2 transform -translate-y-1/2">
-											<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
+											<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]" />
 										</div>
 									</div>
 								)}
@@ -929,7 +929,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
 											</span>
 										</div>
 										<div className="absolute right-full top-1/2 transform -translate-y-1/2">
-											<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]"></div>
+											<div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]" />
 										</div>
 									</div>
 								)}

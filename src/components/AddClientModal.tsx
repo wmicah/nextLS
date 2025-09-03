@@ -87,7 +87,7 @@ export default function AddClientModal({
 	})
 
 	const checkEmail = async (email: string) => {
-		if (!email || !email.includes("@")) {
+		if (!email?.includes("@")) {
 			setEmailExists(null)
 			return
 		}
@@ -839,7 +839,7 @@ export default function AddClientModal({
 									<div
 										className="animate-spin rounded-full h-4 w-4 border-b-2"
 										style={{ borderColor: "#C3BCC2" }}
-									></div>
+									 />
 									Adding...
 								</div>
 							) : (

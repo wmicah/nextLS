@@ -11,7 +11,7 @@ export default async function VideoReview({
 	const user = await getUser()
 	const { id } = await params
 
-	if (!user || !user.id) {
+	if (!user?.id) {
 		redirect("/auth-callback?origin=videos")
 	}
 

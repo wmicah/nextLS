@@ -62,7 +62,7 @@ export default function ClientDetailsPage({
 					<div
 						className="animate-spin rounded-full h-8 w-8 border-b-2"
 						style={{ borderColor: "#4A5A70" }}
-					></div>
+					 />
 				</div>
 			</Sidebar>
 		)
@@ -223,7 +223,7 @@ export default function ClientDetailsPage({
 									style={{ backgroundColor: "#2A2F2F" }}
 								>
 									<div className="flex items-center gap-2">
-										<div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+										<div className="w-2 h-2 rounded-full bg-yellow-500" />
 										<span className="text-sm text-yellow-400 font-medium">
 											Pending Registration
 										</span>
@@ -520,7 +520,7 @@ export default function ClientDetailsPage({
 												<div
 													className="bg-sky-500 h-2 rounded-full transition-all duration-300"
 													style={{ width: `${assignment.progress}%` }}
-												></div>
+												 />
 											</div>
 										</div>
 									</div>

@@ -54,7 +54,7 @@ export default function VideosPage() {
 	}, [videos, searchQuery, selectedCategory])
 
 	const filteredClientSubmissions = useMemo(() => {
-		let filtered = clientSubmissions.filter((submission) => {
+		const filtered = clientSubmissions.filter((submission) => {
 			const matchesSearch =
 				submission.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				submission.description
@@ -146,7 +146,7 @@ export default function VideosPage() {
 						<div
 							className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
 							style={{ borderColor: "#4A5A70" }}
-						></div>
+						 />
 						<p style={{ color: "#C3BCC2" }}>Loading video library...</p>
 					</div>
 				</div>

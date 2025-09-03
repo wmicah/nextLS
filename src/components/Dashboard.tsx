@@ -82,7 +82,7 @@ export default function Dashboard() {
           <div
             className='animate-spin rounded-full h-8 w-8 border-b-2'
             style={{ borderColor: "#4A5A70" }}
-          ></div>
+           />
         </div>
       </Sidebar>
     )
@@ -729,7 +729,7 @@ export default function Dashboard() {
                           <div
                             className='animate-spin rounded-full h-4 w-4 border-b-2'
                             style={{ borderColor: "#EF4444" }}
-                          ></div>
+                           />
                         ) : (
                           <Trash2 className='h-4 w-4' />
                         )}

@@ -33,7 +33,7 @@ export default function YouTubePlayer({
         style={{
           backgroundColor: "#606364",
         }}
-      ></iframe>
+       />
     </div>
   )
 }

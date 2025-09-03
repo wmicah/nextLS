@@ -306,7 +306,7 @@ ClientProfileModalProps) {
 								<div
 									className="animate-spin rounded-full h-8 w-8 border-2"
 									style={{ borderColor: "#4A5A70", borderTopColor: "#C3BCC2" }}
-								></div>
+								 />
 							</div>
 						) : (
 							<div className="space-y-6">
@@ -1071,7 +1071,7 @@ ClientProfileModalProps) {
 																		backgroundColor: "#4A5A70",
 																		width: `${assignment.progress}%`,
 																	}}
-																></div>
+																 />
 															</div>
 														</div>
 													</div>

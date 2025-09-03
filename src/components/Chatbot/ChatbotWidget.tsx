@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageCircle, X, Send, Bot, User, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
@@ -165,6 +166,7 @@ export default function ChatbotWidget() {
 						<Button
 							onClick={() => setIsOpen(true)}
 							size="lg"
+							aria-label="Open chat with AI assistant"
 							className="relative h-16 w-16 rounded-full bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-800 shadow-2xl border-0 transition-all duration-300 hover:scale-105 hover:shadow-blue-500/25"
 						>
 							<MessageCircle className="h-7 w-7 text-white" />
@@ -228,7 +230,7 @@ export default function ChatbotWidget() {
 
 								{/* Messages Area */}
 								<div className="flex-1 overflow-hidden">
-									<div className="h-full overflow-y-auto p-6 space-y-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100/50 [&::-webkit-scrollbar-thumb]:bg-gray-300/70 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-400/70">
+									<div className="h-full overflow-y-auto p-6 space-y-6">
 										{/* Show Quick Actions on first load or when requested */}
 										{showQuickActions && (
 											<motion.div

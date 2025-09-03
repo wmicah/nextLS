@@ -171,7 +171,7 @@ export default function ClientDashboard() {
 								style={{
 									background: "linear-gradient(45deg, #4A5A70, #606364)",
 								}}
-							></div>
+							 />
 						</div>
 						<div className="absolute bottom-0 left-0 w-24 h-24 opacity-10">
 							<div
@@ -179,7 +179,7 @@ export default function ClientDashboard() {
 								style={{
 									background: "linear-gradient(45deg, #4A5A70, #606364)",
 								}}
-							></div>
+							 />
 						</div>
 
 						<div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0">
@@ -252,7 +252,7 @@ export default function ClientDashboard() {
 							}}
 						>
 							{/* Animated background */}
-							<div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+							<div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
 							<div className="relative z-10">
 								<div className="flex items-center justify-between mb-4 md:mb-6">
@@ -295,7 +295,7 @@ export default function ClientDashboard() {
 							}}
 						>
 							{/* Animated background */}
-							<div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+							<div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
 							<div className="relative z-10">
 								<div className="flex items-center justify-between mb-4 md:mb-6">
@@ -351,7 +351,7 @@ export default function ClientDashboard() {
 									style={{
 										background: "linear-gradient(45deg, #4A5A70, #606364)",
 									}}
-								></div>
+								 />
 							</div>
 
 							<div className="relative z-10">

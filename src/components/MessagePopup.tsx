@@ -361,7 +361,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                         </p>
                         {isCurrentUser && (
                           <div className='flex items-center'>
-                            <div className='w-2 h-2 bg-blue-200 rounded-full'></div>
+                            <div className='w-2 h-2 bg-blue-200 rounded-full' />
                           </div>
                         )}
                       </div>
@@ -389,19 +389,19 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                       <div className='flex items-center'>
                         {pendingMessage.status === "sending" && (
                           <div className='flex items-center gap-1'>
-                            <div className='w-1 h-1 bg-blue-200 rounded-full animate-pulse'></div>
+                            <div className='w-1 h-1 bg-blue-200 rounded-full animate-pulse' />
                             <div
                               className='w-1 h-1 bg-blue-200 rounded-full animate-pulse'
                               style={{ animationDelay: "0.2s" }}
-                            ></div>
+                             />
                             <div
                               className='w-1 h-1 bg-blue-200 rounded-full animate-pulse'
                               style={{ animationDelay: "0.4s" }}
-                            ></div>
+                             />
                           </div>
                         )}
                         {pendingMessage.status === "sent" && (
-                          <div className='w-2 h-2 bg-blue-200 rounded-full'></div>
+                          <div className='w-2 h-2 bg-blue-200 rounded-full' />
                         )}
                         {pendingMessage.status === "failed" && (
                           <div className='w-2 h-2 bg-red-400 rounded-full flex items-center justify-center'>
@@ -444,7 +444,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                   className='px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
                 >
                   {sendMessageMutation.isPending ? (
-                    <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
+                    <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white' />
                   ) : (
                     <Send className='h-4 w-4' />
                   )}

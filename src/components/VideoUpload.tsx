@@ -38,7 +38,7 @@ export default function VideoUpload({
 
 	const handleUploadComplete = (res: any) => {
 		console.log("Upload complete:", res)
-		if (res && res[0]) {
+		if (res?.[0]) {
 			setUploadedFile(res[0])
 			setIsUploading(false)
 		}

@@ -71,8 +71,8 @@ export default function ScheduleLessonModal({
 			return slots
 		}
 
-		let [_, startHour, startMinute, startPeriod] = startMatch
-		let [__, endHour, endMinute, endPeriod] = endMatch
+		const [_, startHour, startMinute, startPeriod] = startMatch
+		const [__, endHour, endMinute, endPeriod] = endMatch
 
 		let currentHour = parseInt(startHour)
 		if (startPeriod.toUpperCase() === "PM" && currentHour !== 12)
@@ -154,7 +154,7 @@ export default function ScheduleLessonModal({
 			return
 		}
 
-		let [_, hours, minutes, period] = timeMatch
+		const [_, hours, minutes, period] = timeMatch
 		let hour = parseInt(hours)
 
 		// Convert to 24-hour format
@@ -193,7 +193,7 @@ export default function ScheduleLessonModal({
 		const timeMatch = time.match(/(\d+):(\d+)\s*(AM|PM)/i)
 		if (!timeMatch) return false
 
-		let [_, hours, minutes, period] = timeMatch
+		const [_, hours, minutes, period] = timeMatch
 		let hour = parseInt(hours)
 
 		// Convert to 24-hour format
@@ -313,7 +313,7 @@ export default function ScheduleLessonModal({
 								>
 									{format(day, "d")}
 									{hasLessons && (
-										<div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+										<div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
 									)}
 								</button>
 							)
@@ -323,11 +323,11 @@ export default function ScheduleLessonModal({
 					{/* Legend */}
 					<div className="flex items-center gap-4 mt-3 text-xs">
 						<div className="flex items-center gap-2">
-							<div className="w-2 h-2 bg-red-500 rounded-full"></div>
+							<div className="w-2 h-2 bg-red-500 rounded-full" />
 							<span className="text-gray-400">Existing lessons</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="w-2 h-2 bg-sky-500 rounded-full"></div>
+							<div className="w-2 h-2 bg-sky-500 rounded-full" />
 							<span className="text-gray-400">Available slots</span>
 						</div>
 					</div>
@@ -450,7 +450,7 @@ export default function ScheduleLessonModal({
 					>
 						{isScheduling ? (
 							<>
-								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
 								Scheduling...
 							</>
 						) : (

@@ -7,7 +7,7 @@ export default async function Programs() {
 	const { getUser } = getKindeServerSession()
 	const user = await getUser()
 
-	if (!user || !user.id) {
+	if (!user?.id) {
 		redirect("/auth-callback?origin=programs")
 	}
 

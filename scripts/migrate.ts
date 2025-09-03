@@ -145,7 +145,6 @@ async function main() {
 				console.error(`❌ ${result.message}: ${result.error}`)
 				process.exit(1)
 			}
-			break
 
 		case "rollback":
 			const rollbackResult = await rollbackMigration()
@@ -156,7 +155,6 @@ async function main() {
 				console.error(`❌ ${rollbackResult.message}: ${rollbackResult.error}`)
 				process.exit(1)
 			}
-			break
 
 		case "status":
 			await checkMigrationStatus()

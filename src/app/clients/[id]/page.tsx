@@ -11,7 +11,7 @@ const Page = async ({ params }: PageProps) => {
 	const { getUser } = getKindeServerSession()
 	const user = await getUser()
 
-	if (!user || !user.id) redirect("/auth-callback?origin=/clients")
+	if (!user?.id) redirect("/auth-callback?origin=/clients")
 
 	const dbUser = await db.user.findFirst({
 		where: {

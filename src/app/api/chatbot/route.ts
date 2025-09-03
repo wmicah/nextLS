@@ -242,7 +242,7 @@ IMPORTANT: Only provide information about the Next Level Softball platform. Do n
 
 		// Call OpenAI API using standard chat completions with full platform knowledge
 		const completion = await openai.chat.completions.create({
-			model: "gpt-4o-mini",
+			model: "gpt-4o-mini ",
 			messages: [
 				{
 					role: "system",
@@ -477,7 +477,7 @@ Your data and your clients' information are protected with enterprise-level secu
 
 	// General help
 	if (message.includes("help") || message.includes("what can you do")) {
-		let helpResponse = `I'm your Next Level Softball AI assistant! I can help you with:
+		const helpResponse = `I'm your Next Level Softball AI assistant! I can help you with:
 
 🎯 **Program Management:**
 - Creating training programs with weeks, days, and drills

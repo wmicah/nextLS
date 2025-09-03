@@ -21,6 +21,7 @@ export default function VideoProtection() {
         e.preventDefault()
         return false
       }
+      return undefined
     }
 
     // Disable text selection

@@ -51,9 +51,9 @@ export default function Home() {
 	return (
 		<div className="relative -mt-14 min-h-[calc(100vh+3.5rem)] overflow-hidden bg-gradient-to-b from-neutral-900 via-neutral-950 to-black">
 			{/* Background spotlights */}
-			<div className="pointer-events-none absolute inset-0 [background:radial-gradient(1200px_600px_at_8%_-10%,rgba(56,189,248,.2),transparent_60%),radial-gradient(900px_500px_at_90%_0%,rgba(59,130,246,.18),transparent_60%)]"></div>
+			<div className="pointer-events-none absolute inset-0 [background:radial-gradient(1200px_600px_at_8%_-10%,rgba(56,189,248,.2),transparent_60%),radial-gradient(900px_500px_at_90%_0%,rgba(59,130,246,.18),transparent_60%)]" />
 			{/* Subtle grid */}
-			<div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30"></div>
+			<div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30" />
 
 			{/* HERO */}
 			<section className="relative z-10 pt-24 sm:pt-32">
@@ -100,7 +100,7 @@ export default function Home() {
 					</div>
 
 					<div className="relative" data-reveal>
-						<div className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-tr from-sky-500/10 via-blue-500/10 to-transparent blur-2xl"></div>
+						<div className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-tr from-sky-500/10 via-blue-500/10 to-transparent blur-2xl" />
 
 						{/* Perspective wrapper */}
 						<div className="[perspective:1000px]">
@@ -123,7 +123,7 @@ export default function Home() {
 								<div
 									className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"
 									style={{ transform: "translateZ(20px)" }}
-								></div>
+								 />
 							</div>
 						</div>
 					</div>
@@ -207,7 +207,7 @@ export default function Home() {
 						className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-sky-600/20 via-sky-500/10 to-transparent p-8 sm:p-12"
 						data-reveal
 					>
-						<div className="absolute -inset-24 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,.25),transparent_40%)]"></div>
+						<div className="absolute -inset-24 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,.25),transparent_40%)]" />
 						<div className="mx-auto max-w-2xl text-center">
 							<h4 className="text-2xl font-semibold text-white sm:text-3xl">
 								Ready to take the mound with confidence?
@@ -241,7 +241,7 @@ function Feature({
 			className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[.04] p-6 transition-all hover:bg-white/[.06]"
 			data-reveal
 		>
-			<div className="absolute -inset-1 -z-10 rounded-2xl opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100 bg-gradient-to-tr from-sky-500/20 via-blue-500/10 to-transparent"></div>
+			<div className="absolute -inset-1 -z-10 rounded-2xl opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100 bg-gradient-to-tr from-sky-500/20 via-blue-500/10 to-transparent" />
 			<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-sky-300">
 				{icon}
 			</div>

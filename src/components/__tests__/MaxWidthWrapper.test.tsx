@@ -37,7 +37,11 @@ describe("MaxWidthWrapper", () => {
 	})
 
 	test("renders empty children", () => {
-		render(<MaxWidthWrapper></MaxWidthWrapper>)
+		render(
+			<MaxWidthWrapper>
+				<div />
+			</MaxWidthWrapper>
+		)
 
 		// Should render without crashing
 		const wrapper =

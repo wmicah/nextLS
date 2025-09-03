@@ -1067,7 +1067,7 @@ export default function WeekPlanner({
 					title="Remove Week"
 				>
 					{deleteWeekMutation.isPending ? (
-						<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+						<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400" />
 					) : (
 						<Trash2 className="h-4 w-4" />
 					)}
@@ -1175,7 +1175,7 @@ export default function WeekPlanner({
 															<Settings className="h-3 w-3 text-blue-400" />
 															Edit Day
 														</button>
-														<div className="border-t border-gray-600 my-1"></div>
+														<div className="border-t border-gray-600 my-1" />
 														<div className="text-xs font-medium text-gray-400 px-2 py-1">
 															Clipboard
 														</div>
@@ -1206,7 +1206,7 @@ export default function WeekPlanner({
 															<Scissors className="h-3 w-3 text-purple-400" />
 															Cut
 														</button>
-														<div className="border-t border-gray-600 my-1"></div>
+														<div className="border-t border-gray-600 my-1" />
 														<button
 															onClick={() =>
 																handleDayMenuClick(day.number, "delete")
@@ -1240,7 +1240,7 @@ export default function WeekPlanner({
 												{dayData.warmupTitle && (
 													<div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-2">
 														<div className="flex items-center gap-1 mb-1">
-															<div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+															<div className="w-2 h-2 bg-yellow-400 rounded-full" />
 															<span className="text-xs font-medium text-yellow-300">
 																Warmup
 															</span>

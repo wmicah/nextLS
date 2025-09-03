@@ -118,7 +118,7 @@ export default function RoleSelectionPage() {
 							</div>
 							{selectedRole === "COACH" && (
 								<div className="absolute top-4 right-4">
-									<div className="h-4 w-4 rounded-full bg-blue-600"></div>
+									<div className="h-4 w-4 rounded-full bg-blue-600" />
 								</div>
 							)}
 						</div>
@@ -145,7 +145,7 @@ export default function RoleSelectionPage() {
 							</div>
 							{selectedRole === "CLIENT" && (
 								<div className="absolute top-4 right-4">
-									<div className="h-4 w-4 rounded-full bg-green-600"></div>
+									<div className="h-4 w-4 rounded-full bg-green-600" />
 								</div>
 							)}
 						</div>

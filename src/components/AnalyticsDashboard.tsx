@@ -22,7 +22,7 @@ import {
 	X,
 } from "lucide-react"
 import Sidebar from "./Sidebar"
-import ErrorBoundary from "./ErrorBoundary"
+import { ErrorBoundary } from "./ErrorBoundary"
 
 export default function AnalyticsDashboard() {
 	const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">("30d")
@@ -94,7 +94,7 @@ export default function AnalyticsDashboard() {
 					<div
 						className="animate-spin rounded-full h-8 w-8 border-b-2"
 						style={{ borderColor: "#4A5A70" }}
-					></div>
+					 />
 				</div>
 			</Sidebar>
 		)
@@ -454,7 +454,7 @@ export default function AnalyticsDashboard() {
 																	? "linear-gradient(to right, #F59E0B, #FBBF24)"
 																	: "linear-gradient(to right, #EF4444, #F87171)",
 														}}
-													></div>
+													 />
 												</div>
 											</div>
 										)

@@ -6,7 +6,7 @@ export default async function Compare() {
 	const { getUser } = getKindeServerSession()
 	const user = await getUser()
 
-	if (!user || !user.id) {
+	if (!user?.id) {
 		redirect("/auth-callback?origin=videos/compare")
 	}
 

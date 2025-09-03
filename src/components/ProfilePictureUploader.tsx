@@ -82,7 +82,7 @@ export default function ProfilePictureUploader({
 						onClientUploadComplete={(res: any) => {
 							setIsUploading(false)
 							console.log("Upload complete:", res)
-							if (res && res[0]) {
+							if (res?.[0]) {
 								onAvatarChange(res[0].url)
 							}
 						}}

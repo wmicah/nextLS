@@ -248,7 +248,7 @@ export default function ProgramEditorPage() {
 				>
 					<div className="max-w-7xl mx-auto">
 						<div className="text-center py-16">
-							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
 							<p className="text-gray-400">Loading program...</p>
 						</div>
 					</div>
@@ -331,7 +331,7 @@ export default function ProgramEditorPage() {
 								className="flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 mx-auto bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								{createWeekMutation.isPending ? (
-									<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+									<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
 								) : (
 									<Plus className="h-5 w-5" />
 								)}
