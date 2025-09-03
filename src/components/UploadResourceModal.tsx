@@ -76,7 +76,7 @@ export default function UploadResourceModal({
 	const uploadMutation = trpc.library.upload.useMutation({
 		onSuccess: (data) => {
 			// Trigger server-side thumbnail generation for video files
-			if (data.type === 'video' && data.filename) {
+			if (data.resource.type === 'video' && data.resource.filename) {
 				setTimeout(async () => {
 					try {
 						await fetch('/api/generate-thumbnail', {
@@ -85,7 +85,7 @@ export default function UploadResourceModal({
 								'Content-Type': 'application/json',
 							},
 							body: JSON.stringify({ 
-								filename: data.filename, 
+								filename: data.resource.filename, 
 								videoType: 'local' 
 							}),
 						});
