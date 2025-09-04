@@ -422,6 +422,7 @@ export const appRouter = router({
           whereClause.archived = input.archived;
         }
 
+        // Get clients with their basic info
         const clients = await db.client.findMany({
           where: whereClause,
           select: {
@@ -479,9 +480,9 @@ export const appRouter = router({
               },
             },
           },
-          orderBy: { createdAt: "desc" },
         });
 
+        // Return clients in basic order - let frontend handle complex sorting
         return clients;
       }),
 
@@ -506,14 +507,11 @@ export const appRouter = router({
       const threeDaysFromNow = new Date();
       threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
-      return await db.client.findMany({
+      // Get all active clients
+      const clients = await db.client.findMany({
         where: {
           coachId: user.id,
-          archived: false, // Exclude archived clients
-          nextLessonDate: {
-            lte: threeDaysFromNow,
-            gte: new Date(),
-          },
+          archived: false,
         },
         select: {
           id: true,
@@ -557,7 +555,23 @@ export const appRouter = router({
             },
           },
         },
-        orderBy: { nextLessonDate: "asc" },
+      });
+
+      // Simple filter for clients with lessons due soon
+      const now = new Date();
+      const clientsWithLessonsDueSoon = clients.filter(client => {
+        if (client.nextLessonDate) {
+          const lessonDate = new Date(client.nextLessonDate);
+          return lessonDate >= now && lessonDate <= threeDaysFromNow;
+        }
+        return false;
+      });
+
+      // Sort by lesson date (earliest first)
+      return clientsWithLessonsDueSoon.sort((a, b) => {
+        const aDate = new Date(a.nextLessonDate!);
+        const bDate = new Date(b.nextLessonDate!);
+        return aDate.getTime() - bDate.getTime();
       });
     }),
 
@@ -579,14 +593,11 @@ export const appRouter = router({
         });
       }
 
-      return await db.client.findMany({
+      // Get all active clients
+      const clients = await db.client.findMany({
         where: {
           coachId: user.id,
-          archived: false, // Exclude archived clients
-          OR: [
-            { nextLessonDate: null },
-            { nextLessonDate: { lt: new Date() } },
-          ],
+          archived: false,
         },
         select: {
           id: true,
@@ -630,7 +641,25 @@ export const appRouter = router({
             },
           },
         },
-        orderBy: { nextLessonDate: "asc" },
+      });
+
+      // Simple filter for clients needing attention
+      const now = new Date();
+      const clientsNeedingAttention = clients.filter(client => {
+        if (client.nextLessonDate) {
+          const lessonDate = new Date(client.nextLessonDate);
+          // Client needs attention if lesson is in the past or no lesson scheduled
+          return lessonDate <= now;
+        }
+        // No lesson date means they need attention
+        return true;
+      });
+
+      // Sort by creation date (newest first)
+      return clientsNeedingAttention.sort((a, b) => {
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       });
     }),
 
@@ -4163,6 +4192,39 @@ export const appRouter = router({
           id: z.string(),
           title: z.string().optional(),
           description: z.string().optional(),
+          weeks: z
+            .array(
+              z.object({
+                weekNumber: z.number(),
+                title: z.string(),
+                description: z.string().optional(),
+                days: z.array(
+                  z.object({
+                    dayNumber: z.number(),
+                    title: z.string(),
+                    description: z.string().optional(),
+                    drills: z.array(
+                      z.object({
+                        id: z.string(),
+                        title: z.string(),
+                        description: z.string().optional(),
+                        duration: z.string().optional(),
+                        videoUrl: z.string().optional(),
+                        notes: z.string().optional(),
+                        type: z.string().optional(),
+                        sets: z.number().optional(),
+                        reps: z.number().optional(),
+                        tempo: z.string().optional(),
+                        videoId: z.string().optional(),
+                        videoTitle: z.string().optional(),
+                        videoThumbnail: z.string().optional(),
+                      })
+                    ),
+                  })
+                ),
+              })
+            )
+            .optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -4183,21 +4245,76 @@ export const appRouter = router({
           });
         }
 
-        // Update the program
-        const program = await db.program.update({
-          where: {
-            id: input.id,
-            coachId: user.id, // Ensure coach owns this program
-          },
-          data: {
-            ...(input.title && { title: input.title }),
-            ...(input.description !== undefined && {
-              description: input.description,
-            }),
-          },
+        // Start a transaction to update the program and its structure
+        const result = await db.$transaction(async tx => {
+          // Update the program basic info
+          const program = await tx.program.update({
+            where: {
+              id: input.id,
+              coachId: user.id, // Ensure coach owns this program
+            },
+            data: {
+              ...(input.title && { title: input.title }),
+              ...(input.description !== undefined && {
+                description: input.description,
+              }),
+            },
+          });
+
+          // If weeks data is provided, update the program structure
+          if (input.weeks) {
+            // Delete existing weeks and recreate them
+            await tx.programWeek.deleteMany({
+              where: { programId: input.id },
+            });
+
+            // Create new weeks structure
+            for (const week of input.weeks) {
+              const newWeek = await tx.programWeek.create({
+                data: {
+                  programId: input.id,
+                  weekNumber: week.weekNumber,
+                  title: week.title,
+                  description: week.description || "",
+                },
+              });
+
+              // Create days for this week
+              for (const day of week.days) {
+                const newDay = await tx.programDay.create({
+                  data: {
+                    weekId: newWeek.id,
+                    dayNumber: day.dayNumber,
+                    title: day.title,
+                    description: day.description || "",
+                  },
+                });
+
+                // Create drills for this day
+                for (const drill of day.drills) {
+                  await tx.programDrill.create({
+                    data: {
+                      dayId: newDay.id,
+                      order: 1, // Default order
+                      title: drill.title,
+                      description: drill.description || "",
+                      duration: drill.duration || "",
+                      videoUrl: drill.videoUrl || "",
+                      notes: drill.notes || "",
+                      sets: drill.sets,
+                      reps: drill.reps,
+                      tempo: drill.tempo || "",
+                    },
+                  });
+                }
+              }
+            }
+          }
+
+          return program;
         });
 
-        return program;
+        return result;
       }),
 
     // Duplicate a program

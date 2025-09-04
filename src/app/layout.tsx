@@ -10,6 +10,8 @@ import Toast from "@/components/common/Toast";
 import ChatbotWrapper from "@/components/Chatbot/ChatbotWrapper";
 import { ChatbotProvider } from "@/components/Chatbot/ChatbotContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+// Import the startup script to ensure reliable service initialization
+import "@/lib/startup";
 
 const inter = Inter({ subsets: ["latin"] });
 

@@ -170,6 +170,12 @@ model Message {
   attachmentName String?
   attachmentSize Int? // in bytes
   
+  // Acknowledgment support
+  requiresAcknowledgment Boolean @default(false)
+  isAcknowledged        Boolean @default(false)
+  acknowledgedAt         DateTime?
+  acknowledgedBy         String? // User ID who acknowledged
+  
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
@@ -400,6 +406,14 @@ model ProgramDrill {
   sets        Int?
   reps        Int?
   tempo       String? // e.g., "2-0-2" for tempo training
+  
+  // Item type
+  type        String? // "exercise", "drill", or "video"
+  
+  // Video library integration
+  videoId        String?
+  videoTitle     String?
+  videoThumbnail String?
   
   // Superset functionality
   supersetWithId String? // ID of the exercise this is paired with

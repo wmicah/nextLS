@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react";
 // import { useRouter } from "next/navigation"
-import { trpc } from "@/app/_trpc/client"
+import { trpc } from "@/app/_trpc/client";
 import {
   Search,
   Plus,
@@ -13,11 +13,14 @@ import {
   CheckCheck,
   X,
   ArrowLeft,
-} from "lucide-react"
-import ClientSidebar from "./ClientSidebar"
-import { format } from "date-fns"
-import MessageFileUpload from "./MessageFileUpload"
-import ProfilePictureUploader from "./ProfilePictureUploader"
+} from "lucide-react";
+import ClientSidebar from "./ClientSidebar";
+import { format } from "date-fns";
+import MessageFileUpload from "./MessageFileUpload";
+import ProfilePictureUploader from "./ProfilePictureUploader";
+import RichMessageInput from "./RichMessageInput";
+import FormattedMessage from "./FormattedMessage";
+import MessageAcknowledgment from "./MessageAcknowledgment";
 
 interface ClientMessagesPageProps {
   // Add props here if needed in the future
@@ -27,52 +30,52 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
   // const router = useRouter()
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
-  >(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [messageText, setMessageText] = useState("")
+  >(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [messageText, setMessageText] = useState("");
   // const [isTyping, setIsTyping] = useState(false)
   // const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [showFileUpload, setShowFileUpload] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [clientSearchTerm, setClientSearchTerm] = useState("")
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [selectedFile, setSelectedFile] = useState<{
-    file: File
+    file: File;
     uploadData: {
-      attachmentUrl: string
-      attachmentType: string
-      attachmentName: string
-      attachmentSize: number
-    }
-  } | null>(null)
+      attachmentUrl: string;
+      attachmentType: string;
+      attachmentName: string;
+      attachmentSize: number;
+    };
+  } | null>(null);
   const [pendingMessages, setPendingMessages] = useState<
     Array<{
-      id: string
-      content: string
-      timestamp: Date
-      status: "sending" | "sent" | "failed"
-      attachmentUrl?: string
-      attachmentType?: string
-      attachmentName?: string
+      id: string;
+      content: string;
+      timestamp: Date;
+      status: "sending" | "sent" | "failed";
+      attachmentUrl?: string;
+      attachmentType?: string;
+      attachmentName?: string;
     }>
-  >([])
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  >([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   // const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Get current user info
-  const { data: currentUser } = trpc.user.getProfile.useQuery()
+  const { data: currentUser } = trpc.user.getProfile.useQuery();
 
   // Get conversations
   const { data: conversations = [], refetch: refetchConversations } =
     trpc.messaging.getConversations.useQuery(undefined, {
       refetchInterval: 5000,
-    })
+    });
 
   // Get messages for selected conversation
   const { data: messages = [], refetch: refetchMessages } =
     trpc.messaging.getMessages.useQuery(
       { conversationId: selectedConversation! },
       { enabled: !!selectedConversation, refetchInterval: 3000 }
-    )
+    );
 
   // Get unread count
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
@@ -81,16 +84,16 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
       refetchInterval: 3000, // Real-time updates every 3 seconds
       staleTime: 1000, // Consider data stale after 1 second
     }
-  )
+  );
 
   // Get other clients for conversation creation (clients with same coach)
-  const { data: otherClients = [] } = trpc.clients.getOtherClients.useQuery()
+  const { data: otherClients = [] } = trpc.clients.getOtherClients.useQuery();
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation({
-    onMutate: async (variables) => {
+    onMutate: async variables => {
       // Create optimistic message
-      const tempId = `temp-${Date.now()}`
+      const tempId = `temp-${Date.now()}`;
       const optimisticMessage = {
         id: tempId,
         content: variables.content || "",
@@ -101,46 +104,46 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
           attachmentType: variables.attachmentType,
           attachmentName: variables.attachmentName,
         }),
-      }
+      };
 
       // Add to pending messages
-      setPendingMessages((prev) => [...prev, optimisticMessage])
+      setPendingMessages(prev => [...prev, optimisticMessage]);
 
       // Clear input immediately
-      setMessageText("")
-      setSelectedFile(null)
+      setMessageText("");
+      setSelectedFile(null);
 
-      return { tempId }
+      return { tempId };
     },
     onSuccess: (data, variables, context) => {
       // Mark as sent first
-      setPendingMessages((prev) =>
-        prev.map((msg) =>
+      setPendingMessages(prev =>
+        prev.map(msg =>
           msg.id === context?.tempId ? { ...msg, status: "sent" as const } : msg
         )
-      )
+      );
 
       // Refetch messages to get the real message
       refetchMessages().then(() => {
         // Remove pending message after refetch completes
-        setPendingMessages((prev) =>
-          prev.filter((msg) => msg.id !== context?.tempId)
-        )
-      })
-      refetchConversations()
+        setPendingMessages(prev =>
+          prev.filter(msg => msg.id !== context?.tempId)
+        );
+      });
+      refetchConversations();
     },
     onError: (error, variables, context) => {
       // Mark message as failed
-      setPendingMessages((prev) =>
-        prev.map((msg) =>
+      setPendingMessages(prev =>
+        prev.map(msg =>
           msg.id === context?.tempId
             ? { ...msg, status: "failed" as const }
             : msg
         )
-      )
+      );
 
       // Restore message text and file for retry
-      setMessageText(variables.content || "")
+      setMessageText(variables.content || "");
       if (variables.attachmentUrl) {
         // Note: We can't restore the file object, but we can show the attachment info
         setSelectedFile({
@@ -154,62 +157,62 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
             attachmentName: variables.attachmentName || "file",
             attachmentSize: variables.attachmentSize || 0,
           },
-        })
+        });
       }
     },
-  })
+  });
 
   // Helper function to get the other user from a conversation
   const getOtherUser = (conversation: any, currentUserId: string) => {
     if (conversation.type === "COACH_CLIENT") {
       return conversation.coach?.id === currentUserId
         ? conversation.client
-        : conversation.coach
+        : conversation.coach;
     } else if (conversation.type === "CLIENT_CLIENT") {
       return conversation.client1?.id === currentUserId
         ? conversation.client2
-        : conversation.client1
+        : conversation.client1;
     }
-    return null
-  }
+    return null;
+  };
 
   const createConversationMutation =
     trpc.messaging.createConversationWithAnotherClient.useMutation({
-      onSuccess: (conversation) => {
-        setSelectedConversation(conversation.id)
-        refetchConversations()
-        setShowCreateModal(false)
-        setClientSearchTerm("")
+      onSuccess: conversation => {
+        setSelectedConversation(conversation.id);
+        refetchConversations();
+        setShowCreateModal(false);
+        setClientSearchTerm("");
       },
-      onError: (error) => {
-        console.error("Failed to create conversation:", error)
+      onError: error => {
+        console.error("Failed to create conversation:", error);
       },
-    })
+    });
 
   // Get current user for sidebar
-  const { data: authData } = trpc.authCallback.useQuery()
-  const sidebarUser = authData?.user
+  const { data: authData } = trpc.authCallback.useQuery();
+  const sidebarUser = authData?.user;
 
   // Auto-select first conversation if none selected
   useEffect(() => {
     if (!selectedConversation && conversations.length > 0) {
-      setSelectedConversation(conversations[0].id)
+      setSelectedConversation(conversations[0].id);
     }
-  }, [conversations, selectedConversation])
+  }, [conversations, selectedConversation]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Auto-scroll when pending messages are added
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [pendingMessages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [pendingMessages]);
 
   const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!messageText.trim() && !selectedFile) return
+    e.preventDefault();
+    if (!messageText.trim() && !selectedFile) return;
 
     sendMessageMutation.mutate({
       conversationId: selectedConversation!,
@@ -220,44 +223,44 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
         attachmentName: selectedFile.uploadData.attachmentName,
         attachmentSize: selectedFile.uploadData.attachmentSize,
       }),
-    })
-  }
+    });
+  };
 
   const handleFileSelect = (
     file: File,
     uploadData: {
-      attachmentUrl: string
-      attachmentType: string
-      attachmentName: string
-      attachmentSize: number
+      attachmentUrl: string;
+      attachmentType: string;
+      attachmentName: string;
+      attachmentSize: number;
     }
   ) => {
-    setSelectedFile({ file, uploadData })
-    setShowFileUpload(false)
-  }
+    setSelectedFile({ file, uploadData });
+    setShowFileUpload(false);
+  };
 
   const handleCreateConversation = (otherClientId: string) => {
-    createConversationMutation.mutate({ otherClientId })
-  }
+    createConversationMutation.mutate({ otherClientId });
+  };
 
   const filteredConversations = conversations.filter((conversation: any) => {
-    if (!searchTerm) return true
+    if (!searchTerm) return true;
 
-    const otherUser = getOtherUser(conversation, authData?.user?.id || "")
-    if (!otherUser) return false
+    const otherUser = getOtherUser(conversation, authData?.user?.id || "");
+    if (!otherUser) return false;
 
-    const otherUserName = otherUser.name || otherUser.email || ""
-    return otherUserName.toLowerCase().includes(searchTerm.toLowerCase())
-  })
+    const otherUserName = otherUser.name || otherUser.email || "";
+    return otherUserName.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   const filteredClients = otherClients.filter((client: any) => {
-    if (!clientSearchTerm) return true
-    const searchLower = clientSearchTerm.toLowerCase()
+    if (!clientSearchTerm) return true;
+    const searchLower = clientSearchTerm.toLowerCase();
     return (
       client.name?.toLowerCase().includes(searchLower) ||
       client.email?.toLowerCase().includes(searchLower)
-    )
-  })
+    );
+  });
 
   return (
     <ClientSidebar
@@ -267,36 +270,33 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
           : undefined
       }
     >
-      <div
-        className='min-h-screen'
-        style={{ backgroundColor: "#2A3133" }}
-      >
+      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
         {/* Hero Header */}
-        <div className='mb-8'>
-          <div className='rounded-2xl border relative overflow-hidden group'>
+        <div className="mb-8">
+          <div className="rounded-2xl border relative overflow-hidden group">
             <div
-              className='absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300'
+              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
               style={{
                 background:
                   "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
               }}
             />
-            <div className='relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40'>
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-4'>
+            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
                   <div>
                     <h1
-                      className='text-4xl font-bold mb-2'
+                      className="text-4xl font-bold mb-2"
                       style={{ color: "#C3BCC2" }}
                     >
                       Messages
                     </h1>
                     <div
-                      className='flex items-center gap-2 text-lg'
+                      className="flex items-center gap-2 text-lg"
                       style={{ color: "#ABA4AA" }}
                     >
-                      <div className='h-5 w-5 rounded-full bg-gray-500 flex items-center justify-center'>
-                        <File className='h-3 w-3 text-white' />
+                      <div className="h-5 w-5 rounded-full bg-gray-500 flex items-center justify-center">
+                        <File className="h-3 w-3 text-white" />
                       </div>
                       <span>
                         {conversations.length > 0
@@ -310,19 +310,16 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                     </div>
                   </div>
                 </div>
-                <div className='text-right'>
+                <div className="text-right">
                   <div
-                    className='text-2xl font-bold'
+                    className="text-2xl font-bold"
                     style={{ color: "#C3BCC2" }}
                   >
                     {unreadCount > 0
                       ? `${unreadCount} unread`
                       : "All caught up"}
                   </div>
-                  <div
-                    className='text-sm'
-                    style={{ color: "#ABA4AA" }}
-                  >
+                  <div className="text-sm" style={{ color: "#ABA4AA" }}>
                     {new Date().toLocaleDateString("en-US", {
                       weekday: "long",
                     })}
@@ -335,7 +332,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 
         {/* Messages Interface */}
         <div
-          className='flex h-[calc(100vh-200px)] rounded-3xl border overflow-hidden shadow-2xl'
+          className="flex h-[calc(100vh-200px)] rounded-3xl border overflow-hidden shadow-2xl"
           style={{
             backgroundColor: "#1E1E1E",
             borderColor: "#2a2a2a",
@@ -344,77 +341,71 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
         >
           {/* Conversations Sidebar */}
           <div
-            className='w-80 border-r flex flex-col'
+            className="w-80 border-r flex flex-col"
             style={{ borderColor: "#2a2a2a", backgroundColor: "#2a2a2a" }}
           >
             {/* Header */}
-            <div
-              className='p-6 border-b'
-              style={{ borderColor: "#2a2a2a" }}
-            >
-              <div className='flex items-center justify-between mb-6'>
+            <div className="p-6 border-b" style={{ borderColor: "#2a2a2a" }}>
+              <div className="flex items-center justify-between mb-6">
                 <h2
-                  className='text-2xl font-bold tracking-tight'
+                  className="text-2xl font-bold tracking-tight"
                   style={{ color: "#ffffff" }}
                 >
                   Conversations
                 </h2>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className='w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg'
+                  className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg"
                   style={{ backgroundColor: "#E0E0E0", color: "#000000" }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#E0E0E1"
-                    e.currentTarget.style.transform = "scale(1.1)"
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#E0E0E1";
+                    e.currentTarget.style.transform = "scale(1.1)";
                   }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#E0E0E0"
-                    e.currentTarget.style.transform = "scale(1)"
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#E0E0E0";
+                    e.currentTarget.style.transform = "scale(1)";
                   }}
                 >
-                  <Plus className='h-5 w-5' />
+                  <Plus className="h-5 w-5" />
                 </button>
               </div>
 
               {/* Search */}
-              <div className='relative'>
+              <div className="relative">
                 <Search
-                  className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4'
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
                   style={{ color: "#ABA4AA" }}
                 />
                 <input
-                  type='text'
-                  placeholder='Search conversations...'
+                  type="text"
+                  placeholder="Search conversations..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className='w-full pl-10 pr-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 transition-all duration-200'
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 transition-all duration-200"
                   style={{
                     backgroundColor: "#353A3A",
                     color: "#C3BCC2",
                     borderColor: "#606364",
                   }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = "#4A5A70"
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#4A5A70";
                   }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "#606364"
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = "#606364";
                   }}
                 />
               </div>
             </div>
 
             {/* Conversations List */}
-            <div className='flex-1 overflow-y-auto'>
+            <div className="flex-1 overflow-y-auto">
               {filteredConversations.length === 0 ? (
-                <div className='p-6 text-center'>
+                <div className="p-6 text-center">
                   <File
-                    className='h-12 w-12 mx-auto mb-4 opacity-50'
+                    className="h-12 w-12 mx-auto mb-4 opacity-50"
                     style={{ color: "#ABA4AA" }}
                   />
-                  <p
-                    className='text-sm'
-                    style={{ color: "#ABA4AA" }}
-                  >
+                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
                     {searchTerm
                       ? "No conversations found"
                       : "No conversations yet"}
@@ -425,12 +416,12 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                   const otherParticipant = getOtherUser(
                     conversation,
                     currentUser?.id || ""
-                  )
+                  );
                   const conversationType =
-                    conversation.type === "CLIENT_CLIENT" ? "Client" : "Coach"
+                    conversation.type === "CLIENT_CLIENT" ? "Client" : "Coach";
 
-                  const lastMessage = conversation.messages[0]
-                  const unreadCount = conversation._count?.messages || 0
+                  const lastMessage = conversation.messages[0];
+                  const unreadCount = conversation._count?.messages || 0;
 
                   return (
                     <div
@@ -442,7 +433,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                       }`}
                       onClick={() => setSelectedConversation(conversation.id)}
                     >
-                      <div className='flex items-center gap-3'>
+                      <div className="flex items-center gap-3">
                         <ProfilePictureUploader
                           currentAvatarUrl={
                             otherParticipant?.settings?.avatarUrl
@@ -453,14 +444,14 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                             "User"
                           }
                           onAvatarChange={() => {}}
-                          size='md'
+                          size="md"
                           readOnly={true}
-                          className='flex-shrink-0'
+                          className="flex-shrink-0"
                         />
-                        <div className='flex-1 min-w-0'>
-                          <div className='flex items-center justify-between'>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
                             <p
-                              className='font-medium truncate'
+                              className="font-medium truncate"
                               style={{ color: "#C3BCC2" }}
                             >
                               {otherParticipant?.name ||
@@ -469,7 +460,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                             </p>
                             {lastMessage && (
                               <span
-                                className='text-xs flex-shrink-0 ml-2'
+                                className="text-xs flex-shrink-0 ml-2"
                                 style={{ color: "#ABA4AA" }}
                               >
                                 {format(
@@ -479,10 +470,10 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                               </span>
                             )}
                           </div>
-                          <div className='flex items-center justify-between'>
-                            <div className='flex items-center gap-2'>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
                               <span
-                                className='text-xs px-2 py-1 rounded-full'
+                                className="text-xs px-2 py-1 rounded-full"
                                 style={{
                                   backgroundColor:
                                     conversation.type === "CLIENT_CLIENT"
@@ -498,7 +489,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                               </span>
                               {lastMessage && (
                                 <p
-                                  className='text-sm truncate'
+                                  className="text-sm truncate"
                                   style={{ color: "#ABA4AA" }}
                                 >
                                   {lastMessage.content}
@@ -506,7 +497,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                               )}
                             </div>
                             {unreadCount > 0 && (
-                              <span className='bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center'>
+                              <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
                                 {unreadCount}
                               </span>
                             )}
@@ -514,7 +505,7 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                         </div>
                       </div>
                     </div>
-                  )
+                  );
                 })
               )}
             </div>
@@ -522,24 +513,24 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 
           {/* Chat Area */}
           <div
-            className='flex-1 flex flex-col'
+            className="flex-1 flex flex-col"
             style={{ backgroundColor: "#1E1E1E" }}
           >
             {selectedConversation ? (
               <>
                 {/* Chat Header */}
                 <div
-                  className='p-6 border-b'
+                  className="p-6 border-b"
                   style={{ borderColor: "#2a2a2a" }}
                 >
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center gap-3'>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
                       <button
                         onClick={() => setSelectedConversation(null)}
-                        className='p-2 rounded-lg hover:bg-gray-800 transition-colors'
+                        className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
                       >
                         <ArrowLeft
-                          className='h-5 w-5'
+                          className="h-5 w-5"
                           style={{ color: "#C3BCC2" }}
                         />
                       </button>
@@ -547,77 +538,76 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                         currentAvatarUrl={(() => {
                           const conversation = conversations.find(
                             (c: any) => c.id === selectedConversation
-                          )
+                          );
                           if (conversation) {
                             const otherUser = getOtherUser(
                               conversation,
                               currentUser?.id || ""
-                            )
-                            return otherUser?.settings?.avatarUrl
+                            );
+                            return otherUser?.settings?.avatarUrl;
                           }
-                          return undefined
+                          return undefined;
                         })()}
                         userName={(() => {
                           const conversation = conversations.find(
                             (c: any) => c.id === selectedConversation
-                          )
+                          );
                           if (conversation) {
                             const otherUser = getOtherUser(
                               conversation,
                               currentUser?.id || ""
-                            )
-                            return otherUser?.name || otherUser?.email || "User"
+                            );
+                            return (
+                              otherUser?.name || otherUser?.email || "User"
+                            );
                           }
-                          return "User"
+                          return "User";
                         })()}
                         onAvatarChange={() => {}}
-                        size='md'
+                        size="md"
                         readOnly={true}
-                        className='flex-shrink-0'
+                        className="flex-shrink-0"
                       />
                       <div>
                         <h3
-                          className='font-semibold'
+                          className="font-semibold"
                           style={{ color: "#C3BCC2" }}
                         >
                           {(() => {
                             const conversation = conversations.find(
                               (c: any) => c.id === selectedConversation
-                            )
+                            );
                             if (conversation) {
                               const otherUser = getOtherUser(
                                 conversation,
                                 currentUser?.id || ""
-                              )
+                              );
                               return (
                                 otherUser?.name ||
                                 otherUser?.email?.split("@")[0] ||
                                 "Unknown"
-                              )
+                              );
                             }
-                            return "Unknown"
+                            return "Unknown";
                           })()}
                         </h3>
-                        <p
-                          className='text-sm'
-                          style={{ color: "#ABA4AA" }}
-                        >
+                        <p className="text-sm" style={{ color: "#ABA4AA" }}>
                           {(() => {
                             const conversation = conversations.find(
                               (c: { id: string; type: string }) =>
                                 c.id === selectedConversation
-                            )
+                            );
                             return conversation?.type === "CLIENT_CLIENT"
                               ? "Client"
-                              : "Coach"
+                              : "Coach";
                           })()}
                         </p>
                       </div>
                     </div>
-                    <div className='flex items-center gap-2'>
-                      <button className='p-2 rounded-lg hover:bg-gray-800 transition-colors'>
+                    <div className="flex items-center gap-2">
+                      <button className="p-2 rounded-lg hover:bg-gray-800 transition-colors">
                         <MoreVertical
-                          className='h-4 w-4'
+                          className="h-4 w-4"
                           style={{ color: "#ABA4AA" }}
                         />
                       </button>
@@ -626,9 +616,9 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                 </div>
 
                 {/* Messages */}
-                <div className='flex-1 overflow-y-auto p-6 space-y-4'>
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
                   {messages.map((message: any) => {
-                    const isCurrentUser = message.sender.id === currentUser?.id
+                    const isCurrentUser = message.sender.id === currentUser?.id;
 
                     return (
                       <div
@@ -644,29 +634,47 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                               : "bg-gray-700 text-gray-100"
                           }`}
                         >
-                          <p className='text-sm'>{message.content}</p>
+                          <div className="text-sm">
+                            <FormattedMessage content={message.content} />
+                          </div>
+
+                          {/* Message Acknowledgment */}
+                          <MessageAcknowledgment
+                            messageId={message.id}
+                            requiresAcknowledgment={
+                              message.requiresAcknowledgment || false
+                            }
+                            isAcknowledged={message.isAcknowledged || false}
+                            acknowledgedAt={
+                              message.acknowledgedAt
+                                ? new Date(message.acknowledgedAt)
+                                : null
+                            }
+                            isOwnMessage={isCurrentUser}
+                          />
+
                           {message.attachmentUrl && (
-                            <div className='mt-2'>
+                            <div className="mt-2">
                               {message.attachmentType?.startsWith("image/") ? (
                                 <img
                                   src={message.attachmentUrl}
-                                  alt='Attachment'
-                                  className='max-w-full rounded-lg'
+                                  alt="Attachment"
+                                  className="max-w-full rounded-lg"
                                 />
                               ) : (
                                 <a
                                   href={message.attachmentUrl}
-                                  target='_blank'
-                                  rel='noopener noreferrer'
-                                  className='flex items-center gap-2 text-sm underline'
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 text-sm underline"
                                 >
-                                  <File className='h-4 w-4' />
+                                  <File className="h-4 w-4" />
                                   {message.attachmentName || "Attachment"}
                                 </a>
                               )}
                             </div>
                           )}
-                          <div className='flex items-center justify-end gap-1 mt-2'>
+                          <div className="flex items-center justify-end gap-1 mt-2">
                             <span
                               className={`text-xs ${
                                 isCurrentUser
@@ -688,63 +696,62 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                           </div>
                         </div>
                       </div>
-                    )
+                    );
                   })}
 
                   {/* Pending Messages */}
-                  {pendingMessages.map((pendingMessage) => (
-                    <div
-                      key={pendingMessage.id}
-                      className='flex justify-end'
-                    >
+                  {pendingMessages.map(pendingMessage => (
+                    <div key={pendingMessage.id} className="flex justify-end">
                       <div
                         className={`max-w-[70%] px-4 py-3 rounded-2xl bg-blue-500 text-white ${
                           pendingMessage.status === "failed" ? "opacity-60" : ""
                         }`}
                       >
-                        <p className='text-sm'>{pendingMessage.content}</p>
+                        <div className="text-sm">
+                          <FormattedMessage content={pendingMessage.content} />
+                        </div>
                         {pendingMessage.attachmentUrl && (
-                          <div className='mt-2'>
+                          <div className="mt-2">
                             {pendingMessage.attachmentType?.startsWith(
                               "image/"
                             ) ? (
                               <img
                                 src={pendingMessage.attachmentUrl}
-                                alt='Attachment'
-                                className='max-w-full rounded-lg'
+                                alt="Attachment"
+                                className="max-w-full rounded-lg"
                               />
                             ) : (
-                              <div className='flex items-center gap-2 text-sm'>
-                                <File className='h-4 w-4' />
+                              <div className="flex items-center gap-2 text-sm">
+                                <File className="h-4 w-4" />
                                 {pendingMessage.attachmentName || "Attachment"}
                               </div>
                             )}
                           </div>
                         )}
-                        <div className='flex items-center justify-end gap-1 mt-2'>
-                          <span className='text-xs text-blue-100'>
+                        <div className="flex items-center justify-end gap-1 mt-2">
+                          <span className="text-xs text-blue-100">
                             {format(pendingMessage.timestamp, "HH:mm")}
                           </span>
-                          <div className='flex items-center'>
+                          <div className="flex items-center">
                             {pendingMessage.status === "sending" && (
-                              <div className='flex items-center gap-1'>
-                                <div className='w-1 h-1 bg-blue-200 rounded-full animate-pulse' />
+                              <div className="flex items-center gap-1">
+                                <div className="w-1 h-1 bg-blue-200 rounded-full animate-pulse" />
                                 <div
-                                  className='w-1 h-1 bg-blue-200 rounded-full animate-pulse'
+                                  className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
                                   style={{ animationDelay: "0.2s" }}
-                                 />
+                                />
                                 <div
-                                  className='w-1 h-1 bg-blue-200 rounded-full animate-pulse'
+                                  className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
                                   style={{ animationDelay: "0.4s" }}
-                                 />
+                                />
                               </div>
                             )}
                             {pendingMessage.status === "sent" && (
-                              <CheckCheck className='h-3 w-3 text-blue-200' />
+                              <CheckCheck className="h-3 w-3 text-blue-200" />
                             )}
                             {pendingMessage.status === "failed" && (
-                              <div className='w-3 h-3 bg-red-400 rounded-full flex items-center justify-center'>
-                                <span className='text-xs text-red-800 font-bold'>
+                              <div className="w-3 h-3 bg-red-400 rounded-full flex items-center justify-center">
+                                <span className="text-xs text-red-800 font-bold">
                                   !
                                 </span>
                               </div>
@@ -760,90 +767,29 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 
                 {/* Message Input */}
                 <div
-                  className='p-6 border-t'
+                  className="p-6 border-t"
                   style={{ borderColor: "#2a2a2a" }}
                 >
-                  <form
-                    onSubmit={handleSendMessage}
-                    className='flex items-end gap-3'
-                  >
-                    <div className='flex-1'>
-                      <textarea
-                        value={messageText}
-                        onChange={(e) => setMessageText(e.target.value)}
-                        placeholder='Type a message...'
-                        className='w-full p-4 rounded-2xl border-0 resize-none focus:outline-none focus:ring-2 transition-all duration-200'
-                        style={{
-                          backgroundColor: "#353A3A",
-                          color: "#C3BCC2",
-                          borderColor: "#606364",
-                          minHeight: "60px",
-                          maxHeight: "120px",
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = "#4A5A70"
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = "#606364"
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault()
-                            handleSendMessage(e as React.FormEvent)
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className='flex items-center gap-2'>
-                      <button
-                        type='button'
-                        onClick={() => setShowFileUpload(true)}
-                        className='p-3 rounded-xl hover:bg-gray-800 transition-colors'
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        <Paperclip className='h-5 w-5' />
-                      </button>
-                      <button
-                        type='submit'
-                        disabled={
-                          (!messageText.trim() && !selectedFile) ||
-                          sendMessageMutation.isPending
-                        }
-                        className='p-3 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
-                        style={{
-                          backgroundColor: "#E0E0E0",
-                          color: "#000000",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!sendMessageMutation.isPending) {
-                            e.currentTarget.style.backgroundColor = "#E0E0E1"
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!sendMessageMutation.isPending) {
-                            e.currentTarget.style.backgroundColor = "#E0E0E0"
-                          }
-                        }}
-                      >
-                        {sendMessageMutation.isPending ? (
-                          <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-black' />
-                        ) : (
-                          <Send className='h-5 w-5' />
-                        )}
-                      </button>
-                    </div>
-                  </form>
+                  <RichMessageInput
+                    value={messageText}
+                    onChange={setMessageText}
+                    onSend={() => handleSendMessage({} as React.FormEvent)}
+                    onFileUpload={() => setShowFileUpload(true)}
+                    placeholder="Type a message..."
+                    disabled={false}
+                    isPending={sendMessageMutation.isPending}
+                  />
                 </div>
               </>
             ) : (
-              <div className='flex-1 flex items-center justify-center'>
-                <div className='text-center'>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
                   <File
-                    className='h-16 w-16 mx-auto mb-4 opacity-50'
+                    className="h-16 w-16 mx-auto mb-4 opacity-50"
                     style={{ color: "#ABA4AA" }}
                   />
                   <h3
-                    className='text-xl font-medium mb-2'
+                    className="text-xl font-medium mb-2"
                     style={{ color: "#C3BCC2" }}
                   >
                     Select a conversation
@@ -859,67 +805,61 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
 
         {/* Create Conversation Modal */}
         {showCreateModal && (
-          <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div
-              className='bg-gray-800 border border-gray-700 rounded-2xl w-96 max-h-[80vh] overflow-y-auto'
+              className="bg-gray-800 border border-gray-700 rounded-2xl w-96 max-h-[80vh] overflow-y-auto"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
-              <div
-                className='p-6 border-b'
-                style={{ borderColor: "#606364" }}
-              >
-                <div className='flex items-center justify-between'>
+              <div className="p-6 border-b" style={{ borderColor: "#606364" }}>
+                <div className="flex items-center justify-between">
                   <h3
-                    className='text-xl font-semibold'
+                    className="text-xl font-semibold"
                     style={{ color: "#C3BCC2" }}
                   >
                     Start New Conversation
                   </h3>
                   <button
                     onClick={() => setShowCreateModal(false)}
-                    className='p-2 rounded-lg hover:bg-gray-700 transition-colors'
+                    className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
                     style={{ color: "#ABA4AA" }}
                   >
-                    <X className='h-5 w-5' />
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
-              <div className='p-6'>
-                <div className='mb-4'>
-                  <div className='relative'>
+              <div className="p-6">
+                <div className="mb-4">
+                  <div className="relative">
                     <Search
-                      className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4'
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
                       style={{ color: "#ABA4AA" }}
                     />
                     <input
-                      type='text'
-                      placeholder='Search peers...'
+                      type="text"
+                      placeholder="Search peers..."
                       value={clientSearchTerm}
-                      onChange={(e) => setClientSearchTerm(e.target.value)}
-                      className='w-full pl-10 pr-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 transition-all duration-200'
+                      onChange={e => setClientSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 transition-all duration-200"
                       style={{
                         backgroundColor: "#2A3133",
                         color: "#C3BCC2",
                         borderColor: "#606364",
                       }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = "#4A5A70"
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = "#4A5A70";
                       }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = "#606364"
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = "#606364";
                       }}
                     />
                   </div>
                 </div>
 
-                <div className='max-h-64 overflow-y-auto'>
+                <div className="max-h-64 overflow-y-auto">
                   {filteredClients.length === 0 ? (
-                    <div className='text-center py-4'>
-                      <p
-                        className='text-sm'
-                        style={{ color: "#ABA4AA" }}
-                      >
+                    <div className="text-center py-4">
+                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
                         {clientSearchTerm
                           ? "No clients found"
                           : "No other clients available"}
@@ -931,55 +871,55 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
                         key={client.id}
                         onClick={() => handleCreateConversation(client.id)}
                         disabled={createConversationMutation.isPending}
-                        className='w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed'
+                        className="w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
                           borderColor: "#606364",
                           color: "#C3BCC2",
                         }}
-                        onMouseEnter={(e) => {
+                        onMouseEnter={e => {
                           if (!createConversationMutation.isPending) {
-                            e.currentTarget.style.backgroundColor = "#3A4040"
+                            e.currentTarget.style.backgroundColor = "#3A4040";
                           }
                         }}
-                        onMouseLeave={(e) => {
+                        onMouseLeave={e => {
                           if (!createConversationMutation.isPending) {
                             e.currentTarget.style.backgroundColor =
-                              "transparent"
+                              "transparent";
                           }
                         }}
                       >
                         {createConversationMutation.isPending && (
-                          <div className='absolute inset-0 bg-black/20 flex items-center justify-center rounded'>
-                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400' />
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
                           </div>
                         )}
-                        <div className='flex items-center gap-3'>
+                        <div className="flex items-center gap-3">
                           <ProfilePictureUploader
                             currentAvatarUrl={client.avatar}
                             userName={client.name || client.email || "User"}
                             onAvatarChange={() => {}}
-                            size='sm'
+                            size="sm"
                             readOnly={true}
-                            className='flex-shrink-0'
+                            className="flex-shrink-0"
                           />
-                          <div className='text-left'>
+                          <div className="text-left">
                             <p
-                              className='font-medium'
+                              className="font-medium"
                               style={{ color: "#C3BCC2" }}
                             >
                               {client.name ||
                                 client.email?.split("@")[0] ||
                                 "Unknown"}
                             </p>
-                            <div className='flex items-center gap-2'>
+                            <div className="flex items-center gap-2">
                               <p
-                                className='text-sm'
+                                className="text-sm"
                                 style={{ color: "#ABA4AA" }}
                               >
                                 {client.email || "No email"}
                               </p>
                               {!client.userId && (
-                                <span className='text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'>
+                                <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
                                   No Account
                                 </span>
                               )}
@@ -1004,5 +944,5 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
         )}
       </div>
     </ClientSidebar>
-  )
+  );
 }

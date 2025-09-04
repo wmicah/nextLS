@@ -1,350 +1,400 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { trpc } from "@/app/_trpc/client"
-import { ArrowLeft, Save, Plus } from "lucide-react"
-import Sidebar from "@/components/Sidebar"
-import WeekPlanner from "@/components/programs/WeekPlanner"
-import { useClipboardStore } from "@/lib/stores/clipboardStore"
-import { useSelectionStore } from "@/lib/stores/selectionStore"
-import { useUIStore } from "@/lib/stores/uiStore"
-// import KbdHints from "@/components/common/KbdHints"
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { trpc } from "@/app/_trpc/client";
+import { ArrowLeft, Save, Plus } from "lucide-react";
+import Sidebar from "@/components/Sidebar";
+import ProgramBuilder from "@/components/ProgramBuilder";
+import { useToast } from "@/lib/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+
+// Types for ProgramBuilder integration
+type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
+
+interface ProgramBuilderItem {
+  id: string;
+  title: string;
+  type?: "exercise" | "drill" | "video";
+  notes?: string;
+  sets?: number;
+  reps?: number;
+  tempo?: string;
+  duration?: string;
+  videoUrl?: string;
+  videoId?: string;
+  videoTitle?: string;
+  videoThumbnail?: string;
+}
+
+interface ProgramBuilderWeek {
+  id: string;
+  name: string;
+  days: Record<DayKey, ProgramBuilderItem[]>;
+  collapsed?: boolean;
+}
 
 export default function ProgramEditorPage() {
-	const params = useParams()
-	const router = useRouter()
-	const programId = params.id as string
+  const params = useParams();
+  const router = useRouter();
+  const programId = params.id as string;
+  const { toast } = useToast();
 
-	// Stores
-	const { clipboard, setClipboard } = useClipboardStore()
-	const { selectedDays, setSelectedDays, clearSelection } = useSelectionStore()
-	const { addToast, setSaving, setLastSaved } = useUIStore()
+  // State
+  const [localIsSaving, setLocalIsSaving] = useState(false);
+  const [localLastSaved, setLocalLastSaved] = useState<Date | null>(null);
+  const [programBuilderWeeks, setProgramBuilderWeeks] = useState<
+    ProgramBuilderWeek[]
+  >([]);
 
-	// State
-	// const [currentWeek, setCurrentWeek] = useState(1)
-	const [localIsSaving, setLocalIsSaving] = useState(false)
-	const [localLastSaved, setLocalLastSaved] = useState<Date | null>(null)
+  // Fetch program data
+  const { data: program, refetch: refetchProgram } =
+    trpc.programs.getById.useQuery(
+      { id: programId },
+      {
+        enabled: !!programId,
+      }
+    );
 
-	// Fetch program data
-	const { data: program, refetch: refetchProgram } =
-		trpc.programs.getById.useQuery(
-			{ id: programId },
-			{
-				enabled: !!programId,
-			}
-		)
+  // Mutations
+  const updateProgramMutation = trpc.programs.update.useMutation({
+    onSuccess: () => {
+      setLocalIsSaving(false);
+      setLocalLastSaved(new Date());
+      toast({
+        title: "Program saved",
+        description: "Your program has been saved successfully.",
+      });
+      refetchProgram();
+    },
+    onError: error => {
+      setLocalIsSaving(false);
+      toast({
+        title: "Error",
+        description: `Error saving program: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
 
-	// Mutations
-	const createWeekMutation = trpc.programs.createWeek.useMutation({
-		onSuccess: () => {
-			refetchProgram()
-			addToast({
-				type: "success",
-				title: "Week created",
-				message: "New week has been created successfully.",
-			})
-		},
-		onError: (error) => {
-			addToast({
-				type: "error",
-				title: "Failed to create week",
-				message: `Error creating week: ${error.message}`,
-			})
-		},
-	})
+  // Convert database program data to ProgramBuilder format
+  useEffect(() => {
+    if (program && program.weeks) {
+      const convertedWeeks: ProgramBuilderWeek[] = program.weeks.map(
+        (week, weekIndex) => ({
+          id: `week-${week.weekNumber}`,
+          name: week.title || `Week ${week.weekNumber}`,
+          collapsed: false,
+          days: {
+            sun:
+              week.days
+                .find(d => d.dayNumber === 7)
+                ?.drills?.map(drill => ({
+                  id: drill.id,
+                  title: drill.title,
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  notes: drill.description || drill.notes || "",
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo || "",
+                  duration: drill.duration || "",
+                  videoUrl: drill.videoUrl || "",
+                  videoId: drill.videoId || "",
+                  videoTitle: drill.videoTitle || "",
+                  videoThumbnail: drill.videoThumbnail || "",
+                })) || [],
+            mon:
+              week.days
+                .find(d => d.dayNumber === 1)
+                ?.drills?.map(drill => ({
+                  id: drill.id,
+                  title: drill.title,
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  notes: drill.description || drill.notes || "",
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo || "",
+                  duration: drill.duration || "",
+                  videoUrl: drill.videoUrl || "",
+                  videoId: drill.videoId || "",
+                  videoTitle: drill.videoTitle || "",
+                  videoThumbnail: drill.videoThumbnail || "",
+                })) || [],
+            tue:
+              week.days
+                .find(d => d.dayNumber === 2)
+                ?.drills?.map(drill => ({
+                  id: drill.id,
+                  title: drill.title,
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  notes: drill.description || drill.notes || "",
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo || "",
+                  duration: drill.duration || "",
+                  videoUrl: drill.videoUrl || "",
+                  videoId: drill.videoId || "",
+                  videoTitle: drill.videoTitle || "",
+                  videoThumbnail: drill.videoThumbnail || "",
+                })) || [],
+            wed:
+              week.days
+                .find(d => d.dayNumber === 3)
+                ?.drills?.map(drill => ({
+                  id: drill.id,
+                  title: drill.title,
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  notes: drill.description || drill.notes || "",
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo || "",
+                  duration: drill.duration || "",
+                  videoUrl: drill.videoUrl || "",
+                  videoId: drill.videoId || "",
+                  videoTitle: drill.videoTitle || "",
+                  videoThumbnail: drill.videoThumbnail || "",
+                })) || [],
+            thu:
+              week.days
+                .find(d => d.dayNumber === 4)
+                ?.drills?.map(drill => ({
+                  id: drill.id,
+                  title: drill.title,
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  notes: drill.description || drill.notes || "",
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo || "",
+                  duration: drill.duration || "",
+                  videoUrl: drill.videoUrl || "",
+                  videoId: drill.videoId || "",
+                  videoTitle: drill.videoTitle || "",
+                  videoThumbnail: drill.videoThumbnail || "",
+                })) || [],
+            fri:
+              week.days
+                .find(d => d.dayNumber === 5)
+                ?.drills?.map(drill => ({
+                  id: drill.id,
+                  title: drill.title,
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  notes: drill.description || drill.notes || "",
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo || "",
+                  duration: drill.duration || "",
+                  videoUrl: drill.videoUrl || "",
+                  videoId: drill.videoId || "",
+                  videoTitle: drill.videoTitle || "",
+                  videoThumbnail: drill.videoThumbnail || "",
+                })) || [],
+            sat:
+              week.days
+                .find(d => d.dayNumber === 6)
+                ?.drills?.map(drill => ({
+                  id: drill.id,
+                  title: drill.title,
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  notes: drill.description || drill.notes || "",
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo || "",
+                  duration: drill.duration || "",
+                  videoUrl: drill.videoUrl || "",
+                  videoId: drill.videoId || "",
+                  videoTitle: drill.videoTitle || "",
+                  videoThumbnail: drill.videoThumbnail || "",
+                })) || [],
+          },
+        })
+      );
 
-	const updateProgramMutation = trpc.programs.update.useMutation({
-		onSuccess: () => {
-			setLocalIsSaving(false)
-			setLocalLastSaved(new Date())
-			setSaving(false)
-			setLastSaved(new Date())
-			addToast({
-				type: "success",
-				title: "Program saved",
-				message: "Program has been saved successfully.",
-			})
-			refetchProgram()
-		},
-		onError: (error) => {
-			setLocalIsSaving(false)
-			setSaving(false)
-			addToast({
-				type: "error",
-				title: "Save failed",
-				message: `Error saving program: ${error.message}`,
-			})
-		},
-	})
+      setProgramBuilderWeeks(convertedWeeks);
+    }
+  }, [program]);
 
-	// Remove auto-save - only save when user explicitly clicks save
+  // Handle ProgramBuilder save
+  const handleProgramBuilderSave = (weeks: ProgramBuilderWeek[]) => {
+    setProgramBuilderWeeks(weeks);
+    console.log("ProgramBuilder weeks updated:", weeks);
+  };
 
-	const handleCopy = () => {
-		if (selectedDays.length === 0) {
-			addToast({
-				type: "error",
-				title: "Nothing selected",
-				message: "Please select at least one day to copy.",
-			})
-			return
-		}
+  // Convert ProgramBuilder data back to database format and save
+  const handleSave = async () => {
+    if (!program || !programBuilderWeeks.length) return;
 
-		// Get the selected days data
-		const selectedDaysData = selectedDays
-			.map((dayId) => {
-				const [weekNum, dayNum] = dayId.split("-").map(Number)
-				const week = program?.weeks.find((w) => w.weekNumber === weekNum)
-				const day = week?.days.find((d) => d.dayNumber === dayNum)
-				return day
-			})
-			.filter(Boolean)
+    setLocalIsSaving(true);
 
-		if (selectedDaysData.length > 0) {
-			setClipboard({
-				days: selectedDaysData.map((day) => ({
-					isRest: day?.isRestDay || false,
-					warmup: day?.warmupTitle
-						? {
-								title: day.warmupTitle,
-								description: day.warmupDescription,
-						  }
-						: undefined,
-					items:
-						day?.drills?.map((drill) => ({
-							id: drill.id,
-							name: drill.title,
-							sets: drill.sets,
-							reps: drill.reps,
-							tempo: drill.tempo,
-							supersetWithId: drill.supersetWithId,
-						})) || [],
-				})),
-			})
+    try {
+      // Convert ProgramBuilder weeks back to database format
+      const convertedWeeks = programBuilderWeeks.map(
+        (builderWeek, weekIndex) => ({
+          weekNumber: weekIndex + 1,
+          title: builderWeek.name,
+          description: "",
+          days: Object.entries(builderWeek.days).map(
+            ([dayKey, items], dayIndex) => {
+              const dayNumber =
+                dayKey === "sun"
+                  ? 7
+                  : dayKey === "mon"
+                  ? 1
+                  : dayKey === "tue"
+                  ? 2
+                  : dayKey === "wed"
+                  ? 3
+                  : dayKey === "thu"
+                  ? 4
+                  : dayKey === "fri"
+                  ? 5
+                  : 6;
 
-			addToast({
-				type: "success",
-				title: "Days copied",
-				message: `${selectedDaysData.length} day(s) copied to clipboard.`,
-			})
-		}
-	}
+              // If the day has no items, make it a rest day
+              if (items.length === 0) {
+                return {
+                  dayNumber,
+                  title: "Rest Day",
+                  description: "Recovery and rest day",
+                  drills: [
+                    {
+                      id: `rest-day-${dayNumber}`,
+                      title: "Rest Day",
+                      description:
+                        "Take this day to recover and rest. No specific exercises required.",
+                      duration: "",
+                      videoUrl: "",
+                      notes: "This is an automatically generated rest day.",
+                      type: "exercise",
+                      sets: undefined,
+                      reps: undefined,
+                      tempo: "",
+                    },
+                  ],
+                };
+              }
 
-	const handlePaste = () => {
-		if (!clipboard || clipboard.days.length === 0) {
-			addToast({
-				type: "error",
-				title: "Nothing to paste",
-				message: "Clipboard is empty.",
-			})
-			return
-		}
+              // Convert items to drills format
+              return {
+                dayNumber,
+                title: `Day ${dayNumber}`,
+                description: "",
+                drills: items.map((item, itemIndex) => ({
+                  id: item.id,
+                  title: item.title,
+                  description: item.notes || "",
+                  duration: item.duration || "",
+                  videoUrl: item.videoUrl || "",
+                  notes: item.notes || "",
+                  type: item.type || "exercise",
+                  sets: item.sets,
+                  reps: item.reps,
+                  tempo: item.tempo || "",
+                  videoId: item.videoId,
+                  videoTitle: item.videoTitle,
+                  videoThumbnail: item.videoThumbnail,
+                })),
+              };
+            }
+          ),
+        })
+      );
 
-		// TODO: Implement paste functionality
-		addToast({
-			type: "info",
-			title: "Paste functionality",
-			message: "Paste functionality will be implemented.",
-		})
-	}
+      // Update the program with the new structure
+      await updateProgramMutation.mutateAsync({
+        id: programId,
+        title: program.title || "",
+        description: program.description || "",
+        weeks: convertedWeeks,
+      });
 
-	const handleSelectAll = () => {
-		if (!program) return
+      toast({
+        title: "Program saved",
+        description: "Your program has been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving program:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save program. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLocalIsSaving(false);
+    }
+  };
 
-		// Only select implemented days from the first week for now
-		const firstWeek = program.weeks[0]
-		if (!firstWeek) return
+  if (!program) {
+    return (
+      <Sidebar>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading program...</p>
+          </div>
+        </div>
+      </Sidebar>
+    );
+  }
 
-		const implementedDays = firstWeek.days
-			.filter(
-				(day) => day && !day.isRestDay && day.drills && day.drills.length > 0
-			)
-			.map((day) => `${firstWeek.weekNumber}-${day.dayNumber}`)
+  return (
+    <Sidebar>
+      <div className="min-h-screen bg-[#2A3133]">
+        {/* Header */}
+        <div className="bg-[#353A3A] border-b border-gray-600 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => router.back()}
+                className="text-gray-400 hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold text-white">
+                  {program.title || "Untitled Program"}
+                </h1>
+                {program.description && (
+                  <p className="text-gray-400 mt-1">{program.description}</p>
+                )}
+              </div>
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={localIsSaving}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {localIsSaving ? "Saving..." : "Save Program"}
+            </Button>
+          </div>
+          {localLastSaved && (
+            <p className="text-sm text-gray-500 mt-2">
+              Last saved: {localLastSaved.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
 
-		setSelectedDays(implementedDays)
-		addToast({
-			type: "success",
-			title: "Implemented days selected",
-			message: `${implementedDays.length} implemented day(s) selected.`,
-		})
-	}
-
-	const handleDeleteSelected = () => {
-		if (selectedDays.length === 0) return
-
-		if (
-			confirm(
-				`Are you sure you want to delete ${selectedDays.length} selected day(s)?`
-			)
-		) {
-			// TODO: Implement delete functionality
-			addToast({
-				type: "success",
-				title: "Days deleted",
-				message: `${selectedDays.length} day(s) have been deleted.`,
-			})
-			clearSelection()
-		}
-	}
-
-	const handleSave = () => {
-		if (!program) return
-
-		setLocalIsSaving(true)
-		updateProgramMutation.mutate({
-			id: programId,
-			title: program.title || "",
-			description: program.description || "",
-		})
-	}
-
-	// Keyboard shortcuts
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
-			const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey
-
-			if (cmdOrCtrl) {
-				switch (e.key.toLowerCase()) {
-					case "c":
-						e.preventDefault()
-						handleCopy()
-						break
-					case "v":
-						e.preventDefault()
-						handlePaste()
-						break
-					case "a":
-						e.preventDefault()
-						handleSelectAll()
-						break
-				}
-			}
-
-			if (e.key === "Delete" || e.key === "Backspace") {
-				if (selectedDays.length > 0) {
-					e.preventDefault()
-					handleDeleteSelected()
-				}
-			}
-		}
-
-		window.addEventListener("keydown", handleKeyDown)
-		return () => window.removeEventListener("keydown", handleKeyDown)
-	}, [
-		selectedDays,
-		handleCopy,
-		handleDeleteSelected,
-		handlePaste,
-		handleSelectAll,
-	])
-
-	if (!program) {
-		return (
-			<Sidebar>
-				<div
-					className="min-h-screen p-6"
-					style={{ backgroundColor: "#2A3133" }}
-				>
-					<div className="max-w-7xl mx-auto">
-						<div className="text-center py-16">
-							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
-							<p className="text-gray-400">Loading program...</p>
-						</div>
-					</div>
-				</div>
-			</Sidebar>
-		)
-	}
-
-	return (
-		<Sidebar>
-			<div className="min-h-screen p-6" style={{ backgroundColor: "#2A3133" }}>
-				<div className="max-w-7xl mx-auto">
-					{/* Simple Header */}
-					<div className="flex items-center justify-between mb-6">
-						<div className="flex items-center gap-4">
-							<button
-								onClick={() => router.push("/programs")}
-								className="p-2 rounded-lg hover:bg-gray-700/50 transition-colors"
-							>
-								<ArrowLeft className="h-5 w-5 text-white" />
-							</button>
-							<div>
-								<h1 className="text-2xl font-bold text-white">
-									{program.title}
-								</h1>
-								{program.description && (
-									<p className="text-gray-400 text-sm">{program.description}</p>
-								)}
-							</div>
-						</div>
-						<button
-							onClick={handleSave}
-							disabled={localIsSaving}
-							className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700 text-white"
-						>
-							<Save className="h-4 w-4" />
-							{localIsSaving ? "Saving..." : "Save"}
-						</button>
-					</div>
-
-					{/* Vertical Weeks Display */}
-					<div className="space-y-8">
-						{program.weeks.length > 0 ? (
-							program.weeks.map((week) => (
-								<div key={week.weekNumber} className="space-y-4">
-									<WeekPlanner
-										program={program}
-										currentWeek={week.weekNumber}
-										selectedDays={selectedDays}
-										setSelectedDays={setSelectedDays}
-									/>
-								</div>
-							))
-						) : (
-							<div className="text-center py-16">
-								<div className="text-gray-400 mb-4">No weeks created yet</div>
-							</div>
-						)}
-
-						{/* Add Week Button - Always visible at bottom */}
-						<div className="text-center pt-8 border-t border-gray-700">
-							<button
-								onClick={() => {
-									const nextWeekNumber =
-										program.weeks.length > 0
-											? Math.max(
-													...program.weeks.map(
-														(w: { weekNumber: number }) => w.weekNumber
-													)
-											  ) + 1
-											: 1
-									createWeekMutation.mutate({
-										programId: program.id,
-										weekNumber: nextWeekNumber,
-										title: `Week ${nextWeekNumber}`,
-										description: "",
-									})
-								}}
-								disabled={createWeekMutation.isPending}
-								className="flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 mx-auto bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-							>
-								{createWeekMutation.isPending ? (
-									<div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-								) : (
-									<Plus className="h-5 w-5" />
-								)}
-								{createWeekMutation.isPending
-									? "Creating..."
-									: program.weeks.length > 0
-									? "Add Another Week"
-									: "Create First Week"}
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</Sidebar>
-	)
+        {/* Program Builder */}
+        <ProgramBuilder
+          onSave={handleProgramBuilderSave}
+          initialWeeks={programBuilderWeeks}
+          programDetails={{
+            title: program.title || "Untitled Program",
+            description: program.description || "",
+            level: program.level || "Drive",
+            duration: program.weeks?.length || 1,
+          }}
+        />
+      </div>
+    </Sidebar>
+  );
 }
