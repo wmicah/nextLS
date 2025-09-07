@@ -294,11 +294,65 @@ export const appRouter = router({
       return count;
     }),
 
+    // Get combined inbox counts (messages + notifications)
+    getInboxCounts: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Ensure UserInbox row exists for this user
+      await db.$executeRaw`
+        SELECT public.ensure_inbox_row()
+      `;
+
+      // Try to get from UserInbox aggregate table first
+      const inbox = await db.userInbox.findUnique({
+        where: { userId: user.id },
+        select: {
+          totalUnread: true,
+          totalNotifications: true,
+        },
+      });
+
+      if (inbox) {
+        return {
+          totalUnread: inbox.totalUnread,
+          totalNotifications: inbox.totalNotifications,
+        };
+      }
+
+      // Fallback to counting individual records if aggregate doesn't exist
+      const [messageCount, notificationCount] = await Promise.all([
+        db.message.count({
+          where: {
+            isRead: false,
+            senderId: { not: user.id },
+            conversation: {
+              OR: [{ coachId: user.id }, { clientId: user.id }],
+            },
+          },
+        }),
+        db.notification.count({
+          where: {
+            userId: user.id,
+            isRead: false,
+          },
+        }),
+      ]);
+
+      return {
+        totalUnread: messageCount,
+        totalNotifications: notificationCount,
+      };
+    }),
+
     updateWorkingHours: publicProcedure
       .input(
         z.object({
           startTime: z.string(),
           endTime: z.string(),
+          workingDays: z.array(z.string()).optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -336,6 +390,15 @@ export const appRouter = router({
           data: {
             workingHoursStart: input.startTime,
             workingHoursEnd: input.endTime,
+            workingDays: input.workingDays || [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday",
+            ],
           },
         });
 
@@ -373,6 +436,15 @@ export const appRouter = router({
             ? {
                 startTime: dbUser.workingHoursStart,
                 endTime: dbUser.workingHoursEnd,
+                workingDays: dbUser.workingDays || [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday",
+                ],
               }
             : null,
       };
@@ -2207,169 +2279,99 @@ export const appRouter = router({
 
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-      const userRole = await db.user.findUnique({
-        where: { id: user.id },
-        select: { role: true },
+      // Simplified query - get all conversations for this user in one go
+      const conversations = await db.conversation.findMany({
+        where: {
+          OR: [
+            { coachId: user.id },
+            { clientId: user.id },
+            { client1Id: user.id },
+            { client2Id: user.id },
+          ],
+        },
+        include: {
+          // Only include essential fields
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          client: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          client1: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          client2: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          // Get only the latest message
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              content: true,
+              createdAt: true,
+              senderId: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 20, // Limit to 20 conversations
       });
 
-      if (!userRole?.role) throw new TRPCError({ code: "UNAUTHORIZED" });
-
-      // Get conversations based on user role
-      let conversations;
-
-      if (userRole.role === "COACH") {
-        // Coaches see all conversations with their clients
-        conversations = await db.conversation.findMany({
-          where: {
-            type: "COACH_CLIENT",
-            coachId: user.id,
-          },
-          include: {
-            coach: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                settings: { select: { avatarUrl: true } },
-              },
-            },
-            client: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                settings: { select: { avatarUrl: true } },
-              },
-            },
-            messages: {
-              orderBy: { createdAt: "desc" },
-              take: 1,
-              include: {
-                sender: { select: { id: true, name: true } },
-              },
-            },
-            _count: {
-              select: {
-                messages: {
-                  where: {
-                    isRead: false,
-                    senderId: { not: user.id },
-                  },
-                },
-              },
-            },
-          },
-          orderBy: { updatedAt: "desc" },
-          take: 50, // Limit for coaches
-        });
-      } else {
-        // Clients see conversations with their coach AND other clients with the same coach
-        const client = await db.client.findFirst({
-          where: { userId: user.id },
-          select: { coachId: true },
-        });
-
-        if (!client)
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Client profile not found",
-          });
-
-        // Get coach-client conversations
-        const coachClientConversations = await db.conversation.findMany({
-          where: {
-            type: "COACH_CLIENT",
-            clientId: user.id,
-          },
-          include: {
-            coach: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                settings: { select: { avatarUrl: true } },
-              },
-            },
-            client: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                settings: { select: { avatarUrl: true } },
-              },
-            },
-            messages: {
-              orderBy: { createdAt: "desc" },
-              take: 1,
-              include: {
-                sender: { select: { id: true, name: true } },
-              },
-            },
-            _count: {
-              select: {
-                messages: {
-                  where: {
-                    isRead: false,
-                    senderId: { not: user.id },
-                  },
-                },
-              },
-            },
-          },
-          orderBy: { updatedAt: "desc" },
-        });
-
-        // Get client-client conversations where this user is either client1 or client2
-        const clientClientConversations = await db.conversation.findMany({
-          where: {
-            type: "CLIENT_CLIENT",
-            OR: [{ client1Id: user.id }, { client2Id: user.id }],
-          },
-          include: {
-            client1: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                settings: { select: { avatarUrl: true } },
-              },
-            },
-            client2: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                settings: { select: { avatarUrl: true } },
-              },
-            },
-            messages: {
-              orderBy: { createdAt: "desc" },
-              take: 1,
-              include: {
-                sender: { select: { id: true, name: true } },
-              },
-            },
-            _count: {
-              select: {
-                messages: {
-                  where: {
-                    isRead: false,
-                    senderId: { not: user.id },
-                  },
-                },
-              },
-            },
-          },
-          orderBy: { updatedAt: "desc" },
-        });
-
-        conversations = [
-          ...coachClientConversations,
-          ...clientClientConversations,
-        ];
-      }
-
       return conversations;
+    }),
+
+    // Fast endpoint for getting unread counts per conversation
+    getConversationUnreadCounts: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Get unread counts for all conversations in one query
+      const unreadCounts = await db.message.groupBy({
+        by: ["conversationId"],
+        where: {
+          isRead: false,
+          senderId: { not: user.id },
+          conversation: {
+            OR: [
+              { coachId: user.id },
+              { clientId: user.id },
+              { client1Id: user.id },
+              { client2Id: user.id },
+            ],
+          },
+        },
+        _count: {
+          id: true,
+        },
+      });
+
+      // Convert to a plain object for serialization
+      const countsObj: Record<string, number> = {};
+      unreadCounts.forEach(item => {
+        countsObj[item.conversationId] = item._count.id;
+      });
+
+      return countsObj;
     }),
 
     getMessages: publicProcedure
@@ -2476,6 +2478,9 @@ export const appRouter = router({
           where: { id: input.conversationId },
           data: { updatedAt: new Date() },
         });
+
+        // Simple real-time update - just return the message
+        // Let the client handle refetching if needed
 
         return message;
       }),
@@ -2799,7 +2804,12 @@ export const appRouter = router({
 
         if (!conversation) throw new TRPCError({ code: "FORBIDDEN" });
 
-        // Mark all unread messages as read
+        // Use the optimized RPC function that handles both message updates and aggregate decrement
+        await db.$executeRaw`
+          SELECT public.mark_conversation_read(${input.conversationId})
+        `;
+
+        // Also mark individual messages as read for consistency
         await db.message.updateMany({
           where: {
             conversationId: input.conversationId,
@@ -2808,6 +2818,70 @@ export const appRouter = router({
           },
           data: { isRead: true },
         });
+
+        // Broadcast real-time update to mark messages as read
+        try {
+          const { broadcastToUser } = await import("@/app/api/realtime/route");
+
+          // Find the conversation participants
+          const conversation = await db.conversation.findFirst({
+            where: { id: input.conversationId },
+            select: {
+              coachId: true,
+              clientId: true,
+              client1Id: true,
+              client2Id: true,
+            },
+          });
+
+          if (conversation) {
+            // Get updated unread count for the user who marked messages as read
+            const updatedUnreadCount = await db.message.count({
+              where: {
+                isRead: false,
+                senderId: { not: user.id },
+                conversation: {
+                  OR: [
+                    { coachId: user.id },
+                    { clientId: user.id },
+                    { client1Id: user.id },
+                    { client2Id: user.id },
+                  ],
+                },
+              },
+            });
+
+            // Broadcast updated unread count to the user who marked messages as read
+            broadcastToUser(user.id, {
+              type: "notification",
+              data: { unreadCount: updatedUnreadCount },
+            });
+
+            // Broadcast to all participants that messages were marked as read
+            const participants = [
+              conversation.coachId,
+              conversation.clientId,
+              conversation.client1Id,
+              conversation.client2Id,
+            ].filter(Boolean);
+
+            participants.forEach(participantId => {
+              if (participantId && participantId !== user.id) {
+                console.log(`📤 Broadcasting read status to: ${participantId}`);
+                broadcastToUser(participantId, {
+                  type: "messages_read",
+                  data: {
+                    conversationId: input.conversationId,
+                    readBy: user.id,
+                    timestamp: new Date().toISOString(),
+                  },
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error("❌ Failed to broadcast read status:", error);
+        }
 
         return { success: true };
       }),
@@ -2849,11 +2923,17 @@ export const appRouter = router({
           isRead: false,
           senderId: { not: user.id },
           conversation: {
-            OR: [{ coachId: user.id }, { clientId: user.id }],
+            OR: [
+              { coachId: user.id },
+              { clientId: user.id },
+              { client1Id: user.id },
+              { client2Id: user.id },
+            ],
           },
         },
       });
 
+      console.log(`📊 getUnreadCount for user ${user.id}: ${unreadCount}`);
       return unreadCount;
     }),
   }),
@@ -3472,6 +3552,17 @@ export const appRouter = router({
           });
         }
 
+        // Check if the requested date is on a working day
+        if (coach.workingDays) {
+          const dayName = format(lessonDate, "EEEE");
+          if (!coach.workingDays.includes(dayName)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `You are not available on ${dayName}s`,
+            });
+          }
+        }
+
         // Create the lesson (using Event model) - automatically CONFIRMED when coach schedules
         const lesson = await db.event.create({
           data: {
@@ -3986,18 +4077,40 @@ export const appRouter = router({
               completedAt: null,
             },
           },
+          // Include weeks with days and drills for detailed structure
+          weeks: {
+            include: {
+              days: {
+                include: {
+                  drills: true,
+                },
+                orderBy: {
+                  dayNumber: "asc",
+                },
+              },
+            },
+            orderBy: {
+              weekNumber: "asc",
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
         },
       });
 
-      // Transform to include active client count
+      // Transform to include active client count and all necessary fields
       return programs.map(program => ({
         id: program.id,
         title: program.title,
         description: program.description,
+        level: program.level,
+        duration: program.duration,
+        status: program.status,
         activeClientCount: program.assignments.length,
+        totalWeeks: program.weeks.length,
+        weeks: program.weeks,
+        assignments: program.assignments,
         createdAt: program.createdAt,
         updatedAt: program.updatedAt,
       }));
@@ -4080,10 +4193,8 @@ export const appRouter = router({
                 description: week.description || "",
                 days: {
                   create: week.days.map(day => {
-                    // Check if this is a rest day (only has one drill with "Rest Day" title)
-                    const isRestDay =
-                      day.drills.length === 1 &&
-                      day.drills[0].title === "Rest Day";
+                    // Check if this is a rest day (has no drills)
+                    const isRestDay = day.drills.length === 0;
 
                     return {
                       dayNumber: day.dayNumber,
@@ -4098,9 +4209,9 @@ export const appRouter = router({
                           duration: drill.duration || "",
                           videoUrl: drill.videoUrl || "",
                           notes: drill.notes || "",
-                          sets: null, // Optional field, set to null if not provided
-                          reps: null, // Optional field, set to null if not provided
-                          tempo: null, // Optional field, set to null if not provided
+                          sets: drill.sets || null, // Optional field, set to null if not provided
+                          reps: drill.reps || null, // Optional field, set to null if not provided
+                          tempo: drill.tempo || null, // Optional field, set to null if not provided
                         })),
                       },
                     };
@@ -4218,6 +4329,7 @@ export const appRouter = router({
                         videoId: z.string().optional(),
                         videoTitle: z.string().optional(),
                         videoThumbnail: z.string().optional(),
+                        routineId: z.string().optional(),
                       })
                     ),
                   })
@@ -4228,6 +4340,8 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
+        console.log("=== PROGRAMS.UPDATE MUTATION CALLED ===");
+        console.log("Input:", input);
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
@@ -4281,21 +4395,30 @@ export const appRouter = router({
 
               // Create days for this week
               for (const day of week.days) {
+                // Check if this is a rest day (has no drills)
+                const isRestDay = day.drills.length === 0;
+
                 const newDay = await tx.programDay.create({
                   data: {
                     weekId: newWeek.id,
                     dayNumber: day.dayNumber,
                     title: day.title,
                     description: day.description || "",
+                    isRestDay: isRestDay,
                   },
                 });
 
                 // Create drills for this day
-                for (const drill of day.drills) {
+                for (
+                  let drillIndex = 0;
+                  drillIndex < day.drills.length;
+                  drillIndex++
+                ) {
+                  const drill = day.drills[drillIndex];
                   await tx.programDrill.create({
                     data: {
                       dayId: newDay.id,
-                      order: 1, // Default order
+                      order: drillIndex + 1, // Use proper order
                       title: drill.title,
                       description: drill.description || "",
                       duration: drill.duration || "",
@@ -4304,6 +4427,11 @@ export const appRouter = router({
                       sets: drill.sets,
                       reps: drill.reps,
                       tempo: drill.tempo || "",
+                      type: drill.type || "exercise",
+                      videoId: drill.videoId,
+                      videoTitle: drill.videoTitle,
+                      videoThumbnail: drill.videoThumbnail,
+                      routineId: drill.routineId,
                     },
                   });
                 }
@@ -4314,6 +4442,8 @@ export const appRouter = router({
           return program;
         });
 
+        console.log("=== PROGRAMS.UPDATE COMPLETED ===");
+        console.log("Returning result:", result);
         return result;
       }),
 
@@ -5505,6 +5635,264 @@ export const appRouter = router({
         // Delete the week (this will cascade delete all days and exercises)
         await db.programWeek.delete({
           where: { id: week.id },
+        });
+
+        return { success: true };
+      }),
+  }),
+
+  routines: router({
+    // Get all routines for the coach
+    list: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view routines",
+        });
+      }
+
+      // Get all routines created by this coach
+      const routines = await db.routine.findMany({
+        where: { coachId: user.id },
+        include: {
+          exercises: {
+            orderBy: { order: "asc" },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return routines;
+    }),
+
+    // Get a specific routine by ID
+    get: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const routine = await db.routine.findFirst({
+          where: {
+            id: input.id,
+            coachId: user.id,
+          },
+          include: {
+            exercises: {
+              orderBy: { order: "asc" },
+            },
+          },
+        });
+
+        if (!routine) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Routine not found",
+          });
+        }
+
+        return routine;
+      }),
+
+    // Create a new routine
+    create: publicProcedure
+      .input(
+        z.object({
+          name: z.string().min(1, "Routine name is required"),
+          description: z.string().optional(),
+          exercises: z.array(
+            z.object({
+              title: z.string().min(1, "Exercise title is required"),
+              description: z.string().optional(),
+              type: z.string().optional(),
+              notes: z.string().optional(),
+              sets: z.number().optional(),
+              reps: z.number().optional(),
+              tempo: z.string().optional(),
+              duration: z.string().optional(),
+              videoId: z.string().optional(),
+              videoTitle: z.string().optional(),
+              videoThumbnail: z.string().optional(),
+              videoUrl: z.string().optional(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can create routines",
+          });
+        }
+
+        // Create the routine with exercises
+        const routine = await db.routine.create({
+          data: {
+            name: input.name,
+            description: input.description,
+            coachId: user.id,
+            exercises: {
+              create: input.exercises.map((exercise, index) => ({
+                order: index + 1,
+                title: exercise.title,
+                description: exercise.description,
+                type: exercise.type,
+                notes: exercise.notes,
+                sets: exercise.sets,
+                reps: exercise.reps,
+                tempo: exercise.tempo,
+                duration: exercise.duration,
+                videoId: exercise.videoId,
+                videoTitle: exercise.videoTitle,
+                videoThumbnail: exercise.videoThumbnail,
+                videoUrl: exercise.videoUrl,
+              })),
+            },
+          },
+          include: {
+            exercises: {
+              orderBy: { order: "asc" },
+            },
+          },
+        });
+
+        return routine;
+      }),
+
+    // Update a routine
+    update: publicProcedure
+      .input(
+        z.object({
+          id: z.string(),
+          name: z.string().min(1, "Routine name is required"),
+          description: z.string().optional(),
+          exercises: z.array(
+            z.object({
+              id: z.string().optional(), // For existing exercises
+              title: z.string().min(1, "Exercise title is required"),
+              description: z.string().optional(),
+              type: z.string().optional(),
+              notes: z.string().optional(),
+              sets: z.number().optional(),
+              reps: z.number().optional(),
+              tempo: z.string().optional(),
+              duration: z.string().optional(),
+              videoId: z.string().optional(),
+              videoTitle: z.string().optional(),
+              videoThumbnail: z.string().optional(),
+              videoUrl: z.string().optional(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify the routine exists and belongs to the coach
+        const existingRoutine = await db.routine.findFirst({
+          where: {
+            id: input.id,
+            coachId: user.id,
+          },
+        });
+
+        if (!existingRoutine) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Routine not found",
+          });
+        }
+
+        // Update the routine and its exercises
+        const routine = await db.routine.update({
+          where: { id: input.id },
+          data: {
+            name: input.name,
+            description: input.description,
+            exercises: {
+              deleteMany: {}, // Delete all existing exercises
+              create: input.exercises.map((exercise, index) => ({
+                order: index + 1,
+                title: exercise.title,
+                description: exercise.description,
+                type: exercise.type,
+                notes: exercise.notes,
+                sets: exercise.sets,
+                reps: exercise.reps,
+                tempo: exercise.tempo,
+                duration: exercise.duration,
+                videoId: exercise.videoId,
+                videoTitle: exercise.videoTitle,
+                videoThumbnail: exercise.videoThumbnail,
+                videoUrl: exercise.videoUrl,
+              })),
+            },
+          },
+          include: {
+            exercises: {
+              orderBy: { order: "asc" },
+            },
+          },
+        });
+
+        return routine;
+      }),
+
+    // Delete a routine
+    delete: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify the routine exists and belongs to the coach
+        const existingRoutine = await db.routine.findFirst({
+          where: {
+            id: input.id,
+            coachId: user.id,
+          },
+        });
+
+        if (!existingRoutine) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Routine not found",
+          });
+        }
+
+        // Delete the routine (this will cascade delete all exercises)
+        await db.routine.delete({
+          where: { id: input.id },
         });
 
         return { success: true };
@@ -7397,6 +7785,95 @@ export const appRouter = router({
       return programs;
     }),
 
+    getAssignedProgram: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get client's current assigned program
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+        include: {
+          coach: { select: { name: true } },
+          programAssignments: {
+            where: { completedAt: null }, // Only active assignments
+            include: {
+              program: {
+                include: {
+                  weeks: {
+                    include: {
+                      days: {
+                        include: {
+                          drills: {
+                            include: {
+                              completions: {
+                                where: { clientId: user.id },
+                              },
+                            },
+                            orderBy: { order: "asc" },
+                          },
+                        },
+                        orderBy: { dayNumber: "asc" },
+                      },
+                    },
+                    orderBy: { weekNumber: "asc" },
+                  },
+                },
+              },
+            },
+            orderBy: { assignedAt: "desc" },
+            take: 1, // Get the most recent active assignment
+          },
+        },
+      });
+
+      if (!client || client.programAssignments.length === 0) {
+        return null;
+      }
+
+      const assignment = client.programAssignments[0];
+      const program = assignment.program;
+      const startDate = new Date(assignment.assignedAt);
+      const currentDate = new Date();
+      const weeksDiff = Math.floor(
+        (currentDate.getTime() - startDate.getTime()) /
+          (7 * 24 * 60 * 60 * 1000)
+      );
+      const currentWeek = Math.min(weeksDiff + 1, program.duration);
+      const overallProgress = Math.min(
+        (currentWeek / program.duration) * 100,
+        100
+      );
+
+      return {
+        id: program.id,
+        title: program.title,
+        description: program.description,
+        startDate: assignment.assignedAt.toISOString(),
+        endDate: new Date(
+          startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        currentWeek,
+        totalWeeks: program.duration,
+        overallProgress,
+        coachName: client.coach.name,
+        assignmentId: assignment.id,
+        weeks: program.weeks,
+      };
+    }),
+
     getPitchingData: publicProcedure.query(async () => {
       const { getUser } = getKindeServerSession();
       const user = await getUser();
@@ -7578,134 +8055,6 @@ export const appRouter = router({
       return { notes: client.notes || "", updatedAt: client.updatedAt };
     }),
 
-    // Keep the old query for backward compatibility
-    getAssignedProgram: publicProcedure.query(async () => {
-      const { getUser } = getKindeServerSession();
-      const user = await getUser();
-      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
-
-      // Verify user is a CLIENT
-      const dbUser = await db.user.findFirst({
-        where: { id: user.id, role: "CLIENT" },
-      });
-
-      if (!dbUser) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only clients can access this endpoint",
-        });
-      }
-
-      // Get client's assigned programs
-      const client = await db.client.findFirst({
-        where: { userId: user.id },
-        include: {
-          coach: { select: { name: true } },
-          programAssignments: {
-            include: {
-              program: true,
-            },
-            orderBy: { assignedAt: "desc" },
-          },
-        },
-      });
-
-      if (!client || client.programAssignments.length === 0) {
-        return null;
-      }
-
-      // If multiple programs are assigned, return information about all of them
-      if (client.programAssignments.length > 1) {
-        const programs = client.programAssignments.map(assignment => {
-          const program = assignment.program;
-          const startDate =
-            assignment.startDate || new Date(assignment.assignedAt);
-          const currentDate = new Date();
-          const weeksDiff = Math.floor(
-            (currentDate.getTime() - startDate.getTime()) /
-              (7 * 24 * 60 * 60 * 1000)
-          );
-          const currentWeek = Math.min(weeksDiff + 1, program.duration);
-          const overallProgress = Math.min(
-            (currentWeek / program.duration) * 100,
-            100
-          );
-
-          return {
-            id: program.id,
-            title: program.title,
-            description: program.description,
-            startDate: startDate.toISOString(),
-            endDate: new Date(
-              startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            currentWeek,
-            totalWeeks: program.duration,
-            overallProgress,
-            coachName: client.coach.name,
-            assignmentId: assignment.id,
-            assignedAt: assignment.assignedAt.toISOString(),
-          };
-        });
-
-        // Return the most recent program as primary, but include all programs
-        return {
-          ...programs[0],
-          allPrograms: programs,
-          totalPrograms: programs.length,
-        };
-      }
-
-      // Single program assignment (original behavior)
-      const assignment = client.programAssignments[0];
-      const program = assignment.program;
-
-      // Calculate current week and progress
-      const startDate = assignment.startDate || new Date(assignment.assignedAt);
-      const currentDate = new Date();
-      const weeksDiff = Math.floor(
-        (currentDate.getTime() - startDate.getTime()) /
-          (7 * 24 * 60 * 60 * 1000)
-      );
-      const currentWeek = Math.min(weeksDiff + 1, program.duration);
-      const overallProgress = Math.min(
-        (currentWeek / program.duration) * 100,
-        100
-      );
-
-      return {
-        id: program.id,
-        title: program.title,
-        description: program.description,
-        startDate: startDate.toISOString(),
-        endDate: new Date(
-          startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
-        ).toISOString(),
-        currentWeek,
-        totalWeeks: program.duration,
-        overallProgress,
-        coachName: client.coach.name,
-        allPrograms: [
-          {
-            id: program.id,
-            title: program.title,
-            description: program.description,
-            startDate: startDate.toISOString(),
-            endDate: new Date(
-              startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            currentWeek,
-            totalWeeks: program.duration,
-            overallProgress,
-            coachName: client.coach.name,
-            assignmentId: assignment.id,
-            assignedAt: assignment.assignedAt.toISOString(),
-          },
-        ],
-        totalPrograms: 1,
-      };
-    }),
-
     getProgramCalendar: publicProcedure
       .input(
         z.object({
@@ -7772,14 +8121,14 @@ export const appRouter = router({
         const calendarData: Record<string, any> = {};
 
         // Process all assigned programs
-        client.programAssignments.forEach(assignment => {
+        for (const assignment of client.programAssignments) {
           const program = assignment.program;
           const startDate =
             assignment.startDate || new Date(assignment.assignedAt);
 
           // Get all days in the program
-          program.weeks.forEach((week: any) => {
-            week.days.forEach((day: any) => {
+          for (const week of program.weeks) {
+            for (const day of week.days) {
               // Calculate the day date by adding the appropriate number of days
               const dayDate = new Date(startDate);
               const daysToAdd = (week.weekNumber - 1) * 7 + (day.dayNumber - 1);
@@ -7802,16 +8151,71 @@ export const appRouter = router({
                 dayDate.getFullYear() === input.year &&
                 dayDate.getMonth() + 1 === input.month
               ) {
-                const drills = day.drills.map((drill: any) => ({
-                  id: drill.id,
-                  title: drill.title,
-                  sets: drill.sets,
-                  reps: drill.reps,
-                  tempo: drill.tempo,
-                  tags: drill.tags ? JSON.parse(drill.tags) : [],
-                  videoUrl: drill.videoUrl,
-                  completed: drill.completions && drill.completions.length > 0,
-                }));
+                // Process drills and expand routines
+                const expandedDrills = [];
+                for (const drill of day.drills) {
+                  if (drill.routineId) {
+                    // This is a routine drill - fetch and expand the routine
+                    const routine = await db.routine.findUnique({
+                      where: { id: drill.routineId },
+                      include: {
+                        exercises: {
+                          orderBy: { order: "asc" },
+                        },
+                      },
+                    });
+
+                    if (routine) {
+                      // Add each exercise from the routine as a separate drill
+                      for (const exercise of routine.exercises) {
+                        expandedDrills.push({
+                          id: `${drill.id}-routine-${exercise.id}`, // Unique ID for tracking
+                          title: exercise.title,
+                          sets: exercise.sets,
+                          reps: exercise.reps,
+                          tempo: exercise.tempo,
+                          tags: [], // Routine exercises don't have tags
+                          videoUrl: exercise.videoUrl,
+                          completed:
+                            drill.completions && drill.completions.length > 0, // Use routine completion status
+                          description: exercise.description,
+                          notes: exercise.notes,
+                          duration: exercise.duration,
+                          type: exercise.type,
+                          videoId: exercise.videoId,
+                          videoTitle: exercise.videoTitle,
+                          videoThumbnail: exercise.videoThumbnail,
+                          routineId: drill.routineId, // Keep reference to original routine
+                          originalDrillId: drill.id, // Keep reference to original drill
+                        });
+                      }
+                    }
+                  } else {
+                    // Regular drill - add as-is
+                    expandedDrills.push({
+                      id: drill.id,
+                      title: drill.title,
+                      sets: drill.sets,
+                      reps: drill.reps,
+                      tempo: drill.tempo,
+                      tags: (drill as any).tags
+                        ? JSON.parse((drill as any).tags)
+                        : [],
+                      videoUrl: drill.videoUrl,
+                      completed:
+                        drill.completions && drill.completions.length > 0,
+                      description: drill.description,
+                      notes: drill.notes,
+                      duration: drill.duration,
+                      type: drill.type,
+                      videoId: drill.videoId,
+                      videoTitle: drill.videoTitle,
+                      videoThumbnail: drill.videoThumbnail,
+                    });
+                  }
+                }
+
+                const drills = expandedDrills;
 
                 const completedDrills = drills.filter(
                   (drill: any) => drill.completed
@@ -7850,9 +8254,9 @@ export const appRouter = router({
                   };
                 }
               }
-            });
-          });
-        });
+            }
+          }
+        }
 
         // Don't fill empty days with rest days - leave them blank
 
@@ -7938,16 +8342,16 @@ export const appRouter = router({
         });
 
         // Process each program assignment
-        clientWithPrograms.programAssignments.forEach((assignment: any) => {
+        for (const assignment of clientWithPrograms.programAssignments) {
           const programStartDate = new Date(
             assignment.startDate || assignment.assignedAt
           );
           const program = assignment.program;
 
           // Process each week of the program
-          program.weeks.forEach((week: any) => {
+          for (const week of program.weeks) {
             // Process each day of the week
-            week.days.forEach((day: any) => {
+            for (const day of week.days) {
               // Calculate the actual date for this program day
               const dayDate = new Date(programStartDate);
               dayDate.setDate(
@@ -7960,16 +8364,58 @@ export const appRouter = router({
               if (dayDate >= startDateTime && dayDate <= endDateTime) {
                 const dateString = dayDate.toISOString().split("T")[0];
 
-                // Get drills for this day and check completion status
-                const drills = day.drills.map((drill: any) => {
+                // Process drills and expand routines
+                const expandedDrills = [];
+                for (const drill of day.drills) {
                   const completion = completions.find(
                     (c: any) => c.drillId === drill.id
                   );
-                  return {
-                    ...drill,
-                    completed: !!completion,
-                  };
-                });
+
+                  if (drill.routineId) {
+                    // This is a routine drill - fetch and expand the routine
+                    const routine = await db.routine.findUnique({
+                      where: { id: drill.routineId },
+                      include: {
+                        exercises: {
+                          orderBy: { order: "asc" },
+                        },
+                      },
+                    });
+
+                    if (routine) {
+                      // Add each exercise from the routine as a separate drill
+                      for (const exercise of routine.exercises) {
+                        expandedDrills.push({
+                          id: `${drill.id}-routine-${exercise.id}`, // Unique ID for tracking
+                          title: exercise.title,
+                          sets: exercise.sets,
+                          reps: exercise.reps,
+                          tempo: exercise.tempo,
+                          tags: [], // Routine exercises don't have tags
+                          videoUrl: exercise.videoUrl,
+                          completed: !!completion, // Use routine completion status
+                          description: exercise.description,
+                          notes: exercise.notes,
+                          duration: exercise.duration,
+                          type: exercise.type,
+                          videoId: exercise.videoId,
+                          videoTitle: exercise.videoTitle,
+                          videoThumbnail: exercise.videoThumbnail,
+                          routineId: drill.routineId, // Keep reference to original routine
+                          originalDrillId: drill.id, // Keep reference to original drill
+                        });
+                      }
+                    }
+                  } else {
+                    // Regular drill - add as-is
+                    expandedDrills.push({
+                      ...drill,
+                      completed: !!completion,
+                    });
+                  }
+                }
+
+                const drills = expandedDrills;
 
                 const completedDrills = drills.filter(
                   (drill: any) => drill.completed
@@ -8008,9 +8454,9 @@ export const appRouter = router({
                   };
                 }
               }
-            });
-          });
-        });
+            }
+          }
+        }
 
         return calendarData;
       }),
@@ -8200,24 +8646,17 @@ export const appRouter = router({
           });
         }
 
-        // Get client's CONFIRMED lessons for the specified month (excluding Schedule Request lessons and lessons for other clients)
+        // Get client's lessons for the specified month (including PENDING and CONFIRMED)
         const lessons = await db.event.findMany({
           where: {
             clientId: client.id,
-            status: "CONFIRMED", // Only return confirmed lessons
+            status: {
+              in: ["PENDING", "CONFIRMED"],
+            },
             NOT: {
-              OR: [
-                {
-                  title: {
-                    contains: "Schedule Request",
-                  },
-                },
-                {
-                  title: {
-                    contains: "test user 2",
-                  },
-                },
-              ],
+              title: {
+                contains: "test user 2",
+              },
             },
             date: {
               gte: new Date(input.year, input.month, 1),
@@ -8630,10 +9069,9 @@ export const appRouter = router({
           });
         }
 
-        // Update the event status to DECLINED
-        const updatedEvent = await db.event.update({
+        // Delete the declined event to free up the time slot
+        const deletedEvent = await db.event.delete({
           where: { id: input.eventId },
-          data: { status: "DECLINED" },
         });
 
         // Create notification for the client
@@ -8646,7 +9084,7 @@ export const appRouter = router({
               message: `Your schedule request for ${format(
                 new Date(event.date),
                 "MMM d, yyyy 'at' h:mm a"
-              )} has been declined.${
+              )} has been declined and the time slot is now available.${
                 input.reason ? ` Reason: ${input.reason}` : ""
               }`,
               data: {
@@ -8659,7 +9097,7 @@ export const appRouter = router({
           });
         }
 
-        return updatedEvent;
+        return deletedEvent;
       }),
 
     // Request a schedule change
@@ -8744,6 +9182,21 @@ export const appRouter = router({
             code: "BAD_REQUEST",
             message: "Cannot request lessons in the past",
           });
+        }
+
+        // Check if the requested date is on a working day
+        const coach = await db.user.findFirst({
+          where: { id: client.coachId },
+        });
+
+        if (coach?.workingDays) {
+          const dayName = format(requestedDateTime, "EEEE");
+          if (!coach.workingDays.includes(dayName)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Coach is not available on ${dayName}s`,
+            });
+          }
         }
 
         // Check if the requested time slot is already booked

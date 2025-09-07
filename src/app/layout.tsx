@@ -12,6 +12,7 @@ import { ChatbotProvider } from "@/components/Chatbot/ChatbotContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 // Import the startup script to ensure reliable service initialization
 import "@/lib/startup";
+import MessagingServiceProvider from "@/components/MessagingServiceProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -188,12 +189,14 @@ export default function RootLayout({
           <Providers>
             <ThemeProvider>
               <ChatbotProvider>
-                <ConditionalNavbar />
-                {children}
-                <Toast />
-                <ChatbotWrapper />
-                <Analytics />
-                <PerformanceDashboard />
+                <MessagingServiceProvider>
+                  <ConditionalNavbar />
+                  {children}
+                  <Toast />
+                  <ChatbotWrapper />
+                  <Analytics />
+                  <PerformanceDashboard />
+                </MessagingServiceProvider>
               </ChatbotProvider>
             </ThemeProvider>
           </Providers>

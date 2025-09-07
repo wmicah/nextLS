@@ -128,8 +128,8 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
     scrollToBottom();
   }, [pendingMessages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!messageText.trim() || !selectedConversation) return;
 
     sendMessageMutation.mutate({
@@ -420,7 +420,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
               <RichMessageInput
                 value={messageText}
                 onChange={setMessageText}
-                onSend={() => handleSendMessage({} as React.FormEvent)}
+                onSend={() => handleSendMessage()}
                 placeholder="Type a message..."
                 disabled={false}
                 isPending={sendMessageMutation.isPending}

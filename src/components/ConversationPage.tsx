@@ -108,8 +108,8 @@ export default function ConversationPage({
   }, [])
 
   // Handle sending message
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSendMessage = (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (!messageText.trim() && !selectedFile) return
 
     sendMessageMutation.mutate({

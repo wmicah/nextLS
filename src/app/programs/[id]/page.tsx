@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import { ArrowLeft, Save, Plus } from "lucide-react";
@@ -15,7 +15,7 @@ type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 interface ProgramBuilderItem {
   id: string;
   title: string;
-  type?: "exercise" | "drill" | "video";
+  type?: "exercise" | "drill" | "video" | "routine";
   notes?: string;
   sets?: number;
   reps?: number;
@@ -25,6 +25,7 @@ interface ProgramBuilderItem {
   videoId?: string;
   videoTitle?: string;
   videoThumbnail?: string;
+  routineId?: string;
 }
 
 interface ProgramBuilderWeek {
@@ -43,6 +44,7 @@ export default function ProgramEditorPage() {
   // State
   const [localIsSaving, setLocalIsSaving] = useState(false);
   const [localLastSaved, setLocalLastSaved] = useState<Date | null>(null);
+  const isRefetchingAfterSaveRef = useRef(false);
   const [programBuilderWeeks, setProgramBuilderWeeks] = useState<
     ProgramBuilderWeek[]
   >([]);
@@ -56,16 +58,27 @@ export default function ProgramEditorPage() {
       }
     );
 
+  // Get utils for cache invalidation
+  const utils = trpc.useUtils();
+
   // Mutations
   const updateProgramMutation = trpc.programs.update.useMutation({
     onSuccess: () => {
+      console.log("=== SAVE SUCCESS - REFETCHING PROGRAM ===");
       setLocalIsSaving(false);
       setLocalLastSaved(new Date());
+      isRefetchingAfterSaveRef.current = true;
       toast({
         title: "Program saved",
         description: "Your program has been saved successfully.",
       });
-      refetchProgram();
+
+      // Invalidate cache and refetch to ensure fresh data
+      utils.programs.getById.invalidate({ id: programId }).then(() => {
+        refetchProgram().then(() => {
+          isRefetchingAfterSaveRef.current = false;
+        });
+      });
     },
     onError: error => {
       setLocalIsSaving(false);
@@ -79,7 +92,9 @@ export default function ProgramEditorPage() {
 
   // Convert database program data to ProgramBuilder format
   useEffect(() => {
-    if (program && program.weeks) {
+    if (program && program.weeks && !isRefetchingAfterSaveRef.current) {
+      console.log("=== CONVERTING DATABASE TO PROGRAMBUILDER ===");
+      console.log("Original program.weeks:", program.weeks);
       const convertedWeeks: ProgramBuilderWeek[] = program.weeks.map(
         (week, weekIndex) => ({
           id: `week-${week.weekNumber}`,
@@ -103,6 +118,7 @@ export default function ProgramEditorPage() {
                   videoId: drill.videoId || "",
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
+                  routineId: drill.routineId || undefined,
                 })) || [],
             mon:
               week.days
@@ -121,6 +137,7 @@ export default function ProgramEditorPage() {
                   videoId: drill.videoId || "",
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
+                  routineId: drill.routineId || undefined,
                 })) || [],
             tue:
               week.days
@@ -139,6 +156,7 @@ export default function ProgramEditorPage() {
                   videoId: drill.videoId || "",
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
+                  routineId: drill.routineId || undefined,
                 })) || [],
             wed:
               week.days
@@ -157,6 +175,7 @@ export default function ProgramEditorPage() {
                   videoId: drill.videoId || "",
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
+                  routineId: drill.routineId || undefined,
                 })) || [],
             thu:
               week.days
@@ -175,6 +194,7 @@ export default function ProgramEditorPage() {
                   videoId: drill.videoId || "",
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
+                  routineId: drill.routineId || undefined,
                 })) || [],
             fri:
               week.days
@@ -193,6 +213,7 @@ export default function ProgramEditorPage() {
                   videoId: drill.videoId || "",
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
+                  routineId: drill.routineId || undefined,
                 })) || [],
             sat:
               week.days
@@ -211,108 +232,122 @@ export default function ProgramEditorPage() {
                   videoId: drill.videoId || "",
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
+                  routineId: drill.routineId || undefined,
                 })) || [],
           },
         })
       );
 
+      console.log("Converted weeks:", convertedWeeks);
       setProgramBuilderWeeks(convertedWeeks);
     }
   }, [program]);
 
   // Handle ProgramBuilder save
   const handleProgramBuilderSave = (weeks: ProgramBuilderWeek[]) => {
+    console.log("=== HANDLEPROGRAMBUILDERSAVE CALLED ===");
+    console.log("New weeks:", weeks);
+    console.log(
+      "Current programBuilderWeeks before update:",
+      programBuilderWeeks
+    );
     setProgramBuilderWeeks(weeks);
     console.log("ProgramBuilder weeks updated:", weeks);
   };
 
   // Convert ProgramBuilder data back to database format and save
-  const handleSave = async () => {
-    if (!program || !programBuilderWeeks.length) return;
+  const handleSave = async (weeksToSave?: ProgramBuilderWeek[]) => {
+    console.log("=== SAVE FUNCTION CALLED ===");
+    console.log("program:", program);
+    console.log("weeksToSave:", weeksToSave);
+    console.log("programBuilderWeeks:", programBuilderWeeks);
+
+    const weeks = weeksToSave || programBuilderWeeks;
+    if (!program || !weeks.length) {
+      console.log("Early return: missing program or weeks");
+      return;
+    }
 
     setLocalIsSaving(true);
 
     try {
       // Convert ProgramBuilder weeks back to database format
-      const convertedWeeks = programBuilderWeeks.map(
-        (builderWeek, weekIndex) => ({
-          weekNumber: weekIndex + 1,
-          title: builderWeek.name,
-          description: "",
-          days: Object.entries(builderWeek.days).map(
-            ([dayKey, items], dayIndex) => {
-              const dayNumber =
-                dayKey === "sun"
-                  ? 7
-                  : dayKey === "mon"
-                  ? 1
-                  : dayKey === "tue"
-                  ? 2
-                  : dayKey === "wed"
-                  ? 3
-                  : dayKey === "thu"
-                  ? 4
-                  : dayKey === "fri"
-                  ? 5
-                  : 6;
+      console.log("=== CONVERTING PROGRAMBUILDER TO DATABASE ===");
+      console.log("weeks to convert:", weeks);
+      const convertedWeeks = weeks.map((builderWeek, weekIndex) => ({
+        weekNumber: weekIndex + 1,
+        title: builderWeek.name,
+        description: "",
+        days: Object.entries(builderWeek.days).map(
+          ([dayKey, items], dayIndex) => {
+            const dayNumber =
+              dayKey === "sun"
+                ? 7
+                : dayKey === "mon"
+                ? 1
+                : dayKey === "tue"
+                ? 2
+                : dayKey === "wed"
+                ? 3
+                : dayKey === "thu"
+                ? 4
+                : dayKey === "fri"
+                ? 5
+                : 6;
 
-              // If the day has no items, make it a rest day
-              if (items.length === 0) {
-                return {
-                  dayNumber,
-                  title: "Rest Day",
-                  description: "Recovery and rest day",
-                  drills: [
-                    {
-                      id: `rest-day-${dayNumber}`,
-                      title: "Rest Day",
-                      description:
-                        "Take this day to recover and rest. No specific exercises required.",
-                      duration: "",
-                      videoUrl: "",
-                      notes: "This is an automatically generated rest day.",
-                      type: "exercise",
-                      sets: undefined,
-                      reps: undefined,
-                      tempo: "",
-                    },
-                  ],
-                };
-              }
-
-              // Convert items to drills format
+            // If the day has no items, make it a rest day
+            if (items.length === 0) {
               return {
                 dayNumber,
-                title: `Day ${dayNumber}`,
-                description: "",
-                drills: items.map((item, itemIndex) => ({
-                  id: item.id,
-                  title: item.title,
-                  description: item.notes || "",
-                  duration: item.duration || "",
-                  videoUrl: item.videoUrl || "",
-                  notes: item.notes || "",
-                  type: item.type || "exercise",
-                  sets: item.sets,
-                  reps: item.reps,
-                  tempo: item.tempo || "",
-                  videoId: item.videoId,
-                  videoTitle: item.videoTitle,
-                  videoThumbnail: item.videoThumbnail,
-                })),
+                title: "Rest Day",
+                description: "Recovery and rest day",
+                drills: [], // No drills for rest days
               };
             }
-          ),
-        })
-      );
 
+            // Convert items to drills format
+            return {
+              dayNumber,
+              title: `Day ${dayNumber}`,
+              description: "",
+              drills: items.map((item, itemIndex) => ({
+                id: item.id,
+                title: item.title,
+                description: item.notes || "",
+                duration: item.duration || "",
+                videoUrl: item.videoUrl || "",
+                notes: item.notes || "",
+                type: item.type || "exercise",
+                sets: item.sets,
+                reps: item.reps,
+                tempo: item.tempo || "",
+                videoId: item.videoId,
+                videoTitle: item.videoTitle,
+                videoThumbnail: item.videoThumbnail,
+                routineId: item.routineId,
+              })),
+            };
+          }
+        ),
+      }));
+
+      console.log("Converted back to database format:", convertedWeeks);
       // Update the program with the new structure
+      console.log("About to call updateProgramMutation with:", {
+        id: programId,
+        title: program.title || "",
+        description: program.description || "",
+        weeks: convertedWeeks,
+      });
+
       await updateProgramMutation.mutateAsync({
         id: programId,
         title: program.title || "",
         description: program.description || "",
         weeks: convertedWeeks,
       });
+
+      console.log("updateProgramMutation completed successfully");
 
       toast({
         title: "Program saved",
@@ -346,43 +381,6 @@ export default function ProgramEditorPage() {
   return (
     <Sidebar>
       <div className="min-h-screen bg-[#2A3133]">
-        {/* Header */}
-        <div className="bg-[#353A3A] border-b border-gray-600 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                onClick={() => router.back()}
-                className="text-gray-400 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-white">
-                  {program.title || "Untitled Program"}
-                </h1>
-                {program.description && (
-                  <p className="text-gray-400 mt-1">{program.description}</p>
-                )}
-              </div>
-            </div>
-            <Button
-              onClick={handleSave}
-              disabled={localIsSaving}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {localIsSaving ? "Saving..." : "Save Program"}
-            </Button>
-          </div>
-          {localLastSaved && (
-            <p className="text-sm text-gray-500 mt-2">
-              Last saved: {localLastSaved.toLocaleTimeString()}
-            </p>
-          )}
-        </div>
-
         {/* Program Builder */}
         <ProgramBuilder
           onSave={handleProgramBuilderSave}
@@ -392,6 +390,10 @@ export default function ProgramEditorPage() {
             description: program.description || "",
             level: program.level || "Drive",
             duration: program.weeks?.length || 1,
+            onBack: () => router.back(),
+            onSave: handleSave,
+            isSaving: localIsSaving,
+            lastSaved: localLastSaved,
           }}
         />
       </div>

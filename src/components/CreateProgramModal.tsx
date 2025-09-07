@@ -80,7 +80,7 @@ type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 interface ProgramBuilderItem {
   id: string;
   title: string;
-  type?: "exercise" | "drill" | "video";
+  type?: "exercise" | "drill" | "video" | "routine";
   notes?: string;
   sets?: number;
   reps?: number;
@@ -90,6 +90,7 @@ interface ProgramBuilderItem {
   videoId?: string;
   videoTitle?: string;
   videoThumbnail?: string;
+  routineId?: string;
 }
 
 interface ProgramBuilderWeek {
@@ -421,21 +422,7 @@ export default function CreateProgramModal({
                 dayNumber: dayIndex + 1,
                 title: "Rest Day",
                 description: "Recovery and rest day",
-                drills: [
-                  {
-                    order: 1,
-                    title: "Rest Day",
-                    description:
-                      "Take this day to recover and rest. No specific exercises required.",
-                    duration: "",
-                    videoUrl: "",
-                    notes: "This is an automatically generated rest day.",
-                    type: "exercise",
-                    sets: undefined,
-                    reps: undefined,
-                    tempo: "",
-                  },
-                ],
+                drills: [], // No drills for rest days
               };
             }
 
@@ -482,7 +469,7 @@ export default function CreateProgramModal({
                   "Take this day to recover and rest. No specific exercises required.",
                 duration: "",
                 videoUrl: "",
-                notes: "This is an automatically generated rest day.",
+                notes: "",
                 type: "exercise",
                 sets: undefined,
                 reps: undefined,
@@ -530,7 +517,7 @@ export default function CreateProgramModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto bg-[#2A3133] border-gray-600">
+        <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] overflow-y-auto bg-[#2A3133] border-gray-600">
           <DialogHeader>
             <DialogTitle className="text-white">Create New Program</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -565,7 +552,7 @@ export default function CreateProgramModal({
             </TabsList>
 
             <TabsContent value="details" className="space-y-6">
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="title" className="text-white">
                     Program Title
@@ -573,7 +560,7 @@ export default function CreateProgramModal({
                   <Input
                     id="title"
                     {...register("title")}
-                    className="bg-[#3A4245] border-gray-600 text-white"
+                    className="bg-[#3A4245] border-gray-600 text-white w-full"
                     placeholder="e.g., Advanced Training Program"
                   />
                   {errors.title && (
@@ -584,19 +571,6 @@ export default function CreateProgramModal({
                 </div>
 
                 <div>
-                  <Label htmlFor="description" className="text-white">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    {...register("description")}
-                    className="bg-[#3A4245] border-gray-600 text-white"
-                    placeholder="Describe what this program covers..."
-                    rows={3}
-                  />
-                </div>
-
-                <div>
                   <Label htmlFor="level" className="text-white">
                     Focus Area
                   </Label>
@@ -604,7 +578,7 @@ export default function CreateProgramModal({
                     onValueChange={value => setValue("level", value as any)}
                     defaultValue="Drive"
                   >
-                    <SelectTrigger className="bg-[#3A4245] border-gray-600">
+                    <SelectTrigger className="bg-[#3A4245] border-gray-600 w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#3A4245] border-gray-600">
@@ -655,7 +629,7 @@ export default function CreateProgramModal({
                     id="duration"
                     type="number"
                     {...register("duration", { valueAsNumber: true })}
-                    className="bg-[#3A4245] border-gray-600 text-white"
+                    className="bg-[#3A4245] border-gray-600 text-white w-full"
                     placeholder="e.g., 8"
                     min={1}
                   />
@@ -665,6 +639,19 @@ export default function CreateProgramModal({
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="description" className="text-white">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  {...register("description")}
+                  className="bg-[#3A4245] border-gray-600 text-white w-full"
+                  placeholder="Describe what this program covers..."
+                  rows={4}
+                />
               </div>
             </TabsContent>
 

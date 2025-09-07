@@ -22,6 +22,7 @@ model User {
   isAdmin                  Boolean           @default(false) // True if user has admin privileges
   workingHoursStart        String?           @map("working_hours_start")
   workingHoursEnd          String?           @map("working_hours_end")
+  workingDays              String[]          @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) @map("working_days")
   clientConversations      Conversation[]    @relation("ClientConversations")
   coachConversations       Conversation[]    @relation("CoachConversations")
   client1Conversations     Conversation[]    @relation("Client1Conversations")
@@ -43,6 +44,7 @@ model User {
   assignedWorkouts         Workout[]         @relation("CoachWorkouts")
   programs                 Program[]         @relation("CoachPrograms")
   notifications            Notification[]
+  inbox                   UserInbox?
   settings                 UserSettings?
   uploadedVideos           Video[]           @relation("UserVideos")
   videoFeedback            VideoFeedback[]   @relation("CoachVideoFeedback")
@@ -52,6 +54,7 @@ model User {
   clientVideoSubmissions   ClientVideoSubmission[] @relation("CoachVideoSubmissions")
   clientAnalytics          ClientAnalytics[]
   coachAnalytics           CoachAnalytics?
+  routines                 Routine[]        @relation("CoachRoutines")
 
   @@map("users")
 }
@@ -418,6 +421,9 @@ model ProgramDrill {
   // Superset functionality
   supersetWithId String? // ID of the exercise this is paired with
   
+  // Routine functionality
+  routineId String? // ID of the routine this drill belongs to
+  
   // Completion tracking
   completions DrillCompletion[]
   clientVideoSubmissions ClientVideoSubmission[]
@@ -565,6 +571,49 @@ model ProgramAssignment {
   @@map("program_assignments")
 }
 
+// Routine Models
+model Routine {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  coachId     String
+  coach       User     @relation("CoachRoutines", fields: [coachId], references: [id], onDelete: Cascade)
+  
+  // Routine structure
+  exercises   RoutineExercise[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("routines")
+}
+
+model RoutineExercise {
+  id          String   @id @default(cuid())
+  order       Int
+  title       String
+  description String?
+  type        String?  // "exercise", "drill", "video", "routine"
+  notes       String?
+  sets        Int?
+  reps        Int?
+  tempo       String?  // e.g., "2-0-2" for tempo training
+  duration    String?
+  routineId   String
+  routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  
+  // Video library integration
+  videoId        String?
+  videoTitle     String?
+  videoThumbnail String?
+  videoUrl       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("routine_exercises")
+}
+
 enum UserRole {
   COACH
   CLIENT
@@ -631,6 +680,16 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+model UserInbox {
+  userId             String   @id
+  totalUnread        Int      @default(0)
+  totalNotifications Int      @default(0)
+  updatedAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("UserInbox")
 }
 
 model UserSettings {

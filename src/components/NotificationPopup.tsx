@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
+// Removed complex SSE hooks - using simple polling instead
 import { format } from "date-fns";
 import {
   Bell,
@@ -34,16 +35,20 @@ export default function NotificationPopup({
       { limit: 10 },
       {
         enabled: isOpen,
-        refetchInterval: 10000, // Poll every 10 seconds
+        refetchInterval: false, // No polling!
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
       }
     );
 
-  // Get unread count
+  // Simple polling for notification count
   const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 3000, // Real-time updates every 3 seconds
-      staleTime: 1000, // Consider data stale after 1 second
+      refetchInterval: 10000, // Poll every 10 seconds
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
     }
   );
 

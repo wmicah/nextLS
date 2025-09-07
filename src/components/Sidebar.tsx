@@ -23,6 +23,7 @@ import {
   FiVideo,
 } from "react-icons/fi";
 import { LogOut, Settings, UserIcon, MessageCircle } from "lucide-react";
+// Removed complex SSE hooks - using simple polling instead
 import MessagePopup from "./MessagePopup";
 import NotificationPopup from "./NotificationPopup";
 import ProfilePictureUploader from "./ProfilePictureUploader";
@@ -58,29 +59,39 @@ export default function Sidebar({ user, children }: SidebarProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const messagePopupRef = useRef<HTMLDivElement>(null);
 
-  // Get unread message count and conversations
-  const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
-    undefined,
-    {
-      refetchInterval: 3000, // Real-time updates every 3 seconds
-      staleTime: 1000, // Consider data stale after 1 second
-    }
+  // Use the optimized unread counts endpoint
+  const { data: unreadCountsObj = {}, refetch: refetchUnreadCount } =
+    trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
+      refetchInterval: 10000, // Poll every 10 seconds
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    });
+
+  // Calculate total unread count from the object
+  const unreadCount = Object.values(unreadCountsObj).reduce(
+    (sum, count) => sum + count,
+    0
   );
+
+  const { data: unreadNotificationCount = 0 } =
+    trpc.notifications.getUnreadCount.useQuery(undefined, {
+      refetchInterval: 10000, // Poll every 10 seconds
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    });
+
+  // Get conversations with aggressive caching
   const { data: conversations = [] } = trpc.messaging.getConversations.useQuery(
     undefined,
     {
       enabled: showRecentMessages,
-      refetchInterval: 10000, // Increased from 5s to 10s for better performance
-      staleTime: 5000, // Add stale time to reduce unnecessary refetches
+      refetchInterval: 60000, // Poll every minute
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      staleTime: 30 * 1000, // Cache for 30 seconds
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     }
   );
-
-  // Get unread notification count
-  const { data: unreadNotificationCount = 0 } =
-    trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 3000, // Real-time updates every 3 seconds
-      staleTime: 1000, // Consider data stale after 1 second
-    });
 
   // Get user settings for avatar
   const { data: userSettings } = trpc.settings.getSettings.useQuery();
