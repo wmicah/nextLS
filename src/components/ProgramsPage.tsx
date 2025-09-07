@@ -52,8 +52,8 @@ import { cn } from "@/lib/utils";
 import CreateProgramModal from "./CreateProgramModal";
 import AssignProgramModal from "./AssignProgramModal";
 import ProgramDetailsModal from "./ProgramDetailsModal";
-import CreateRoutineModal from "./CreateRoutineModal";
-import RoutinesTab from "./RoutinesTab";
+import CreateRoutineModal from "@/components/CreateRoutineModal";
+import RoutinesTab from "@/components/RoutinesTab";
 
 interface ProgramWeek {
   id: string;
@@ -77,9 +77,9 @@ interface ProgramDrill {
   title: string;
   type: string | null;
   notes?: string | null;
-  sets?: number;
-  reps?: number;
-  tempo?: string;
+  sets?: number | null;
+  reps?: number | null;
+  tempo?: string | null;
   duration?: string | null;
 }
 
