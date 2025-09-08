@@ -50,3 +50,4 @@ async function sendLessonReminders() {
 
 // Run the script
 sendLessonReminders();
+

@@ -261,3 +261,4 @@ If you encounter issues:
 **Happy Coaching! 🏆**
 
 Your clients will now receive professional, timely reminders that help reduce no-shows and improve your business efficiency.
+

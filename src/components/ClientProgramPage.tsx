@@ -32,6 +32,7 @@ import {
   CalendarCheck,
   CalendarX,
   CalendarClock,
+  Link,
 } from "lucide-react";
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,8 @@ interface Drill {
   tags?: string[];
   completed?: boolean;
   videoUrl?: string;
+  supersetId?: string;
+  supersetOrder?: number;
 }
 
 interface DayData {
@@ -129,6 +132,8 @@ export default function ClientProgramPage() {
     type?: string;
   } | null>(null);
   const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [selectedDrillForComment, setSelectedDrillForComment] = useState<{
     id: string;
     title: string;
@@ -404,7 +409,12 @@ export default function ClientProgramPage() {
     console.log("Opening video with URL:", videoUrl);
     console.log("Available library items:", libraryItems);
 
+    // Clear any previous video errors and reset retry count
+    setVideoError(null);
+    setRetryCount(0);
+
     // Find the video in the library based on the URL
+    console.log("Searching for video item with URL:", videoUrl);
     const videoItem = libraryItems?.find(
       (item: {
         url?: string;
@@ -476,6 +486,8 @@ export default function ClientProgramPage() {
   const handleCloseVideo = () => {
     setIsVideoPlayerOpen(false);
     setSelectedVideo(null);
+    setVideoError(null);
+    setRetryCount(0);
   };
 
   // Handle opening comment modal
@@ -1151,6 +1163,14 @@ export default function ClientProgramPage() {
                                         {drill.completed && (
                                           <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
                                         )}
+                                        {drill.supersetId && (
+                                          <div className="flex items-center gap-1 text-xs text-purple-300">
+                                            <Link className="h-3 w-3" />
+                                            <span className="font-medium">
+                                              SUPERSET
+                                            </span>
+                                          </div>
+                                        )}
                                         {drill.title}
                                       </div>
                                       {drill.sets && drill.reps && (
@@ -1399,6 +1419,14 @@ export default function ClientProgramPage() {
                                       >
                                         {drill.completed && (
                                           <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                        )}
+                                        {drill.supersetId && (
+                                          <div className="flex items-center gap-1 text-xs text-purple-300">
+                                            <Link className="h-3 w-3" />
+                                            <span className="font-medium">
+                                              SUPERSET
+                                            </span>
+                                          </div>
                                         )}
                                         {drill.title}
                                       </h4>
@@ -1840,6 +1868,14 @@ export default function ClientProgramPage() {
                                       >
                                         {drill.completed && (
                                           <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-500 flex-shrink-0" />
+                                        )}
+                                        {drill.supersetId && (
+                                          <div className="flex items-center gap-1 text-xs text-purple-300">
+                                            <Link className="h-3 w-3" />
+                                            <span className="font-medium">
+                                              SUPERSET
+                                            </span>
+                                          </div>
                                         )}
                                         {drill.title}
                                       </div>
@@ -2476,13 +2512,27 @@ export default function ClientProgramPage() {
                         {selectedDay.drills.map(drill => (
                           <div
                             key={drill.id}
-                            className="bg-gray-700 rounded-2xl p-6 border border-gray-600"
+                            className={`rounded-2xl p-6 border ${
+                              drill.supersetId
+                                ? "bg-purple-600/30 border-purple-500/50"
+                                : "bg-gray-700 border-gray-600"
+                            }`}
                           >
                             <div className="flex items-start justify-between mb-4">
                               <div className="flex-1">
-                                <h3 className="text-xl font-bold text-white mb-2">
-                                  {drill.title}
-                                </h3>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3 className="text-xl font-bold text-white">
+                                    {drill.title}
+                                  </h3>
+                                  {drill.supersetId && (
+                                    <div className="flex items-center gap-1 text-xs text-purple-300">
+                                      <Link className="h-4 w-4" />
+                                      <span className="font-medium">
+                                        SUPERSET
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
 
                                 {/* Sets, Reps, Tempo */}
                                 <div className="flex items-center gap-6 mb-3">
@@ -2698,6 +2748,32 @@ export default function ClientProgramPage() {
 
                 {/* Video Player Content */}
                 <div className="p-4">
+                  {/* Video Error Display */}
+                  {videoError && (
+                    <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <p className="text-red-300 text-sm">{videoError}</p>
+                        </div>
+                        {retryCount < 3 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setVideoError(null);
+                              setRetryCount(prev => prev + 1);
+                              // The key change will force the video element to re-render
+                            }}
+                            className="text-red-300 border-red-500/30 hover:bg-red-500/10"
+                          >
+                            Retry ({retryCount + 1}/3)
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="aspect-video bg-black rounded-xl overflow-hidden">
                     {selectedVideo &&
                     selectedVideo.isYoutube &&
@@ -2715,22 +2791,118 @@ export default function ClientProgramPage() {
                       />
                     ) : selectedVideo && selectedVideo.url ? (
                       // Custom uploaded video
-                      <video
-                        controls
-                        controlsList="nodownload nofullscreen"
-                        disablePictureInPicture
-                        className="w-full h-full object-contain"
-                        style={{ backgroundColor: "#000" }}
-                        onContextMenu={e => e.preventDefault()}
-                        onError={e => {
-                          console.error("Video load error:", e);
-                        }}
-                      >
-                        <source src={selectedVideo.url} type="video/mp4" />
-                        <source src={selectedVideo.url} type="video/webm" />
-                        <source src={selectedVideo.url} type="video/ogg" />
-                        Your browser does not support the video tag.
-                      </video>
+                      (() => {
+                        console.log(
+                          "Rendering video with URL:",
+                          selectedVideo.url
+                        );
+                        console.log("Video type:", selectedVideo.type);
+                        console.log("Is YouTube:", selectedVideo.isYoutube);
+                        console.log(
+                          "URL is valid:",
+                          selectedVideo.url.startsWith("http")
+                        );
+                        console.log("URL length:", selectedVideo.url.length);
+                        return (
+                          <video
+                            key={`video-${selectedVideo.id}-${retryCount}`}
+                            controls
+                            controlsList="nodownload nofullscreen"
+                            disablePictureInPicture
+                            className="w-full h-full object-contain"
+                            style={{ backgroundColor: "#000" }}
+                            onContextMenu={e => e.preventDefault()}
+                            onLoad={() => {
+                              console.log(
+                                "Video loaded successfully:",
+                                selectedVideo?.url
+                              );
+                            }}
+                            onLoadStart={() => {
+                              console.log(
+                                "Video load started:",
+                                selectedVideo?.url
+                              );
+                              // Test if URL is accessible
+                              fetch(selectedVideo?.url || "", {
+                                method: "HEAD",
+                              })
+                                .then(response => {
+                                  console.log("Video URL fetch test:", {
+                                    url: selectedVideo?.url,
+                                    status: response.status,
+                                    statusText: response.statusText,
+                                    headers: Object.fromEntries(
+                                      response.headers.entries()
+                                    ),
+                                  });
+                                })
+                                .catch(error => {
+                                  console.error(
+                                    "Video URL fetch test failed:",
+                                    error
+                                  );
+                                });
+                            }}
+                            onCanPlay={() => {
+                              console.log(
+                                "Video can play:",
+                                selectedVideo?.url
+                              );
+                              setVideoError(null);
+                            }}
+                            onError={e => {
+                              const videoElement = e.target as HTMLVideoElement;
+                              const error = videoElement.error;
+                              const errorInfo = {
+                                code: error?.code,
+                                message: error?.message,
+                                networkState: videoElement.networkState,
+                                readyState: videoElement.readyState,
+                                videoUrl: selectedVideo?.url,
+                                videoTitle: selectedVideo?.title,
+                                timestamp: new Date().toISOString(),
+                              };
+
+                              console.error("Video load error:", errorInfo);
+                              console.error(
+                                "Video element src:",
+                                videoElement.src
+                              );
+                              console.error(
+                                "Video element currentSrc:",
+                                videoElement.currentSrc
+                              );
+
+                              let errorMessage = "Failed to load video.";
+                              if (error?.code === 4) {
+                                errorMessage =
+                                  "Video format not supported or corrupted.";
+                              } else if (error?.code === 3) {
+                                errorMessage = "Video decoding error.";
+                              } else if (error?.code === 2) {
+                                errorMessage =
+                                  "Network error while loading video.";
+                              } else if (error?.code === 1) {
+                                errorMessage = "Video loading aborted.";
+                              }
+
+                              // Add URL to error message for debugging
+                              errorMessage += ` (URL: ${selectedVideo?.url?.substring(
+                                0,
+                                50
+                              )}...)`;
+
+                              setVideoError(errorMessage);
+                            }}
+                          >
+                            <source src={selectedVideo.url} type="video/mp4" />
+                            <source src={selectedVideo.url} type="video/webm" />
+                            <source src={selectedVideo.url} type="video/ogg" />
+                            Your browser does not support the video tag.
+                          </video>
+                        );
+                      })()
                     ) : (
                       // Fallback: show error message
                       <div className="flex items-center justify-center h-full">

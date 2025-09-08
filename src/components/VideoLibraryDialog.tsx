@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Video, Star, Eye, X, Filter, Play, Plus } from "lucide-react";
+import { Search, Video, X, Play, Clock } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
 
 interface VideoLibraryDialogProps {
@@ -40,240 +40,245 @@ export default function VideoLibraryDialog({
   editingItem,
 }: VideoLibraryDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedDifficulty, setSelectedDifficulty] = useState("all");
+  const [activeTab, setActiveTab] = useState<"master" | "local">("master");
 
-  // Fetch library resources
-  const { data: libraryItems = [], isLoading } =
-    trpc.libraryResources.getAll.useQuery();
+  // Fetch master library resources
+  const { data: masterLibraryItems = [], isLoading: masterLoading } =
+    trpc.admin.getMasterLibrary.useQuery(undefined, {
+      enabled: activeTab === "master",
+    });
+
+  // Fetch local library resources
+  const { data: localLibraryItems = [], isLoading: localLoading } =
+    trpc.libraryResources.getAll.useQuery(undefined, {
+      enabled: activeTab === "local",
+    });
+
+  // Get categories from the appropriate library
   const { data: categories = [] } =
     trpc.libraryResources.getCategories.useQuery();
 
-  const difficulties = ["Beginner", "Intermediate", "Advanced", "All Levels"];
+  // Combine data based on active tab
+  const libraryItems =
+    activeTab === "master" ? masterLibraryItems : localLibraryItems;
+  const isLoading = activeTab === "master" ? masterLoading : localLoading;
 
-  // Filter items based on search and filters
+  // Filter items based on search term only (library type is already filtered by the queries)
   const filteredItems = libraryItems.filter((item: any) => {
-    const matchesSearch =
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || item.category === selectedCategory;
-    const matchesDifficulty =
-      selectedDifficulty === "all" || item.difficulty === selectedDifficulty;
+    const matchesSearch = item.title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
 
-    return matchesSearch && matchesCategory && matchesDifficulty;
+    return matchesSearch;
   });
 
-  const handleSelect = (exercise: any) => {
-    onSelectVideo({
-      id: exercise.id,
-      title: exercise.title,
-      description: exercise.description || "",
-      duration: exercise.duration || "",
-      url: exercise.url || "",
-      thumbnail: exercise.thumbnail || "",
-    });
-    onClose();
-  };
-
-  // Close modal on escape key
+  // Close dialog on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && isOpen) {
         onClose();
       }
     };
 
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
     }
 
-    return undefined;
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
   }, [isOpen, onClose]);
+
+  // Reset search when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setSearchTerm("");
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="w-full max-w-5xl bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl max-h-[90vh] overflow-hidden">
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 10000,
+        backgroundColor: "rgba(0, 0, 0, 0.75)",
+        backdropFilter: "blur(4px)",
+      }}
+      onClick={e => {
+        // Only close if clicking directly on the backdrop, not on child elements
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="w-full max-w-4xl bg-[#2A3133] rounded-xl border border-gray-600 shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+        style={{
+          pointerEvents: "auto",
+          backgroundColor: "#2A3133",
+          borderColor: "#606364",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Video Library</h2>
-            <p className="text-gray-400 text-sm mt-1">
-              {editingItem
-                ? `Edit video for "${editingItem.title}"`
-                : "Select videos from your library"}
-            </p>
-          </div>
+        <div className="flex items-center justify-between p-4 border-b border-gray-600">
+          <h2 className="text-xl font-semibold text-white">Add from Library</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Search and Filters */}
-        <div className="p-6 border-b border-gray-700">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search Bar */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search videos..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+        {/* Tabs */}
+        <div className="flex border-b border-gray-600">
+          <button
+            onClick={() => setActiveTab("master")}
+            className={`px-6 py-3 text-sm font-medium ${
+              activeTab === "master"
+                ? "text-white border-b-2 border-blue-500 bg-gray-700/50"
+                : "text-gray-400 hover:text-white hover:bg-gray-700/30"
+            }`}
+          >
+            Master Library
+          </button>
+          <button
+            onClick={() => setActiveTab("local")}
+            className={`px-6 py-3 text-sm font-medium ${
+              activeTab === "local"
+                ? "text-white border-b-2 border-blue-500 bg-gray-700/50"
+                : "text-gray-400 hover:text-white hover:bg-gray-700/30"
+            }`}
+          >
+            Local Library
+          </button>
+        </div>
 
-            {/* Filters */}
-            <div className="flex gap-3">
-              <select
-                value={selectedCategory}
-                onChange={e => setSelectedCategory(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Categories</option>
-                {categories.map((cat: any) => (
-                  <option key={cat.name} value={cat.name}>
-                    {cat.name} ({cat.count})
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedDifficulty}
-                onChange={e => setSelectedDifficulty(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Levels</option>
-                {difficulties.map(diff => (
-                  <option key={diff} value={diff}>
-                    {diff}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Results Count */}
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-gray-400">
-              {isLoading
-                ? "Loading..."
-                : `${filteredItems.length} video${
-                    filteredItems.length !== 1 ? "s" : ""
-                  } found`}
-            </div>
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                Clear search
-              </button>
-            )}
+        {/* Search */}
+        <div className="p-4 border-b border-gray-600">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search videos..."
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-600 bg-[#353A3A] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
 
-        {/* Video List */}
-        <div className="overflow-y-auto max-h-[60vh] p-6">
+        {/* Content */}
+        <div className="flex-1 overflow-hidden">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+            <div className="flex items-center justify-center h-48">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
             </div>
-          ) : filteredItems.length > 0 ? (
-            <div className="grid gap-4">
-              {filteredItems.map((item: any) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelect(item)}
-                  className="group p-4 rounded-xl border border-gray-700 bg-gray-800 hover:bg-gray-750 hover:border-gray-600 cursor-pointer transition-all duration-200 hover:shadow-lg"
-                >
-                  <div className="flex items-start gap-4">
+          ) : filteredItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+              <Video className="h-8 w-8 mb-3 opacity-50" />
+              <h3 className="text-lg font-medium mb-1">No videos found</h3>
+              <p className="text-sm text-center">
+                {searchTerm
+                  ? "Try adjusting your search terms"
+                  : `No videos in your ${activeTab} library yet`}
+              </p>
+            </div>
+          ) : (
+            <div className="h-full overflow-y-auto p-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className="bg-[#353A3A] rounded-lg border border-gray-600 overflow-hidden hover:border-blue-500 cursor-pointer group"
+                    onClick={() => onSelectVideo(item)}
+                  >
                     {/* Thumbnail */}
-                    <div className="relative flex-shrink-0">
+                    <div className="relative aspect-video bg-gray-700">
                       {item.thumbnail ? (
                         <img
                           src={item.thumbnail}
                           alt={item.title}
-                          className="w-20 h-14 object-cover rounded-lg"
+                          className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-20 h-14 bg-gray-700 rounded-lg flex items-center justify-center">
+                        <div className="w-full h-full flex items-center justify-center">
                           <Video className="h-6 w-6 text-gray-500" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg flex items-center justify-center transition-colors">
-                        <Play className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                      {/* Play overlay */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                          <Play className="h-4 w-4 text-white" />
+                        </div>
                       </div>
+
+                      {/* Duration badge */}
+                      {item.duration && (
+                        <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {item.duration}
+                        </div>
+                      )}
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-semibold mb-2 group-hover:text-blue-400 transition-colors">
+                    <div className="p-3">
+                      <h3 className="font-medium text-white mb-1 line-clamp-2 text-sm">
                         {item.title}
                       </h3>
+
                       {item.description && (
-                        <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                        <p className="text-gray-400 text-xs mb-2 line-clamp-2">
                           {item.description}
                         </p>
                       )}
-                      <div className="flex items-center gap-3 text-xs">
+
+                      <div className="flex items-center gap-1">
                         {item.category && (
-                          <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300">
+                          <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-1 rounded">
                             {item.category}
                           </span>
                         )}
                         {item.difficulty && (
-                          <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-300">
+                          <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded">
                             {item.difficulty}
                           </span>
                         )}
-                        {item.duration && (
-                          <span className="text-gray-500">{item.duration}</span>
-                        )}
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <Star className="h-3 w-3 text-yellow-400" />
-                          <span>{item.rating || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <Eye className="h-3 w-3" />
-                          <span>{item.views || 0}</span>
-                        </div>
                       </div>
                     </div>
-
-                    {/* Add Button */}
-                    <div className="flex-shrink-0">
-                      <button className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors opacity-0 group-hover:opacity-100">
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Video className="h-8 w-8 text-gray-500" />
+                ))}
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">
-                No videos found
-              </h3>
-              <p className="text-gray-400">
-                {searchTerm ||
-                selectedCategory !== "all" ||
-                selectedDifficulty !== "all"
-                  ? "Try adjusting your search or filters"
-                  : "Add some videos to your library to get started"}
-              </p>
             </div>
           )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-600">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-400">
+              {filteredItems.length} video
+              {filteredItems.length !== 1 ? "s" : ""} found
+            </div>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-400 hover:text-white"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>

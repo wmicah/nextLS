@@ -49,3 +49,4 @@ export async function GET(
     return NextResponse.json({ error: "Thumbnail not found" }, { status: 404 });
   }
 }
+

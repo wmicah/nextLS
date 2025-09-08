@@ -1,28 +1,44 @@
-import React from 'react';
-import { useThumbnail } from '@/hooks/useThumbnail';
-import { Play, Video, FileText } from 'lucide-react';
+import React from "react";
+import { useThumbnail } from "@/hooks/useThumbnail";
+import { Play, Video, FileText } from "lucide-react";
 
 interface VideoThumbnailProps {
   item: any;
-  videoType: 'master' | 'local';
+  videoType: "master" | "local";
   className?: string;
 }
 
-export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({ 
-  item, 
-  videoType, 
-  className = "h-28 lg:h-32" 
+export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
+  item,
+  videoType,
+  className = "h-28 lg:h-32",
 }) => {
+  // Extract filename safely, avoiding YouTube URLs
+  const getFilename = () => {
+    if (item.filename) return item.filename;
+    if (
+      item.url &&
+      !item.url.includes("youtube.com") &&
+      !item.url.includes("youtu.be")
+    ) {
+      return item.url.split("/").pop();
+    }
+    return null;
+  };
+
   const { thumbnailUrl, isGenerating, error } = useThumbnail(
-    item.filename || item.url?.split('/').pop(),
+    getFilename(),
     videoType,
-    item.type === 'video'
+    item.type === "video" && !item.isYoutube,
+    item.url
   );
 
   // For YouTube videos, use the existing YouTubePlayer
   if (item.isYoutube && item.youtubeId) {
     return (
-      <div className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}>
+      <div
+        className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}
+      >
         <iframe
           src={`https://www.youtube.com/embed/${item.youtubeId}?controls=0&showinfo=0&rel=0&modestbranding=1`}
           title={item.title}
@@ -35,34 +51,36 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
   }
 
   // For uploaded videos with generated thumbnails
-  if (thumbnailUrl && item.type === 'video') {
+  if (thumbnailUrl && item.type === "video") {
     return (
-      <div className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}>
+      <div
+        className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}
+      >
         <img
           src={thumbnailUrl}
           alt={item.title}
           className="w-full h-full object-cover"
-          onError={(e) => {
+          onError={e => {
             // Fallback to emoji if thumbnail fails to load
             const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
+            target.style.display = "none";
             const fallback = target.nextElementSibling as HTMLElement;
-            if (fallback) fallback.style.display = 'flex';
+            if (fallback) fallback.style.display = "flex";
           }}
         />
         {/* Fallback emoji (hidden by default) */}
-        <div className="text-4xl hidden">
-          🎥
-        </div>
+        <div className="text-4xl hidden">🎥</div>
       </div>
     );
   }
 
   // For videos without thumbnails or other file types
   return (
-    <div className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}>
+    <div
+      className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}
+    >
       <div className="text-4xl flex items-center gap-2">
-        {item.type === 'video' ? (
+        {item.type === "video" ? (
           <>
             {isGenerating ? (
               <div className="flex items-center gap-2">

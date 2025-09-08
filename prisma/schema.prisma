@@ -413,13 +413,14 @@ model ProgramDrill {
   // Item type
   type        String? // "exercise", "drill", or "video"
   
+  // Superset functionality
+  supersetId    String? // ID of the superset group
+  supersetOrder Int?    // Order within the superset (1 or 2)
+  
   // Video library integration
   videoId        String?
   videoTitle     String?
   videoThumbnail String?
-  
-  // Superset functionality
-  supersetWithId String? // ID of the exercise this is paired with
   
   // Routine functionality
   routineId String? // ID of the routine this drill belongs to

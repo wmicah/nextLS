@@ -6,6 +6,7 @@ import { trpc } from "@/app/_trpc/client";
 import { ArrowLeft, Save, Plus } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import ProgramBuilder from "@/components/ProgramBuilder";
+import VideoLibraryDialog from "@/components/VideoLibraryDialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
@@ -35,7 +36,7 @@ interface ProgramBuilderWeek {
   collapsed?: boolean;
 }
 
-export default function ProgramEditorPage() {
+function ProgramEditorPageContent() {
   const params = useParams();
   const router = useRouter();
   const programId = params.id as string;
@@ -48,6 +49,17 @@ export default function ProgramEditorPage() {
   const [programBuilderWeeks, setProgramBuilderWeeks] = useState<
     ProgramBuilderWeek[]
   >([]);
+
+  // Video Library Dialog state
+  const [isVideoLibraryOpen, setIsVideoLibraryOpen] = useState(false);
+  const [selectedVideoFromLibrary, setSelectedVideoFromLibrary] = useState<{
+    id: string;
+    title: string;
+    description?: string;
+    duration?: string;
+    url?: string;
+    thumbnail?: string;
+  } | null>(null);
 
   // Fetch program data
   const { data: program, refetch: refetchProgram } =
@@ -379,24 +391,45 @@ export default function ProgramEditorPage() {
   }
 
   return (
-    <Sidebar>
-      <div className="min-h-screen bg-[#2A3133]">
-        {/* Program Builder */}
-        <ProgramBuilder
-          onSave={handleProgramBuilderSave}
-          initialWeeks={programBuilderWeeks}
-          programDetails={{
-            title: program.title || "Untitled Program",
-            description: program.description || "",
-            level: program.level || "Drive",
-            duration: program.weeks?.length || 1,
-            onBack: () => router.back(),
-            onSave: handleSave,
-            isSaving: localIsSaving,
-            lastSaved: localLastSaved,
-          }}
-        />
-      </div>
-    </Sidebar>
+    <>
+      <Sidebar>
+        <div className="min-h-screen bg-[#2A3133]">
+          {/* Program Builder */}
+          <ProgramBuilder
+            onSave={handleProgramBuilderSave}
+            initialWeeks={programBuilderWeeks}
+            programDetails={{
+              title: program.title || "Untitled Program",
+              description: program.description || "",
+              level: program.level || "Drive",
+              duration: program.weeks?.length || 1,
+              onBack: () => router.back(),
+              onSave: handleSave,
+              isSaving: localIsSaving,
+              lastSaved: localLastSaved,
+            }}
+            onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
+            selectedVideoFromLibrary={selectedVideoFromLibrary}
+            onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
+          />
+        </div>
+      </Sidebar>
+
+      {/* Video Library Dialog - Rendered at root level */}
+      <VideoLibraryDialog
+        isOpen={isVideoLibraryOpen}
+        onClose={() => setIsVideoLibraryOpen(false)}
+        onSelectVideo={video => {
+          console.log("Video selected in ProgramEditor:", video);
+          setSelectedVideoFromLibrary(video);
+          setIsVideoLibraryOpen(false);
+        }}
+        editingItem={null}
+      />
+    </>
   );
+}
+
+export default function ProgramEditorPage() {
+  return <ProgramEditorPageContent />;
 }

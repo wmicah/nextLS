@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,10 +32,11 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Plus, Trash2, GripVertical, Play, Clock } from "lucide-react";
+import { Plus, Trash2, GripVertical, Play, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DrillSelectionModal from "./DrillSelectionModal";
 import ProgramBuilder from "./ProgramBuilder";
+import VideoLibraryDialog from "./VideoLibraryDialog";
 
 const programSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -106,7 +107,7 @@ interface CreateProgramModalProps {
   onSubmit: (data: ProgramFormData) => void;
 }
 
-export default function CreateProgramModal({
+function CreateProgramModalContent({
   isOpen,
   onClose,
   onSubmit,
@@ -119,6 +120,16 @@ export default function CreateProgramModal({
     null
   );
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const [isVideoLibraryOpen, setIsVideoLibraryOpen] = useState(false);
+  const [selectedVideoFromLibrary, setSelectedVideoFromLibrary] = useState<{
+    id: string;
+    title: string;
+    description?: string;
+    duration?: string;
+    url?: string;
+    thumbnail?: string;
+  } | null>(null);
+
   const [weeks, setWeeks] = useState<
     Array<{
       weekNumber: number;
@@ -403,11 +414,16 @@ export default function CreateProgramModal({
 
   // Handle ProgramBuilder save
   const handleProgramBuilderSave = (builderWeeks: ProgramBuilderWeek[]) => {
+    console.log("ProgramBuilder save called with weeks:", builderWeeks);
     setProgramBuilderWeeks(builderWeeks);
-    console.log("ProgramBuilder weeks updated:", builderWeeks);
+    console.log("ProgramBuilder weeks state updated");
   };
 
   const handleFormSubmit = (data: ProgramFormData) => {
+    console.log(
+      "Form submitted with programBuilderWeeks:",
+      programBuilderWeeks
+    );
     // Convert ProgramBuilder weeks to the old format for backward compatibility
     const convertedWeeks = programBuilderWeeks.map(
       (builderWeek, weekIndex) => ({
@@ -448,6 +464,8 @@ export default function CreateProgramModal({
         ),
       })
     );
+
+    console.log("Converted weeks:", convertedWeeks);
 
     // Ensure weeks are properly initialized and fill empty days with rest days
     const validWeeks = convertedWeeks.map((week, weekIndex) => ({
@@ -506,6 +524,8 @@ export default function CreateProgramModal({
   };
 
   const handleClose = () => {
+    console.log("CreateProgramModal handleClose called");
+    console.log("CreateProgramModal handleClose - isOpen was:", isOpen);
     reset();
     setWeeks([]);
     setProgramBuilderWeeks([]);
@@ -516,13 +536,30 @@ export default function CreateProgramModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={() => {
+          // Don't auto-close on any open change - only close explicitly
+        }}
+      >
         <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] overflow-y-auto bg-[#2A3133] border-gray-600">
           <DialogHeader>
-            <DialogTitle className="text-white">Create New Program</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Design a comprehensive training program for your clients
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-white">
+                  Create New Program
+                </DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Design a comprehensive training program for your clients
+                </DialogDescription>
+              </div>
+              <button
+                onClick={handleClose}
+                className="p-1 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </DialogHeader>
 
           <Tabs
@@ -683,12 +720,10 @@ export default function CreateProgramModal({
                 <ProgramBuilder
                   onSave={handleProgramBuilderSave}
                   initialWeeks={programBuilderWeeks}
-                  programDetails={{
-                    title: watch("title") || "Untitled Program",
-                    description: watch("description"),
-                    level: watch("level") || "Drive",
-                    duration: watch("duration") || 1,
-                  }}
+                  programDetails={undefined}
+                  onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
+                  selectedVideoFromLibrary={selectedVideoFromLibrary}
+                  onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
                 />
               </div>
             </TabsContent>
@@ -811,6 +846,30 @@ export default function CreateProgramModal({
         onClose={() => setIsDrillSelectionOpen(false)}
         onSelectDrill={handleSelectDrill}
       />
+
+      {/* Video Library Dialog - Rendered at root level */}
+      <VideoLibraryDialog
+        isOpen={isVideoLibraryOpen}
+        onClose={() => setIsVideoLibraryOpen(false)}
+        onSelectVideo={video => {
+          console.log("Video selected in CreateProgramModal:", video);
+          console.log(
+            "CreateProgramModal isOpen before video selection:",
+            isOpen
+          );
+          setSelectedVideoFromLibrary(video);
+          setIsVideoLibraryOpen(false);
+          console.log(
+            "CreateProgramModal isOpen after video selection:",
+            isOpen
+          );
+        }}
+        editingItem={null}
+      />
     </>
   );
+}
+
+export default function CreateProgramModal(props: CreateProgramModalProps) {
+  return <CreateProgramModalContent {...props} />;
 }

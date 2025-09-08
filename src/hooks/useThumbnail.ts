@@ -10,7 +10,8 @@ interface ThumbnailData {
 export const useThumbnail = (
   filename: string,
   videoType: "master" | "local",
-  isVideo: boolean
+  isVideo: boolean,
+  videoUrl?: string
 ) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -19,17 +20,32 @@ export const useThumbnail = (
   useEffect(() => {
     if (!filename || !isVideo) return;
 
+    // Skip thumbnail generation for YouTube videos - they have their own thumbnails
+    if (
+      filename.includes("watch?v=") ||
+      filename.includes("youtube.com") ||
+      filename.includes("youtu.be")
+    ) {
+      return;
+    }
+
     const generateThumbnail = async () => {
       try {
         setIsGenerating(true);
         setError(null);
+
+        // For local videos, we need to handle UploadThing URLs differently
+        const requestBody =
+          videoType === "local" && videoUrl
+            ? { filename, videoType, videoUrl }
+            : { filename, videoType };
 
         const response = await fetch("/api/generate-thumbnail", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ filename, videoType }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
@@ -41,7 +57,14 @@ export const useThumbnail = (
         if (data.success) {
           setThumbnailUrl(data.thumbnailUrl);
         } else {
-          throw new Error(data.error || "Thumbnail generation failed");
+          // If FFmpeg is not available, don't throw an error
+          // The component will show a fallback video icon
+          if (data.error?.includes("FFmpeg not available")) {
+            console.warn("FFmpeg not available, using fallback thumbnail");
+            setThumbnailUrl(null); // This will trigger the fallback UI
+          } else {
+            throw new Error(data.error || "Thumbnail generation failed");
+          }
         }
       } catch (err) {
         console.error("Thumbnail generation error:", err);
@@ -52,7 +75,7 @@ export const useThumbnail = (
     };
 
     generateThumbnail();
-  }, [filename, videoType, isVideo]);
+  }, [filename, videoType, isVideo, videoUrl]);
 
   return {
     thumbnailUrl,

@@ -4656,7 +4656,8 @@ export const appRouter = router({
                   sets: z.number().optional(),
                   reps: z.number().optional(),
                   tempo: z.string().optional(),
-                  supersetWithId: z.string().optional(),
+                  supersetId: z.string().optional(),
+                  supersetOrder: z.number().optional(),
                 })
               ),
             })
@@ -4769,7 +4770,8 @@ export const appRouter = router({
                 sets: drillData.sets || 0,
                 reps: drillData.reps || 0,
                 tempo: drillData.tempo || "",
-                supersetWithId: drillData.supersetWithId || "",
+                supersetId: drillData.supersetId || null,
+                supersetOrder: drillData.supersetOrder || null,
               },
             });
           }
@@ -5890,12 +5892,78 @@ export const appRouter = router({
           });
         }
 
+        // Check for program references before deletion
+        const programDrillsUsingRoutine = await db.programDrill.findMany({
+          where: {
+            routineId: input.id,
+          },
+          include: {
+            day: {
+              include: {
+                week: {
+                  include: {
+                    program: {
+                      select: {
+                        id: true,
+                        title: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        // If routine is used in programs, replace with rest day
+        if (programDrillsUsingRoutine.length > 0) {
+          // Get unique programs that will be affected
+          const affectedPrograms = Array.from(
+            new Set(
+              programDrillsUsingRoutine.map(
+                drill => drill.day.week.program.title
+              )
+            )
+          );
+
+          // Replace routine references with rest day
+          await db.programDrill.updateMany({
+            where: {
+              routineId: input.id,
+            },
+            data: {
+              title: "Rest Day",
+              description: `Routine "${existingRoutine.name}" was deleted and replaced with a rest day`,
+              type: "rest",
+              routineId: null,
+              sets: null,
+              reps: null,
+              tempo: null,
+              duration: "Rest",
+              notes: `Original routine: ${existingRoutine.name} (deleted)`,
+            },
+          });
+        }
+
         // Delete the routine (this will cascade delete all exercises)
         await db.routine.delete({
           where: { id: input.id },
         });
 
-        return { success: true };
+        return {
+          success: true,
+          affectedPrograms:
+            programDrillsUsingRoutine.length > 0
+              ? Array.from(
+                  new Set(
+                    programDrillsUsingRoutine.map(
+                      drill => drill.day.week.program.title
+                    )
+                  )
+                )
+              : [],
+          replacedDrills: programDrillsUsingRoutine.length,
+        };
       }),
   }),
 

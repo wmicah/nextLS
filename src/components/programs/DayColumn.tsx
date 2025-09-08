@@ -136,7 +136,7 @@ function SortableExerciseItem({ exercise, onDelete }: any) {
 								</span>
 							</div>
 						)}
-						{exercise.supersetWithId && (
+						{exercise.supersetId && (
 							<div className="flex items-center gap-2">
 								<span className="text-sm bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full">
 									Superset

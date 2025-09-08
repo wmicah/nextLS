@@ -25,6 +25,11 @@ import {
   Grid3X3,
   List,
   Sparkles,
+  Copy,
+  Eye,
+  Zap,
+  Activity,
+  Dumbbell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +73,13 @@ interface RoutinesTabProps {
     exercises: RoutineExercise[];
   }) => void;
   onDeleteRoutine: (routineId: string) => void;
+  onViewDetails?: (routine: {
+    id: string;
+    name: string;
+    description: string;
+    exercises: RoutineExercise[];
+  }) => void;
+  onDuplicateRoutine?: (routine: Routine) => void;
 }
 
 export default function RoutinesTab({
@@ -75,6 +87,8 @@ export default function RoutinesTab({
   onCreateRoutine,
   onUpdateRoutine,
   onDeleteRoutine,
+  onViewDetails,
+  onDuplicateRoutine,
 }: RoutinesTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -219,7 +233,7 @@ export default function RoutinesTab({
           </div>
           <h3
             className="text-xl font-semibold mb-3"
-            style={{ color: "#C3BCC2" }}
+            style={{ color: "#f0fdf4" }}
           >
             {searchTerm ? "No routines found" : "No routines created yet"}
           </h3>
@@ -253,136 +267,265 @@ export default function RoutinesTab({
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRoutines.map(routine => (
+          {filteredRoutines.map((routine, index) => (
             <div
               key={routine.id}
               className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
               style={{
                 backgroundColor: "#353A3A",
                 borderColor: "#606364",
+                animationDelay: `${index * 100}ms`,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#3A4040";
-                e.currentTarget.style.borderColor = "#4A5A70";
+                e.currentTarget.style.backgroundColor = "#3a4040";
+                e.currentTarget.style.borderColor = "#10B981";
+                e.currentTarget.style.boxShadow =
+                  "0 20px 40px rgba(16, 185, 129, 0.05)";
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = "#353A3A";
                 e.currentTarget.style.borderColor = "#606364";
+                e.currentTarget.style.boxShadow =
+                  "0 4px 20px rgba(0, 0, 0, 0.1)";
               }}
             >
+              {/* Gradient overlay */}
+              <div
+                className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
+                }}
+              />
+
               <div className="relative p-6">
-                {/* Header with title and actions */}
+                {/* Header with title and quick actions */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1 min-w-0">
-                    <h3
-                      className="text-lg font-bold line-clamp-1 mb-2"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {routine.name}
-                    </h3>
+                    <div className="mb-2">
+                      <h3
+                        className="text-lg font-bold line-clamp-1"
+                        style={{ color: "#f0fdf4" }}
+                      >
+                        {routine.name}
+                      </h3>
+                    </div>
                     <p
-                      className="text-sm line-clamp-2"
-                      style={{ color: "#ABA4AA" }}
+                      className="text-sm line-clamp-2 mb-3"
+                      style={{ color: "#a7f3d0" }}
                     >
                       {routine.description}
                     </p>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className="p-1.5 rounded-lg transition-all duration-300 transform hover:scale-110"
-                        style={{ color: "#ABA4AA" }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.color = "#C3BCC2";
-                          e.currentTarget.style.backgroundColor = "#606364";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.color = "#ABA4AA";
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="rounded-xl border shadow-xl"
-                      style={{
-                        backgroundColor: "#353A3A",
-                        borderColor: "#606364",
+
+                  {/* Quick Action Buttons */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        onUpdateRoutine(routine);
                       }}
+                      className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      style={{
+                        backgroundColor: "#4A5A70",
+                        color: "#f0fdf4",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = "#606364";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "#4A5A70";
+                      }}
+                      title="Edit Routine"
                     >
-                      <DropdownMenuItem
-                        onClick={() => onUpdateRoutine(routine)}
-                        className="rounded-lg mx-1 my-1"
-                        style={{ color: "#C3BCC2" }}
+                      <Edit className="h-4 w-4" />
+                    </button>
+
+                    {onDuplicateRoutine && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          onDuplicateRoutine(routine);
+                        }}
+                        className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                        style={{
+                          backgroundColor: "#10B981",
+                          color: "#f0fdf4",
+                        }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#606364";
+                          e.currentTarget.style.backgroundColor = "#059669";
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.backgroundColor = "#10B981";
+                        }}
+                        title="Duplicate Routine"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    )}
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                          style={{
+                            backgroundColor: "#606364",
+                            color: "#f0fdf4",
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = "#4A5A70";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = "#606364";
+                          }}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        className="rounded-xl border shadow-xl z-50"
+                        style={{
+                          backgroundColor: "#1f2937",
+                          borderColor: "#374151",
+                          position: "absolute",
                         }}
                       >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator
-                        style={{ backgroundColor: "#606364" }}
-                      />
-                      <DropdownMenuItem
-                        onClick={() => onDeleteRoutine(routine.id)}
-                        className="rounded-lg mx-1 my-1"
-                        style={{ color: "#ff6b6b" }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#ff6b6b20";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        {onViewDetails && (
+                          <DropdownMenuItem
+                            onClick={() => onViewDetails(routine)}
+                            className="rounded-lg mx-1 my-1"
+                            style={{ color: "#f9fafb" }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.backgroundColor = "#374151";
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator
+                          style={{ backgroundColor: "#374151" }}
+                        />
+                        <DropdownMenuItem
+                          onClick={() => onDeleteRoutine(routine.id)}
+                          className="rounded-lg mx-1 my-1"
+                          style={{ color: "#fca5a5" }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = "#7f1d1d";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
 
                 {/* Exercise Count */}
-                <div className="flex items-center gap-2 mb-3">
-                  <Users className="h-4 w-4" style={{ color: "#ABA4AA" }} />
+                <div className="mb-4">
                   <span
-                    className="text-sm font-medium"
-                    style={{ color: "#C3BCC2" }}
+                    className="text-sm font-semibold"
+                    style={{ color: "#f0fdf4" }}
                   >
-                    {routine.exercises.length} exercises
+                    {routine.exercises.length}{" "}
+                    {routine.exercises.length === 1 ? "Exercise" : "Exercises"}
                   </span>
                 </div>
 
-                {/* Exercise Types */}
+                {/* Exercise Types Preview */}
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {Array.from(
-                    new Set(routine.exercises.map(ex => ex.type))
-                  ).map(type => (
+                  {Array.from(new Set(routine.exercises.map(ex => ex.type)))
+                    .slice(0, 3)
+                    .map(type => (
+                      <span
+                        key={type}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                        style={{
+                          backgroundColor: getExerciseColor(type).split(" ")[0],
+                          color: getExerciseColor(type).split(" ")[1],
+                        }}
+                      >
+                        {getExerciseIcon(type)}
+                        <span className="capitalize">{type}</span>
+                      </span>
+                    ))}
+                  {Array.from(new Set(routine.exercises.map(ex => ex.type)))
+                    .length > 3 && (
                     <span
-                      key={type}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+                      className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium"
                       style={{
-                        backgroundColor: getExerciseColor(type).split(" ")[0],
-                        color: getExerciseColor(type).split(" ")[1],
+                        backgroundColor: "#606364",
+                        color: "#f9fafb",
                       }}
                     >
-                      {getExerciseIcon(type)}
-                      <span className="capitalize">{type}</span>
+                      +
+                      {Array.from(new Set(routine.exercises.map(ex => ex.type)))
+                        .length - 3}{" "}
+                      more
                     </span>
-                  ))}
+                  )}
                 </div>
 
-                {/* Created Date */}
+                {/* Included Exercises */}
+                {routine.exercises.length > 0 && (
+                  <div className="mb-4">
+                    <div
+                      className="text-xs font-medium mb-3"
+                      style={{ color: "#a7f3d0" }}
+                    >
+                      Included Exercises:
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {routine.exercises.map((exercise, idx) => (
+                        <div
+                          key={exercise.id}
+                          className="flex items-center gap-2 text-xs"
+                          style={{ color: "#a7f3d0" }}
+                        >
+                          <div
+                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: "#10B981" }}
+                          />
+                          <span className="truncate">{exercise.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer with date and quick stats */}
                 <div
-                  className="flex items-center gap-2 text-xs"
-                  style={{ color: "#ABA4AA" }}
+                  className="flex items-center justify-between pt-3 border-t"
+                  style={{ borderColor: "#2d4a3e" }}
                 >
-                  <Calendar className="h-3 w-3" />
-                  <span>Created {formatDate(routine.createdAt)}</span>
+                  <div
+                    className="flex items-center gap-2 text-xs"
+                    style={{ color: "#a7f3d0" }}
+                  >
+                    <Calendar className="h-3 w-3" />
+                    <span>Created {formatDate(routine.createdAt)}</span>
+                  </div>
+
+                  {/* Quick action indicator */}
+                  <div className="flex items-center gap-1">
+                    <Zap className="h-3 w-3" style={{ color: "#fbbf24" }} />
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: "#fbbf24" }}
+                    >
+                      Ready
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -390,111 +533,185 @@ export default function RoutinesTab({
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredRoutines.map(routine => (
+          {filteredRoutines.map((routine, index) => (
             <div
               key={routine.id}
               className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-1 cursor-pointer relative overflow-hidden group"
               style={{
                 backgroundColor: "#353A3A",
                 borderColor: "#606364",
+                animationDelay: `${index * 50}ms`,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#3A4040";
-                e.currentTarget.style.borderColor = "#4A5A70";
+                e.currentTarget.style.backgroundColor = "#3a4040";
+                e.currentTarget.style.borderColor = "#10B981";
+                e.currentTarget.style.boxShadow =
+                  "0 10px 30px rgba(16, 185, 129, 0.05)";
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = "#353A3A";
                 e.currentTarget.style.borderColor = "#606364";
+                e.currentTarget.style.boxShadow =
+                  "0 4px 20px rgba(0, 0, 0, 0.1)";
               }}
             >
+              {/* Gradient overlay */}
+              <div
+                className="absolute inset-0 opacity-3 group-hover:opacity-8 transition-opacity duration-300"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
+                }}
+              />
+
               <div className="relative p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3
-                        className="font-semibold truncate"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        {routine.name}
-                      </h3>
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
-                        style={{
-                          backgroundColor: "#4A5A70",
-                          color: "#C3BCC2",
-                        }}
-                      >
-                        <Users className="h-3 w-3" />
-                        {routine.exercises.length} exercises
-                      </span>
-                    </div>
-                    <p
-                      className="text-sm mb-3 line-clamp-1"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      {routine.description}
-                    </p>
-                    <div
-                      className="flex items-center gap-4 text-xs"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>Created {formatDate(routine.createdAt)}</span>
+                    <div className="mb-3">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3
+                          className="font-bold text-lg truncate"
+                          style={{ color: "#a7f3d0" }}
+                        >
+                          {routine.name}
+                        </h3>
+                        <span
+                          className="text-sm font-semibold"
+                          style={{ color: "#f0fdf4" }}
+                        >
+                          {routine.exercises.length}{" "}
+                          {routine.exercises.length === 1
+                            ? "Exercise"
+                            : "Exercises"}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>Updated {formatDate(routine.updatedAt)}</span>
+
+                      <p
+                        className="text-sm mb-3 line-clamp-1"
+                        style={{ color: "#a7f3d0" }}
+                      >
+                        {routine.description}
+                      </p>
+
+                      <div className="flex items-center gap-6 text-xs">
+                        <div
+                          className="flex items-center gap-1"
+                          style={{ color: "#a7f3d0" }}
+                        >
+                          <Calendar className="h-3 w-3" />
+                          <span>Created {formatDate(routine.createdAt)}</span>
+                        </div>
+                        <div
+                          className="flex items-center gap-1"
+                          style={{ color: "#a7f3d0" }}
+                        >
+                          <Zap className="h-3 w-3" />
+                          <span>Ready to use</span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      onUpdateRoutine(routine);
+                    }}
+                    className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                    style={{
+                      backgroundColor: "#4A5A70",
+                      color: "#f0fdf4",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#606364";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                    }}
+                    title="Edit Routine"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+
+                  {onDuplicateRoutine && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        onDuplicateRoutine(routine);
+                      }}
+                      className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      style={{
+                        backgroundColor: "#10B981",
+                        color: "#f0fdf4",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = "#059669";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "#10B981";
+                      }}
+                      title="Duplicate Routine"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  )}
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
-                        className="p-1.5 rounded-lg transition-all duration-300 transform hover:scale-110"
-                        style={{ color: "#ABA4AA" }}
+                        className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                        style={{
+                          backgroundColor: "#606364",
+                          color: "#f0fdf4",
+                        }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.color = "#C3BCC2";
-                          e.currentTarget.style.backgroundColor = "#606364";
+                          e.currentTarget.style.backgroundColor = "#4A5A70";
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.color = "#ABA4AA";
-                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.backgroundColor = "#606364";
                         }}
+                        onClick={e => e.stopPropagation()}
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                      className="rounded-xl border shadow-xl"
+                      className="rounded-xl border shadow-xl z-50"
                       style={{
-                        backgroundColor: "#353A3A",
-                        borderColor: "#606364",
+                        backgroundColor: "#1f2937",
+                        borderColor: "#374151",
+                        position: "absolute",
                       }}
                     >
-                      <DropdownMenuItem
-                        onClick={() => onUpdateRoutine(routine)}
-                        className="rounded-lg mx-1 my-1"
-                        style={{ color: "#C3BCC2" }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#606364";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
+                      {onViewDetails && (
+                        <DropdownMenuItem
+                          onClick={() => onViewDetails(routine)}
+                          className="rounded-lg mx-1 my-1"
+                          style={{ color: "#f9fafb" }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = "#374151";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator
-                        style={{ backgroundColor: "#606364" }}
+                        style={{ backgroundColor: "#374151" }}
                       />
                       <DropdownMenuItem
                         onClick={() => onDeleteRoutine(routine.id)}
                         className="rounded-lg mx-1 my-1"
-                        style={{ color: "#ff6b6b" }}
+                        style={{ color: "#fca5a5" }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#ff6b6b20";
+                          e.currentTarget.style.backgroundColor = "#7f1d1d";
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.backgroundColor = "transparent";

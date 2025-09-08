@@ -53,7 +53,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/app/_trpc/client";
-import VideoLibraryDialog from "./VideoLibraryDialog";
 import {
   DndContext,
   closestCenter,
@@ -90,6 +89,8 @@ interface ProgramItem {
   videoTitle?: string;
   videoThumbnail?: string;
   routineId?: string;
+  supersetId?: string; // ID of the superset group
+  supersetOrder?: number; // Order within the superset (1 or 2)
 }
 
 interface Routine {
@@ -119,6 +120,16 @@ interface ProgramBuilderProps {
     isSaving?: boolean;
     lastSaved?: Date | null;
   };
+  onOpenVideoLibrary?: () => void;
+  selectedVideoFromLibrary?: {
+    id: string;
+    title: string;
+    description?: string;
+    duration?: string;
+    url?: string;
+    thumbnail?: string;
+  } | null;
+  onVideoProcessed?: () => void;
 }
 
 const DAY_LABELS: Record<DayKey, string> = {
@@ -137,8 +148,13 @@ export default function ProgramBuilder({
   onSave,
   initialWeeks = [],
   programDetails,
+  onOpenVideoLibrary,
+  selectedVideoFromLibrary,
+  onVideoProcessed,
 }: ProgramBuilderProps) {
   const [weeks, setWeeks] = useState<Week[]>(initialWeeks);
+  const [selectedWeekId, setSelectedWeekId] = useState<string>("");
+  const [selectedDayKey, setSelectedDayKey] = useState<DayKey>("sun");
 
   // Sync internal weeks state with initialWeeks prop changes
   useEffect(() => {
@@ -146,13 +162,9 @@ export default function ProgramBuilder({
       setWeeks(initialWeeks);
     }
   }, [initialWeeks]);
-
-  const [isVideoLibraryOpen, setIsVideoLibraryOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ProgramItem | null>(null);
   const [isVideoDetailsDialogOpen, setIsVideoDetailsDialogOpen] =
     useState(false);
-  const [selectedWeekId, setSelectedWeekId] = useState<string>("");
-  const [selectedDayKey, setSelectedDayKey] = useState<DayKey>("sun");
-  const [editingItem, setEditingItem] = useState<ProgramItem | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<{
     id: string;
     title: string;
@@ -362,6 +374,27 @@ export default function ProgramBuilder({
     [weeks, onSave]
   );
 
+  const reorderItems = useCallback(
+    (weekId: string, dayKey: DayKey, newItems: ProgramItem[]) => {
+      const updatedWeeks = weeks.map(week => {
+        if (week.id === weekId) {
+          return {
+            ...week,
+            days: {
+              ...week.days,
+              [dayKey]: newItems,
+            },
+          };
+        }
+        return week;
+      });
+      setWeeks(updatedWeeks);
+      // Call onSave to keep parent state in sync
+      onSave?.(updatedWeeks);
+    },
+    [weeks, onSave]
+  );
+
   const handleSave = useCallback(() => {
     if (programDetails?.onSave) {
       // In edit mode, call the database save function with current weeks
@@ -379,18 +412,21 @@ export default function ProgramBuilder({
       setEditingItem(item);
 
       if (item.type === "video") {
-        setIsVideoLibraryOpen(true);
+        onOpenVideoLibrary?.();
       }
     },
     []
   );
 
-  const openAddFromLibrary = useCallback((weekId: string, dayKey: DayKey) => {
-    setSelectedWeekId(weekId);
-    setSelectedDayKey(dayKey);
-    setEditingItem(null);
-    setIsVideoLibraryOpen(true);
-  }, []);
+  const openAddFromLibrary = useCallback(
+    (weekId: string, dayKey: DayKey) => {
+      setSelectedWeekId(weekId);
+      setSelectedDayKey(dayKey);
+      setEditingItem(null);
+      onOpenVideoLibrary?.();
+    },
+    [onOpenVideoLibrary]
+  );
 
   const handleVideoSelect = useCallback(
     (video: {
@@ -401,6 +437,11 @@ export default function ProgramBuilder({
       url?: string;
       thumbnail?: string;
     }) => {
+      console.log("ProgramBuilder handleVideoSelect called with:", video);
+      console.log("selectedWeekId:", selectedWeekId);
+      console.log("selectedDayKey:", selectedDayKey);
+      console.log("Current weeks state:", weeks);
+
       // Check if we're creating a routine
       if (selectedWeekId === "routine-creation") {
         // Add video directly to routine
@@ -419,18 +460,34 @@ export default function ProgramBuilder({
           ...prev,
           exercises: [...(prev.exercises || []), videoItem],
         }));
-        setIsVideoLibraryOpen(false);
         setSelectedWeekId("");
         setSelectedDayKey("sun");
       } else {
         // Normal video selection for program days
+        console.log("Setting selectedVideo and opening VideoDetailsDialog");
         setSelectedVideo(video);
-        setIsVideoLibraryOpen(false);
+        console.log("About to set isVideoDetailsDialogOpen to true");
         setIsVideoDetailsDialogOpen(true);
+        console.log("VideoDetailsDialog should now be open");
       }
     },
     [selectedWeekId]
   );
+
+  // Handle video selection from library
+  useEffect(() => {
+    console.log(
+      "ProgramBuilder useEffect - selectedVideoFromLibrary:",
+      selectedVideoFromLibrary
+    );
+    console.log("ProgramBuilder useEffect - selectedWeekId:", selectedWeekId);
+    console.log("ProgramBuilder useEffect - selectedDayKey:", selectedDayKey);
+    if (selectedVideoFromLibrary) {
+      console.log("Video selected from library:", selectedVideoFromLibrary);
+      handleVideoSelect(selectedVideoFromLibrary);
+      onVideoProcessed?.(); // Clear the selected video after processing
+    }
+  }, [selectedVideoFromLibrary, handleVideoSelect, onVideoProcessed]);
 
   const handleVideoDetailsSubmit = useCallback(
     (details: {
@@ -439,8 +496,17 @@ export default function ProgramBuilder({
       reps?: number;
       tempo?: string;
     }) => {
+      console.log(
+        "ProgramBuilder handleVideoDetailsSubmit called with details:",
+        details
+      );
+      console.log("selectedVideo:", selectedVideo);
+      console.log("selectedWeekId:", selectedWeekId);
+      console.log("selectedDayKey:", selectedDayKey);
+
       if (!selectedVideo) return;
 
+      // Create the video item
       const videoItem: Omit<ProgramItem, "id"> = {
         title: selectedVideo.title,
         type: "video",
@@ -455,23 +521,25 @@ export default function ProgramBuilder({
         tempo: details.tempo || "",
       };
 
+      // Add the video item to the program
       if (editingItem) {
         editItem(selectedWeekId, selectedDayKey, editingItem.id, videoItem);
       } else {
         addItem(selectedWeekId, selectedDayKey, videoItem);
       }
 
+      // Close the dialog
       setIsVideoDetailsDialogOpen(false);
       setSelectedVideo(null);
       setEditingItem(null);
     },
     [
       selectedVideo,
-      editingItem,
       selectedWeekId,
       selectedDayKey,
-      editItem,
+      editingItem,
       addItem,
+      editItem,
     ]
   );
 
@@ -539,8 +607,15 @@ export default function ProgramBuilder({
           );
 
           if (item && superset) {
-            item.routineId = superset.routineId; // Link to the superset's routine
-            superset.routineId = item.routineId; // Link to the item's routine
+            // Create a unique superset ID
+            const supersetGroupId = `superset-${Date.now()}`;
+
+            // Set both items as part of the same superset
+            item.supersetId = supersetGroupId;
+            item.supersetOrder = 1;
+            superset.supersetId = supersetGroupId;
+            superset.supersetOrder = 2;
+
             return { ...week, days: updatedDays };
           }
         }
@@ -559,8 +634,19 @@ export default function ProgramBuilder({
         if (week.id === selectedWeekId) {
           const updatedDays = { ...week.days };
           const item = updatedDays[selectedDayKey].find(i => i.id === itemId);
-          if (item) {
-            item.routineId = undefined;
+          if (item && item.supersetId) {
+            // Find all items in the same superset group
+            const supersetGroupId = item.supersetId;
+            const supersetItems = updatedDays[selectedDayKey].filter(
+              i => i.supersetId === supersetGroupId
+            );
+
+            // Remove superset properties from all items in the group
+            supersetItems.forEach(supersetItem => {
+              supersetItem.supersetId = undefined;
+              supersetItem.supersetOrder = undefined;
+            });
+
             return { ...week, days: updatedDays };
           }
         }
@@ -573,24 +659,32 @@ export default function ProgramBuilder({
     [weeks, selectedWeekId, selectedDayKey, onSave]
   );
 
+  const handleOpenSupersetModal = useCallback((item: ProgramItem) => {
+    setPendingSupersetDrill(item);
+    setIsSupersetModalOpen(true);
+  }, []);
+
   const getSupersetGroups = useCallback(() => {
     const groups: { [key: string]: ProgramItem[] } = {};
     weeks.forEach(week => {
       Object.entries(week.days).forEach(([dayKey, items]) => {
         items.forEach(item => {
-          if (item.routineId) {
-            const routineName =
-              routines.find(r => r.id === item.routineId)?.name ||
-              "Unknown Routine";
-            if (!groups[routineName]) {
-              groups[routineName] = [];
+          if (item.supersetId) {
+            const groupKey = `${week.id}-${dayKey}-${item.supersetId}`;
+            if (!groups[groupKey]) {
+              groups[groupKey] = [];
             }
-            groups[routineName].push(item);
+            groups[groupKey].push(item);
           }
         });
       });
     });
-    return Object.entries(groups).map(([name, items]) => ({ name, items }));
+    return Object.values(groups).map((items, index) => ({
+      name: `Superset ${index + 1}`,
+      items: items.sort(
+        (a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)
+      ),
+    }));
   }, [weeks, routines]);
 
   const handleDragEnd = useCallback(
@@ -784,6 +878,7 @@ export default function ProgramBuilder({
             onAddItem={openAddFromLibrary}
             onEditItem={openEditItemDialog}
             onDeleteItem={deleteItem}
+            onReorderItems={reorderItems}
             onAddRoutine={(routine, dayKey) =>
               handleAddRoutineToDay(routine, week.id, dayKey)
             }
@@ -792,6 +887,7 @@ export default function ProgramBuilder({
             onDragEnd={handleDragEnd}
             onCreateSuperset={handleCreateSuperset}
             onRemoveSuperset={handleRemoveSuperset}
+            onOpenSupersetModal={handleOpenSupersetModal}
             getSupersetGroups={getSupersetGroups}
             onOpenAddRoutine={(weekId, dayKey) => {
               setPendingRoutineDay({ weekId, dayKey });
@@ -801,23 +897,12 @@ export default function ProgramBuilder({
         ))}
       </div>
 
-      {/* Video Library Dialog */}
-      <VideoLibraryDialog
-        isOpen={isVideoLibraryOpen}
-        onClose={() => {
-          setIsVideoLibraryOpen(false);
-          setEditingItem(null);
-          setSelectedWeekId("");
-          setSelectedDayKey("sun");
-        }}
-        onSelectVideo={handleVideoSelect}
-        editingItem={editingItem}
-      />
-
       {/* Video Details Dialog */}
+
       <VideoDetailsDialog
         isOpen={isVideoDetailsDialogOpen}
         onClose={() => {
+          console.log("VideoDetailsDialog onClose called");
           setIsVideoDetailsDialogOpen(false);
           setSelectedVideo(null);
         }}
@@ -831,8 +916,8 @@ export default function ProgramBuilder({
           <DialogHeader>
             <DialogTitle className="text-white">Create Superset</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Select two exercises to link as a superset (minimal rest between
-              them)
+              Select another exercise from the same day to create a superset
+              (minimal rest between exercises)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -861,18 +946,19 @@ export default function ProgramBuilder({
                   }
                 }}
               >
-                <option value="">Select an exercise...</option>
-                {weeks.flatMap(week =>
-                  Object.entries(week.days).flatMap(([dayKey, items]) =>
-                    items
-                      .filter(item => item.id !== pendingSupersetDrill?.id)
-                      .map(item => (
-                        <option key={item.id} value={item.id}>
-                          {item.title} ({dayKey})
-                        </option>
-                      ))
+                <option value="">
+                  Select an exercise from the same day...
+                </option>
+                {weeks
+                  .find(week => week.id === selectedWeekId)
+                  ?.days[selectedDayKey]?.filter(
+                    item => item.id !== pendingSupersetDrill?.id
                   )
-                )}
+                  .map(item => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
@@ -936,7 +1022,7 @@ export default function ProgramBuilder({
                 <Button
                   onClick={() => {
                     // Open video library to select videos for the routine
-                    setIsVideoLibraryOpen(true);
+                    onOpenVideoLibrary?.();
                     setEditingItem(null);
                     setSelectedWeekId("routine-creation");
                     setSelectedDayKey("sun");
@@ -1229,12 +1315,18 @@ interface WeekCardProps {
   onAddItem: (weekId: string, dayKey: DayKey) => void;
   onEditItem: (weekId: string, dayKey: DayKey, item: ProgramItem) => void;
   onDeleteItem: (weekId: string, dayKey: DayKey, itemId: string) => void;
+  onReorderItems: (
+    weekId: string,
+    dayKey: DayKey,
+    newItems: ProgramItem[]
+  ) => void;
   onAddRoutine: (routine: Routine, dayKey: DayKey) => void;
   routines: Routine[];
   sensors: any; // DndContext sensors
   onDragEnd: (event: DragEndEvent) => void;
   onCreateSuperset: (itemId: string, supersetId: string) => void;
   onRemoveSuperset: (itemId: string) => void;
+  onOpenSupersetModal: (item: ProgramItem) => void;
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
 }
@@ -1248,12 +1340,14 @@ function WeekCard({
   onAddItem,
   onEditItem,
   onDeleteItem,
+  onReorderItems,
   onAddRoutine,
   routines,
   sensors,
   onDragEnd,
   onCreateSuperset,
   onRemoveSuperset,
+  onOpenSupersetModal,
   getSupersetGroups,
   onOpenAddRoutine,
 }: WeekCardProps) {
@@ -1338,6 +1432,9 @@ function WeekCard({
                 onAddItem={() => onAddItem(week.id, dayKey)}
                 onEditItem={item => onEditItem(week.id, dayKey, item)}
                 onDeleteItem={itemId => onDeleteItem(week.id, dayKey, itemId)}
+                onReorderItems={newItems =>
+                  onReorderItems(week.id, dayKey, newItems)
+                }
                 onAddRoutine={() =>
                   onAddRoutine(
                     {
@@ -1352,6 +1449,7 @@ function WeekCard({
                 routines={routines}
                 onCreateSuperset={onCreateSuperset}
                 onRemoveSuperset={onRemoveSuperset}
+                onOpenSupersetModal={onOpenSupersetModal}
                 getSupersetGroups={getSupersetGroups}
                 onOpenAddRoutine={onOpenAddRoutine}
               />
@@ -1372,10 +1470,12 @@ interface DayCardProps {
   onAddItem: () => void;
   onEditItem: (item: ProgramItem) => void;
   onDeleteItem: (itemId: string) => void;
+  onReorderItems: (newItems: ProgramItem[]) => void;
   onAddRoutine: () => void;
   routines: Routine[];
   onCreateSuperset: (itemId: string, supersetId: string) => void;
   onRemoveSuperset: (itemId: string) => void;
+  onOpenSupersetModal: (item: ProgramItem) => void;
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
 }
@@ -1388,10 +1488,12 @@ function DayCard({
   onAddItem,
   onEditItem,
   onDeleteItem,
+  onReorderItems,
   onAddRoutine,
   routines,
   onCreateSuperset,
   onRemoveSuperset,
+  onOpenSupersetModal,
   getSupersetGroups,
   onOpenAddRoutine,
 }: DayCardProps) {
@@ -1441,8 +1543,7 @@ function DayCard({
                   if (oldIndex !== -1 && newIndex !== -1) {
                     const newItems = arrayMove(items, oldIndex, newIndex);
                     // Update the items in the parent component
-                    // This would need to be handled by the parent
-                    console.log("Items reordered:", newItems);
+                    onReorderItems(newItems);
                   }
                 }
               }}
@@ -1458,7 +1559,7 @@ function DayCard({
                       item={item}
                       onEdit={() => onEditItem(item)}
                       onDelete={() => onDeleteItem(item.id)}
-                      onAddSuperset={() => onAddRoutine()}
+                      onAddSuperset={() => onOpenSupersetModal(item)}
                       routines={routines}
                       onCreateSuperset={onCreateSuperset}
                       onRemoveSuperset={onRemoveSuperset}
@@ -1536,17 +1637,30 @@ function SortableDrillItem({
   };
 
   const isRoutine = item.type === "routine";
+  const isSuperset = item.supersetId !== undefined;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "bg-gray-800 rounded-lg p-3 border transition-all duration-200",
+        "rounded-lg p-3 border transition-all duration-200",
         isDragging && "opacity-50 scale-95",
-        isRoutine ? "border-green-400 bg-green-900/20" : "border-gray-600"
+        isSuperset
+          ? "bg-purple-600/30 border-purple-500/50"
+          : isRoutine
+          ? "bg-green-900/20 border-green-400"
+          : "bg-gray-800 border-gray-600"
       )}
     >
+      {/* Superset indicator */}
+      {isSuperset && (
+        <div className="text-xs text-purple-300 mb-2 flex items-center gap-1">
+          <Link className="h-3 w-3" />
+          <span className="font-medium">SUPERSET</span>
+        </div>
+      )}
+
       {/* Routine indicator */}
       {isRoutine && (
         <div className="flex items-center gap-2 mb-2 p-2 bg-green-900/30 rounded-lg">
@@ -1605,6 +1719,29 @@ function SortableDrillItem({
 
         {/* Action buttons */}
         <div className="flex flex-col gap-1">
+          {/* Superset Chain Link Button */}
+          {!item.supersetId ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onAddSuperset}
+              className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30"
+              title="Add Superset"
+            >
+              <Link className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRemoveSuperset(item.id)}
+              className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30"
+              title="Remove Superset"
+            >
+              <Unlink className="h-4 w-4" />
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="sm"
@@ -1679,11 +1816,24 @@ function ProgramItemCard({
     }
   };
 
-  const isSuperset = item.routineId !== undefined;
+  const isSuperset = item.supersetId !== undefined;
 
   return (
-    <Card className="bg-gray-600/50 border-gray-500/50">
+    <Card
+      className={`${
+        isSuperset
+          ? "bg-purple-600/30 border-purple-500/50"
+          : "bg-gray-600/50 border-gray-500/50"
+      }`}
+    >
       <CardContent className="p-2">
+        {/* Superset indicator */}
+        {isSuperset && (
+          <div className="text-xs text-purple-300 mb-1 flex items-center gap-1">
+            <Link className="h-3 w-3" />
+            <span className="font-medium">SUPERSET</span>
+          </div>
+        )}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -1712,55 +1862,60 @@ function ProgramItemCard({
             )}
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-1">
+            {/* Superset Chain Link Button */}
+            {!isSuperset ? (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-500"
+                onClick={onAddSuperset}
+                className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30"
+                title="Add Superset"
               >
-                <MoreHorizontal className="h-3 w-3" />
+                <Link className="h-4 w-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-gray-700 border-gray-600">
-              <DropdownMenuItem
-                onClick={onEdit}
-                className="text-white hover:bg-gray-600"
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRemoveSuperset(item.id)}
+                className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30"
+                title="Remove Superset"
               >
-                <Edit className="h-3 w-3 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-gray-600" />
-              <DropdownMenuItem
-                onClick={onDelete}
-                className="text-red-400 hover:bg-red-400/10"
-              >
-                <Trash2 className="h-3 w-3 mr-2" />
-                Delete
-              </DropdownMenuItem>
-              {isSuperset && (
-                <>
-                  <DropdownMenuSeparator className="bg-gray-600" />
-                  <DropdownMenuItem
-                    onClick={() => onRemoveSuperset(item.id)}
-                    className="text-red-400 hover:bg-red-400/10"
-                  >
-                    <Unlink className="h-3 w-3 mr-2" />
-                    Remove Superset
-                  </DropdownMenuItem>
-                </>
-              )}
-              {!isSuperset && (
-                <DropdownMenuItem
-                  onClick={onAddSuperset}
-                  className="text-blue-400 hover:bg-blue-400/10"
+                <Unlink className="h-4 w-4" />
+              </Button>
+            )}
+
+            {/* More Options Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-500"
                 >
-                  <Link className="h-3 w-3 mr-2" />
-                  Add Superset
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-gray-700 border-gray-600">
+                <DropdownMenuItem
+                  onClick={onEdit}
+                  className="text-white hover:bg-gray-600"
+                >
+                  <Edit className="h-3 w-3 mr-2" />
+                  Edit
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSeparator className="bg-gray-600" />
+                <DropdownMenuItem
+                  onClick={onDelete}
+                  className="text-red-400 hover:bg-red-400/10"
+                >
+                  <Trash2 className="h-3 w-3 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -1813,9 +1968,11 @@ function VideoDetailsDialog({
 
   if (!video) return null;
 
+  console.log("VideoDetailsDialog rendering with video:", video);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-800 border-gray-600 text-white">
+      <DialogContent className="bg-gray-800 border-gray-600 text-white z-[100]">
         <DialogHeader>
           <DialogTitle>Add Video Details</DialogTitle>
           <DialogDescription className="text-gray-400">

@@ -400,8 +400,10 @@ export default function AdminDashboard() {
 
                     const uploadData = await uploadResponse.json();
 
-                    // Create a secure URL for the file
-                    const secureUrl = `secure://master-library/${uploadData.filename}`;
+                    // Create a proper HTTP URL for the file (this replaces the old secure://master-library/ protocol)
+                    const secureUrl = `/api/master-video/${encodeURIComponent(
+                      uploadData.filename
+                    )}`;
 
                     // Now save the metadata to the database
                     addResourceMutation.mutate({
