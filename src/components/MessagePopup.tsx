@@ -36,6 +36,13 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
       refetchInterval: 5000, // Refresh every 5 seconds
     });
 
+  // Get unread counts for each conversation
+  const { data: unreadCounts = {} } =
+    trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
+      enabled: isOpen,
+      refetchInterval: 5000, // Refresh every 5 seconds
+    });
+
   const { data: messages = [], refetch: refetchMessages } =
     trpc.messaging.getMessages.useQuery(
       { conversationId: selectedConversation! },
@@ -255,12 +262,18 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                       ? conversation.coach
                       : conversation.client;
                   const lastMessage = conversation.messages[0];
-                  const unreadCount = conversation._count.messages;
+                  // Get actual unread count from the unreadCounts data
+                  const unreadCount = unreadCounts[conversation.id] || 0;
+                  const hasUnread = unreadCount > 0;
 
                   return (
                     <div
                       key={conversation.id}
-                      className="flex items-center gap-3 p-3 hover:bg-gray-600 cursor-pointer border-b border-gray-600 transition-colors"
+                      className={`flex items-center gap-3 p-3 hover:bg-gray-600 cursor-pointer border-b border-gray-600 transition-colors relative ${
+                        hasUnread
+                          ? "bg-gray-700/50 border-l-4 border-l-red-500"
+                          : ""
+                      }`}
                       onClick={() => setSelectedConversation(conversation.id)}
                     >
                       <ProfilePictureUploader
@@ -274,8 +287,12 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p
-                            className="text-sm font-medium truncate"
-                            style={{ color: "#E2E8F0" }}
+                            className={`text-sm truncate ${
+                              hasUnread ? "font-semibold" : "font-medium"
+                            }`}
+                            style={{
+                              color: hasUnread ? "#FFFFFF" : "#E2E8F0",
+                            }}
                           >
                             {otherUser.name || otherUser.email.split("@")[0]}
                           </p>
@@ -291,16 +308,25 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                         <div className="flex items-center justify-between">
                           {lastMessage && (
                             <p
-                              className="text-xs truncate"
-                              style={{ color: "#9CA3AF" }}
+                              className={`text-xs truncate ${
+                                hasUnread ? "font-medium" : ""
+                              }`}
+                              style={{
+                                color: hasUnread ? "#E2E8F0" : "#9CA3AF",
+                              }}
                             >
                               {lastMessage.content}
                             </p>
                           )}
-                          {unreadCount > 0 && (
-                            <span className="bg-blue-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center ml-2">
-                              {unreadCount}
-                            </span>
+                          {hasUnread && (
+                            <div className="flex items-center gap-2 ml-2">
+                              {/* Unread indicator dot */}
+                              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 animate-pulse"></div>
+                              {/* Unread count badge */}
+                              <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center font-medium">
+                                {unreadCount}
+                              </span>
+                            </div>
                           )}
                         </div>
                       </div>

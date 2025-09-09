@@ -112,6 +112,17 @@ export default function Sidebar({ user, children }: SidebarProps) {
     }
   );
 
+  // Get unread counts for each conversation
+  const { data: unreadCounts = {} } =
+    trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
+      enabled: showRecentMessages,
+      refetchInterval: 60000, // Poll every minute
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      staleTime: 30 * 1000, // Cache for 30 seconds
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    });
+
   // Get user settings for avatar
   const { data: userSettings } = trpc.settings.getSettings.useQuery();
 
@@ -867,8 +878,10 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                 ? conversation.coach
                                 : conversation.client;
                             const lastMessage = conversation.messages[0];
+                            // Get actual unread count from the unreadCounts data
                             const unreadCount =
-                              conversation._count?.messages || 0;
+                              unreadCounts[conversation.id] || 0;
+                            const hasUnread = unreadCount > 0;
 
                             return (
                               <Link
@@ -881,7 +894,11 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                     setIsAnimating(false);
                                   }, 200);
                                 }}
-                                className="flex items-center gap-3 p-3 border-b transition-all duration-200 hover:transform hover:translate-x-1"
+                                className={`flex items-center gap-3 p-3 border-b transition-all duration-200 hover:transform hover:translate-x-1 relative ${
+                                  hasUnread
+                                    ? "bg-gray-700/30 border-l-4 border-l-red-500"
+                                    : ""
+                                }`}
                                 style={{
                                   borderColor: "#606364",
                                   color: "#C3BCC2",
@@ -919,8 +936,16 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
                                     <p
-                                      className="text-sm font-medium truncate"
-                                      style={{ color: "#C3BCC2" }}
+                                      className={`text-sm truncate ${
+                                        hasUnread
+                                          ? "font-semibold"
+                                          : "font-medium"
+                                      }`}
+                                      style={{
+                                        color: hasUnread
+                                          ? "#FFFFFF"
+                                          : "#C3BCC2",
+                                      }}
                                     >
                                       {otherUser.name ||
                                         otherUser.email.split("@")[0]}
@@ -937,16 +962,27 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                   <div className="flex items-center justify-between">
                                     {lastMessage && (
                                       <p
-                                        className="text-xs truncate"
-                                        style={{ color: "#ABA4AA" }}
+                                        className={`text-xs truncate ${
+                                          hasUnread ? "font-medium" : ""
+                                        }`}
+                                        style={{
+                                          color: hasUnread
+                                            ? "#E2E8F0"
+                                            : "#ABA4AA",
+                                        }}
                                       >
                                         {lastMessage.content}
                                       </p>
                                     )}
-                                    {unreadCount > 0 && (
-                                      <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center ml-2 animate-pulse">
-                                        {unreadCount}
-                                      </span>
+                                    {hasUnread && (
+                                      <div className="flex items-center gap-2 ml-2">
+                                        {/* Unread indicator dot */}
+                                        <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 animate-pulse"></div>
+                                        {/* Unread count badge */}
+                                        <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center font-medium">
+                                          {unreadCount}
+                                        </span>
+                                      </div>
                                     )}
                                   </div>
                                 </div>

@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 // Import the startup script to ensure reliable service initialization
 import "@/lib/startup";
 import MessagingServiceProvider from "@/components/MessagingServiceProvider";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -198,6 +199,7 @@ export default function RootLayout({
                   <Toast />
                   <ChatbotWrapper />
                   <Analytics />
+                  <ServiceWorkerRegistration />
                 </MessagingServiceProvider>
               </ChatbotProvider>
             </ThemeProvider>
