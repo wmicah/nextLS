@@ -116,8 +116,8 @@ export default function Dashboard() {
   return (
     <Sidebar>
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Hero Header */}
-        <div className="mb-8">
+        {/* Hero Header - improved mobile layout */}
+        <div className="mb-6 md:mb-8">
           <div className="rounded-2xl border relative overflow-hidden group">
             <div
               className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
@@ -126,21 +126,21 @@ export default function Dashboard() {
                   "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
               }}
             />
-            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-              <div className="flex items-center justify-between">
+            <div className="relative p-4 md:p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div>
                     <h1
-                      className="text-4xl font-bold mb-2"
+                      className="text-2xl md:text-4xl font-bold mb-2"
                       style={{ color: "#C3BCC2" }}
                     >
                       Welcome back, Coach
                     </h1>
                     <p
-                      className="flex items-center gap-2 text-lg"
+                      className="flex items-center gap-2 text-sm md:text-lg"
                       style={{ color: "#ABA4AA" }}
                     >
-                      <TrendingUpIcon className="h-5 w-5 text-yellow-400" />
+                      <TrendingUpIcon className="h-4 w-4 md:h-5 md:w-5 text-yellow-400" />
                       {clients.length > 0
                         ? `Growing strong with ${clients.length} ${
                             clients.length === 1 ? "athlete" : "athletes"
@@ -149,9 +149,9 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-left md:text-right">
                   <div
-                    className="text-2xl font-bold"
+                    className="text-xl md:text-2xl font-bold"
                     style={{ color: "#C3BCC2" }}
                   >
                     {new Date().toLocaleDateString()}
@@ -167,8 +167,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Enhanced Stats Cards - improved mobile grid */}
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
           <div
             className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
             style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
@@ -386,10 +386,10 @@ export default function Dashboard() {
               </div>
               Quick Actions
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-3 p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
+                className="flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
                 style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = "#3A4040";
@@ -406,14 +406,17 @@ export default function Dashboard() {
                 >
                   <Plus className="h-5 w-5" style={{ color: "#C3BCC2" }} />
                 </div>
-                <span className="font-medium" style={{ color: "#C3BCC2" }}>
+                <span
+                  className="font-medium text-sm md:text-base"
+                  style={{ color: "#C3BCC2" }}
+                >
                   Add Client
                 </span>
               </button>
 
               <Link
                 href="/schedule"
-                className="flex items-center gap-3 p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
+                className="flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
                 style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = "#3A4040";
@@ -430,14 +433,17 @@ export default function Dashboard() {
                 >
                   <Calendar className="h-5 w-5" style={{ color: "#C3BCC2" }} />
                 </div>
-                <span className="font-medium" style={{ color: "#C3BCC2" }}>
+                <span
+                  className="font-medium text-sm md:text-base"
+                  style={{ color: "#C3BCC2" }}
+                >
                   Schedule Lesson
                 </span>
               </Link>
 
               <Link
                 href="/programs"
-                className="flex items-center gap-3 p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
+                className="flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
                 style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = "#3A4040";
@@ -454,14 +460,17 @@ export default function Dashboard() {
                 >
                   <Dumbbell className="h-5 w-5" style={{ color: "#C3BCC2" }} />
                 </div>
-                <span className="font-medium" style={{ color: "#C3BCC2" }}>
+                <span
+                  className="font-medium text-sm md:text-base"
+                  style={{ color: "#C3BCC2" }}
+                >
                   Create Program
                 </span>
               </Link>
 
               <Link
                 href="/library"
-                className="flex items-center gap-3 p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
+                className="flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
                 style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = "#3A4040";
@@ -478,7 +487,10 @@ export default function Dashboard() {
                 >
                   <BookOpen className="h-5 w-5" style={{ color: "#C3BCC2" }} />
                 </div>
-                <span className="font-medium" style={{ color: "#C3BCC2" }}>
+                <span
+                  className="font-medium text-sm md:text-base"
+                  style={{ color: "#C3BCC2" }}
+                >
                   Browse Library
                 </span>
               </Link>
@@ -489,11 +501,11 @@ export default function Dashboard() {
         {/* Recent Notifications Section */}
         <RecentNotificationsSection />
 
-        {/* Enhanced Athletes Section */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Enhanced Athletes Section - improved mobile layout */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
           <div>
             <h2
-              className="text-2xl font-bold flex items-center gap-3 mb-2"
+              className="text-xl md:text-2xl font-bold flex items-center gap-3 mb-2"
               style={{ color: "#C3BCC2" }}
             >
               <div
@@ -504,7 +516,10 @@ export default function Dashboard() {
               </div>
               Your Athletes
             </h2>
-            <p className="flex items-center gap-2" style={{ color: "#ABA4AA" }}>
+            <p
+              className="flex items-center gap-2 text-sm md:text-base"
+              style={{ color: "#ABA4AA" }}
+            >
               <Clock className="h-4 w-4" />
               {clients.length} {clients.length === 1 ? "athlete" : "athletes"}{" "}
               waiting for you
@@ -512,7 +527,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium border"
+            className="flex items-center justify-center gap-2 px-4 py-3 md:px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium border w-full md:w-auto"
             style={{
               backgroundColor: "#353A3A",
               color: "#C3BCC2",
@@ -589,7 +604,7 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {clients.map((client: any, index: number) => (
               <div
                 key={client.id}

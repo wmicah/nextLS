@@ -347,30 +347,51 @@ export default function Sidebar({ user, children }: SidebarProps) {
 
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-      {/* Mobile hamburger button */}
+      {/* Mobile hamburger button - improved positioning and design */}
       <button
         onClick={toggleMobileSidebar}
-        className="fixed top-4 left-4 z-30 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-lg bg-sidebar text-sidebar-foreground border border-sidebar-border"
+        className="fixed top-4 left-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl bg-gradient-to-br from-[#4A5A70] to-[#353A3A] text-white border border-[#606364] backdrop-blur-sm"
         aria-label={isMobileOpen ? "Close sidebar" : "Open sidebar"}
+        style={{
+          boxShadow:
+            "0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+        }}
       >
-        {isMobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+        <div className="relative">
+          {isMobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+          {/* Pulse animation for unread notifications */}
+          {unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          )}
+        </div>
       </button>
 
-      {/* Mobile overlay */}
+      {/* Mobile overlay - improved with better blur and animation */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-60 z-10 md:hidden transition-opacity duration-300 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/70 z-40 md:hidden transition-all duration-300 backdrop-blur-md"
           onClick={() => setIsMobileOpen(false)}
+          style={{
+            animation: "fadeIn 0.3s ease-out",
+          }}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - improved mobile animations */}
       <aside
-        className={`flex flex-col justify-between h-screen fixed left-0 top-0 z-20 transition-[width,transform] duration-500 ease-in-out backdrop-blur-sm bg-sidebar text-sidebar-foreground shadow-lg ${
+        className={`flex flex-col justify-between h-screen fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out backdrop-blur-sm bg-sidebar text-sidebar-foreground shadow-2xl ${
           isOpen ? "md:w-64" : "md:w-20"
         } ${
-          isMobileOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full"
-        } md:translate-x-0`}
+          isMobileOpen
+            ? "w-80 translate-x-0 opacity-100"
+            : "w-80 -translate-x-full opacity-0 md:opacity-100"
+        } md:translate-x-0 md:z-20`}
+        style={{
+          background: "linear-gradient(180deg, #2A3133 0%, #1A1D1E 100%)",
+          boxShadow: isMobileOpen
+            ? "0 0 0 1px rgba(255, 255, 255, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+            : "0 4px 20px rgba(0, 0, 0, 0.3)",
+        }}
       >
         <div>
           {/* Header */}
@@ -449,8 +470,8 @@ export default function Sidebar({ user, children }: SidebarProps) {
                 }}
                 className={`transition-all duration-300 ease-in-out transform hover:scale-105 group relative ${
                   isOpen
-                    ? "flex items-center gap-3 px-4 py-3 hover:shadow-lg overflow-hidden rounded-xl"
-                    : "flex items-center justify-center p-3 text-xl rounded-xl"
+                    ? "flex items-center gap-3 px-4 py-4 hover:shadow-lg overflow-hidden rounded-xl md:py-3"
+                    : "flex items-center justify-center p-4 text-xl rounded-xl md:p-3"
                 } ${
                   isActiveLink(link.href) ? "text-white" : "hover:text-white"
                 }`}
@@ -1248,13 +1269,17 @@ export default function Sidebar({ user, children }: SidebarProps) {
         </div>
       </aside>
 
-      {/* Main Content Area with proper margins */}
+      {/* Main Content Area - improved mobile responsiveness */}
       <div
-        className={`flex-1 p-8 transition-all duration-500 ease-in-out ${
-          isOpen ? "ml-20 md:ml-64" : "ml-20"
+        className={`flex-1 transition-all duration-500 ease-in-out ${
+          isOpen ? "ml-0 md:ml-20 lg:ml-64" : "ml-0 md:ml-20"
         }`}
+        style={{
+          padding: "1rem",
+          paddingTop: "5rem", // Space for mobile hamburger button
+        }}
       >
-        {children}
+        <div className="max-w-full mx-auto">{children}</div>
       </div>
 
       {/* Client Search Modal */}
@@ -1263,7 +1288,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
         onClose={() => setShowClientSearch(false)}
       />
 
-      {/* Add custom keyframes for animations */}
+      {/* Add custom keyframes for animations - improved mobile animations */}
       <style jsx>{`
         @keyframes slideInUp {
           from {
@@ -1293,6 +1318,44 @@ export default function Sidebar({ user, children }: SidebarProps) {
           to {
             opacity: 0;
             transform: scale(0.95);
+          }
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes slideInFromLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes slideOutToLeft {
+          from {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateX(-100%);
+          }
+        }
+
+        /* Mobile-specific improvements */
+        @media (max-width: 768px) {
+          .mobile-sidebar-enter {
+            animation: slideInFromLeft 0.3s ease-out;
+          }
+          .mobile-sidebar-exit {
+            animation: slideOutToLeft 0.3s ease-in;
           }
         }
       `}</style>

@@ -13,12 +13,30 @@ const Providers = ({ children }: PropsWithChildren) => {
 					queries: {
 						staleTime: 5 * 60 * 1000, // 5 minutes
 						gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-						retry: 1,
+						retry: (failureCount, error) => {
+							// Don't retry on 4xx errors
+							if (error instanceof Error && 'status' in error) {
+								const status = (error as any).status;
+								if (status >= 400 && status < 500) {
+									return false;
+								}
+							}
+							return failureCount < 2;
+						},
 						refetchOnWindowFocus: false,
-						refetchOnReconnect: false,
+						refetchOnReconnect: true,
 					},
 					mutations: {
-						retry: 1,
+						retry: (failureCount, error) => {
+							// Don't retry on 4xx errors
+							if (error instanceof Error && 'status' in error) {
+								const status = (error as any).status;
+								if (status >= 400 && status < 500) {
+									return false;
+								}
+							}
+							return failureCount < 1;
+						},
 					},
 				},
 			})
@@ -27,10 +45,13 @@ const Providers = ({ children }: PropsWithChildren) => {
 		trpc.createClient({
 			links: [
 				httpBatchLink({
-					url:
-						process.env.NODE_ENV === "production"
-							? "https://next-ls-nine.vercel.app/api/trpc"
-							: "http://localhost:3000/api/trpc",
+					url: "/api/trpc", // Use relative URL - works in both dev and production
+					// Add error handling
+					headers: async () => {
+						return {
+							'x-trpc-source': 'react',
+						};
+					},
 				}),
 			],
 		})

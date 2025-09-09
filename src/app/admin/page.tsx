@@ -19,11 +19,8 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
-import {
-  LazyPerformanceDashboard,
-  LazyAdminSecurityDashboard,
-  LazyWrapper,
-} from "@/components/LazyWrapper";
+import PerformanceDashboard from "@/components/PerformanceDashboard";
+import AdminSecurityDashboard from "@/components/AdminSecurityDashboard";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -356,17 +353,13 @@ export default function AdminDashboard() {
 
         {activeTab === "performance" && (
           <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
-            <LazyWrapper>
-              <LazyPerformanceDashboard />
-            </LazyWrapper>
+            <PerformanceDashboard />
           </div>
         )}
 
         {activeTab === "security" && (
           <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
-            <LazyWrapper>
-              <LazyAdminSecurityDashboard />
-            </LazyWrapper>
+            <AdminSecurityDashboard />
           </div>
         )}
 
