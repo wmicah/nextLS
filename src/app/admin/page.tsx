@@ -19,6 +19,11 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
+import {
+  LazyPerformanceDashboard,
+  LazyAdminSecurityDashboard,
+  LazyWrapper,
+} from "@/components/LazyWrapper";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -102,6 +107,8 @@ export default function AdminDashboard() {
     { id: "overview", label: "Overview", icon: TrendingUp },
     { id: "master-library", label: "Master Library", icon: BookOpen },
     { id: "users", label: "User Management", icon: Users },
+    { id: "performance", label: "Performance", icon: TrendingUp },
+    { id: "security", label: "Security", icon: Shield },
     { id: "settings", label: "Admin Settings", icon: Settings },
   ];
 
@@ -344,6 +351,22 @@ export default function AdminDashboard() {
             <p className="text-gray-400">
               User management features coming soon...
             </p>
+          </div>
+        )}
+
+        {activeTab === "performance" && (
+          <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+            <LazyWrapper>
+              <LazyPerformanceDashboard />
+            </LazyWrapper>
+          </div>
+        )}
+
+        {activeTab === "security" && (
+          <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+            <LazyWrapper>
+              <LazyAdminSecurityDashboard />
+            </LazyWrapper>
           </div>
         )}
 

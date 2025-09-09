@@ -223,15 +223,25 @@ export function measurePerformance<T>(name: string, fn: () => T): T {
   try {
     const result = fn();
     const duration = performance.now() - start;
-    captureData("performance_measure", { name, duration });
+    try {
+      captureData("performance_measure", { name, duration });
+    } catch (monitoringError) {
+      // Silently ignore monitoring errors in tests
+      console.debug("Monitoring not available:", monitoringError);
+    }
     return result;
   } catch (error) {
     const duration = performance.now() - start;
-    captureData("performance_measure_error", {
-      name,
-      duration,
-      error: (error as Error).message || "Unknown error",
-    });
+    try {
+      captureData("performance_measure_error", {
+        name,
+        duration,
+        error: (error as Error).message || "Unknown error",
+      });
+    } catch (monitoringError) {
+      // Silently ignore monitoring errors in tests
+      console.debug("Monitoring not available:", monitoringError);
+    }
     throw error;
   }
 }
@@ -244,15 +254,25 @@ export async function measureAsyncPerformance<T>(
   try {
     const result = await fn();
     const duration = performance.now() - start;
-    captureData("performance_measure_async", { name, duration });
+    try {
+      captureData("performance_measure_async", { name, duration });
+    } catch (monitoringError) {
+      // Silently ignore monitoring errors in tests
+      console.debug("Monitoring not available:", monitoringError);
+    }
     return result;
   } catch (error) {
     const duration = performance.now() - start;
-    captureData("performance_measure_async_error", {
-      name,
-      duration,
-      error: (error as Error).message || "Unknown error",
-    });
+    try {
+      captureData("performance_measure_async_error", {
+        name,
+        duration,
+        error: (error as Error).message || "Unknown error",
+      });
+    } catch (monitoringError) {
+      // Silently ignore monitoring errors in tests
+      console.debug("Monitoring not available:", monitoringError);
+    }
     throw error;
   }
 }

@@ -241,19 +241,5 @@ global.performance = {
   },
 };
 
-// Mock window.location for tests
-delete window.location;
-window.location = {
-  assign: jest.fn(),
-  replace: jest.fn(),
-  reload: jest.fn(),
-  href: "http://localhost:3000",
-  pathname: "/",
-  search: "",
-  hash: "",
-  host: "localhost:3000",
-  hostname: "localhost",
-  port: "3000",
-  protocol: "http:",
-  origin: "http://localhost:3000",
-};
+// Note: window.location mocking removed due to Jest compatibility issues
+// Individual tests can mock location methods as needed

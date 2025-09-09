@@ -20,6 +20,7 @@ model User {
   stripeSubscriptionId     String?           @unique @map("stripe_subscription_id")
   role                     UserRole?
   isAdmin                  Boolean           @default(false) // True if user has admin privileges
+  lastLoginAt              DateTime?         @map("last_login_at") // Track last login for session validation
   workingHoursStart        String?           @map("working_hours_start")
   workingHoursEnd          String?           @map("working_hours_end")
   workingDays              String[]          @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) @map("working_days")
@@ -48,6 +49,7 @@ model User {
   inbox                   UserInbox?
   settings                 UserSettings?
   uploadedVideos           Video[]           @relation("UserVideos")
+  adminAuditLogs           AdminAuditLog[]   // Admin audit trail
   videoFeedback            VideoFeedback[]   @relation("CoachVideoFeedback")
   videoAnnotations         VideoAnnotation[] @relation("CoachVideoAnnotations")
   videoAudioNotes          VideoAudioNote[]  @relation("CoachVideoAudioNotes")
@@ -883,4 +885,18 @@ enum RecordingStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+// Admin audit logging for security monitoring
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  action    String   // The action performed (e.g., "user_created", "resource_deleted")
+  details   String   // JSON string of additional details
+  timestamp DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("admin_audit_logs")
 }

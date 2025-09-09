@@ -27,9 +27,12 @@ const securityHeaders = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
 
   // Advanced security headers
-  "X-DNS-Prefetch-Control": "off",
+  "X-DNS-Prefetch-Control": "on", // Enable DNS prefetching for better performance
   "X-Download-Options": "noopen",
   "X-Permitted-Cross-Domain-Policies": "none",
+
+  // Performance headers
+  "Cache-Control": "public, max-age=31536000, immutable", // 1 year for static assets
 
   // Content Security Policy
   "Content-Security-Policy": [
@@ -249,6 +252,33 @@ export async function middleware(request: NextRequest) {
     Object.entries(securityHeaders).forEach(([key, value]) => {
       response.headers.set(key, value);
     });
+
+    // Add performance-optimized cache headers based on route
+    if (
+      pathname.startsWith("/_next/static/") ||
+      pathname.startsWith("/public/")
+    ) {
+      // Static assets - long cache
+      response.headers.set(
+        "Cache-Control",
+        "public, max-age=31536000, immutable"
+      );
+    } else if (pathname.startsWith("/api/")) {
+      // API routes - short cache
+      response.headers.set("Cache-Control", "public, max-age=60, s-maxage=60");
+    } else if (pathname.includes("/admin") || pathname.includes("/dashboard")) {
+      // Admin/dashboard pages - no cache
+      response.headers.set(
+        "Cache-Control",
+        "no-cache, no-store, must-revalidate"
+      );
+    } else {
+      // Regular pages - medium cache
+      response.headers.set(
+        "Cache-Control",
+        "public, max-age=300, s-maxage=300"
+      );
+    }
 
     // Add custom security headers
     response.headers.set("X-Request-ID", requestId);

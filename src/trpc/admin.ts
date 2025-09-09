@@ -3,15 +3,28 @@ import { TRPCError } from "@trpc/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { db } from "@/db";
 import { publicProcedure } from "./trpc";
+import { validateAdminAccess, logAdminAction } from "@/lib/admin-security";
 
-// Admin role check helper
-const requireAdmin = async (userId: string) => {
+// Enhanced admin role check helper with audit logging
+const requireAdmin = async (userId: string, action?: string) => {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { isAdmin: true },
+    select: { isAdmin: true, email: true, name: true },
   });
 
   if (!user || !user.isAdmin) {
+    // Log unauthorized access attempt
+    if (action) {
+      await logAdminAction(
+        "unauthorized_access_attempt",
+        {
+          attemptedAction: action,
+          userEmail: user?.email || "unknown",
+        },
+        userId
+      );
+    }
+
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Admin access required",
@@ -79,8 +92,8 @@ export const adminRouter = {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
 
-    // Check if user is admin
-    await requireAdmin(user.id);
+    // Check if user is admin with audit logging
+    await requireAdmin(user.id, "get_master_library_admin");
 
     const resources = await db.libraryResource.findMany({
       where: {
@@ -91,6 +104,15 @@ export const adminRouter = {
         createdAt: "desc",
       },
     });
+
+    // Log admin action
+    await logAdminAction(
+      "viewed_master_library_admin",
+      {
+        resourceCount: resources.length,
+      },
+      user.id
+    );
 
     return resources;
   }),
@@ -154,8 +176,8 @@ export const adminRouter = {
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
 
-      // Check if user is admin
-      await requireAdmin(user.id);
+      // Check if user is admin with audit logging
+      await requireAdmin(user.id, "add_to_master_library");
 
       const resource = await db.libraryResource.create({
         data: {
@@ -168,6 +190,18 @@ export const adminRouter = {
           rating: 0,
         },
       });
+
+      // Log admin action
+      await logAdminAction(
+        "added_master_library_resource",
+        {
+          resourceId: resource.id,
+          title: input.title,
+          category: input.category,
+          type: input.type,
+        },
+        user.id
+      );
 
       return {
         id: resource.id,
@@ -360,8 +394,8 @@ export const adminRouter = {
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
 
-      // Check if user is admin
-      await requireAdmin(user.id);
+      // Check if user is admin with audit logging
+      await requireAdmin(user.id, "update_user_admin_status");
 
       // Prevent admin from changing their own admin status
       if (input.userId === user.id) {
@@ -383,9 +417,51 @@ export const adminRouter = {
         },
       });
 
+      // Log admin action
+      await logAdminAction(
+        "updated_user_admin_status",
+        {
+          targetUserId: input.userId,
+          newAdminStatus: input.isAdmin,
+          targetUserEmail: updatedUser.email,
+        },
+        user.id
+      );
+
       return {
         message: "User admin status updated successfully",
         user: updatedUser,
       };
     }),
+
+  // Get admin audit logs
+  getAuditLogs: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+
+    // Check if user is admin
+    await requireAdmin(user.id, "get_audit_logs");
+
+    const auditLogs = await db.adminAuditLog.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+      take: 100, // Limit to last 100 entries
+    });
+
+    return auditLogs;
+  }),
 };

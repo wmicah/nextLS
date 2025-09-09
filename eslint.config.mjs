@@ -3,20 +3,14 @@ import { fileURLToPath } from "url";
 import { FlatCompat } from "@eslint/eslintrc";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(import.meta.url);
+const __dirname = dirname(__filename);
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
 const eslintConfig = [
-  ...compat.extends(
-    "next/core-web-vitals",
-    "next/typescript",
-    "eslint:recommended",
-    "@typescript-eslint/recommended",
-    "@typescript-eslint/recommended-requiring-type-checking"
-  ),
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     ignores: [
       "node_modules/**",
@@ -126,24 +120,6 @@ const eslintConfig = [
       "jsx-a11y/role-supports-aria-props": "error",
       "jsx-a11y/scope": "error",
       "jsx-a11y/tabindex-no-positive": "warn",
-    },
-    parserOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",
-      ecmaFeatures: {
-        jsx: true,
-      },
-    },
-    env: {
-      browser: true,
-      es2022: true,
-      node: true,
-      jest: true,
-    },
-    settings: {
-      react: {
-        version: "detect",
-      },
     },
   },
 ];

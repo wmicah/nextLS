@@ -4,7 +4,6 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Analytics from "@/components/Analytics";
-import PerformanceDashboard from "@/components/PerformanceDashboard";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import Toast from "@/components/common/Toast";
 import ChatbotWrapper from "@/components/Chatbot/ChatbotWrapper";
@@ -14,7 +13,11 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import "@/lib/startup";
 import MessagingServiceProvider from "@/components/MessagingServiceProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap", // Improve font loading performance
+  preload: true,
+});
 
 export const metadata: Metadata = {
   title: {
@@ -195,7 +198,6 @@ export default function RootLayout({
                   <Toast />
                   <ChatbotWrapper />
                   <Analytics />
-                  <PerformanceDashboard />
                 </MessagingServiceProvider>
               </ChatbotProvider>
             </ThemeProvider>
