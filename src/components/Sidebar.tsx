@@ -387,7 +387,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
             : "w-80 -translate-x-full opacity-0 md:opacity-100"
         } md:translate-x-0 md:z-20`}
         style={{
-          background: "linear-gradient(180deg, #2A3133 0%, #1A1D1E 100%)",
+          background: "linear-gradient(180deg, #1A1D1E 0%, #0F1112 100%)",
           boxShadow: isMobileOpen
             ? "0 0 0 1px rgba(255, 255, 255, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.5)"
             : "0 4px 20px rgba(0, 0, 0, 0.3)",
