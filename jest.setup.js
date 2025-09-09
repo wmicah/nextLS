@@ -195,3 +195,65 @@ global.NextResponse = class MockNextResponse {
     return new MockNextResponse(null, options);
   }
 };
+
+// Mock monitoring functions
+jest.mock("@/lib/monitoring", () => ({
+  captureError: jest.fn(),
+  captureWarning: jest.fn(),
+  captureMetric: jest.fn(),
+  captureAction: jest.fn(),
+  captureData: jest.fn(),
+  timeFunction: jest.fn((name, fn) => fn()),
+  timeAsyncFunction: jest.fn((name, fn) => fn()),
+  reportWebVitals: jest.fn(),
+  monitoring: {
+    captureError: jest.fn(),
+    captureWarning: jest.fn(),
+    captureMetric: jest.fn(),
+    captureAction: jest.fn(),
+    captureData: jest.fn(),
+    timeFunction: jest.fn((name, fn) => fn()),
+    timeAsyncFunction: jest.fn((name, fn) => fn()),
+    captureWebVitals: jest.fn(),
+    getMonitoringData: jest.fn(() => ({
+      errors: [],
+      metrics: [],
+      actions: [],
+      sessionId: "test-session",
+    })),
+    cleanup: jest.fn(),
+  },
+}));
+
+// Mock performance API
+global.performance = {
+  now: jest.fn(() => Date.now()),
+  timeOrigin: Date.now(),
+  getEntriesByType: jest.fn(() => []),
+  mark: jest.fn(),
+  measure: jest.fn(),
+  clearMarks: jest.fn(),
+  clearMeasures: jest.fn(),
+  memory: {
+    usedJSHeapSize: 1000000,
+    totalJSHeapSize: 2000000,
+    jsHeapSizeLimit: 4000000,
+  },
+};
+
+// Mock window.location for tests
+delete window.location;
+window.location = {
+  assign: jest.fn(),
+  replace: jest.fn(),
+  reload: jest.fn(),
+  href: "http://localhost:3000",
+  pathname: "/",
+  search: "",
+  hash: "",
+  host: "localhost:3000",
+  hostname: "localhost",
+  port: "3000",
+  protocol: "http:",
+  origin: "http://localhost:3000",
+};

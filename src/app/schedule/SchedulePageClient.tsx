@@ -54,6 +54,7 @@ export default function SchedulePageClient() {
       "Saturday",
       "Sunday",
     ], // Default value
+    timeSlotInterval: 60, // Default 60 minutes (1 hour)
   });
   const [scheduleForm, setScheduleForm] = useState({
     clientId: "",
@@ -99,6 +100,7 @@ export default function SchedulePageClient() {
           "Saturday",
           "Sunday",
         ],
+        timeSlotInterval: coachProfile.workingHours.timeSlotInterval || 60,
       });
     }
   }, [coachProfile]);
@@ -247,10 +249,42 @@ export default function SchedulePageClient() {
   };
 
   const handleSaveWorkingHours = () => {
+    // Validate that end time is after start time
+    const startTime = workingHours.startTime;
+    const endTime = workingHours.endTime;
+
+    // Parse times to compare
+    const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+
+    if (startMatch && endMatch) {
+      const [, startHour, startMinute, startPeriod] = startMatch;
+      const [, endHour, endMinute, endPeriod] = endMatch;
+
+      // Convert to 24-hour format for comparison
+      let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
+      if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
+        startTotalMinutes += 12 * 60;
+      if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
+        startTotalMinutes = parseInt(startMinute);
+
+      let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
+      if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
+        endTotalMinutes += 12 * 60;
+      if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
+        endTotalMinutes = parseInt(endMinute);
+
+      if (endTotalMinutes <= startTotalMinutes) {
+        alert("End time must be after start time");
+        return;
+      }
+    }
+
     updateWorkingHoursMutation.mutate({
       startTime: workingHours.startTime,
       endTime: workingHours.endTime,
       workingDays: workingHours.workingDays,
+      timeSlotInterval: workingHours.timeSlotInterval,
     });
   };
 
@@ -261,6 +295,70 @@ export default function SchedulePageClient() {
         ? prev.workingDays.filter(d => d !== day)
         : [...prev.workingDays, day],
     }));
+  };
+
+  // Generate time options with 15-minute intervals
+  const generateTimeOptions = () => {
+    const options = [];
+
+    // Generate AM times (12:00 AM to 11:45 AM)
+    for (let hour = 0; hour <= 11; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const displayHour = hour === 0 ? 12 : hour;
+        const minuteStr = minute.toString().padStart(2, "0");
+        const timeValue = `${displayHour}:${minuteStr} AM`;
+        options.push(
+          <option key={timeValue} value={timeValue}>
+            {timeValue}
+          </option>
+        );
+      }
+    }
+
+    // Generate PM times (12:00 PM to 11:45 PM)
+    for (let hour = 0; hour <= 11; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const displayHour = hour === 0 ? 12 : hour;
+        const minuteStr = minute.toString().padStart(2, "0");
+        const timeValue = `${displayHour}:${minuteStr} PM`;
+        options.push(
+          <option key={timeValue} value={timeValue}>
+            {timeValue}
+          </option>
+        );
+      }
+    }
+
+    return options;
+  };
+
+  // Check if the current time configuration is valid
+  const isTimeConfigurationValid = () => {
+    const startTime = workingHours.startTime;
+    const endTime = workingHours.endTime;
+
+    const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+
+    if (!startMatch || !endMatch) return true; // Don't show error if times aren't parsed yet
+
+    const [, startHour, startMinute, startPeriod] = startMatch;
+    const [, endHour, endMinute, endPeriod] = endMatch;
+
+    // Convert to 24-hour format for comparison
+    let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
+    if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
+      startTotalMinutes += 12 * 60;
+    if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
+      startTotalMinutes = parseInt(startMinute);
+
+    let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
+    if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
+      endTotalMinutes += 12 * 60;
+    if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
+      endTotalMinutes = parseInt(endMinute);
+
+    return endTotalMinutes > startTotalMinutes;
   };
 
   const handleDateClick = (date: Date) => {
@@ -406,10 +504,11 @@ export default function SchedulePageClient() {
     handleRejectRequest(request);
   };
 
-  // Generate time slots based on coach's working hours
+  // Generate time slots based on coach's working hours and interval
   const generateTimeSlots = () => {
     const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
     const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
+    const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
 
     const slots = [];
 
@@ -418,7 +517,7 @@ export default function SchedulePageClient() {
     const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
 
     if (!startMatch || !endMatch) {
-      // Fallback to default hours
+      // Fallback to default hours with hourly slots
       for (let hour = 9; hour < 18; hour++) {
         const displayHour = hour > 12 ? hour - 12 : hour;
         const period = hour >= 12 ? "PM" : "AM";
@@ -427,46 +526,48 @@ export default function SchedulePageClient() {
       return slots;
     }
 
-    const [, startHour, , startPeriod] = startMatch;
-    const [, endHour, , endPeriod] = endMatch;
+    const [, startHour, startMinute, startPeriod] = startMatch;
+    const [, endHour, endMinute, endPeriod] = endMatch;
 
-    let currentHour = parseInt(startHour);
-    if (startPeriod.toUpperCase() === "PM" && currentHour !== 12)
-      currentHour += 12;
-    if (startPeriod.toUpperCase() === "AM" && currentHour === 12)
-      currentHour = 0;
+    // Convert to 24-hour format and total minutes
+    let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
+    if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
+      startTotalMinutes += 12 * 60;
+    if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
+      startTotalMinutes = parseInt(startMinute);
 
-    let endHour24 = parseInt(endHour);
-    if (endPeriod.toUpperCase() === "PM" && endHour24 !== 12) endHour24 += 12;
-    if (endPeriod.toUpperCase() === "AM" && endHour24 === 12) endHour24 = 0;
+    let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
+    if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
+      endTotalMinutes += 12 * 60;
+    if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
+      endTotalMinutes = parseInt(endMinute);
 
     // Get current time to filter out past slots
     const now = new Date();
     const isToday =
       scheduleForm.date && format(now, "yyyy-MM-dd") === scheduleForm.date;
-    const currentHour24 = now.getHours();
-    const currentMinute = now.getMinutes();
+    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-    while (currentHour < endHour24) {
+    // Generate slots based on interval
+    for (
+      let totalMinutes = startTotalMinutes;
+      totalMinutes < endTotalMinutes;
+      totalMinutes += interval
+    ) {
       // Skip past time slots for today
-      if (isToday && currentHour < currentHour24) {
-        currentHour++;
+      if (isToday && totalMinutes <= currentTotalMinutes) {
         continue;
       }
-      if (isToday && currentHour === currentHour24 && currentMinute >= 0) {
-        currentHour++;
-        continue;
-      }
+
+      const hour24 = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
 
       const displayHour =
-        currentHour === 0
-          ? 12
-          : currentHour > 12
-          ? currentHour - 12
-          : currentHour;
-      const period = currentHour >= 12 ? "PM" : "AM";
-      slots.push(`${displayHour}:00 ${period}`);
-      currentHour++;
+        hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+      const period = hour24 >= 12 ? "PM" : "AM";
+      const minuteStr = minute.toString().padStart(2, "0");
+
+      slots.push(`${displayHour}:${minuteStr} ${period}`);
     }
 
     return slots;
@@ -477,6 +578,7 @@ export default function SchedulePageClient() {
   const generateAvailableTimeSlots = (date: Date) => {
     const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
     const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
+    const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
     const workingDays = coachProfile?.workingHours?.workingDays || [
       "Monday",
       "Tuesday",
@@ -499,7 +601,7 @@ export default function SchedulePageClient() {
     const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
 
     if (!startMatch || !endMatch) {
-      // Fallback to default hours
+      // Fallback to default hours with hourly slots
       for (let hour = 9; hour < 18; hour++) {
         const displayHour = hour > 12 ? hour - 12 : hour;
         const period = hour >= 12 ? "PM" : "AM";
@@ -508,24 +610,26 @@ export default function SchedulePageClient() {
       return slots;
     }
 
-    const [, startHour, , startPeriod] = startMatch;
-    const [, endHour, , endPeriod] = endMatch;
+    const [, startHour, startMinute, startPeriod] = startMatch;
+    const [, endHour, endMinute, endPeriod] = endMatch;
 
-    let currentHour = parseInt(startHour);
-    if (startPeriod.toUpperCase() === "PM" && currentHour !== 12)
-      currentHour += 12;
-    if (startPeriod.toUpperCase() === "AM" && currentHour === 12)
-      currentHour = 0;
+    // Convert to 24-hour format and total minutes
+    let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
+    if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
+      startTotalMinutes += 12 * 60;
+    if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
+      startTotalMinutes = parseInt(startMinute);
 
-    let endHour24 = parseInt(endHour);
-    if (endPeriod.toUpperCase() === "PM" && endHour24 !== 12) endHour24 += 12;
-    if (endPeriod.toUpperCase() === "AM" && endHour24 === 12) endHour24 = 0;
+    let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
+    if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
+      endTotalMinutes += 12 * 60;
+    if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
+      endTotalMinutes = parseInt(endMinute);
 
     // Get current time to filter out past slots for today
     const now = new Date();
     const isToday = format(now, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
-    const currentHour24 = now.getHours();
-    const currentMinute = now.getMinutes();
+    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
     // Get existing lessons for this date
     const existingLessons = getAllLessonsForDate(date);
@@ -534,32 +638,30 @@ export default function SchedulePageClient() {
       return format(lessonDate, "h:mm a");
     });
 
-    while (currentHour < endHour24) {
+    // Generate slots based on interval
+    for (
+      let totalMinutes = startTotalMinutes;
+      totalMinutes < endTotalMinutes;
+      totalMinutes += interval
+    ) {
       // Skip past time slots for today
-      if (isToday && currentHour < currentHour24) {
-        currentHour++;
-        continue;
-      }
-      if (isToday && currentHour === currentHour24 && currentMinute >= 0) {
-        currentHour++;
+      if (isToday && totalMinutes <= currentTotalMinutes) {
         continue;
       }
 
+      const hour24 = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
+
       const displayHour =
-        currentHour === 0
-          ? 12
-          : currentHour > 12
-          ? currentHour - 12
-          : currentHour;
-      const period = currentHour >= 12 ? "PM" : "AM";
-      const timeSlot = `${displayHour}:00 ${period}`;
+        hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+      const period = hour24 >= 12 ? "PM" : "AM";
+      const minuteStr = minute.toString().padStart(2, "0");
+      const timeSlot = `${displayHour}:${minuteStr} ${period}`;
 
       // Only add if not already booked
       if (!bookedTimes.includes(timeSlot)) {
         slots.push(timeSlot);
       }
-
-      currentHour++;
     }
 
     return slots;
@@ -1101,22 +1203,7 @@ export default function SchedulePageClient() {
                         borderColor: "#606364",
                       }}
                     >
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const hour = i + 1;
-                        return (
-                          <option key={`${hour}-AM`} value={`${hour}:00 AM`}>
-                            {hour}:00 AM
-                          </option>
-                        );
-                      })}
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const hour = i + 1;
-                        return (
-                          <option key={`${hour}-PM`} value={`${hour}:00 PM`}>
-                            {hour}:00 PM
-                          </option>
-                        );
-                      })}
+                      {generateTimeOptions()}
                     </select>
                   </div>
 
@@ -1135,26 +1222,18 @@ export default function SchedulePageClient() {
                       className="w-full p-2 rounded-lg border text-white"
                       style={{
                         backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
+                        borderColor: isTimeConfigurationValid()
+                          ? "#606364"
+                          : "#EF4444",
                       }}
                     >
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const hour = i + 1;
-                        return (
-                          <option key={`${hour}-AM`} value={`${hour}:00 AM`}>
-                            {hour}:00 AM
-                          </option>
-                        );
-                      })}
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const hour = i + 1;
-                        return (
-                          <option key={`${hour}-PM`} value={`${hour}:00 PM`}>
-                            {hour}:00 PM
-                          </option>
-                        );
-                      })}
+                      {generateTimeOptions()}
                     </select>
+                    {!isTimeConfigurationValid() && (
+                      <p className="text-xs text-red-400 mt-1">
+                        End time must be after start time
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -1189,6 +1268,36 @@ export default function SchedulePageClient() {
                       Select the days you're available for lessons
                     </p>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Time Slot Interval
+                    </label>
+                    <select
+                      value={workingHours.timeSlotInterval}
+                      onChange={e =>
+                        setWorkingHours({
+                          ...workingHours,
+                          timeSlotInterval: parseInt(e.target.value),
+                        })
+                      }
+                      className="w-full p-2 rounded-lg border text-white"
+                      style={{
+                        backgroundColor: "#2A2F2F",
+                        borderColor: "#606364",
+                      }}
+                    >
+                      <option value={15}>15 minutes</option>
+                      <option value={30}>30 minutes</option>
+                      <option value={45}>45 minutes</option>
+                      <option value={60}>60 minutes (1 hour)</option>
+                      <option value={90}>90 minutes (1.5 hours)</option>
+                      <option value={120}>120 minutes (2 hours)</option>
+                    </select>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Choose how often you want time slots to be available
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-6">
@@ -1205,7 +1314,10 @@ export default function SchedulePageClient() {
                   </button>
                   <button
                     onClick={handleSaveWorkingHours}
-                    disabled={updateWorkingHoursMutation.isPending}
+                    disabled={
+                      updateWorkingHoursMutation.isPending ||
+                      !isTimeConfigurationValid()
+                    }
                     className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     style={{
                       backgroundColor: "#4A5A70",

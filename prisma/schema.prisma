@@ -23,6 +23,7 @@ model User {
   workingHoursStart        String?           @map("working_hours_start")
   workingHoursEnd          String?           @map("working_hours_end")
   workingDays              String[]          @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) @map("working_days")
+  timeSlotInterval         Int               @default(60) @map("time_slot_interval") // Time slot interval in minutes (15, 30, 45, 60)
   clientConversations      Conversation[]    @relation("ClientConversations")
   coachConversations       Conversation[]    @relation("CoachConversations")
   client1Conversations     Conversation[]    @relation("Client1Conversations")

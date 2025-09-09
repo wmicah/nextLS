@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import {
   Plus,
@@ -84,6 +85,7 @@ interface Client {
 }
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [archivingClientId, setArchivingClientId] = useState<string | null>(
     null
@@ -199,10 +201,8 @@ export default function ClientsPage() {
   };
 
   const handleOpenProfile = (client: Client) => {
-    console.log("handleOpenProfile called with client:", client);
-    setSelectedClientForProfile(client);
-    setIsProfileModalOpen(true);
-    console.log("Modal should be opening now");
+    // Navigate to the new client detail page
+    router.push(`/clients/${client.id}/detail`);
   };
 
   // Helper function to check if a lesson date is valid (future only)

@@ -353,6 +353,7 @@ export const appRouter = router({
           startTime: z.string(),
           endTime: z.string(),
           workingDays: z.array(z.string()).optional(),
+          timeSlotInterval: z.number().min(15).max(120).optional(), // 15-120 minutes
         })
       )
       .mutation(async ({ input }) => {
@@ -399,6 +400,7 @@ export const appRouter = router({
               "Saturday",
               "Sunday",
             ],
+            timeSlotInterval: input.timeSlotInterval || 60,
           },
         });
 
@@ -445,6 +447,7 @@ export const appRouter = router({
                   "Saturday",
                   "Sunday",
                 ],
+                timeSlotInterval: dbUser.timeSlotInterval || 60,
               }
             : null,
       };
@@ -1214,7 +1217,22 @@ export const appRouter = router({
             clientId: input.clientId,
           },
           include: {
-            program: true,
+            program: {
+              include: {
+                weeks: {
+                  include: {
+                    days: {
+                      include: {
+                        drills: true,
+                      },
+                    },
+                  },
+                  orderBy: {
+                    weekNumber: "asc",
+                  },
+                },
+              },
+            },
           },
           orderBy: {
             assignedAt: "desc",
@@ -2479,8 +2497,46 @@ export const appRouter = router({
           data: { updatedAt: new Date() },
         });
 
-        // Simple real-time update - just return the message
-        // Let the client handle refetching if needed
+        // Trigger SSE updates for real-time notifications
+        try {
+          const { sendToUser } = await import("@/app/api/sse/messages/route");
+
+          // Get the recipient's user ID
+          const recipientId =
+            conversation.coachId === user.id
+              ? conversation.clientId
+              : conversation.coachId;
+
+          if (recipientId) {
+            // Send new message notification to recipient
+            sendToUser(recipientId, {
+              type: "new_message",
+              data: {
+                message,
+                conversationId: input.conversationId,
+              },
+            });
+
+            // Update unread count for recipient
+            const unreadCount = await db.message.count({
+              where: {
+                conversation: {
+                  OR: [{ clientId: recipientId }, { coachId: recipientId }],
+                },
+                isRead: false,
+                senderId: { not: recipientId },
+              },
+            });
+
+            sendToUser(recipientId, {
+              type: "unread_count",
+              data: { count: unreadCount },
+            });
+          }
+        } catch (error) {
+          console.error("Error sending SSE update:", error);
+          // Don't fail the message send if SSE fails
+        }
 
         return message;
       }),

@@ -77,7 +77,7 @@ type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 interface ProgramItem {
   id: string;
   title: string;
-  type?: "exercise" | "drill" | "video" | "routine";
+  type?: "exercise" | "drill" | "video" | "routine" | "rest";
   description?: string;
   notes?: string;
   sets?: number;
@@ -1497,7 +1497,9 @@ function DayCard({
   getSupersetGroups,
   onOpenAddRoutine,
 }: DayCardProps) {
-  const isRestDay = items.length === 0;
+  // Filter out rest day items and check if it's a rest day
+  const nonRestItems = items.filter(item => item.type !== "rest");
+  const isRestDay = nonRestItems.length === 0;
 
   return (
     <div className="space-y-3">
@@ -1536,12 +1538,18 @@ function DayCard({
               onDragEnd={event => {
                 const { active, over } = event;
                 if (over && active.id !== over.id) {
-                  const oldIndex = items.findIndex(
+                  const oldIndex = nonRestItems.findIndex(
                     item => item.id === active.id
                   );
-                  const newIndex = items.findIndex(item => item.id === over.id);
+                  const newIndex = nonRestItems.findIndex(
+                    item => item.id === over.id
+                  );
                   if (oldIndex !== -1 && newIndex !== -1) {
-                    const newItems = arrayMove(items, oldIndex, newIndex);
+                    const newItems = arrayMove(
+                      nonRestItems,
+                      oldIndex,
+                      newIndex
+                    );
                     // Update the items in the parent component
                     onReorderItems(newItems);
                   }
@@ -1549,11 +1557,11 @@ function DayCard({
               }}
             >
               <SortableContext
-                items={items.map(item => item.id)}
+                items={nonRestItems.map(item => item.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-2">
-                  {items.map(item => (
+                  {nonRestItems.map(item => (
                     <SortableDrillItem
                       key={item.id}
                       item={item}

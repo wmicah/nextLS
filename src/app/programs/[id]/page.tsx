@@ -16,7 +16,7 @@ type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 interface ProgramBuilderItem {
   id: string;
   title: string;
-  type?: "exercise" | "drill" | "video" | "routine";
+  type?: "exercise" | "drill" | "video" | "routine" | "rest";
   notes?: string;
   sets?: number;
   reps?: number;

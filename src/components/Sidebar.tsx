@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useState, useRef, useEffect } from "react";
+import { useMessageSSE } from "@/hooks/useMessageSSE";
 import {
   FiSettings,
   FiBell,
@@ -59,23 +60,41 @@ export default function Sidebar({ user, children }: SidebarProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const messagePopupRef = useRef<HTMLDivElement>(null);
 
-  // Use the optimized unread counts endpoint
+  // Use SSE for real-time unread count updates
+  const { unreadCount: sseUnreadCount, isConnected: sseConnected } =
+    useMessageSSE({
+      enabled: false, // Disabled due to connection loop issues
+      onUnreadCountUpdate: count => {
+        console.log("Unread count updated via SSE:", count);
+      },
+    });
+
+  // Smart polling with conditional intervals
   const { data: unreadCountsObj = {}, refetch: refetchUnreadCount } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: 10000, // Poll every 10 seconds
+      refetchInterval:
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible"
+          ? 15000
+          : 30000, // 15s when active, 30s when inactive
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     });
 
-  // Calculate total unread count from the object
+  // Calculate total unread count - using smart polling
   const unreadCount = Object.values(unreadCountsObj).reduce(
     (sum, count) => sum + count,
     0
   );
 
+  // Keep notifications polling for now (can be upgraded to WebSocket later)
   const { data: unreadNotificationCount = 0 } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 10000, // Poll every 10 seconds
+      refetchInterval:
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible"
+          ? 15000
+          : 30000, // 15s when active, 30s when inactive
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     });
