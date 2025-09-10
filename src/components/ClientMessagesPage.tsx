@@ -21,13 +21,15 @@ import ProfilePictureUploader from "./ProfilePictureUploader";
 import RichMessageInput from "./RichMessageInput";
 import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileClientMessagesPage from "./MobileClientMessagesPage";
 // Removed complex SSE hooks - using simple polling instead
 
 interface ClientMessagesPageProps {
   // Add props here if needed in the future
 }
 
-export default function ClientMessagesPage({}: ClientMessagesPageProps) {
+function ClientMessagesPage({}: ClientMessagesPageProps) {
   // const router = useRouter()
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
@@ -967,3 +969,5 @@ export default function ClientMessagesPage({}: ClientMessagesPageProps) {
     </ClientSidebar>
   );
 }
+
+export default withMobileDetection(MobileClientMessagesPage, ClientMessagesPage);

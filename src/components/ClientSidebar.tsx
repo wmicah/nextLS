@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 // Removed complex SSE hooks - using simple polling instead
 import { useState, useRef, useEffect } from "react";
+import { useMobileDetection } from "@/lib/mobile-detection";
 import {
   FiSettings,
   FiBell,
@@ -87,6 +88,7 @@ interface ClientSidebarProps {
 export default function ClientSidebar({ user, children }: ClientSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isMobile } = useMobileDetection();
   const { data: authData } = trpc.authCallback.useQuery();
   const [isOpen, setIsOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -161,6 +163,12 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
   const handleMessageClick = (e: React.MouseEvent) => {
     e.preventDefault();
 
+    // On mobile, navigate directly to client messages page
+    if (isMobile) {
+      router.push("/client-messages");
+      return;
+    }
+
     if (showRecentMessages) {
       // Closing animation
       setIsAnimating(true);
@@ -208,11 +216,6 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
       console.error("Logout failed:", error);
       setIsLoggingOut(false);
     }
-  };
-
-  const handleSettingsClick = () => {
-    setUserDropdownOpen(false);
-    router.push("/client-settings");
   };
 
   const formatTime = (date: string) => {
@@ -900,9 +903,20 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
               <button
                 onClick={handleUserClick}
                 disabled={isLoggingOut}
-                className="rounded-full w-12 h-12 flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-110 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="rounded-full w-16 h-16 md:w-12 md:h-12 flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-110 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation"
                 style={{
                   boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
+                  // Add larger touch target for mobile
+                  minWidth: "64px",
+                  minHeight: "64px",
+                }}
+                onTouchStart={e => {
+                  // Add visual feedback for touch
+                  e.currentTarget.style.transform = "scale(0.95)";
+                }}
+                onTouchEnd={e => {
+                  // Reset transform after touch
+                  e.currentTarget.style.transform = "scale(1)";
                 }}
               >
                 {isLoggingOut ? (
@@ -999,47 +1013,35 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                     </div>
                   </div>
 
-                  <div className="mt-3 space-y-1">
+                  <div className="mt-3">
                     <button
-                      onClick={handleSettingsClick}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-                      style={{ color: "#ABA4AA" }}
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg transition-all duration-200 hover:scale-105 touch-manipulation"
+                      style={{
+                        color: "#ABA4AA",
+                        minHeight: "44px", // Ensure minimum touch target
+                      }}
                       onMouseEnter={e => {
                         e.currentTarget.style.backgroundColor = "#606364";
-                        e.currentTarget.style.color = "#C3BCC2";
+                        e.currentTarget.style.color = "#EF4444";
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.backgroundColor = "transparent";
                         e.currentTarget.style.color = "#ABA4AA";
                       }}
+                      onTouchStart={e => {
+                        e.currentTarget.style.backgroundColor = "#606364";
+                        e.currentTarget.style.color = "#EF4444";
+                      }}
+                      onTouchEnd={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = "#ABA4AA";
+                      }}
                       role="menuitem"
                     >
-                      <Settings className="h-4 w-4" />
-                      <span className="text-sm">Settings</span>
+                      <LogOut className="h-4 w-4" />
+                      <span className="text-sm">Log Out</span>
                     </button>
-
-                    <div
-                      className="border-t pt-2 mt-2"
-                      style={{ borderColor: "#606364" }}
-                    >
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-                        style={{ color: "#ABA4AA" }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#606364";
-                          e.currentTarget.style.color = "#EF4444";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                          e.currentTarget.style.color = "#ABA4AA";
-                        }}
-                        role="menuitem"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span className="text-sm">Log Out</span>
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>

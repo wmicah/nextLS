@@ -2,26 +2,21 @@
 
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
-import { MessageCircle, X, Send, User, Search } from "lucide-react";
+import { MessageCircle, X, Send, User, Search, ArrowLeft } from "lucide-react";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import RichMessageInput from "./RichMessageInput";
 import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
-import { useMobileDetection } from "@/lib/mobile-detection";
-import MobileMessagePopup from "./MobileMessagePopup";
 
-interface MessagePopupProps {
+interface MobileMessagePopupProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
-  const { isMobile } = useMobileDetection();
-
-  // Render mobile version if on mobile
-  if (isMobile) {
-    return <MobileMessagePopup isOpen={isOpen} onClose={onClose} />;
-  }
+export default function MobileMessagePopup({
+  isOpen,
+  onClose,
+}: MobileMessagePopupProps) {
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
   >(null);
@@ -111,7 +106,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
     },
   });
 
-  // Handle click outside to close
+  // Handle click outside to close (only on desktop)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -187,10 +182,10 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div
         ref={popupRef}
-        className="w-80 h-96 rounded-lg shadow-2xl border flex flex-col"
+        className="w-full max-w-md h-[90vh] rounded-2xl shadow-2xl border flex flex-col"
         style={{
           backgroundColor: "#2D3142",
           borderColor: "#4A5568",
@@ -198,41 +193,41 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between p-3 border-b"
+          className="flex items-center justify-between p-4 border-b"
           style={{ borderColor: "#4A5568" }}
         >
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" style={{ color: "#E2E8F0" }} />
-            <h3 className="font-semibold" style={{ color: "#E2E8F0" }}>
-              {selectedConversation ? "Chat" : "Messages"}
-            </h3>
-          </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-3">
             {selectedConversation && (
               <button
                 onClick={() => setSelectedConversation(null)}
-                className="p-1.5 rounded-md hover:bg-gray-600 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-600 transition-colors touch-manipulation"
+                style={{ minWidth: "44px", minHeight: "44px" }}
               >
-                <User className="h-4 w-4" style={{ color: "#CBD5E0" }} />
+                <ArrowLeft className="h-5 w-5" style={{ color: "#E2E8F0" }} />
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-md hover:bg-gray-600 transition-colors"
-            >
-              <X className="h-4 w-4" style={{ color: "#CBD5E0" }} />
-            </button>
+            <MessageCircle className="h-6 w-6" style={{ color: "#E2E8F0" }} />
+            <h3 className="text-lg font-semibold" style={{ color: "#E2E8F0" }}>
+              {selectedConversation ? "Chat" : "Messages"}
+            </h3>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-600 transition-colors touch-manipulation"
+            style={{ minWidth: "44px", minHeight: "44px" }}
+          >
+            <X className="h-6 w-6" style={{ color: "#CBD5E0" }} />
+          </button>
         </div>
 
         {!selectedConversation ? (
           /* Conversations List */
           <div className="flex-1 flex flex-col">
             {/* Search */}
-            <div className="p-3 border-b" style={{ borderColor: "#4A5568" }}>
+            <div className="p-4 border-b" style={{ borderColor: "#4A5568" }}>
               <div className="relative">
                 <Search
-                  className="absolute left-2.5 top-2.5 h-4 w-4"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5"
                   style={{ color: "#9CA3AF" }}
                 />
                 <input
@@ -240,11 +235,10 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                   placeholder="Search people"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border-0 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full pl-10 pr-4 py-3 text-base rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 touch-manipulation"
                   style={{
                     backgroundColor: "#374151",
                     color: "#E2E8F0",
-                    // Remove: focusRingColor: "#60A5FA",
                   }}
                 />
               </div>
@@ -253,12 +247,12 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
             {/* Conversations */}
             <div className="flex-1 overflow-y-auto">
               {filteredConversations.length === 0 ? (
-                <div className="p-4 text-center">
+                <div className="p-6 text-center">
                   <MessageCircle
-                    className="h-8 w-8 mx-auto mb-2 opacity-50"
+                    className="h-12 w-12 mx-auto mb-4 opacity-50"
                     style={{ color: "#9CA3AF" }}
                   />
-                  <p className="text-sm" style={{ color: "#9CA3AF" }}>
+                  <p className="text-base" style={{ color: "#9CA3AF" }}>
                     {searchTerm ? "No conversations found" : "No messages yet"}
                   </p>
                 </div>
@@ -277,25 +271,26 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                   return (
                     <div
                       key={conversation.id}
-                      className={`flex items-center gap-3 p-3 hover:bg-gray-600 cursor-pointer border-b border-gray-600 transition-colors relative ${
+                      className={`flex items-center gap-4 p-4 hover:bg-gray-600 cursor-pointer border-b border-gray-600 transition-colors relative touch-manipulation ${
                         hasUnread
                           ? "bg-gray-700/50 border-l-4 border-l-red-500"
                           : ""
                       }`}
+                      style={{ minHeight: "80px" }}
                       onClick={() => setSelectedConversation(conversation.id)}
                     >
                       <ProfilePictureUploader
                         currentAvatarUrl={otherUser?.settings?.avatarUrl}
                         userName={otherUser?.name || otherUser?.email || "User"}
                         onAvatarChange={() => {}}
-                        size="sm"
+                        size="md"
                         readOnly={true}
                         className="flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p
-                            className={`text-sm truncate ${
+                            className={`text-base truncate ${
                               hasUnread ? "font-semibold" : "font-medium"
                             }`}
                             style={{
@@ -306,7 +301,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                           </p>
                           {lastMessage && (
                             <span
-                              className="text-xs flex-shrink-0 ml-2"
+                              className="text-sm flex-shrink-0 ml-2"
                               style={{ color: "#9CA3AF" }}
                             >
                               {formatTime(lastMessage.createdAt)}
@@ -316,7 +311,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                         <div className="flex items-center justify-between">
                           {lastMessage && (
                             <p
-                              className={`text-xs truncate ${
+                              className={`text-sm truncate ${
                                 hasUnread ? "font-medium" : ""
                               }`}
                               style={{
@@ -329,9 +324,9 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                           {hasUnread && (
                             <div className="flex items-center gap-2 ml-2">
                               {/* Unread indicator dot */}
-                              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 animate-pulse"></div>
+                              <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0 animate-pulse"></div>
                               {/* Unread count badge */}
-                              <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center font-medium">
+                              <span className="bg-red-500 text-white text-sm rounded-full px-2 py-1 min-w-[24px] text-center font-medium">
                                 {unreadCount}
                               </span>
                             </div>
@@ -348,7 +343,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
           /* Chat View */
           <div className="flex-1 flex flex-col">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map((message: any) => {
                 const isCurrentUser =
                   message.sender.id ===
@@ -363,7 +358,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                     }`}
                   >
                     <div
-                      className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
+                      className={`max-w-[85%] px-4 py-3 rounded-2xl text-base ${
                         isCurrentUser
                           ? "bg-blue-500 text-white rounded-br-sm"
                           : "bg-gray-600 text-gray-100 rounded-bl-sm"
@@ -386,9 +381,9 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                         isOwnMessage={isCurrentUser}
                       />
 
-                      <div className="flex items-center justify-end gap-1 mt-1">
+                      <div className="flex items-center justify-end gap-1 mt-2">
                         <p
-                          className={`text-xs ${
+                          className={`text-sm ${
                             isCurrentUser ? "text-blue-100" : "text-gray-400"
                           }`}
                         >
@@ -409,13 +404,13 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
               {pendingMessages.map(pendingMessage => (
                 <div key={pendingMessage.id} className="flex justify-end">
                   <div
-                    className={`max-w-[70%] px-3 py-2 rounded-lg text-sm bg-blue-500 text-white rounded-br-sm ${
+                    className={`max-w-[85%] px-4 py-3 rounded-2xl text-base bg-blue-500 text-white rounded-br-sm ${
                       pendingMessage.status === "failed" ? "opacity-60" : ""
                     }`}
                   >
                     <FormattedMessage content={pendingMessage.content} />
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      <p className="text-xs text-blue-100">
+                    <div className="flex items-center justify-end gap-1 mt-2">
+                      <p className="text-sm text-blue-100">
                         {formatTime(pendingMessage.timestamp.toISOString())}
                       </p>
                       <div className="flex items-center">
@@ -450,7 +445,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
             </div>
 
             {/* Message Input */}
-            <div className="p-3 border-t" style={{ borderColor: "#4A5568" }}>
+            <div className="p-4 border-t" style={{ borderColor: "#4A5568" }}>
               <RichMessageInput
                 value={messageText}
                 onChange={setMessageText}

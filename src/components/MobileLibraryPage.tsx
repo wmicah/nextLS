@@ -293,7 +293,9 @@ export default function MobileLibraryPage() {
                       <div className="aspect-video relative">
                         <VideoThumbnail
                           item={item}
-                          videoType={activeTab === "master" ? "master" : "local"}
+                          videoType={
+                            activeTab === "master" ? "master" : "local"
+                          }
                           className="w-full h-full"
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
@@ -320,7 +322,9 @@ export default function MobileLibraryPage() {
                       <div className="w-16 h-12 rounded relative flex-shrink-0">
                         <VideoThumbnail
                           item={item}
-                          videoType={activeTab === "master" ? "master" : "local"}
+                          videoType={
+                            activeTab === "master" ? "master" : "local"
+                          }
                           className="w-full h-full"
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
