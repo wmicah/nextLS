@@ -5,10 +5,9 @@ import { performanceMonitor } from "@/lib/performance";
 import { captureMetric, captureData } from "@/lib/monitoring";
 
 export default function Analytics() {
-  // Only show analytics in development mode
-  if (process.env.NODE_ENV === "production") return null;
-
   useEffect(() => {
+    // Only show analytics in development mode
+    if (process.env.NODE_ENV === "production") return;
     // Start performance monitoring
     performanceMonitor.start();
 

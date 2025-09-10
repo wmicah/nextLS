@@ -1445,6 +1445,14 @@ function MobileDayCard({
   const nonRestItems = items.filter(item => item.type !== "rest");
   const isRestDay = nonRestItems.length === 0;
 
+  // Create sensors outside of conditional rendering
+  const daySensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   return (
     <div className="space-y-3">
       {/* Day Header */}
@@ -1472,12 +1480,7 @@ function MobileDayCard({
             </div>
           ) : (
             <DndContext
-              sensors={useSensors(
-                useSensor(PointerSensor),
-                useSensor(KeyboardSensor, {
-                  coordinateGetter: sortableKeyboardCoordinates,
-                })
-              )}
+              sensors={daySensors}
               collisionDetection={closestCenter}
               onDragEnd={event => {
                 const { active, over } = event;
