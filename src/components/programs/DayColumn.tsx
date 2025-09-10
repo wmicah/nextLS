@@ -35,12 +35,6 @@ interface DayColumnProps {
 
 // Draggable Exercise Item Component
 function SortableExerciseItem({ exercise, onDelete }: any) {
-	// Defensive check to ensure exercise has an ID
-	if (!exercise?.id) {
-		console.warn("Exercise without ID:", exercise)
-		return null
-	}
-
 	const {
 		attributes,
 		listeners,
@@ -49,12 +43,18 @@ function SortableExerciseItem({ exercise, onDelete }: any) {
 		transition,
 		isDragging,
 	} = useSortable({
-		id: exercise.id,
+		id: exercise?.id || "fallback-id",
 		transition: {
 			duration: 250,
 			easing: "cubic-bezier(0.25, 1, 0.5, 1)",
 		},
 	})
+
+	// Defensive check to ensure exercise has an ID
+	if (!exercise?.id) {
+		console.warn("Exercise without ID:", exercise)
+		return null
+	}
 
 	const style = {
 		transform: CSS.Transform.toString(transform),

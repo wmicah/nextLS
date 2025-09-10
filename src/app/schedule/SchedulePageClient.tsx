@@ -1013,7 +1013,10 @@ function SchedulePageClient() {
           <WorkingHoursModal
             isOpen={showWorkingHoursModal}
             onClose={() => setShowWorkingHoursModal(false)}
-            coachProfile={coachProfile}
+            coachProfile={coachProfile ? {
+              ...coachProfile,
+              workingHours: coachProfile.workingHours || undefined
+            } : undefined}
           />
 
           {/* Schedule Lesson Modal */}

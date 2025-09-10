@@ -266,7 +266,7 @@ export default function AdminDashboard() {
                 >
                   <div className="text-center">
                     <div className="text-lg font-bold text-white">
-                      {stats?.totalUsers || 0}
+                      {stats?.activeUsers || 0}
                     </div>
                     <div className="text-xs text-gray-400">Users</div>
                   </div>

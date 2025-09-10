@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
+import Link from "next/link"
 
 // Mock Next.js navigation
 const mockPush = jest.fn()
@@ -24,9 +25,9 @@ describe("Navigation - Critical User Flow", () => {
 		// Mock the landing page component
 		const LandingPage = () => (
 			<div>
-				<a href="/auth/signup" data-testid="signup-link">
+				<Link href="/auth/signup" data-testid="signup-link">
 					Get Started
-				</a>
+				</Link>
 			</div>
 		)
 
@@ -40,9 +41,9 @@ describe("Navigation - Critical User Flow", () => {
 		// Mock the landing page component
 		const LandingPage = () => (
 			<div>
-				<a href="/pricing" data-testid="pricing-link">
+				<Link href="/pricing" data-testid="pricing-link">
 					See Pricing
-				</a>
+				</Link>
 			</div>
 		)
 
@@ -57,9 +58,9 @@ describe("Navigation - Critical User Flow", () => {
 		const SignInPage = () => (
 			<div>
 				<p>Don't have an account?</p>
-				<a href="/auth/signup" data-testid="signup-link">
+				<Link href="/auth/signup" data-testid="signup-link">
 					Sign up
-				</a>
+				</Link>
 			</div>
 		)
 
@@ -73,15 +74,15 @@ describe("Navigation - Critical User Flow", () => {
 		// Mock the dashboard navigation
 		const DashboardNav = () => (
 			<nav>
-				<a href="/clients" data-testid="clients-link">
+				<Link href="/clients" data-testid="clients-link">
 					Clients
-				</a>
-				<a href="/programs" data-testid="programs-link">
+				</Link>
+				<Link href="/programs" data-testid="programs-link">
 					Programs
-				</a>
-				<a href="/schedule" data-testid="schedule-link">
+				</Link>
+				<Link href="/schedule" data-testid="schedule-link">
 					Schedule
-				</a>
+				</Link>
 			</nav>
 		)
 
@@ -105,15 +106,15 @@ describe("Navigation - Critical User Flow", () => {
 		// Mock the client dashboard navigation
 		const ClientDashboardNav = () => (
 			<nav>
-				<a href="/client-program" data-testid="program-link">
+				<Link href="/client-program" data-testid="program-link">
 					Program
-				</a>
-				<a href="/client-schedule" data-testid="schedule-link">
+				</Link>
+				<Link href="/client-schedule" data-testid="schedule-link">
 					Schedule
-				</a>
-				<a href="/client-messages" data-testid="messages-link">
+				</Link>
+				<Link href="/client-messages" data-testid="messages-link">
 					Messages
-				</a>
+				</Link>
 			</nav>
 		)
 
