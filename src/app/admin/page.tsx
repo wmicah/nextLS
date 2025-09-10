@@ -111,8 +111,33 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#2A3133] text-white">
-      {/* Header */}
-      <div className="bg-[#1A1D1E] border-b border-[#4A5A70] p-6">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-[#1A1D1E] border-b border-[#4A5A70] p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#4A5A70] flex items-center justify-center">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold">Admin</h1>
+              <p className="text-xs text-gray-400">
+                {authData.user.name || authData.user.email}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#4A5A70] text-white">
+              {authData.user.role}
+            </span>
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-600 text-white">
+              Admin
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:block bg-[#1A1D1E] border-b border-[#4A5A70] p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -140,9 +165,20 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Back Button */}
-        <div className="mb-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
+        {/* Mobile Back Button */}
+        <div className="md:hidden mb-4">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-white hover:bg-[#2D3748] rounded-lg transition-all duration-200"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back</span>
+          </button>
+        </div>
+
+        {/* Desktop Back Button */}
+        <div className="hidden md:block mb-6">
           <button
             onClick={() => router.push("/dashboard")}
             className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-[#2D3748] rounded-lg transition-all duration-200"
@@ -152,8 +188,31 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-[#1A1D1E] rounded-lg p-1 mb-8">
+        {/* Mobile Navigation Tabs */}
+        <div className="md:hidden mb-4">
+          <div className="flex space-x-1 bg-[#1A1D1E] rounded-lg p-1 overflow-x-auto">
+            {tabs.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-md transition-all duration-200 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "bg-[#4A5A70] text-white"
+                      : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-xs">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Desktop Navigation Tabs */}
+        <div className="hidden md:flex space-x-1 bg-[#1A1D1E] rounded-lg p-1 mb-8">
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (
@@ -175,9 +234,59 @@ export default function AdminDashboard() {
 
         {/* Tab Content */}
         {activeTab === "overview" && (
-          <div className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="space-y-4 md:space-y-6">
+            {/* Mobile Stats - Horizontal Scroll */}
+            <div className="md:hidden mb-4">
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                <div
+                  className="flex-shrink-0 w-24 rounded-lg border p-2"
+                  style={{ backgroundColor: "#1A1D1E", borderColor: "#4A5A70" }}
+                >
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white">
+                      {stats?.totalResources || 0}
+                    </div>
+                    <div className="text-xs text-gray-400">Resources</div>
+                  </div>
+                </div>
+                <div
+                  className="flex-shrink-0 w-24 rounded-lg border p-2"
+                  style={{ backgroundColor: "#1A1D1E", borderColor: "#4A5A70" }}
+                >
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white">
+                      {stats?.masterLibraryCount || 0}
+                    </div>
+                    <div className="text-xs text-gray-400">Master</div>
+                  </div>
+                </div>
+                <div
+                  className="flex-shrink-0 w-24 rounded-lg border p-2"
+                  style={{ backgroundColor: "#1A1D1E", borderColor: "#4A5A70" }}
+                >
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white">
+                      {stats?.totalUsers || 0}
+                    </div>
+                    <div className="text-xs text-gray-400">Users</div>
+                  </div>
+                </div>
+                <div
+                  className="flex-shrink-0 w-24 rounded-lg border p-2"
+                  style={{ backgroundColor: "#1A1D1E", borderColor: "#4A5A70" }}
+                >
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white">
+                      {stats?.activeUsers || 0}
+                    </div>
+                    <div className="text-xs text-gray-400">Active</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Stats Cards */}
+            <div className="hidden md:grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
                 <div className="flex items-center justify-between">
                   <div>

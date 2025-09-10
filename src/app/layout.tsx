@@ -9,8 +9,7 @@ import Toast from "@/components/common/Toast";
 import ChatbotWrapper from "@/components/Chatbot/ChatbotWrapper";
 import { ChatbotProvider } from "@/components/Chatbot/ChatbotContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-// Import the startup script to ensure reliable service initialization
-import "@/lib/startup";
+// Lesson reminder service will be initialized via API route instead of layout
 import MessagingServiceProvider from "@/components/MessagingServiceProvider";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 

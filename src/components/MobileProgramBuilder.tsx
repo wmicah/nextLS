@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { withMobileDetection } from "@/lib/mobile-detection";
-import MobileProgramBuilder from "./MobileProgramBuilder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import CustomSelect from "./ui/CustomSelect";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +51,9 @@ import {
   Link,
   Unlink,
   ArrowLeft,
+  Calendar,
+  Users,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/app/_trpc/client";
@@ -91,8 +93,8 @@ interface ProgramItem {
   videoTitle?: string;
   videoThumbnail?: string;
   routineId?: string;
-  supersetId?: string; // ID of the superset group
-  supersetOrder?: number; // Order within the superset (1 or 2)
+  supersetId?: string;
+  supersetOrder?: number;
 }
 
 interface Routine {
@@ -104,7 +106,7 @@ interface Routine {
 
 interface Week {
   id: string;
-  name: string; // "Week 1", "Week 2", etc.
+  name: string;
   days: Record<DayKey, ProgramItem[]>;
   collapsed?: boolean;
 }
@@ -146,7 +148,7 @@ const DAY_LABELS: Record<DayKey, string> = {
 
 const DAY_KEYS: DayKey[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
-function ProgramBuilder({
+export default function MobileProgramBuilder({
   onSave,
   initialWeeks = [],
   programDetails,
@@ -157,13 +159,6 @@ function ProgramBuilder({
   const [weeks, setWeeks] = useState<Week[]>(initialWeeks);
   const [selectedWeekId, setSelectedWeekId] = useState<string>("");
   const [selectedDayKey, setSelectedDayKey] = useState<DayKey>("sun");
-
-  // Sync internal weeks state with initialWeeks prop changes
-  useEffect(() => {
-    if (initialWeeks && initialWeeks.length > 0) {
-      setWeeks(initialWeeks);
-    }
-  }, [initialWeeks]);
   const [editingItem, setEditingItem] = useState<ProgramItem | null>(null);
   const [isVideoDetailsDialogOpen, setIsVideoDetailsDialogOpen] =
     useState(false);
@@ -178,6 +173,26 @@ function ProgramBuilder({
   const [isSupersetModalOpen, setIsSupersetModalOpen] = useState(false);
   const [pendingSupersetDrill, setPendingSupersetDrill] =
     useState<ProgramItem | null>(null);
+  const [isCreateRoutineModalOpen, setIsCreateRoutineModalOpen] =
+    useState(false);
+  const [isAddRoutineModalOpen, setIsAddRoutineModalOpen] = useState(false);
+  const [pendingRoutineDay, setPendingRoutineDay] = useState<{
+    weekId: string;
+    dayKey: DayKey;
+  } | null>(null);
+  const [newRoutine, setNewRoutine] = useState({
+    name: "",
+    description: "",
+    exercises: [] as ProgramItem[],
+  });
+
+  // Sync internal weeks state with initialWeeks prop changes
+  useEffect(() => {
+    if (initialWeeks && initialWeeks.length > 0) {
+      setWeeks(initialWeeks);
+    }
+  }, [initialWeeks]);
+
   // tRPC hooks for routines
   const { data: routinesData = [], refetch: refetchRoutines } =
     trpc.routines.list.useQuery();
@@ -209,6 +224,7 @@ function ProgramBuilder({
       routineId: exercise.routineId,
     })),
   }));
+
   const createRoutineMutation = trpc.routines.create.useMutation({
     onSuccess: () => {
       refetchRoutines();
@@ -216,28 +232,17 @@ function ProgramBuilder({
       setNewRoutine({ name: "", description: "", exercises: [] });
     },
   });
+
   const updateRoutineMutation = trpc.routines.update.useMutation({
     onSuccess: () => {
       refetchRoutines();
     },
   });
+
   const deleteRoutineMutation = trpc.routines.delete.useMutation({
     onSuccess: () => {
       refetchRoutines();
     },
-  });
-
-  const [isCreateRoutineModalOpen, setIsCreateRoutineModalOpen] =
-    useState(false);
-  const [isAddRoutineModalOpen, setIsAddRoutineModalOpen] = useState(false);
-  const [pendingRoutineDay, setPendingRoutineDay] = useState<{
-    weekId: string;
-    dayKey: DayKey;
-  } | null>(null);
-  const [newRoutine, setNewRoutine] = useState({
-    name: "",
-    description: "",
-    exercises: [] as ProgramItem[],
   });
 
   // Handlers
@@ -263,7 +268,7 @@ function ProgramBuilder({
 
   const deleteWeek = useCallback(
     (weekId: string) => {
-      if (weeks.length === 1) return; // Don't delete the last week
+      if (weeks.length === 1) return;
       const updatedWeeks = weeks.filter(week => week.id !== weekId);
       setWeeks(updatedWeeks);
     },
@@ -280,7 +285,7 @@ function ProgramBuilder({
         id: `week-${newWeekNumber}`,
         name: `Week ${newWeekNumber}`,
         collapsed: false,
-        days: JSON.parse(JSON.stringify(weekToDuplicate.days)), // Deep copy
+        days: JSON.parse(JSON.stringify(weekToDuplicate.days)),
       };
       const updatedWeeks = [...weeks, newWeek];
       setWeeks(updatedWeeks);
@@ -321,7 +326,6 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
       onSave?.(updatedWeeks);
     },
     [weeks, onSave]
@@ -349,7 +353,6 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
       onSave?.(updatedWeeks);
     },
     [weeks, onSave]
@@ -370,7 +373,6 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
       onSave?.(updatedWeeks);
     },
     [weeks, onSave]
@@ -391,7 +393,6 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
       onSave?.(updatedWeeks);
     },
     [weeks, onSave]
@@ -399,10 +400,8 @@ function ProgramBuilder({
 
   const handleSave = useCallback(() => {
     if (programDetails?.onSave) {
-      // In edit mode, call the database save function with current weeks
       programDetails.onSave(weeks);
     } else {
-      // In create mode, just update parent state
       onSave?.(weeks);
     }
   }, [weeks, onSave, programDetails]);
@@ -439,14 +438,7 @@ function ProgramBuilder({
       url?: string;
       thumbnail?: string;
     }) => {
-      console.log("ProgramBuilder handleVideoSelect called with:", video);
-      console.log("selectedWeekId:", selectedWeekId);
-      console.log("selectedDayKey:", selectedDayKey);
-      console.log("Current weeks state:", weeks);
-
-      // Check if we're creating a routine
       if (selectedWeekId === "routine-creation") {
-        // Add video directly to routine
         const videoItem: ProgramItem = {
           id: `temp-${Date.now()}`,
           title: video.title,
@@ -465,12 +457,8 @@ function ProgramBuilder({
         setSelectedWeekId("");
         setSelectedDayKey("sun");
       } else {
-        // Normal video selection for program days
-        console.log("Setting selectedVideo and opening VideoDetailsDialog");
         setSelectedVideo(video);
-        console.log("About to set isVideoDetailsDialogOpen to true");
         setIsVideoDetailsDialogOpen(true);
-        console.log("VideoDetailsDialog should now be open");
       }
     },
     [selectedWeekId]
@@ -478,16 +466,9 @@ function ProgramBuilder({
 
   // Handle video selection from library
   useEffect(() => {
-    console.log(
-      "ProgramBuilder useEffect - selectedVideoFromLibrary:",
-      selectedVideoFromLibrary
-    );
-    console.log("ProgramBuilder useEffect - selectedWeekId:", selectedWeekId);
-    console.log("ProgramBuilder useEffect - selectedDayKey:", selectedDayKey);
     if (selectedVideoFromLibrary) {
-      console.log("Video selected from library:", selectedVideoFromLibrary);
       handleVideoSelect(selectedVideoFromLibrary);
-      onVideoProcessed?.(); // Clear the selected video after processing
+      onVideoProcessed?.();
     }
   }, [selectedVideoFromLibrary, handleVideoSelect, onVideoProcessed]);
 
@@ -498,17 +479,8 @@ function ProgramBuilder({
       reps?: number;
       tempo?: string;
     }) => {
-      console.log(
-        "ProgramBuilder handleVideoDetailsSubmit called with details:",
-        details
-      );
-      console.log("selectedVideo:", selectedVideo);
-      console.log("selectedWeekId:", selectedWeekId);
-      console.log("selectedDayKey:", selectedDayKey);
-
       if (!selectedVideo) return;
 
-      // Create the video item
       const videoItem: Omit<ProgramItem, "id"> = {
         title: selectedVideo.title,
         type: "video",
@@ -523,14 +495,12 @@ function ProgramBuilder({
         tempo: details.tempo || "",
       };
 
-      // Add the video item to the program
       if (editingItem) {
         editItem(selectedWeekId, selectedDayKey, editingItem.id, videoItem);
       } else {
         addItem(selectedWeekId, selectedDayKey, videoItem);
       }
 
-      // Close the dialog
       setIsVideoDetailsDialogOpen(false);
       setSelectedVideo(null);
       setEditingItem(null);
@@ -609,10 +579,7 @@ function ProgramBuilder({
           );
 
           if (item && superset) {
-            // Create a unique superset ID
             const supersetGroupId = `superset-${Date.now()}`;
-
-            // Set both items as part of the same superset
             item.supersetId = supersetGroupId;
             item.supersetOrder = 1;
             superset.supersetId = supersetGroupId;
@@ -624,7 +591,6 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
       onSave?.(updatedWeeks);
     },
     [weeks, selectedWeekId, selectedDayKey, onSave]
@@ -637,13 +603,11 @@ function ProgramBuilder({
           const updatedDays = { ...week.days };
           const item = updatedDays[selectedDayKey].find(i => i.id === itemId);
           if (item && item.supersetId) {
-            // Find all items in the same superset group
             const supersetGroupId = item.supersetId;
             const supersetItems = updatedDays[selectedDayKey].filter(
               i => i.supersetId === supersetGroupId
             );
 
-            // Remove superset properties from all items in the group
             supersetItems.forEach(supersetItem => {
               supersetItem.supersetId = undefined;
               supersetItem.supersetOrder = undefined;
@@ -655,7 +619,6 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
       onSave?.(updatedWeeks);
     },
     [weeks, selectedWeekId, selectedDayKey, onSave]
@@ -706,7 +669,6 @@ function ProgramBuilder({
 
       const updatedWeeks = arrayMove(weeks, oldIndex, newIndex);
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
       onSave?.(updatedWeeks);
     },
     [weeks, onSave]
@@ -721,156 +683,133 @@ function ProgramBuilder({
 
   return (
     <div
-      className="min-h-screen p-4 overflow-x-auto"
+      className="min-h-screen w-full max-w-full overflow-x-hidden"
       style={{ backgroundColor: "#2A3133" }}
     >
-      {/* Program Details Header */}
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-30 bg-[#2A3133] border-b border-[#606364] py-3">
+        <div className="flex items-center justify-between w-full min-w-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {programDetails?.onBack && (
+              <Button
+                variant="ghost"
+                onClick={programDetails.onBack}
+                className="p-2 text-[#C3BCC2] hover:text-white hover:bg-[#353A3A] min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: "#4A5A70" }}
+            >
+              <Calendar className="h-4 w-4" style={{ color: "#C3BCC2" }} />
+            </div>
+            <h1 className="text-lg font-bold text-[#C3BCC2] break-words">
+              {programDetails?.title || "Program Builder"}
+            </h1>
+            <span
+              className="px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
+              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+            >
+              {weeks.length} week{weeks.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              onClick={handleSave}
+              disabled={programDetails?.isSaving}
+              className="p-2 rounded-lg bg-green-600 hover:bg-green-700 text-white min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              <Save className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Program Details Card */}
       {programDetails && (
-        <div className="mb-8 p-6 bg-[#353A3A] rounded-2xl border border-gray-600">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <div className="flex items-center gap-4 mb-2">
-                {programDetails.onBack && (
-                  <Button
-                    variant="ghost"
-                    onClick={programDetails.onBack}
-                    className="text-gray-400 hover:text-white"
+        <div className="p-4">
+          <Card className="bg-[#353A3A] border-[#606364]">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div>
+                  <h2 className="text-lg font-bold text-[#C3BCC2] mb-1 break-words">
+                    {programDetails.title}
+                  </h2>
+                  <p className="text-sm text-[#ABA4AA] break-words">
+                    {programDetails.description || "No description provided"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-500/10 text-green-400 border-green-500/20 text-xs"
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
+                    {programDetails.level}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-xs"
+                  >
+                    {programDetails.duration} weeks
+                  </Badge>
+                </div>
+                {programDetails.lastSaved && (
+                  <p className="text-xs text-[#ABA4AA]">
+                    Last saved: {programDetails.lastSaved.toLocaleTimeString()}
+                  </p>
                 )}
-                <h2 className="text-2xl font-bold text-white">
-                  {programDetails.title || "Untitled Program"}
-                </h2>
               </div>
-              <p className="text-gray-400">
-                {programDetails.description || "No description provided"}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Badge
-                variant="outline"
-                className="bg-green-500/10 text-green-400 border-green-500/20"
-              >
-                {programDetails.level}
-              </Badge>
-              <Badge
-                variant="outline"
-                className="bg-purple-500/10 text-purple-400 border-purple-500/20"
-              >
-                {programDetails.duration} weeks
-              </Badge>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={() => {
-                  console.log("=== SAVE BUTTON CLICKED ===");
-                  console.log("Calling ProgramBuilder handleSave()");
-                  handleSave();
-                }}
-                disabled={programDetails.isSaving}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {programDetails.isSaving ? "Saving..." : "Save Program"}
-              </Button>
-            </div>
-          </div>
-          {programDetails.lastSaved && (
-            <p className="text-sm text-gray-500 mt-2">
-              Last saved: {programDetails.lastSaved.toLocaleTimeString()}
-            </p>
-          )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Top Toolbar - Only show when not in edit mode */}
-      {!programDetails && (
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={addWeek}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Week
-              </Button>
-              <Button
-                onClick={() => setIsCreateRoutineModalOpen(true)}
-                variant="outline"
-                className="border-green-500/50 text-green-400 hover:bg-green-500/10"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Routine
-              </Button>
-              <Button
-                onClick={toggleCollapseAll}
-                variant="outline"
-                className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
-              >
-                {weeks.every(week => week.collapsed) ? (
-                  <>
-                    <Expand className="h-4 w-4 mr-2" />
-                    Expand All
-                  </>
-                ) : (
-                  <>
-                    <Minimize className="h-4 w-4 mr-2" />
-                    Collapse All
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+      {/* Action Buttons */}
+      <div className="p-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={addWeek}
+            className="bg-blue-600 hover:bg-blue-700 text-white h-12"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Week
+          </Button>
+          <Button
+            onClick={() => setIsCreateRoutineModalOpen(true)}
+            variant="outline"
+            className="border-green-500/50 text-green-400 hover:bg-green-500/10 h-12"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Routine
+          </Button>
         </div>
-      )}
-
-      {/* Action Buttons - Show when in edit mode */}
-      {programDetails && (
-        <div className="mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={addWeek}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Week
-            </Button>
-            <Button
-              onClick={() => setIsCreateRoutineModalOpen(true)}
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/10"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Routine
-            </Button>
-            <Button
-              onClick={toggleCollapseAll}
-              variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
-            >
-              {weeks.every(week => week.collapsed) ? (
-                <>
-                  <Expand className="h-4 w-4 mr-2" />
-                  Expand All
-                </>
-              ) : (
-                <>
-                  <Minimize className="h-4 w-4 mr-2" />
-                  Collapse All
-                </>
-              )}
-            </Button>
-          </div>
+        <div className="mt-3">
+          <Button
+            onClick={toggleCollapseAll}
+            variant="outline"
+            className="w-full border-[#606364] text-[#C3BCC2] hover:bg-[#353A3A] hover:text-white h-12"
+          >
+            {weeks.every(week => week.collapsed) ? (
+              <>
+                <Expand className="h-4 w-4 mr-2" />
+                Expand All
+              </>
+            ) : (
+              <>
+                <Minimize className="h-4 w-4 mr-2" />
+                Collapse All
+              </>
+            )}
+          </Button>
         </div>
-      )}
+      </div>
 
-      {/* Weeks */}
-      <div className="space-y-6">
+      {/* Weeks List */}
+      <div className="px-4 pb-4 space-y-4">
         {weeks.map((week, weekIndex) => (
-          <WeekCard
+          <MobileWeekCard
             key={week.id}
             week={week}
             weekIndex={weekIndex}
@@ -900,11 +839,9 @@ function ProgramBuilder({
       </div>
 
       {/* Video Details Dialog */}
-
       <VideoDetailsDialog
         isOpen={isVideoDetailsDialogOpen}
         onClose={() => {
-          console.log("VideoDetailsDialog onClose called");
           setIsVideoDetailsDialogOpen(false);
           setSelectedVideo(null);
         }}
@@ -914,54 +851,59 @@ function ProgramBuilder({
 
       {/* Superset Modal */}
       <Dialog open={isSupersetModalOpen} onOpenChange={setIsSupersetModalOpen}>
-        <DialogContent className="bg-[#2A3133] border-gray-600">
+        <DialogContent className="bg-[#2A3133] border-[#606364]">
           <DialogHeader>
-            <DialogTitle className="text-white">Create Superset</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-[#C3BCC2]">
+              Create Superset
+            </DialogTitle>
+            <DialogDescription className="text-[#ABA4AA]">
               Select another exercise from the same day to create a superset
-              (minimal rest between exercises)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-white">First Exercise</Label>
-              <div className="p-3 bg-gray-700 rounded border border-gray-600">
-                <p className="text-white font-medium">
+              <Label className="text-[#C3BCC2]">First Exercise</Label>
+              <div className="p-3 bg-[#353A3A] rounded border border-[#606364]">
+                <p className="text-[#C3BCC2] font-medium break-words">
                   {pendingSupersetDrill?.title}
                 </p>
-                <p className="text-gray-400 text-sm">
+                <p className="text-[#ABA4AA] text-sm break-words">
                   {pendingSupersetDrill?.notes}
                 </p>
               </div>
             </div>
             <div>
-              <Label className="text-white">Second Exercise</Label>
-              <select
-                className="w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
-                onChange={e => {
-                  if (e.target.value && pendingSupersetDrill) {
-                    handleCreateSuperset(
-                      pendingSupersetDrill.id,
-                      e.target.value
-                    );
+              <Label className="text-[#C3BCC2]">Second Exercise</Label>
+              <CustomSelect
+                value=""
+                onChange={value => {
+                  if (value && pendingSupersetDrill) {
+                    handleCreateSuperset(pendingSupersetDrill.id, value);
                     setIsSupersetModalOpen(false);
                   }
                 }}
-              >
-                <option value="">
-                  Select an exercise from the same day...
-                </option>
-                {weeks
-                  .find(week => week.id === selectedWeekId)
-                  ?.days[selectedDayKey]?.filter(
-                    item => item.id !== pendingSupersetDrill?.id
-                  )
-                  .map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.title}
-                    </option>
-                  ))}
-              </select>
+                options={[
+                  {
+                    value: "",
+                    label: "Select an exercise from the same day...",
+                  },
+                  ...(weeks
+                    .find(week => week.id === selectedWeekId)
+                    ?.days[selectedDayKey]?.filter(
+                      item => item.id !== pendingSupersetDrill?.id
+                    )
+                    .map(item => ({
+                      value: item.id,
+                      label: item.title,
+                    })) || []),
+                ]}
+                placeholder="Select an exercise from the same day..."
+                style={{
+                  backgroundColor: "#353A3A",
+                  borderColor: "#606364",
+                  color: "#C3BCC2",
+                }}
+              />
             </div>
           </div>
         </DialogContent>
@@ -972,20 +914,20 @@ function ProgramBuilder({
         open={isCreateRoutineModalOpen}
         onOpenChange={setIsCreateRoutineModalOpen}
       >
-        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-4xl">
+        <DialogContent className="bg-[#2A3133] border-[#606364] max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">Create New Routine</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Add videos/exercises to create a reusable routine. This routine
-              can then be added to any program day.
+            <DialogTitle className="text-[#C3BCC2]">
+              Create New Routine
+            </DialogTitle>
+            <DialogDescription className="text-[#ABA4AA]">
+              Add videos/exercises to create a reusable routine
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Routine Details */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
-                <Label htmlFor="routine-name" className="text-white">
+                <Label htmlFor="routine-name" className="text-[#C3BCC2]">
                   Routine Name
                 </Label>
                 <Input
@@ -995,11 +937,11 @@ function ProgramBuilder({
                     setNewRoutine(prev => ({ ...prev, name: e.target.value }))
                   }
                   placeholder="e.g., Drive Warm-up, Core Stability"
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
                 />
               </div>
               <div>
-                <Label htmlFor="routine-description" className="text-white">
+                <Label htmlFor="routine-description" className="text-[#C3BCC2]">
                   Description
                 </Label>
                 <Input
@@ -1012,18 +954,18 @@ function ProgramBuilder({
                     }))
                   }
                   placeholder="Describe what this routine focuses on..."
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
                 />
               </div>
             </div>
 
-            {/* Routine Day */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-white">Routine Day</h3>
+                <h3 className="text-lg font-medium text-[#C3BCC2]">
+                  Routine Day
+                </h3>
                 <Button
                   onClick={() => {
-                    // Open video library to select videos for the routine
                     onOpenVideoLibrary?.();
                     setEditingItem(null);
                     setSelectedWeekId("routine-creation");
@@ -1037,14 +979,14 @@ function ProgramBuilder({
                 </Button>
               </div>
 
-              <Card className="bg-gray-700/50 border-gray-600">
+              <Card className="bg-[#353A3A]/50 border-[#606364]">
                 <CardContent className="p-4">
                   {!newRoutine.exercises ||
                   newRoutine.exercises.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
+                    <div className="text-center py-8 text-[#ABA4AA]">
                       <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>
-                        No exercises added yet. Click "Add Exercise" to get
+                      <p className="break-words">
+                        No exercises added yet. Click "Add from Library" to get
                         started.
                       </p>
                     </div>
@@ -1053,7 +995,7 @@ function ProgramBuilder({
                       {newRoutine.exercises?.map((exercise, index) => (
                         <div
                           key={exercise.id}
-                          className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg border border-gray-600"
+                          className="flex items-center gap-3 p-3 bg-[#2A3133] rounded-lg border border-[#606364]"
                         >
                           <div className="flex-1">
                             <Input
@@ -1072,7 +1014,7 @@ function ProgramBuilder({
                                 }));
                               }}
                               placeholder="Exercise name"
-                              className="bg-gray-700 border-gray-600 text-white mb-2"
+                              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mb-2"
                             />
                             <div className="grid grid-cols-3 gap-2">
                               <Input
@@ -1094,7 +1036,7 @@ function ProgramBuilder({
                                 }}
                                 placeholder="Sets"
                                 type="number"
-                                className="bg-gray-700 border-gray-600 text-white text-sm"
+                                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
                               />
                               <Input
                                 value={exercise.reps || ""}
@@ -1115,7 +1057,7 @@ function ProgramBuilder({
                                 }}
                                 placeholder="Reps"
                                 type="number"
-                                className="bg-gray-700 border-gray-600 text-white text-sm"
+                                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
                               />
                               <Input
                                 value={exercise.tempo || ""}
@@ -1133,7 +1075,7 @@ function ProgramBuilder({
                                   }));
                                 }}
                                 placeholder="Tempo"
-                                className="bg-gray-700 border-gray-600 text-white text-sm"
+                                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
                               />
                             </div>
                             <Input
@@ -1152,7 +1094,7 @@ function ProgramBuilder({
                                 }));
                               }}
                               placeholder="Notes (optional)"
-                              className="bg-gray-700 border-gray-600 text-white text-sm mt-2"
+                              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm mt-2"
                             />
                           </div>
                           <Button
@@ -1189,7 +1131,7 @@ function ProgramBuilder({
                 setIsCreateRoutineModalOpen(false);
                 setNewRoutine({ name: "", description: "", exercises: [] });
               }}
-              className="border-gray-600 text-gray-300"
+              className="border-[#606364] text-[#ABA4AA]"
             >
               Cancel
             </Button>
@@ -1214,21 +1156,22 @@ function ProgramBuilder({
         open={isAddRoutineModalOpen}
         onOpenChange={setIsAddRoutineModalOpen}
       >
-        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-2xl">
+        <DialogContent className="bg-[#2A3133] border-[#606364] max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">Add Routine to Day</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Select a routine to add to this day. The routine will appear as a
-              single item but expand to show all exercises for clients.
+            <DialogTitle className="text-[#C3BCC2]">
+              Add Routine to Day
+            </DialogTitle>
+            <DialogDescription className="text-[#ABA4AA]">
+              Select a routine to add to this day
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {routines.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-[#ABA4AA]">
                 <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No routines created yet.</p>
-                <p className="text-sm">
+                <p className="break-words">No routines created yet.</p>
+                <p className="text-sm break-words">
                   Create a routine first to use this feature.
                 </p>
               </div>
@@ -1237,7 +1180,7 @@ function ProgramBuilder({
                 {routines.map(routine => (
                   <Card
                     key={routine.id}
-                    className="bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 cursor-pointer transition-colors"
+                    className="bg-[#353A3A]/50 border-[#606364] hover:bg-[#353A3A] cursor-pointer transition-colors"
                     onClick={() => {
                       if (pendingRoutineDay) {
                         handleAddRoutineToDay(
@@ -1253,19 +1196,19 @@ function ProgramBuilder({
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-medium text-white mb-1">
+                          <h3 className="font-medium text-[#C3BCC2] mb-1 break-words">
                             {routine.name}
                           </h3>
-                          <p className="text-sm text-gray-400 mb-2">
+                          <p className="text-sm text-[#ABA4AA] mb-2 break-words">
                             {routine.description || "No description provided"}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <div className="flex items-center gap-2 text-xs text-[#ABA4AA]">
                             <span>
                               {routine.exercises.length} exercise
                               {routine.exercises.length !== 1 ? "s" : ""}
                             </span>
                             {routine.exercises.length > 0 && (
-                              <span>
+                              <span className="break-words">
                                 •{" "}
                                 {routine.exercises
                                   .map(ex => ex.title)
@@ -1296,7 +1239,7 @@ function ProgramBuilder({
                 setIsAddRoutineModalOpen(false);
                 setPendingRoutineDay(null);
               }}
-              className="border-gray-600 text-gray-300"
+              className="border-[#606364] text-[#ABA4AA]"
             >
               Cancel
             </Button>
@@ -1307,8 +1250,8 @@ function ProgramBuilder({
   );
 }
 
-// Week Card Component
-interface WeekCardProps {
+// Mobile Week Card Component
+interface MobileWeekCardProps {
   week: Week;
   weekIndex: number;
   onToggleCollapse: () => void;
@@ -1324,7 +1267,7 @@ interface WeekCardProps {
   ) => void;
   onAddRoutine: (routine: Routine, dayKey: DayKey) => void;
   routines: Routine[];
-  sensors: any; // DndContext sensors
+  sensors: any;
   onDragEnd: (event: DragEndEvent) => void;
   onCreateSuperset: (itemId: string, supersetId: string) => void;
   onRemoveSuperset: (itemId: string) => void;
@@ -1333,7 +1276,7 @@ interface WeekCardProps {
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
 }
 
-function WeekCard({
+function MobileWeekCard({
   week,
   weekIndex,
   onToggleCollapse,
@@ -1352,7 +1295,7 @@ function WeekCard({
   onOpenSupersetModal,
   getSupersetGroups,
   onOpenAddRoutine,
-}: WeekCardProps) {
+}: MobileWeekCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({
       id: week.id,
@@ -1371,16 +1314,16 @@ function WeekCard({
     <Card
       ref={setNodeRef}
       style={style}
-      className="bg-[#353A3A] border-gray-600 shadow-xl w-full"
+      className="bg-[#353A3A] border-[#606364] shadow-lg w-full"
     >
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleCollapse}
-              className="p-1 h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-600"
+              className="p-1 h-8 w-8 text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#2A3133] flex-shrink-0"
             >
               {week.collapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -1388,44 +1331,44 @@ function WeekCard({
                 <ChevronDown className="h-4 w-4" />
               )}
             </Button>
-            <CardTitle className="text-xl font-bold text-white">
+            <CardTitle className="text-lg font-bold text-[#C3BCC2] break-words">
               {week.name}
             </CardTitle>
             <Badge
               variant="outline"
-              className="bg-blue-500/10 text-blue-400 border-blue-500/20"
+              className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs flex-shrink-0"
             >
               {weekIndex + 1}
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={onDuplicate}
-              className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+              className="border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] h-8 px-2"
             >
-              <Copy className="h-4 w-4 mr-1" />
-              Duplicate
+              <Copy className="h-3 w-3 mr-1" />
+              <span className="hidden sm:inline">Duplicate</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="border-red-500 text-red-400 hover:bg-red-500/10"
+              className="border-red-500 text-red-400 hover:bg-red-500/10 h-8 px-2"
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
+              <Trash2 className="h-3 w-3 mr-1" />
+              <span className="hidden sm:inline">Delete</span>
             </Button>
           </div>
         </div>
       </CardHeader>
 
       {!week.collapsed && (
-        <CardContent className="px-4 pb-6">
-          <div className="grid grid-cols-7 gap-3">
+        <CardContent className="px-4 pb-4">
+          <div className="space-y-4">
             {DAY_KEYS.map(dayKey => (
-              <DayCard
+              <MobileDayCard
                 key={dayKey}
                 dayKey={dayKey}
                 dayLabel={DAY_LABELS[dayKey]}
@@ -1463,8 +1406,8 @@ function WeekCard({
   );
 }
 
-// Day Card Component
-interface DayCardProps {
+// Mobile Day Card Component
+interface MobileDayCardProps {
   dayKey: DayKey;
   dayLabel: string;
   items: ProgramItem[];
@@ -1482,7 +1425,7 @@ interface DayCardProps {
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
 }
 
-function DayCard({
+function MobileDayCard({
   dayKey,
   dayLabel,
   items,
@@ -1498,8 +1441,7 @@ function DayCard({
   onOpenSupersetModal,
   getSupersetGroups,
   onOpenAddRoutine,
-}: DayCardProps) {
-  // Filter out rest day items and check if it's a rest day
+}: MobileDayCardProps) {
   const nonRestItems = items.filter(item => item.type !== "rest");
   const isRestDay = nonRestItems.length === 0;
 
@@ -1507,8 +1449,8 @@ function DayCard({
     <div className="space-y-3">
       {/* Day Header */}
       <div className="text-center">
-        <h3 className="text-sm font-medium text-gray-300 mb-1">{dayLabel}</h3>
-        <div className="text-xs text-gray-500 uppercase tracking-wide">
+        <h3 className="text-sm font-medium text-[#C3BCC2] mb-1">{dayLabel}</h3>
+        <div className="text-xs text-[#ABA4AA] uppercase tracking-wide">
           {dayKey}
         </div>
       </div>
@@ -1516,15 +1458,15 @@ function DayCard({
       {/* Day Content */}
       <Card
         className={cn(
-          "min-h-[300px] w-full",
+          "min-h-[200px] w-full",
           isRestDay
-            ? "bg-gray-700/30 border-gray-500/30"
-            : "bg-gray-700/50 border-gray-500/50"
+            ? "bg-[#2A3133]/30 border-[#606364]/30"
+            : "bg-[#2A3133]/50 border-[#606364]/50"
         )}
       >
         <CardContent className="p-3">
           {isRestDay ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+            <div className="flex flex-col items-center justify-center h-full text-center text-[#ABA4AA]">
               <Moon className="h-6 w-6 mb-2 opacity-50" />
               <span className="text-xs font-medium">Rest Day</span>
             </div>
@@ -1552,7 +1494,6 @@ function DayCard({
                       oldIndex,
                       newIndex
                     );
-                    // Update the items in the parent component
                     onReorderItems(newItems);
                   }
                 }
@@ -1564,7 +1505,7 @@ function DayCard({
               >
                 <div className="space-y-2">
                   {nonRestItems.map(item => (
-                    <SortableDrillItem
+                    <MobileSortableDrillItem
                       key={item.id}
                       item={item}
                       onEdit={() => onEditItem(item)}
@@ -1589,7 +1530,7 @@ function DayCard({
           onClick={() => onAddItem()}
           variant="outline"
           size="sm"
-          className="w-full border-gray-500/50 text-gray-400 hover:bg-gray-600 hover:text-white hover:border-gray-400"
+          className="w-full border-[#606364]/50 text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] hover:border-[#606364] h-10"
         >
           <Video className="h-3 w-3 mr-1" />
           Add from Library
@@ -1598,7 +1539,7 @@ function DayCard({
           onClick={() => onOpenAddRoutine(weekId, dayKey)}
           variant="outline"
           size="sm"
-          className="w-full border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-400"
+          className="w-full border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-400 h-10"
         >
           <Target className="h-3 w-3 mr-1" />
           Add Routine
@@ -1608,8 +1549,8 @@ function DayCard({
   );
 }
 
-// Sortable Drill Item Component
-interface SortableDrillItemProps {
+// Mobile Sortable Drill Item Component
+interface MobileSortableDrillItemProps {
   item: ProgramItem;
   onEdit: () => void;
   onDelete: () => void;
@@ -1620,7 +1561,7 @@ interface SortableDrillItemProps {
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
 }
 
-function SortableDrillItem({
+function MobileSortableDrillItem({
   item,
   onEdit,
   onDelete,
@@ -1629,7 +1570,7 @@ function SortableDrillItem({
   onCreateSuperset,
   onRemoveSuperset,
   getSupersetGroups,
-}: SortableDrillItemProps) {
+}: MobileSortableDrillItemProps) {
   const {
     attributes,
     listeners,
@@ -1660,7 +1601,7 @@ function SortableDrillItem({
           ? "bg-purple-600/30 border-purple-500/50"
           : isRoutine
           ? "bg-green-900/20 border-green-400"
-          : "bg-gray-800 border-gray-600"
+          : "bg-[#2A3133] border-[#606364]"
       )}
     >
       {/* Superset indicator */}
@@ -1683,7 +1624,7 @@ function SortableDrillItem({
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-white"
+          className="cursor-grab active:cursor-grabbing p-1 text-[#ABA4AA] hover:text-[#C3BCC2] flex-shrink-0"
         >
           <GripVertical className="h-3 w-3" />
         </div>
@@ -1691,30 +1632,30 @@ function SortableDrillItem({
         {/* Item content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-white truncate">
+            <span className="text-xs font-medium text-[#C3BCC2] break-words">
               {item.title}
             </span>
           </div>
 
-          {/* Exercise details in horizontal layout */}
-          <div className="flex flex-wrap gap-2 text-xs text-gray-300 mb-2">
+          {/* Exercise details */}
+          <div className="flex flex-wrap gap-1 text-xs text-[#ABA4AA] mb-2">
             {item.sets && (
-              <span className="px-2 py-1 bg-gray-700/50 rounded">
+              <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
                 Sets: {item.sets}
               </span>
             )}
             {item.reps && (
-              <span className="px-2 py-1 bg-gray-700/50 rounded">
+              <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
                 Reps: {item.reps}
               </span>
             )}
             {item.tempo && (
-              <span className="px-2 py-1 bg-gray-700/50 rounded">
+              <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
                 Tempo: {item.tempo}
               </span>
             )}
             {item.duration && (
-              <span className="px-2 py-1 bg-gray-700/50 rounded flex items-center gap-1">
+              <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {item.duration}
               </span>
@@ -1723,12 +1664,14 @@ function SortableDrillItem({
 
           {/* Notes */}
           {item.notes && (
-            <p className="text-xs text-gray-400 line-clamp-2">{item.notes}</p>
+            <p className="text-xs text-[#ABA4AA] break-words line-clamp-2">
+              {item.notes}
+            </p>
           )}
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 flex-shrink-0">
           {/* Superset Chain Link Button */}
           {!item.supersetId ? (
             <Button
@@ -1756,7 +1699,7 @@ function SortableDrillItem({
             variant="ghost"
             size="sm"
             onClick={onEdit}
-            className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
+            className="h-6 w-6 p-0 text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#2A3133]"
           >
             <Edit className="h-3 w-3" />
           </Button>
@@ -1771,164 +1714,6 @@ function SortableDrillItem({
         </div>
       </div>
     </div>
-  );
-}
-
-// Program Item Card Component
-interface ProgramItemCardProps {
-  item: ProgramItem;
-  onEdit: () => void;
-  onDelete: () => void;
-  onAddSuperset: () => void;
-  routines: Routine[];
-  onCreateSuperset: (itemId: string, supersetId: string) => void;
-  onRemoveSuperset: (itemId: string) => void;
-  getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
-}
-
-function ProgramItemCard({
-  item,
-  onEdit,
-  onDelete,
-  onAddSuperset,
-  routines,
-  onCreateSuperset,
-  onRemoveSuperset,
-  getSupersetGroups,
-}: ProgramItemCardProps) {
-  const getItemIcon = () => {
-    switch (item.type) {
-      case "exercise":
-        return <Target className="h-3 w-3" />;
-      case "drill":
-        return <Play className="h-3 w-3" />;
-      case "video":
-        return <Video className="h-3 w-3" />;
-      case "routine":
-        return <GripVertical className="h-3 w-3" />;
-      default:
-        return <Target className="h-3 w-3" />;
-    }
-  };
-
-  const getItemColor = () => {
-    switch (item.type) {
-      case "exercise":
-        return "bg-green-400";
-      case "drill":
-        return "bg-blue-400";
-      case "video":
-        return "bg-purple-400";
-      case "routine":
-        return "bg-yellow-400";
-      default:
-        return "bg-green-400";
-    }
-  };
-
-  const isSuperset = item.supersetId !== undefined;
-
-  return (
-    <Card
-      className={`${
-        isSuperset
-          ? "bg-purple-600/30 border-purple-500/50"
-          : "bg-gray-600/50 border-gray-500/50"
-      }`}
-    >
-      <CardContent className="p-2">
-        {/* Superset indicator */}
-        {isSuperset && (
-          <div className="text-xs text-purple-300 mb-1 flex items-center gap-1">
-            <Link className="h-3 w-3" />
-            <span className="font-medium">SUPERSET</span>
-          </div>
-        )}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <div className={cn("w-2 h-2 rounded-full", getItemColor())} />
-              <span className="text-xs font-medium text-white truncate">
-                {item.title}
-              </span>
-            </div>
-
-            {item.sets && item.reps && (
-              <div className="text-xs text-gray-300 mb-1">
-                {item.sets} × {item.reps}
-                {item.tempo && ` @ ${item.tempo}`}
-              </div>
-            )}
-
-            {item.duration && (
-              <div className="text-xs text-gray-300 mb-1 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {item.duration}
-              </div>
-            )}
-
-            {item.notes && (
-              <p className="text-xs text-gray-400 line-clamp-2">{item.notes}</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Superset Chain Link Button */}
-            {!isSuperset ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onAddSuperset}
-                className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30"
-                title="Add Superset"
-              >
-                <Link className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onRemoveSuperset(item.id)}
-                className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30"
-                title="Remove Superset"
-              >
-                <Unlink className="h-4 w-4" />
-              </Button>
-            )}
-
-            {/* More Options Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-500"
-                >
-                  <MoreHorizontal className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-gray-700 border-gray-600">
-                <DropdownMenuItem
-                  onClick={onEdit}
-                  className="text-white hover:bg-gray-600"
-                >
-                  <Edit className="h-3 w-3 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-600" />
-                <DropdownMenuItem
-                  onClick={onDelete}
-                  className="text-red-400 hover:bg-red-400/10"
-                >
-                  <Trash2 className="h-3 w-3 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -1978,21 +1763,19 @@ function VideoDetailsDialog({
 
   if (!video) return null;
 
-  console.log("VideoDetailsDialog rendering with video:", video);
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-800 border-gray-600 text-white z-[100]">
+      <DialogContent className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] z-[100]">
         <DialogHeader>
           <DialogTitle>Add Video Details</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-[#ABA4AA] break-words">
             Add optional details for {video.title}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="notes" className="text-white">
+            <Label htmlFor="notes" className="text-[#C3BCC2]">
               Notes (Optional)
             </Label>
             <Textarea
@@ -2001,7 +1784,7 @@ function VideoDetailsDialog({
               onChange={e =>
                 setFormData(prev => ({ ...prev, notes: e.target.value }))
               }
-              className="bg-gray-700 border-gray-600 text-white"
+              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
               placeholder="Additional instructions or notes..."
               rows={3}
             />
@@ -2009,7 +1792,7 @@ function VideoDetailsDialog({
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label htmlFor="sets" className="text-white">
+              <Label htmlFor="sets" className="text-[#C3BCC2]">
                 Sets (Optional)
               </Label>
               <Input
@@ -2022,14 +1805,14 @@ function VideoDetailsDialog({
                     sets: e.target.value ? parseInt(e.target.value) : undefined,
                   }))
                 }
-                className="bg-gray-700 border-gray-600 text-white"
+                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
                 placeholder="3"
                 min="1"
               />
             </div>
 
             <div>
-              <Label htmlFor="reps" className="text-white">
+              <Label htmlFor="reps" className="text-[#C3BCC2]">
                 Reps (Optional)
               </Label>
               <Input
@@ -2042,14 +1825,14 @@ function VideoDetailsDialog({
                     reps: e.target.value ? parseInt(e.target.value) : undefined,
                   }))
                 }
-                className="bg-gray-700 border-gray-600 text-white"
+                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
                 placeholder="10"
                 min="1"
               />
             </div>
 
             <div>
-              <Label htmlFor="tempo" className="text-white">
+              <Label htmlFor="tempo" className="text-[#C3BCC2]">
                 Tempo (Optional)
               </Label>
               <Input
@@ -2058,7 +1841,7 @@ function VideoDetailsDialog({
                 onChange={e =>
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
-                className="bg-gray-700 border-gray-600 text-white"
+                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
                 placeholder="2-0-2"
               />
             </div>
@@ -2069,7 +1852,7 @@ function VideoDetailsDialog({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+              className="border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2]"
             >
               Cancel
             </Button>
@@ -2085,6 +1868,3 @@ function VideoDetailsDialog({
     </Dialog>
   );
 }
-
-// Export with mobile detection
-export default withMobileDetection(MobileProgramBuilder, ProgramBuilder);

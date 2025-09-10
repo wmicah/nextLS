@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { trpc } from "@/app/_trpc/client";
 // Removed complex SSE hooks - using simple polling instead
@@ -79,6 +79,12 @@ export default function Dashboard() {
     }
   };
 
+  // If user is not a coach, redirect to client dashboard
+  if (userProfile?.role === "CLIENT") {
+    window.location.href = "/client-dashboard";
+    return null;
+  }
+
   if (isLoading) {
     return (
       <Sidebar>
@@ -90,12 +96,6 @@ export default function Dashboard() {
         </div>
       </Sidebar>
     );
-  }
-
-  // If user is not a coach, redirect to client dashboard
-  if (userProfile?.role === "CLIENT") {
-    window.location.href = "/client-dashboard";
-    return null;
   }
 
   if (error) {
@@ -167,7 +167,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Enhanced Stats Cards - improved mobile grid */}
+        {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
           <div
             className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"

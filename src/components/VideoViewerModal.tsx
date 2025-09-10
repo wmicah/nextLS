@@ -82,14 +82,16 @@ export default function VideoViewerModal({
           <iframe
             width="100%"
             height="100%"
-            src={`https://www.youtube.com/embed/${item.youtubeId}?autoplay=0&rel=0&disablekb=1&modestbranding=1&showinfo=0`}
+            src={`https://www.youtube.com/embed/${item.youtubeId}?rel=0&modestbranding=1&showinfo=0&controls=1&fs=1&cc_load_policy=0&iv_load_policy=3&autohide=0`}
             title={item.title}
             frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             allowFullScreen
-            className="w-full h-full"
-            style={{ pointerEvents: "auto" }}
-            onContextMenu={e => e.preventDefault()} // Disable right-click
+            className="w-full h-full rounded-lg"
+            style={{
+              pointerEvents: "auto",
+              backgroundColor: "#000",
+            }}
             onLoad={() => {
               console.log("YouTube iframe loaded successfully");
             }}
@@ -140,7 +142,7 @@ export default function VideoViewerModal({
           <div className="w-full h-full relative">
             <video
               controls
-              controlsList="nodownload nofullscreen" // Disable download button
+              controlsList="nodownload" // Only disable download button, keep fullscreen
               disablePictureInPicture // Disable picture-in-picture
               className="w-full h-full object-contain"
               style={{ backgroundColor: "#000" }}
@@ -177,7 +179,7 @@ export default function VideoViewerModal({
         return (
           <video
             controls
-            controlsList="nodownload nofullscreen" // Disable download button
+            controlsList="nodownload" // Only disable download button, keep fullscreen
             disablePictureInPicture // Disable picture-in-picture
             className="w-full h-full object-contain"
             style={{ backgroundColor: "#000" }}
@@ -341,9 +343,13 @@ export default function VideoViewerModal({
           </div>
 
           {/* Content Info */}
-          <div className={`grid gap-6 ${isAdmin ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
+          <div
+            className={`grid gap-6 ${
+              isAdmin ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1"
+            }`}
+          >
             {/* Main Content */}
-            <div className={isAdmin ? 'lg:col-span-2' : 'w-full'}>
+            <div className={isAdmin ? "lg:col-span-2" : "w-full"}>
               <h1
                 className="text-3xl font-bold mb-4"
                 style={{ color: "#C3BCC2" }}
@@ -424,7 +430,9 @@ export default function VideoViewerModal({
 
                   {/* Description */}
                   <div
-                    className={`rounded-lg p-6 border ${!isAdmin ? 'max-w-4xl' : ''}`}
+                    className={`rounded-lg p-6 border ${
+                      !isAdmin ? "max-w-4xl" : ""
+                    }`}
                     style={{
                       backgroundColor: "#606364",
                       borderColor: "#ABA4AA",
@@ -447,7 +455,9 @@ export default function VideoViewerModal({
                   {/* Client Comments - Only for non-master library items */}
                   {clientComments.length > 0 && (
                     <div
-                      className={`rounded-lg p-6 border mt-6 ${!isAdmin ? 'max-w-4xl' : ''}`}
+                      className={`rounded-lg p-6 border mt-6 ${
+                        !isAdmin ? "max-w-4xl" : ""
+                      }`}
                       style={{
                         backgroundColor: "#606364",
                         borderColor: "#ABA4AA",
@@ -635,7 +645,8 @@ export default function VideoViewerModal({
                             e.currentTarget.style.color = "#C3BCC2";
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                             e.currentTarget.style.color = "#DC2626";
                           }}
                         >

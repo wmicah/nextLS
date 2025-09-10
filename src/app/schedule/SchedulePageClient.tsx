@@ -30,8 +30,11 @@ import {
   isSameMonth,
 } from "date-fns";
 import Sidebar from "@/components/Sidebar";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileSchedulePage from "@/components/MobileSchedulePage";
+import WorkingHoursModal from "@/components/WorkingHoursModal";
 
-export default function SchedulePageClient() {
+function SchedulePageClient() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showWorkingHoursModal, setShowWorkingHoursModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -42,20 +45,6 @@ export default function SchedulePageClient() {
   const [selectedRequestToReject, setSelectedRequestToReject] =
     useState<any>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [workingHours, setWorkingHours] = useState({
-    startTime: "9:00 AM", // Default value
-    endTime: "6:00 PM", // Default value
-    workingDays: [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-      "Sunday",
-    ], // Default value
-    timeSlotInterval: 60, // Default 60 minutes (1 hour)
-  });
   const [scheduleForm, setScheduleForm] = useState({
     clientId: "",
     time: "",
@@ -85,36 +74,7 @@ export default function SchedulePageClient() {
   const { data: pendingRequests = [] } =
     trpc.clientRouter.getPendingScheduleRequests.useQuery();
 
-  // Update working hours state when coach profile loads
-  useEffect(() => {
-    if (coachProfile?.workingHours) {
-      setWorkingHours({
-        startTime: coachProfile.workingHours.startTime,
-        endTime: coachProfile.workingHours.endTime,
-        workingDays: coachProfile.workingHours.workingDays || [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-          "Sunday",
-        ],
-        timeSlotInterval: coachProfile.workingHours.timeSlotInterval || 60,
-      });
-    }
-  }, [coachProfile]);
-
   const utils = trpc.useUtils();
-  const updateWorkingHoursMutation = trpc.user.updateWorkingHours.useMutation({
-    onSuccess: () => {
-      utils.user.getProfile.invalidate();
-      setShowWorkingHoursModal(false);
-    },
-    onError: error => {
-      alert(`Error updating working hours: ${error.message}`);
-    },
-  });
 
   const scheduleLessonMutation = trpc.scheduling.scheduleLesson.useMutation({
     onSuccess: () => {
@@ -246,119 +206,6 @@ export default function SchedulePageClient() {
       (a: { date: string }, b: { date: string }) =>
         new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  };
-
-  const handleSaveWorkingHours = () => {
-    // Validate that end time is after start time
-    const startTime = workingHours.startTime;
-    const endTime = workingHours.endTime;
-
-    // Parse times to compare
-    const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-
-    if (startMatch && endMatch) {
-      const [, startHour, startMinute, startPeriod] = startMatch;
-      const [, endHour, endMinute, endPeriod] = endMatch;
-
-      // Convert to 24-hour format for comparison
-      let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
-      if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
-        startTotalMinutes += 12 * 60;
-      if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
-        startTotalMinutes = parseInt(startMinute);
-
-      let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
-      if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
-        endTotalMinutes += 12 * 60;
-      if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
-        endTotalMinutes = parseInt(endMinute);
-
-      if (endTotalMinutes <= startTotalMinutes) {
-        alert("End time must be after start time");
-        return;
-      }
-    }
-
-    updateWorkingHoursMutation.mutate({
-      startTime: workingHours.startTime,
-      endTime: workingHours.endTime,
-      workingDays: workingHours.workingDays,
-      timeSlotInterval: workingHours.timeSlotInterval,
-    });
-  };
-
-  const toggleWorkingDay = (day: string) => {
-    setWorkingHours(prev => ({
-      ...prev,
-      workingDays: prev.workingDays.includes(day)
-        ? prev.workingDays.filter(d => d !== day)
-        : [...prev.workingDays, day],
-    }));
-  };
-
-  // Generate time options with 15-minute intervals
-  const generateTimeOptions = () => {
-    const options = [];
-
-    // Generate AM times (12:00 AM to 11:45 AM)
-    for (let hour = 0; hour <= 11; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const displayHour = hour === 0 ? 12 : hour;
-        const minuteStr = minute.toString().padStart(2, "0");
-        const timeValue = `${displayHour}:${minuteStr} AM`;
-        options.push(
-          <option key={timeValue} value={timeValue}>
-            {timeValue}
-          </option>
-        );
-      }
-    }
-
-    // Generate PM times (12:00 PM to 11:45 PM)
-    for (let hour = 0; hour <= 11; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const displayHour = hour === 0 ? 12 : hour;
-        const minuteStr = minute.toString().padStart(2, "0");
-        const timeValue = `${displayHour}:${minuteStr} PM`;
-        options.push(
-          <option key={timeValue} value={timeValue}>
-            {timeValue}
-          </option>
-        );
-      }
-    }
-
-    return options;
-  };
-
-  // Check if the current time configuration is valid
-  const isTimeConfigurationValid = () => {
-    const startTime = workingHours.startTime;
-    const endTime = workingHours.endTime;
-
-    const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-
-    if (!startMatch || !endMatch) return true; // Don't show error if times aren't parsed yet
-
-    const [, startHour, startMinute, startPeriod] = startMatch;
-    const [, endHour, endMinute, endPeriod] = endMatch;
-
-    // Convert to 24-hour format for comparison
-    let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
-    if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
-      startTotalMinutes += 12 * 60;
-    if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
-      startTotalMinutes = parseInt(startMinute);
-
-    let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
-    if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
-      endTotalMinutes += 12 * 60;
-    if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
-      endTotalMinutes = parseInt(endMinute);
-
-    return endTotalMinutes > startTotalMinutes;
   };
 
   const handleDateClick = (date: Date) => {
@@ -1163,183 +1010,11 @@ export default function SchedulePageClient() {
           </div>
 
           {/* Working Hours Modal */}
-          {showWorkingHoursModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div
-                className="rounded-2xl shadow-xl border p-6 w-full max-w-md mx-4"
-                style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-white">
-                    Set Working Hours
-                  </h2>
-                  <button
-                    onClick={() => setShowWorkingHoursModal(false)}
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Start Time
-                    </label>
-                    <select
-                      value={workingHours.startTime}
-                      onChange={e =>
-                        setWorkingHours({
-                          ...workingHours,
-                          startTime: e.target.value,
-                        })
-                      }
-                      className="w-full p-2 rounded-lg border text-white"
-                      style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
-                      }}
-                    >
-                      {generateTimeOptions()}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      End Time
-                    </label>
-                    <select
-                      value={workingHours.endTime}
-                      onChange={e =>
-                        setWorkingHours({
-                          ...workingHours,
-                          endTime: e.target.value,
-                        })
-                      }
-                      className="w-full p-2 rounded-lg border text-white"
-                      style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: isTimeConfigurationValid()
-                          ? "#606364"
-                          : "#EF4444",
-                      }}
-                    >
-                      {generateTimeOptions()}
-                    </select>
-                    {!isTimeConfigurationValid() && (
-                      <p className="text-xs text-red-400 mt-1">
-                        End time must be after start time
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Working Days
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Friday",
-                        "Saturday",
-                        "Sunday",
-                      ].map(day => (
-                        <button
-                          key={day}
-                          type="button"
-                          onClick={() => toggleWorkingDay(day)}
-                          className={`p-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            workingHours.workingDays.includes(day)
-                              ? "bg-blue-500 text-white"
-                              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                          }`}
-                        >
-                          {day.slice(0, 3)}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Select the days you're available for lessons
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Time Slot Interval
-                    </label>
-                    <select
-                      value={workingHours.timeSlotInterval}
-                      onChange={e =>
-                        setWorkingHours({
-                          ...workingHours,
-                          timeSlotInterval: parseInt(e.target.value),
-                        })
-                      }
-                      className="w-full p-2 rounded-lg border text-white"
-                      style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
-                      }}
-                    >
-                      <option value={15}>15 minutes</option>
-                      <option value={30}>30 minutes</option>
-                      <option value={45}>45 minutes</option>
-                      <option value={60}>60 minutes (1 hour)</option>
-                      <option value={90}>90 minutes (1.5 hours)</option>
-                      <option value={120}>120 minutes (2 hours)</option>
-                    </select>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Choose how often you want time slots to be available
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => setShowWorkingHoursModal(false)}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
-                    style={{
-                      backgroundColor: "transparent",
-                      borderColor: "#606364",
-                      color: "#FFFFFF",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveWorkingHours}
-                    disabled={
-                      updateWorkingHoursMutation.isPending ||
-                      !isTimeConfigurationValid()
-                    }
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{
-                      backgroundColor: "#4A5A70",
-                      color: "#FFFFFF",
-                    }}
-                  >
-                    {updateWorkingHoursMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        Save Hours
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <WorkingHoursModal
+            isOpen={showWorkingHoursModal}
+            onClose={() => setShowWorkingHoursModal(false)}
+            coachProfile={coachProfile}
+          />
 
           {/* Schedule Lesson Modal */}
           {showScheduleModal && (
@@ -2065,3 +1740,5 @@ export default function SchedulePageClient() {
     </Sidebar>
   );
 }
+
+export default withMobileDetection(MobileSchedulePage, SchedulePageClient);

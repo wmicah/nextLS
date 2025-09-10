@@ -65,12 +65,14 @@ import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import AssignProgramModal from "@/components/AssignProgramModal";
 import AssignVideoModal from "@/components/AssignVideoModal";
 import ScheduleLessonModal from "@/components/ScheduleLessonModal";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileClientDetailPage from "@/components/MobileClientDetailPage";
 
 interface ClientDetailPageProps {
   clientId: string;
 }
 
-export default function ClientDetailPage({ clientId }: ClientDetailPageProps) {
+function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
@@ -873,3 +875,5 @@ export default function ClientDetailPage({ clientId }: ClientDetailPageProps) {
     </Sidebar>
   );
 }
+
+export default withMobileDetection(MobileClientDetailPage, ClientDetailPage);

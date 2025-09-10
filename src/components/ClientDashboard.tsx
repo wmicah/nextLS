@@ -158,8 +158,42 @@ export default function ClientDashboard() {
       }}
     >
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Header Section with Gradient Background */}
-        <div className="mb-8 md:mb-12">
+        {/* Mobile Header */}
+        <div className="md:hidden mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="p-2 rounded-lg"
+                style={{ backgroundColor: "#4A5A70" }}
+              >
+                <Target className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-white">
+                  {getGreeting()}
+                </h1>
+                <p className="text-xs text-gray-400">
+                  {userProfile?.name ||
+                    user?.given_name ||
+                    user?.email?.split("@")[0]}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {unreadCount > 0 && (
+                <div className="relative">
+                  <MessageCircle className="w-5 h-5 text-white" />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Header Section with Gradient Background */}
+        <div className="hidden md:block mb-8 md:mb-12">
           <div
             className="rounded-2xl md:rounded-3xl p-4 md:p-8 mb-6 md:mb-8 relative overflow-hidden"
             style={{
@@ -335,13 +369,63 @@ export default function ClientDashboard() {
           </div>
         </div>
 
+        {/* Mobile Stats - Horizontal Scroll */}
+        <div className="md:hidden mb-4">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <div
+              className="flex-shrink-0 w-24 rounded-lg border p-2"
+              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+            >
+              <div className="text-center">
+                <div className="text-lg font-bold text-white">
+                  {todaysWorkoutCount}
+                </div>
+                <div className="text-xs text-gray-400">Drills</div>
+              </div>
+            </div>
+            <div
+              className="flex-shrink-0 w-24 rounded-lg border p-2"
+              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+            >
+              <div className="text-center">
+                <div className="text-lg font-bold text-white">
+                  {upcomingSessionsCount}
+                </div>
+                <div className="text-xs text-gray-400">Sessions</div>
+              </div>
+            </div>
+            <div
+              className="flex-shrink-0 w-24 rounded-lg border p-2"
+              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+            >
+              <div className="text-center">
+                <div className="text-lg font-bold text-white">
+                  {assignedVideos.length}
+                </div>
+                <div className="text-xs text-gray-400">Videos</div>
+              </div>
+            </div>
+            <div
+              className="flex-shrink-0 w-24 rounded-lg border p-2"
+              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+            >
+              <div className="text-center">
+                <div className="text-lg font-bold text-white">
+                  {videoAssignments.length}
+                </div>
+                <div className="text-xs text-gray-400">Assignments</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-8">
           {/* Left Column - Main Content */}
-          <div className="xl:col-span-2 space-y-4 md:space-y-8">
+          <div className="xl:col-span-2 space-y-3 md:space-y-8">
             {/* Today's Plan Section */}
             <div
-              className="rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-2xl border relative overflow-hidden"
+              className="rounded-xl md:rounded-3xl p-3 md:p-8 shadow-lg md:shadow-2xl border relative overflow-hidden"
               style={{
                 background: "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
                 borderColor: "#4A5A70",
@@ -358,10 +442,10 @@ export default function ClientDashboard() {
               </div>
 
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4 md:mb-8">
-                  <div className="flex items-center gap-3 md:gap-4">
+                <div className="flex items-center justify-between mb-3 md:mb-8">
+                  <div className="flex items-center gap-2 md:gap-4">
                     <div
-                      className="p-2 md:p-3 rounded-xl md:rounded-2xl"
+                      className="p-2 md:p-3 rounded-lg md:rounded-2xl"
                       style={{ backgroundColor: "#4A5A70" }}
                     >
                       <Target

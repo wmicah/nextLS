@@ -27,8 +27,10 @@ import {
   isSameMonth,
 } from "date-fns";
 import ClientSidebar from "@/components/ClientSidebar";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileClientSchedulePage from "@/components/MobileClientSchedulePage";
 
-export default function ClientSchedulePageClient() {
+function ClientSchedulePageClient() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
@@ -1076,3 +1078,8 @@ export default function ClientSchedulePageClient() {
     </ClientSidebar>
   );
 }
+
+export default withMobileDetection(
+  MobileClientSchedulePage,
+  ClientSchedulePageClient
+);

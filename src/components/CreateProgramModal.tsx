@@ -542,7 +542,7 @@ function CreateProgramModalContent({
           // Don't auto-close on any open change - only close explicitly
         }}
       >
-        <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] overflow-y-auto bg-[#2A3133] border-gray-600">
+        <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] overflow-y-auto bg-[#2A3133] border-gray-600 [&>button]:hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -567,22 +567,22 @@ function CreateProgramModalContent({
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3 bg-[#3A4245] border border-gray-600">
+            <TabsList className="flex w-full justify-between bg-[#3A4245] border border-gray-600 p-1 gap-1">
               <TabsTrigger
                 value="details"
-                className="text-gray-300 data-[state=active]:bg-[#2A3133] data-[state=active]:text-white data-[state=active]:border-gray-600"
+                className="text-gray-300 data-[state=active]:bg-[#2A3133] data-[state=active]:text-white data-[state=active]:border-gray-600 flex-1 px-3 py-2 text-sm font-medium"
               >
                 Program Details
               </TabsTrigger>
               <TabsTrigger
                 value="structure"
-                className="text-gray-300 data-[state=active]:bg-[#2A3133] data-[state=active]:text-white data-[state=active]:border-gray-600"
+                className="text-gray-300 data-[state=active]:bg-[#2A3133] data-[state=active]:text-white data-[state=active]:border-gray-600 flex-1 px-3 py-2 text-sm font-medium"
               >
                 Program Structure
               </TabsTrigger>
               <TabsTrigger
                 value="preview"
-                className="text-gray-300 data-[state=active]:bg-[#2A3133] data-[state=active]:text-white data-[state=active]:border-gray-600"
+                className="text-gray-300 data-[state=active]:bg-[#2A3133] data-[state=active]:text-white data-[state=active]:border-gray-600 flex-1 px-3 py-2 text-sm font-medium"
               >
                 Preview
               </TabsTrigger>

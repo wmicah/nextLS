@@ -24,6 +24,8 @@ import UploadResourceModal from "./UploadResourceModal";
 import VideoViewerModal from "./VideoViewerModal";
 import Sidebar from "./Sidebar";
 import { VideoThumbnail } from "./VideoThumbnail";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileLibraryPage from "./MobileLibraryPage";
 
 const categories = [
   "All",
@@ -35,7 +37,7 @@ const categories = [
   "Extension",
 ];
 
-export default function LibraryPage() {
+function LibraryPage() {
   const [activeTab, setActiveTab] = useState<"master" | "local">("master");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -662,8 +664,8 @@ export default function LibraryPage() {
                       className="h-28 lg:h-32 rounded-t-xl overflow-hidden relative"
                       style={{ backgroundColor: "#0F1416" }}
                     >
-                      <VideoThumbnail 
-                        item={item} 
+                      <VideoThumbnail
+                        item={item}
                         videoType={activeTab === "master" ? "master" : "local"}
                       />
 
@@ -786,8 +788,8 @@ export default function LibraryPage() {
                         borderColor: "#4A5A70",
                       }}
                     >
-                      <VideoThumbnail 
-                        item={item} 
+                      <VideoThumbnail
+                        item={item}
                         videoType={activeTab === "master" ? "master" : "local"}
                         className="w-20 h-20"
                       />
@@ -954,3 +956,6 @@ export default function LibraryPage() {
     </Sidebar>
   );
 }
+
+// Export with mobile detection
+export default withMobileDetection(MobileLibraryPage, LibraryPage);

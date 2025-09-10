@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileClientsPage from "./MobileClientsPage";
 import {
   Plus,
   Calendar,
@@ -84,7 +86,7 @@ interface Client {
   }[];
 }
 
-export default function ClientsPage() {
+function ClientsPage() {
   const router = useRouter();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [archivingClientId, setArchivingClientId] = useState<string | null>(
@@ -1546,3 +1548,6 @@ export default function ClientsPage() {
     </Sidebar>
   );
 }
+
+// Export with mobile detection
+export default withMobileDetection(MobileClientsPage, ClientsPage);

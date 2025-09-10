@@ -55,6 +55,8 @@ import ProgramDetailsModal from "./ProgramDetailsModal";
 import CreateRoutineModal from "@/components/CreateRoutineModal";
 import RoutinesTab from "@/components/RoutinesTab";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileProgramsPage from "./MobileProgramsPage";
 
 interface ProgramWeek {
   id: string;
@@ -123,7 +125,7 @@ interface Routine {
   updatedAt: string;
 }
 
-export default function ProgramsPage() {
+function ProgramsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedProgram, setSelectedProgram] =
@@ -1463,3 +1465,6 @@ function ProgramCard({
     </div>
   );
 }
+
+// Export with mobile detection
+export default withMobileDetection(MobileProgramsPage, ProgramsPage);
