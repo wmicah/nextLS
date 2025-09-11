@@ -334,8 +334,8 @@ export default function NotificationPopup({
         >
           <button
             onClick={() => {
-              // Could navigate to a full notifications page here
-              console.log("View all notifications");
+              // Navigate to the full notifications page
+              window.location.href = "/notifications";
             }}
             className="text-sm transition-colors hover:text-blue-400"
             style={{ color: "#ABA4AA" }}

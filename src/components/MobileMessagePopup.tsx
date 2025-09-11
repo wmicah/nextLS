@@ -280,7 +280,9 @@ export default function MobileMessagePopup({
                       onClick={() => setSelectedConversation(conversation.id)}
                     >
                       <ProfilePictureUploader
-                        currentAvatarUrl={otherUser?.settings?.avatarUrl}
+                        currentAvatarUrl={
+                          otherUser?.settings?.avatarUrl || otherUser?.avatar
+                        }
                         userName={otherUser?.name || otherUser?.email || "User"}
                         onAvatarChange={() => {}}
                         size="md"

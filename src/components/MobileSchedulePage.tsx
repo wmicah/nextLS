@@ -19,6 +19,7 @@ import {
 import WorkingHoursModal from "./WorkingHoursModal";
 import CustomSelect from "./ui/CustomSelect";
 import Sidebar from "./Sidebar";
+import { useSidebarState } from "@/hooks/useSidebarState";
 import {
   format,
   startOfMonth,
@@ -33,6 +34,7 @@ import {
 } from "date-fns";
 
 export default function MobileSchedulePage() {
+  const isSidebarOpen = useSidebarState();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showWorkingHoursModal, setShowWorkingHoursModal] = useState(false);
@@ -307,7 +309,9 @@ export default function MobileSchedulePage() {
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
         {/* Mobile Header */}
         <div
-          className="sticky top-0 z-40 px-4 py-4 border-b"
+          className={`sticky top-0 z-10 px-4 py-4 border-b transition-all duration-500 ease-in-out ${
+            isSidebarOpen ? "md:ml-64" : "md:ml-20"
+          }`}
           style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
         >
           <div className="flex items-center justify-between">

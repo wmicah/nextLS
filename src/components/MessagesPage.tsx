@@ -488,7 +488,9 @@ function MessagesPage({}: MessagesPageProps) {
                     >
                       <div className="flex items-center gap-4">
                         <ProfilePictureUploader
-                          currentAvatarUrl={otherUser?.settings?.avatarUrl}
+                          currentAvatarUrl={
+                            otherUser?.settings?.avatarUrl || otherUser?.avatar
+                          }
                           userName={
                             otherUser?.name || otherUser?.email || "User"
                           }
@@ -558,7 +560,8 @@ function MessagesPage({}: MessagesPageProps) {
                         <ProfilePictureUploader
                           currentAvatarUrl={
                             getOtherUser(currentConversation)?.settings
-                              ?.avatarUrl
+                              ?.avatarUrl ||
+                            getOtherUser(currentConversation)?.avatar
                           }
                           userName={
                             getOtherUser(currentConversation)?.name ||
@@ -1025,7 +1028,9 @@ function MessagesPage({}: MessagesPageProps) {
                       )}
                       <div className="flex items-center gap-3">
                         <ProfilePictureUploader
-                          currentAvatarUrl={client.avatar}
+                          currentAvatarUrl={
+                            client.user?.settings?.avatarUrl || client.avatar
+                          }
                           userName={client.name || client.email || "User"}
                           onAvatarChange={() => {}}
                           size="sm"

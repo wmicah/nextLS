@@ -633,7 +633,9 @@ export default function Dashboard() {
                 <div className="relative p-6">
                   <div className="flex items-center justify-between mb-4">
                     <ProfilePictureUploader
-                      currentAvatarUrl={client.avatar}
+                      currentAvatarUrl={
+                        client.user?.settings?.avatarUrl || client.avatar
+                      }
                       userName={client.name}
                       onAvatarChange={() => {}}
                       size="md"

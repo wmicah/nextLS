@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
+import { useSidebarState } from "@/hooks/useSidebarState";
 import {
   Search,
   Plus,
@@ -29,6 +30,7 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
   >(null);
+  const isSidebarOpen = useSidebarState();
   const [searchTerm, setSearchTerm] = useState("");
   const [messageText, setMessageText] = useState("");
   const [showFileUpload, setShowFileUpload] = useState(false);
@@ -198,7 +200,6 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
         refetchConversations();
         setShowCreateModal(false);
         setClientSearchTerm("");
-        setShowSidebar(false); // Close sidebar after creating conversation
       },
       onError: error => {
         console.error("Failed to create conversation:", error);
@@ -286,164 +287,191 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
           : undefined
       }
     >
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      <div
+        className="min-h-screen flex flex-col overflow-x-hidden"
+        style={{ backgroundColor: "#2A3133" }}
+      >
         {/* Mobile Header */}
-        <div className="sticky top-0 z-40 bg-[#2A3133] border-b border-[#606364] p-4">
+        <div
+          className={`sticky top-0 z-10 bg-[#2A3133] border-b border-[#606364] px-4 py-3 transition-all duration-500 ease-in-out ${
+            isSidebarOpen ? "md:ml-64" : "md:ml-20"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div>
-                <h1 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
+                <h1 className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
                   Messages
                 </h1>
-                <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                <p className="text-xs" style={{ color: "#ABA4AA" }}>
                   {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg touch-manipulation"
-              style={{ backgroundColor: "#E0E0E0", color: "#000000" }}
-            >
-              <Plus className="h-5 w-5" />
-            </button>
+            {/* Only show + button when viewing conversation list */}
+            {!selectedConversation && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 shadow-lg touch-manipulation"
+                style={{ backgroundColor: "#E0E0E0", color: "#000000" }}
+              >
+                <Plus className="h-6 w-6" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Mobile Conversations List */}
         {!selectedConversation && (
-          <div className="p-4">
+          <div className="flex-1 flex flex-col">
             {/* Search */}
-            <div className="relative mb-4">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                style={{ color: "#ABA4AA" }}
-              />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 transition-all duration-200"
-                style={{
-                  backgroundColor: "#353A3A",
-                  color: "#C3BCC2",
-                  borderColor: "#606364",
-                }}
-              />
+            <div className="px-4 py-3">
+              <div className="relative">
+                <Search
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                  style={{ color: "#ABA4AA" }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border-0 focus:outline-none focus:ring-2 transition-all duration-200 text-base"
+                  style={{
+                    backgroundColor: "#353A3A",
+                    color: "#C3BCC2",
+                    borderColor: "#606364",
+                    minHeight: "48px",
+                  }}
+                />
+              </div>
             </div>
 
             {/* Conversations */}
-            <div className="space-y-2">
-              {filteredConversations.length === 0 ? (
-                <div className="text-center py-8">
-                  <File
-                    className="h-12 w-12 mx-auto mb-4 opacity-50"
-                    style={{ color: "#ABA4AA" }}
-                  />
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                    {searchTerm
-                      ? "No conversations found"
-                      : "No conversations yet"}
-                  </p>
-                </div>
-              ) : (
-                filteredConversations.map((conversation: any) => {
-                  const otherParticipant = getOtherUser(
-                    conversation,
-                    currentUser?.id || ""
-                  );
-                  const conversationType =
-                    conversation.type === "CLIENT_CLIENT" ? "Client" : "Coach";
+            <div className="flex-1 px-4 pb-4">
+              <div className="space-y-1">
+                {filteredConversations.length === 0 ? (
+                  <div className="text-center py-12">
+                    <File
+                      className="h-16 w-16 mx-auto mb-4 opacity-50"
+                      style={{ color: "#ABA4AA" }}
+                    />
+                    <p className="text-base" style={{ color: "#ABA4AA" }}>
+                      {searchTerm
+                        ? "No conversations found"
+                        : "No conversations yet"}
+                    </p>
+                    <p className="text-sm mt-2" style={{ color: "#ABA4AA" }}>
+                      Tap the + button to start a new conversation
+                    </p>
+                  </div>
+                ) : (
+                  filteredConversations.map((conversation: any) => {
+                    const otherParticipant = getOtherUser(
+                      conversation,
+                      currentUser?.id || ""
+                    );
+                    const conversationType =
+                      conversation.type === "CLIENT_CLIENT"
+                        ? "Client"
+                        : "Coach";
 
-                  const lastMessage = conversation.messages[0];
-                  const unreadCount = unreadCountsObj[conversation.id] || 0;
+                    const lastMessage = conversation.messages[0];
+                    const unreadCount = unreadCountsObj[conversation.id] || 0;
 
-                  return (
-                    <div
-                      key={conversation.id}
-                      className="p-4 cursor-pointer transition-all duration-200 rounded-xl border touch-manipulation"
-                      style={{
-                        backgroundColor: "#353A3A",
-                        borderColor: "#606364",
-                      }}
-                      onClick={() => setSelectedConversation(conversation.id)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <ProfilePictureUploader
-                          currentAvatarUrl={
-                            otherParticipant?.settings?.avatarUrl
-                          }
-                          userName={
-                            otherParticipant?.name ||
-                            otherParticipant?.email ||
-                            "User"
-                          }
-                          onAvatarChange={() => {}}
-                          size="md"
-                          readOnly={true}
-                          className="flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p
-                              className="font-medium truncate"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              {otherParticipant?.name ||
-                                otherParticipant?.email?.split("@")[0] ||
-                                "Unknown"}
-                            </p>
-                            {lastMessage && (
-                              <span
-                                className="text-xs flex-shrink-0 ml-2"
-                                style={{ color: "#ABA4AA" }}
+                    return (
+                      <div
+                        key={conversation.id}
+                        className="p-4 cursor-pointer transition-all duration-200 rounded-2xl border touch-manipulation active:scale-[0.98]"
+                        style={{
+                          backgroundColor: "#353A3A",
+                          borderColor: "#606364",
+                          minHeight: "72px",
+                        }}
+                        onClick={() => setSelectedConversation(conversation.id)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <ProfilePictureUploader
+                            currentAvatarUrl={
+                              otherParticipant?.settings?.avatarUrl ||
+                              otherParticipant?.avatar
+                            }
+                            userName={
+                              otherParticipant?.name ||
+                              otherParticipant?.email ||
+                              "User"
+                            }
+                            onAvatarChange={() => {}}
+                            size="lg"
+                            readOnly={true}
+                            className="flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0 max-w-full">
+                            <div className="flex items-center justify-between mb-1">
+                              <p
+                                className="font-semibold truncate text-base"
+                                style={{ color: "#C3BCC2" }}
                               >
-                                {format(
-                                  new Date(lastMessage.createdAt),
-                                  "HH:mm"
-                                )}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="text-xs px-2 py-1 rounded-full"
-                                style={{
-                                  backgroundColor:
-                                    conversation.type === "CLIENT_CLIENT"
-                                      ? "#4A5A70"
-                                      : "#E0E0E0",
-                                  color:
-                                    conversation.type === "CLIENT_CLIENT"
-                                      ? "#C3BCC2"
-                                      : "#000000",
-                                }}
-                              >
-                                {conversationType}
-                              </span>
+                                {otherParticipant?.name ||
+                                  otherParticipant?.email?.split("@")[0] ||
+                                  "Unknown"}
+                              </p>
                               {lastMessage && (
-                                <p
-                                  className="text-sm truncate"
+                                <span
+                                  className="text-xs flex-shrink-0 ml-2"
                                   style={{ color: "#ABA4AA" }}
                                 >
-                                  {lastMessage.content}
-                                </p>
+                                  {format(
+                                    new Date(lastMessage.createdAt),
+                                    "HH:mm"
+                                  )}
+                                </span>
                               )}
                             </div>
-                            {unreadCount > 0 && (
-                              <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                                {unreadCount}
-                              </span>
-                            )}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span
+                                  className="text-xs px-2 py-1 rounded-full flex-shrink-0"
+                                  style={{
+                                    backgroundColor:
+                                      conversation.type === "CLIENT_CLIENT"
+                                        ? "#4A5A70"
+                                        : "#E0E0E0",
+                                    color:
+                                      conversation.type === "CLIENT_CLIENT"
+                                        ? "#C3BCC2"
+                                        : "#000000",
+                                  }}
+                                >
+                                  {conversationType}
+                                </span>
+                                {lastMessage && (
+                                  <p
+                                    className="text-sm truncate flex-1"
+                                    style={{ color: "#ABA4AA" }}
+                                  >
+                                    {lastMessage.content.length > 20
+                                      ? `${lastMessage.content.substring(
+                                          0,
+                                          20
+                                        )}...`
+                                      : lastMessage.content}
+                                  </p>
+                                )}
+                              </div>
+                              {unreadCount > 0 && (
+                                <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[24px] text-center flex-shrink-0 ml-2">
+                                  {unreadCount}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -453,16 +481,16 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
           <div className="flex flex-col h-[calc(100vh-80px)]">
             {/* Chat Header */}
             <div
-              className="p-4 border-b flex items-center justify-between"
-              style={{ borderColor: "#2a2a2a", backgroundColor: "#353A3A" }}
+              className="px-4 py-3 border-b flex items-center justify-between"
+              style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
             >
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="p-2 rounded-lg hover:bg-gray-800 transition-colors touch-manipulation"
+                  className="p-2 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95"
                   style={{ minWidth: "44px", minHeight: "44px" }}
                 >
-                  <ArrowLeft className="h-5 w-5" style={{ color: "#C3BCC2" }} />
+                  <ArrowLeft className="h-6 w-6" style={{ color: "#C3BCC2" }} />
                 </button>
                 <ProfilePictureUploader
                   currentAvatarUrl={(() => {
@@ -474,7 +502,9 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                         conversation,
                         currentUser?.id || ""
                       );
-                      return otherUser?.settings?.avatarUrl;
+                      return (
+                        otherUser?.settings?.avatarUrl || otherUser?.avatar
+                      );
                     }
                     return undefined;
                   })()}
@@ -492,12 +522,15 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                     return "User";
                   })()}
                   onAvatarChange={() => {}}
-                  size="md"
+                  size="lg"
                   readOnly={true}
                   className="flex-shrink-0"
                 />
-                <div>
-                  <h3 className="font-semibold" style={{ color: "#C3BCC2" }}>
+                <div className="flex-1 min-w-0">
+                  <h3
+                    className="font-semibold text-base truncate"
+                    style={{ color: "#C3BCC2" }}
+                  >
                     {(() => {
                       const conversation = conversations.find(
                         (c: any) => c.id === selectedConversation
@@ -529,16 +562,16 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                   </p>
                 </div>
               </div>
-              <button className="p-2 rounded-lg hover:bg-gray-800 transition-colors touch-manipulation">
+              <button className="p-2 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95">
                 <MoreVertical
-                  className="h-4 w-4"
+                  className="h-5 w-5"
                   style={{ color: "#ABA4AA" }}
                 />
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3">
               {messages.map((message: any) => {
                 const isCurrentUser = message.sender.id === currentUser?.id;
 
@@ -550,10 +583,10 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                     }`}
                   >
                     <div
-                      className={`max-w-[85%] px-4 py-3 rounded-2xl ${
+                      className={`max-w-[80%] px-4 py-3 rounded-2xl ${
                         isCurrentUser
-                          ? "bg-blue-500 text-white"
-                          : "bg-gray-700 text-gray-100"
+                          ? "bg-blue-500 text-white rounded-br-md"
+                          : "bg-gray-700 text-gray-100 rounded-bl-md"
                       }`}
                     >
                       <div className="text-sm">
@@ -683,8 +716,8 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
 
             {/* Message Input */}
             <div
-              className="p-4 border-t"
-              style={{ borderColor: "#2a2a2a", backgroundColor: "#353A3A" }}
+              className="px-4 py-3 border-t"
+              style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
             >
               <RichMessageInput
                 value={messageText}
@@ -779,7 +812,9 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                         )}
                         <div className="flex items-center gap-3">
                           <ProfilePictureUploader
-                            currentAvatarUrl={client.avatar}
+                            currentAvatarUrl={
+                              client.user?.settings?.avatarUrl || client.avatar
+                            }
                             userName={client.name || client.email || "User"}
                             onAvatarChange={() => {}}
                             size="sm"

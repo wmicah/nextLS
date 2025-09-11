@@ -226,6 +226,8 @@ export default function Sidebar({ user, children }: SidebarProps) {
   useEffect(() => {
     try {
       localStorage.setItem("nls_sidebar_open", isOpen ? "1" : "0");
+      // Dispatch custom event for same-tab listeners
+      window.dispatchEvent(new CustomEvent("sidebarToggle"));
     } catch {}
   }, [isOpen]);
 
@@ -284,6 +286,14 @@ export default function Sidebar({ user, children }: SidebarProps) {
   const handleNotificationClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // On mobile, navigate directly to notifications page
+    if (isMobile) {
+      router.push("/notifications");
+      return;
+    }
+
+    // On desktop, show popup
     if (showNotifications) {
       setIsAnimating(true);
       setTimeout(() => {

@@ -459,7 +459,8 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                       <div className="flex items-center gap-3">
                         <ProfilePictureUploader
                           currentAvatarUrl={
-                            otherParticipant?.settings?.avatarUrl
+                            otherParticipant?.settings?.avatarUrl ||
+                            otherParticipant?.avatar
                           }
                           userName={
                             otherParticipant?.name ||
@@ -567,7 +568,10 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                               conversation,
                               currentUser?.id || ""
                             );
-                            return otherUser?.settings?.avatarUrl;
+                            return (
+                              otherUser?.settings?.avatarUrl ||
+                              otherUser?.avatar
+                            );
                           }
                           return undefined;
                         })()}
@@ -918,7 +922,9 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                         )}
                         <div className="flex items-center gap-3">
                           <ProfilePictureUploader
-                            currentAvatarUrl={client.avatar}
+                            currentAvatarUrl={
+                              client.user?.settings?.avatarUrl || client.avatar
+                            }
                             userName={client.name || client.email || "User"}
                             onAvatarChange={() => {}}
                             size="sm"
@@ -970,4 +976,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   );
 }
 
-export default withMobileDetection(MobileClientMessagesPage, ClientMessagesPage);
+export default withMobileDetection(
+  MobileClientMessagesPage,
+  ClientMessagesPage
+);

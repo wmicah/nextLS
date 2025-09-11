@@ -2314,6 +2314,11 @@ export const appRouter = router({
               id: true,
               name: true,
               email: true,
+              settings: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
             },
           },
           client: {
@@ -2321,6 +2326,11 @@ export const appRouter = router({
               id: true,
               name: true,
               email: true,
+              settings: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
             },
           },
           client1: {
@@ -2328,6 +2338,11 @@ export const appRouter = router({
               id: true,
               name: true,
               email: true,
+              settings: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
             },
           },
           client2: {
@@ -2335,6 +2350,11 @@ export const appRouter = router({
               id: true,
               name: true,
               email: true,
+              settings: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
             },
           },
           // Get only the latest message
@@ -6021,6 +6041,66 @@ export const appRouter = router({
           replacedDrills: programDrillsUsingRoutine.length,
         };
       }),
+
+    downloadVideoFromMessage: publicProcedure
+      .input(
+        z.object({
+          messageId: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can download videos from messages",
+          });
+        }
+
+        // Get the message and verify it belongs to a conversation the coach is part of
+        const message = await db.message.findFirst({
+          where: {
+            id: input.messageId,
+            conversation: {
+              OR: [{ coachId: user.id }, { clientId: user.id }],
+            },
+            attachmentType: "video",
+            attachmentUrl: { not: null },
+          },
+          include: {
+            conversation: {
+              include: {
+                client: { select: { name: true } },
+                coach: { select: { name: true } },
+              },
+            },
+          },
+        });
+
+        if (!message) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Message not found or doesn't contain a video",
+          });
+        }
+
+        // Return the video URL and metadata for download
+        return {
+          videoUrl: message.attachmentUrl!,
+          filename: message.attachmentName || `video_${message.id}.mp4`,
+          title: message.attachmentName || "Video from message",
+          messageId: message.id,
+        };
+      }),
   }),
 
   notifications: router({
@@ -9600,6 +9680,62 @@ export const appRouter = router({
           },
         });
 
+        // Create or find conversation between client and coach
+        let conversation = await db.conversation.findFirst({
+          where: {
+            coachId: client.coachId,
+            clientId: user.id,
+          },
+        });
+
+        if (!conversation) {
+          conversation = await db.conversation.create({
+            data: {
+              coachId: client.coachId,
+              clientId: user.id,
+              type: "COACH_CLIENT",
+            },
+          });
+        }
+
+        // Create message in conversation
+        const messageContent = input.comment
+          ? `📹 **Video Submission: ${input.title}**\n\n${input.comment}`
+          : `📹 **Video Submission: ${input.title}**`;
+
+        await db.message.create({
+          data: {
+            conversationId: conversation.id,
+            senderId: user.id,
+            content: messageContent,
+            attachmentUrl: input.videoUrl,
+            attachmentType: "video",
+            attachmentName: input.title,
+            attachmentSize: null, // We don't have size info from UploadThing
+          },
+        });
+
+        // Update conversation timestamp
+        await db.conversation.update({
+          where: { id: conversation.id },
+          data: { updatedAt: new Date() },
+        });
+
+        // Create notification for the coach
+        await db.notification.create({
+          data: {
+            userId: client.coachId,
+            type: "MESSAGE",
+            title: `New video submission from ${client.name}`,
+            message: `Client submitted a video: "${input.title}"`,
+            data: {
+              videoSubmissionId: videoSubmission.id,
+              clientId: client.id,
+              clientName: client.name,
+            },
+          },
+        });
+
         return { success: true, videoSubmission };
       }),
 
@@ -9658,6 +9794,44 @@ export const appRouter = router({
         const updatedSubmission = await db.clientVideoSubmission.update({
           where: { id: input.videoSubmissionId },
           data: { comment: input.comment },
+        });
+
+        // Create or find conversation between client and coach
+        let conversation = await db.conversation.findFirst({
+          where: {
+            coachId: client.coachId,
+            clientId: user.id,
+          },
+        });
+
+        if (!conversation) {
+          conversation = await db.conversation.create({
+            data: {
+              coachId: client.coachId,
+              clientId: user.id,
+              type: "COACH_CLIENT",
+            },
+          });
+        }
+
+        // Create message in conversation
+        const messageContent = `💬 **Comment on Video: ${videoSubmission.title}**\n\n${input.comment}`;
+
+        await db.message.create({
+          data: {
+            conversationId: conversation.id,
+            senderId: user.id,
+            content: messageContent,
+            attachmentUrl: videoSubmission.videoUrl,
+            attachmentType: "video",
+            attachmentName: videoSubmission.title,
+          },
+        });
+
+        // Update conversation timestamp
+        await db.conversation.update({
+          where: { id: conversation.id },
+          data: { updatedAt: new Date() },
         });
 
         // Create a notification for the coach
@@ -9725,11 +9899,49 @@ export const appRouter = router({
           },
         });
 
+        // Create or find conversation between client and coach
+        let conversation = await db.conversation.findFirst({
+          where: {
+            coachId: client.coachId,
+            clientId: user.id,
+          },
+        });
+
+        if (!conversation) {
+          conversation = await db.conversation.create({
+            data: {
+              coachId: client.coachId,
+              clientId: user.id,
+              type: "COACH_CLIENT",
+            },
+          });
+        }
+
         if (videoSubmission) {
           // Update existing video submission with comment
           const updatedSubmission = await db.clientVideoSubmission.update({
             where: { id: videoSubmission.id },
             data: { comment: input.comment },
+          });
+
+          // Create message in conversation
+          const messageContent = `💬 **Comment on Video: ${videoSubmission.title}**\n\n${input.comment}`;
+
+          await db.message.create({
+            data: {
+              conversationId: conversation.id,
+              senderId: user.id,
+              content: messageContent,
+              attachmentUrl: videoSubmission.videoUrl,
+              attachmentType: "video",
+              attachmentName: videoSubmission.title,
+            },
+          });
+
+          // Update conversation timestamp
+          await db.conversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
           });
 
           // Create notification for coach
@@ -9768,6 +9980,23 @@ export const appRouter = router({
               drillId: input.drillId,
               isPublic: false,
             },
+          });
+
+          // Create message in conversation
+          const messageContent = `💬 **Exercise Feedback for Drill ${input.drillId}**\n\n${input.comment}`;
+
+          await db.message.create({
+            data: {
+              conversationId: conversation.id,
+              senderId: user.id,
+              content: messageContent,
+            },
+          });
+
+          // Update conversation timestamp
+          await db.conversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
           });
 
           // Create notification for coach

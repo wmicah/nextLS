@@ -188,7 +188,15 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
 
   const handleNotificationClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
+    // On mobile, navigate directly to notifications page
+    if (isMobile) {
+      router.push("/notifications");
+      return;
+    }
+
+    // On desktop, show popup
     if (showNotifications) {
       // Closing animation
       setIsAnimating(true);
