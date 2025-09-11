@@ -19,8 +19,10 @@ import {
 } from "lucide-react";
 
 import ClientSidebar from "@/components/ClientSidebar";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileClientDashboard from "@/components/MobileClientDashboard";
 
-export default function ClientDashboard() {
+function ClientDashboard() {
   const {
     user,
     isAuthenticated,
@@ -84,6 +86,19 @@ export default function ClientDashboard() {
       refetchOnReconnect: true,
     }
   );
+
+  // Get recent notifications
+  const { data: recentNotifications = [], isLoading: notificationsLoading } =
+    trpc.notifications.getNotifications.useQuery(
+      { limit: 5, unreadOnly: false },
+      {
+        refetchInterval: 30000, // Poll every 30 seconds
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+        staleTime: 15 * 1000, // Cache for 15 seconds
+        gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
+      }
+    );
 
   // Debug query to see what's in the database
   const { data: debugData, refetch: refetchDebug } =
@@ -280,7 +295,7 @@ export default function ClientDashboard() {
           </div>
 
           {/* Enhanced Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             <div
               className="rounded-2xl md:rounded-3xl p-4 md:p-8 transform hover:scale-105 transition-all duration-300 shadow-2xl border relative overflow-hidden group touch-manipulation"
               style={{
@@ -364,6 +379,51 @@ export default function ClientDashboard() {
                 >
                   {upcomingSessionsCount > 0 ? "This week" : "Schedule clear"}
                 </p>
+              </div>
+            </div>
+
+            {/* Coach's Notes Card */}
+            <div
+              className="lg:col-span-2 rounded-2xl md:rounded-3xl p-4 md:p-8 transform hover:scale-105 transition-all duration-300 shadow-2xl border relative overflow-hidden group touch-manipulation"
+              style={{
+                background: "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
+                borderColor: "#4A5A70",
+              }}
+            >
+              {/* Animated background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4 md:mb-6">
+                  <div
+                    className="p-2 md:p-3 rounded-xl md:rounded-2xl"
+                    style={{ backgroundColor: "#4A5A70" }}
+                  >
+                    <FileText
+                      className="h-6 w-6 md:h-8 md:w-8"
+                      style={{ color: "#C3BCC2" }}
+                    />
+                  </div>
+                </div>
+                <h3
+                  className="text-lg md:text-xl font-bold mb-2 md:mb-3"
+                  style={{ color: "#C3BCC2" }}
+                >
+                  Coach&apos;s Notes
+                </h3>
+                <p
+                  className="text-sm md:text-base line-clamp-3"
+                  style={{ color: "#ABA4AA" }}
+                >
+                  {coachNotes?.notes && coachNotes.notes.trim().length > 0
+                    ? coachNotes.notes
+                    : "No feedback yet"}
+                </p>
+                {coachNotes?.updatedAt && (
+                  <p className="text-xs mt-2" style={{ color: "#606364" }}>
+                    {new Date(coachNotes.updatedAt).toLocaleDateString()}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -460,13 +520,6 @@ export default function ClientDashboard() {
                       Today&apos;s Plan
                     </h2>
                   </div>
-                  <button
-                    onClick={() => refetchDebug()}
-                    className="px-3 py-1 rounded-lg text-sm"
-                    style={{ backgroundColor: "#EF4444", color: "#FFFFFF" }}
-                  >
-                    Debug
-                  </button>
                   <div
                     className="px-3 md:px-4 py-1 md:py-2 rounded-full hidden sm:block"
                     style={{ backgroundColor: "#4A5A70" }}
@@ -665,7 +718,7 @@ export default function ClientDashboard() {
                 </div>
               ) : assignedVideos.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {assignedVideos.map(video => (
+                  {assignedVideos.map((video: any) => (
                     <div
                       key={video.id}
                       className="rounded-xl overflow-hidden transition-all duration-200 hover:scale-105 shadow-lg border"
@@ -866,32 +919,146 @@ export default function ClientDashboard() {
               )}
             </div>
 
-            {/* Coach's Notes */}
+            {/* Recent Notifications */}
             <div
-              className="rounded-2xl p-8 shadow-xl border flex-1 flex flex-col"
+              className="rounded-2xl p-8 shadow-xl border"
               style={{ backgroundColor: "#2B3038", borderColor: "#606364" }}
             >
-              <div className="flex items-center gap-3 mb-6">
-                <FileText className="h-5 w-5" style={{ color: "#4A5A70" }} />
-                <h3 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
-                  Coach&apos;s Notes
-                </h3>
-              </div>
-              <div className="flex-1">
-                <p
-                  className="text-base whitespace-pre-wrap break-words leading-relaxed"
-                  style={{ color: "#ABA4AA" }}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="p-2 rounded-xl"
+                    style={{ backgroundColor: "#4A5A70" }}
+                  >
+                    <MessageCircle
+                      className="h-5 w-5"
+                      style={{ color: "#C3BCC2" }}
+                    />
+                  </div>
+                  <h3
+                    className="text-xl font-bold"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    Recent Updates
+                  </h3>
+                </div>
+                <a
+                  href="/notifications"
+                  className="text-sm font-medium px-3 py-1 rounded-lg transition-colors"
+                  style={{
+                    color: "#4A5A70",
+                    backgroundColor: "#353A3A",
+                  }}
                 >
-                  {coachNotes?.notes && coachNotes.notes.trim().length > 0
-                    ? coachNotes.notes
-                    : "No feedback yet. Your coach will leave notes for you here."}
-                </p>
+                  View All
+                </a>
               </div>
-              {coachNotes?.updatedAt && (
-                <p className="text-xs mt-3" style={{ color: "#606364" }}>
-                  Last updated:{" "}
-                  {new Date(coachNotes.updatedAt).toLocaleString()}
-                </p>
+
+              {notificationsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2
+                    className="h-6 w-6 animate-spin"
+                    style={{ color: "#4A5A70" }}
+                  />
+                  <span className="ml-2" style={{ color: "#ABA4AA" }}>
+                    Loading notifications...
+                  </span>
+                </div>
+              ) : recentNotifications.length > 0 ? (
+                <div className="space-y-4">
+                  {recentNotifications.slice(0, 3).map((notification: any) => (
+                    <div
+                      key={notification.id}
+                      className={`p-4 rounded-xl border transition-all duration-200 ${
+                        !notification.isRead ? "ring-2 ring-blue-500/20" : ""
+                      }`}
+                      style={{
+                        backgroundColor: notification.isRead
+                          ? "#353A3A"
+                          : "#2B3038",
+                        borderColor: "#606364",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="p-2 rounded-lg flex-shrink-0"
+                          style={{ backgroundColor: "#4A5A70" }}
+                        >
+                          {notification.type === "PROGRAM_ASSIGNED" && (
+                            <Target
+                              className="h-4 w-4"
+                              style={{ color: "#C3BCC2" }}
+                            />
+                          )}
+                          {notification.type === "MESSAGE" && (
+                            <MessageCircle
+                              className="h-4 w-4"
+                              style={{ color: "#C3BCC2" }}
+                            />
+                          )}
+                          {notification.type === "LESSON_SCHEDULED" && (
+                            <Calendar
+                              className="h-4 w-4"
+                              style={{ color: "#C3BCC2" }}
+                            />
+                          )}
+                          {![
+                            "PROGRAM_ASSIGNED",
+                            "MESSAGE",
+                            "LESSON_SCHEDULED",
+                          ].includes(notification.type) && (
+                            <MessageCircle
+                              className="h-4 w-4"
+                              style={{ color: "#C3BCC2" }}
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4
+                            className="font-semibold mb-1"
+                            style={{ color: "#C3BCC2" }}
+                          >
+                            {notification.title}
+                          </h4>
+                          <p
+                            className="text-sm leading-relaxed"
+                            style={{ color: "#ABA4AA" }}
+                          >
+                            {notification.message}
+                          </p>
+                          <p
+                            className="text-xs mt-2"
+                            style={{ color: "#606364" }}
+                          >
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        {!notification.isRead && (
+                          <div
+                            className="w-2 h-2 rounded-full flex-shrink-0 mt-2"
+                            style={{ backgroundColor: "#EF4444" }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <MessageCircle
+                    className="w-12 h-12 mx-auto mb-4"
+                    style={{ color: "#606364" }}
+                  />
+                  <h3
+                    className="text-lg font-semibold mb-2"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    No recent updates
+                  </h3>
+                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                    You'll see notifications here when your coach sends updates
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -900,3 +1067,5 @@ export default function ClientDashboard() {
     </ClientSidebar>
   );
 }
+
+export default withMobileDetection(MobileClientDashboard, ClientDashboard);

@@ -66,6 +66,8 @@ import {
   // isFuture,
 } from "date-fns";
 import ClientSidebar from "@/components/ClientSidebar";
+import { withMobileDetection } from "@/lib/mobile-detection";
+import MobileClientProgramPage from "./MobileClientProgramPage";
 
 interface Drill {
   id: string;
@@ -110,7 +112,7 @@ interface DayData {
 // 	streak: number
 // }
 
-export default function ClientProgramPage() {
+function ClientProgramPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
@@ -3025,3 +3027,5 @@ export default function ClientProgramPage() {
     </ClientSidebar>
   );
 }
+
+export default withMobileDetection(MobileClientProgramPage, ClientProgramPage);
