@@ -333,7 +333,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
               >
                 <Plus className="h-6 w-6" />
               </button>
-            )}
+            )}al animation
           </div>
         </div>
 

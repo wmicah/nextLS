@@ -54,6 +54,8 @@ export default function Sidebar({ user, children }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [rippleActive, setRippleActive] = useState(false);
+  const [mobileLogoutConfirm, setMobileLogoutConfirm] = useState(false);
   const [showRecentMessages, setShowRecentMessages] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showClientSearch, setShowClientSearch] = useState(false);
@@ -258,7 +260,37 @@ export default function Sidebar({ user, children }: SidebarProps) {
   const toggleDesktopSidebar = () => setIsOpen(o => !o);
   const toggleMobileSidebar = () => setIsMobileOpen(o => !o);
 
-  const handleUserClick = () => setUserDropdownOpen(o => !o);
+  const handleUserClick = () => {
+    // Trigger ripple effect
+    setRippleActive(true);
+    setTimeout(() => setRippleActive(false), 300);
+
+    if (userDropdownOpen) {
+      // If already showing logout, perform logout
+      handleLogout();
+    } else {
+      // Show logout button
+      setUserDropdownOpen(true);
+      // Auto-reset after 2 seconds if not clicked
+      setTimeout(() => {
+        setUserDropdownOpen(false);
+      }, 2000);
+    }
+  };
+
+  const handleMobileLogoutClick = () => {
+    if (mobileLogoutConfirm) {
+      // Second click - actually logout
+      handleLogout();
+    } else {
+      // First click - show confirmation
+      setMobileLogoutConfirm(true);
+      // Auto-reset after 3 seconds if not clicked again
+      setTimeout(() => {
+        setMobileLogoutConfirm(false);
+      }, 3000);
+    }
+  };
 
   const handleMessageClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -380,6 +412,51 @@ export default function Sidebar({ user, children }: SidebarProps) {
           )}
         </div>
       </button>
+
+      {/* Mobile logout button - only visible when sidebar is open */}
+      {isMobileOpen && (
+        <button
+          onClick={handleMobileLogoutClick}
+          disabled={isLoggingOut}
+          className={`fixed top-4 right-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl text-white border backdrop-blur-sm ${
+            mobileLogoutConfirm
+              ? "bg-gradient-to-br from-green-600 to-green-700 border-green-500"
+              : "bg-gradient-to-br from-red-600 to-red-700 border-red-500"
+          }`}
+          aria-label={mobileLogoutConfirm ? "Confirm logout" : "Logout"}
+          style={{
+            boxShadow: mobileLogoutConfirm
+              ? "0 8px 32px rgba(34, 197, 94, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)"
+              : "0 8px 32px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+            animation: "slideInRight 0.3s ease-out",
+          }}
+        >
+          {isLoggingOut ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+          ) : mobileLogoutConfirm ? (
+            <div className="relative">
+              <svg
+                className="w-5 h-5 text-white transition-all duration-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                style={{
+                  animation: "checkmark 0.5s ease-out",
+                }}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={3}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+          ) : (
+            <LogOut size={20} />
+          )}
+        </button>
+      )}
 
       {/* Mobile overlay - improved with better blur and animation */}
       {isMobileOpen && (
@@ -1099,42 +1176,83 @@ export default function Sidebar({ user, children }: SidebarProps) {
               <button
                 onClick={handleUserClick}
                 disabled={isLoggingOut}
-                className="rounded-full w-16 h-16 md:w-12 md:h-12 flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-110 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation"
+                className={`rounded-full w-12 h-12 md:w-10 md:h-10 flex items-center justify-center font-bold text-white transition-all duration-300 ease-out hover:scale-105 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md touch-manipulation ${
+                  userDropdownOpen ? "ring-1 ring-red-400/30 animate-pulse" : ""
+                }`}
                 style={{
-                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
-                  // Add larger touch target for mobile
-                  minWidth: "64px",
-                  minHeight: "64px",
+                  boxShadow: userDropdownOpen
+                    ? "0 2px 8px rgba(239, 68, 68, 0.2)"
+                    : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                  minWidth: "48px",
+                  minHeight: "48px",
+                  backgroundColor: userDropdownOpen
+                    ? "rgba(239, 68, 68, 0.9)"
+                    : "transparent",
+                  backdropFilter: userDropdownOpen ? "blur(8px)" : "none",
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow =
-                    "0 6px 25px rgba(0, 0, 0, 0.5)";
+                  if (!userDropdownOpen) {
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(0, 0, 0, 0.3)";
+                  } else {
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(239, 68, 68, 0.3)";
+                  }
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 20px rgba(0, 0, 0, 0.4)";
+                  if (!userDropdownOpen) {
+                    e.currentTarget.style.boxShadow =
+                      "0 2px 8px rgba(0, 0, 0, 0.2)";
+                  } else {
+                    e.currentTarget.style.boxShadow =
+                      "0 2px 8px rgba(239, 68, 68, 0.2)";
+                  }
                 }}
                 onTouchStart={e => {
-                  // Add visual feedback for touch
-                  e.currentTarget.style.transform = "scale(0.95)";
+                  e.currentTarget.style.transform = "scale(0.98)";
                 }}
                 onTouchEnd={e => {
-                  // Reset transform after touch
                   e.currentTarget.style.transform = "scale(1)";
                 }}
-                aria-haspopup="menu"
-                aria-expanded={userDropdownOpen}
+                aria-label={userDropdownOpen ? "Logout" : "User profile"}
               >
                 {isLoggingOut ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
                 ) : (
-                  <ProfilePictureUploader
-                    currentAvatarUrl={userSettings?.avatarUrl}
-                    userName={user?.name || authData?.user?.name || "User"}
-                    onAvatarChange={() => {}} // No-op for sidebar
-                    size="sm"
-                    readOnly={true}
-                  />
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    {/* Profile Picture - rotates out and scales down */}
+                    <div
+                      className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out ${
+                        userDropdownOpen
+                          ? "rotate-180 scale-0 opacity-0"
+                          : "rotate-0 scale-100 opacity-100"
+                      }`}
+                    >
+                      <ProfilePictureUploader
+                        currentAvatarUrl={userSettings?.avatarUrl}
+                        userName={user?.name || authData?.user?.name || "User"}
+                        onAvatarChange={() => {}} // No-op for sidebar
+                        size="sm"
+                        readOnly={true}
+                      />
+                    </div>
+
+                    {/* Logout Icon - scales up from center */}
+                    <div
+                      className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out ${
+                        userDropdownOpen
+                          ? "scale-100 opacity-100 rotate-0"
+                          : "scale-0 opacity-0 rotate-180"
+                      }`}
+                    >
+                      <LogOut className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Ripple Effect */}
+                {rippleActive && (
+                  <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" />
                 )}
 
                 {/* User tooltip when collapsed and dropdown closed */}
@@ -1183,75 +1301,6 @@ export default function Sidebar({ user, children }: SidebarProps) {
                 </div>
               )}
             </div>
-
-            {/* User Dropdown Menu */}
-            {userDropdownOpen && !isLoggingOut && (
-              <div
-                className={`absolute bottom-full mb-2 w-64 rounded-xl shadow-xl border transition-all duration-300 ${
-                  isOpen ? "left-0" : "left-16"
-                }`}
-                style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
-                  boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
-                }}
-                role="menu"
-              >
-                <div className="p-4">
-                  <div
-                    className="flex items-center gap-3 pb-3 border-b"
-                    style={{ borderColor: "#606364" }}
-                  >
-                    <ProfilePictureUploader
-                      currentAvatarUrl={userSettings?.avatarUrl}
-                      userName={user?.name || authData?.user?.name || "User"}
-                      onAvatarChange={() => {}} // No-op for dropdown
-                      size="sm"
-                      readOnly={true}
-                    />
-                    <div>
-                      <p className="font-medium" style={{ color: "#C3BCC2" }}>
-                        {user?.name || authData?.user?.name || "User"}
-                      </p>
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                        {user?.email || authData?.user?.email}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg transition-all duration-200 hover:scale-105 touch-manipulation"
-                      style={{
-                        color: "#ABA4AA",
-                        minHeight: "44px", // Ensure minimum touch target
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor = "#606364";
-                        e.currentTarget.style.color = "#EF4444";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                        e.currentTarget.style.color = "#ABA4AA";
-                      }}
-                      onTouchStart={e => {
-                        e.currentTarget.style.backgroundColor = "#606364";
-                        e.currentTarget.style.color = "#EF4444";
-                      }}
-                      onTouchEnd={e => {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                        e.currentTarget.style.color = "#ABA4AA";
-                      }}
-                      role="menuitem"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span className="text-sm">Log Out</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Edge Handle (Desktop only) */}
