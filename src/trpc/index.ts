@@ -1913,47 +1913,102 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { getUser } = getKindeServerSession();
-        const user = await getUser();
+        try {
+          console.log("🚀 Starting upload mutation for user:", input.title);
 
-        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+          const { getUser } = getKindeServerSession();
+          const user = await getUser();
 
-        // Verify user is a COACH
-        const coach = await db.user.findFirst({
-          where: { id: user.id, role: "COACH" },
-        });
+          if (!user?.id) {
+            console.error("❌ Upload failed: No user ID");
+            throw new TRPCError({ code: "UNAUTHORIZED" });
+          }
 
-        if (!coach) {
+          console.log("✅ User authenticated:", user.id);
+
+          // Verify user is a COACH
+          const coach = await db.user.findFirst({
+            where: { id: user.id, role: "COACH" },
+          });
+
+          if (!coach) {
+            console.error("❌ Upload failed: User is not a coach");
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Only coaches can upload resources",
+            });
+          }
+
+          console.log("✅ Coach verification passed");
+
+          const type = input.contentType.startsWith("video/")
+            ? "video"
+            : "document";
+
+          console.log("📝 Creating database record with data:", {
+            title: input.title,
+            type,
+            fileUrl: input.fileUrl,
+            filename: input.filename,
+            coachId: user.id,
+          });
+
+          // Use transaction to ensure data consistency
+          const newResource = await db.$transaction(async tx => {
+            const resource = await tx.libraryResource.create({
+              data: {
+                title: input.title,
+                description: input.description || "",
+                category: input.category,
+                type: type as any,
+                url: input.fileUrl,
+                filename: input.filename,
+                thumbnail: input.thumbnail || (type === "video" ? "🎥" : "📄"),
+                coachId: user.id,
+                views: 0,
+                rating: 0,
+              },
+            });
+
+            console.log(
+              "✅ Database record created successfully:",
+              resource.id
+            );
+            return resource;
+          });
+
+          console.log("🎉 Upload completed successfully:", newResource.id);
+
+          return {
+            id: newResource.id,
+            message: "Resource uploaded successfully",
+            resource: newResource,
+          };
+        } catch (error) {
+          console.error("❌ Upload mutation failed:", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+            input: {
+              title: input.title,
+              filename: input.filename,
+              contentType: input.contentType,
+            },
+            timestamp: new Date().toISOString(),
+          });
+
+          // Re-throw TRPC errors as-is
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+
+          // Wrap other errors
           throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Only coaches can upload resources",
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Upload failed: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
           });
         }
-
-        const type = input.contentType.startsWith("video/")
-          ? "video"
-          : "document";
-
-        const newResource = await db.libraryResource.create({
-          data: {
-            title: input.title,
-            description: input.description || "",
-            category: input.category,
-            type: type as any,
-            url: input.fileUrl,
-            filename: input.filename,
-            thumbnail: input.thumbnail || (type === "video" ? "🎥" : "📄"),
-            coachId: user.id,
-            views: 0,
-            rating: 0,
-          },
-        });
-
-        return {
-          id: newResource.id,
-          message: "Resource uploaded successfully",
-          resource: newResource,
-        };
       }),
 
     update: publicProcedure
@@ -2116,60 +2171,111 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { getUser } = getKindeServerSession();
-        const user = await getUser();
+        try {
+          console.log("🚀 Starting YouTube import for URL:", input.url);
 
-        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+          const { getUser } = getKindeServerSession();
+          const user = await getUser();
 
-        // Verify user is a COACH
-        const coach = await db.user.findFirst({
-          where: { id: user.id, role: "COACH" },
-        });
+          if (!user?.id) {
+            console.error("❌ YouTube import failed: No user ID");
+            throw new TRPCError({ code: "UNAUTHORIZED" });
+          }
 
-        if (!coach) {
+          console.log("✅ User authenticated:", user.id);
+
+          // Verify user is a COACH
+          const coach = await db.user.findFirst({
+            where: { id: user.id, role: "COACH" },
+          });
+
+          if (!coach) {
+            console.error("❌ YouTube import failed: User is not a coach");
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Only coaches can import YouTube videos",
+            });
+          }
+
+          console.log("✅ Coach verification passed");
+
+          const videoId = extractYouTubeVideoId(input.url);
+          if (!videoId) {
+            console.error("❌ YouTube import failed: Invalid URL");
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Invalid YouTube URL",
+            });
+          }
+
+          console.log("✅ YouTube video ID extracted:", videoId);
+
+          const youtubeInfo = await fetchYouTubeVideoInfo(
+            videoId,
+            process.env.YOUTUBE_API_KEY
+          );
+
+          console.log("✅ YouTube info fetched:", youtubeInfo?.title);
+
+          // Use transaction to ensure data consistency
+          const newResource = await db.$transaction(async tx => {
+            const resource = await tx.libraryResource.create({
+              data: {
+                title:
+                  input.customTitle ||
+                  youtubeInfo?.title ||
+                  `YouTube Video ${videoId}`,
+                description:
+                  input.customDescription ||
+                  youtubeInfo?.description ||
+                  "Imported from YouTube",
+                category: input.category,
+                type: "video",
+                url: input.url,
+                youtubeId: videoId,
+                thumbnail:
+                  youtubeInfo?.thumbnail || getYouTubeThumbnail(videoId),
+                duration: youtubeInfo?.duration,
+                isYoutube: true,
+                coachId: user.id,
+                views: 0,
+                rating: 0,
+              },
+            });
+
+            console.log("✅ YouTube video imported successfully:", resource.id);
+            return resource;
+          });
+
+          console.log(
+            "🎉 YouTube import completed successfully:",
+            newResource.id
+          );
+          return newResource;
+        } catch (error) {
+          console.error("❌ YouTube import failed:", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+            input: {
+              url: input.url,
+              category: input.category,
+            },
+            timestamp: new Date().toISOString(),
+          });
+
+          // Re-throw TRPC errors as-is
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+
+          // Wrap other errors
           throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Only coaches can import YouTube videos",
+            code: "INTERNAL_SERVER_ERROR",
+            message: `YouTube import failed: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
           });
         }
-
-        const videoId = extractYouTubeVideoId(input.url);
-        if (!videoId) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid YouTube URL",
-          });
-        }
-
-        const youtubeInfo = await fetchYouTubeVideoInfo(
-          videoId,
-          process.env.YOUTUBE_API_KEY
-        );
-
-        const newResource = await db.libraryResource.create({
-          data: {
-            title:
-              input.customTitle ||
-              youtubeInfo?.title ||
-              `YouTube Video ${videoId}`,
-            description:
-              input.customDescription ||
-              youtubeInfo?.description ||
-              "Imported from YouTube",
-            category: input.category,
-            type: "video",
-            url: input.url,
-            youtubeId: videoId,
-            thumbnail: youtubeInfo?.thumbnail || getYouTubeThumbnail(videoId),
-            duration: youtubeInfo?.duration,
-            isYoutube: true,
-            coachId: user.id,
-            views: 0,
-            rating: 0,
-          },
-        });
-
-        return newResource;
       }),
 
     importYouTubePlaylist: publicProcedure
