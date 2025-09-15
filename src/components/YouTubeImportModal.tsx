@@ -23,7 +23,9 @@ export default function YouTubeImportModal({
 
   const importVideo = trpc.library.importYouTubeVideo.useMutation({
     onSuccess: () => {
+      console.log("🎉 YouTube import successful, invalidating cache...");
       utils.library.list.invalidate();
+      utils.library.getStats.invalidate();
       onSuccess();
       onClose();
       setUrl("");
@@ -33,7 +35,9 @@ export default function YouTubeImportModal({
 
   const importPlaylist = trpc.library.importYouTubePlaylist.useMutation({
     onSuccess: () => {
+      console.log("🎉 YouTube playlist import successful, invalidating cache...");
       utils.library.list.invalidate();
+      utils.library.getStats.invalidate();
       onSuccess();
       onClose();
       setUrl("");

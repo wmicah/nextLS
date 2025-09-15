@@ -73,8 +73,16 @@ export default function UploadResourceModal({
 		})
 	}
 
+	const utils = trpc.useUtils();
+	
 	const uploadMutation = trpc.library.upload.useMutation({
 		onSuccess: (data) => {
+			console.log("🎉 Upload successful, invalidating cache...");
+			
+			// Invalidate and refetch library queries to show new data
+			utils.library.list.invalidate();
+			utils.library.getStats.invalidate();
+			
 			// Trigger server-side thumbnail generation for video files
 			if (data.resource.type === 'video' && data.resource.filename) {
 				setTimeout(async () => {
