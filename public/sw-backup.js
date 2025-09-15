@@ -1,7 +1,7 @@
 // Service Worker for enhanced caching and offline functionality
-const CACHE_NAME = "nextls-v8";
-const STATIC_CACHE = "nextls-static-v8";
-const DYNAMIC_CACHE = "nextls-dynamic-v8";
+const CACHE_NAME = "nextls-v7";
+const STATIC_CACHE = "nextls-static-v7";
+const DYNAMIC_CACHE = "nextls-dynamic-v7";
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -16,8 +16,9 @@ const STATIC_FILES = [
   "/admin",
 ];
 
-// API endpoints to cache (minimal caching)
+// API endpoints to cache
 const API_CACHE_PATTERNS = [
+  "/api/trpc/",
   "/api/health",
   "/api/thumbnail/",
   "/api/master-video/",
