@@ -37,7 +37,14 @@ export async function GET(req: NextRequest) {
     };
 
     // Get recent library resources
-    let recentResources = [];
+    let recentResources: Array<{
+      id: string;
+      title: string;
+      type: string;
+      url: string;
+      createdAt: Date;
+      isYoutube: boolean | null;
+    }> = [];
     try {
       recentResources = await db.libraryResource.findMany({
         where: { coachId: user.id },
