@@ -1,7 +1,7 @@
 // Service Worker for enhanced caching and offline functionality
-const CACHE_NAME = "nextls-v2";
-const STATIC_CACHE = "nextls-static-v2";
-const DYNAMIC_CACHE = "nextls-dynamic-v2";
+const CACHE_NAME = "nextls-v3";
+const STATIC_CACHE = "nextls-static-v3";
+const DYNAMIC_CACHE = "nextls-dynamic-v3";
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -67,6 +67,11 @@ self.addEventListener("activate", event => {
               return caches.delete(cacheName);
             })
         );
+      })
+      .then(() => {
+        console.log("Service Worker activated - clearing all caches");
+        // Force clear all caches to ensure fresh start
+        return caches.delete(DYNAMIC_CACHE);
       })
       .then(() => {
         console.log("Service Worker activated");
