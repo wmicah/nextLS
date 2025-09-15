@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -84,15 +84,7 @@ function LibraryPage() {
       search: searchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
     },
-    {
-      enabled: activeTab === "local",
-      onSuccess: data => {
-        console.log("🎉 Local library query success:", data?.length, "items");
-      },
-      onError: error => {
-        console.error("❌ Local library query error:", error);
-      },
-    }
+    { enabled: activeTab === "local" }
   );
 
   // Combine data based on active tab
@@ -101,17 +93,44 @@ function LibraryPage() {
   const isLoading = activeTab === "master" ? masterLoading : localLoading;
   const error = activeTab === "master" ? masterError : localError;
 
-  // Debug logging
-  console.log("🔍 LibraryPage Debug:", {
+  // Debug logging with useEffect to monitor changes
+  useEffect(() => {
+    console.log("🔍 LibraryPage Debug:", {
+      activeTab,
+      localLibraryItems: localLibraryItems?.length,
+      masterLibraryItems: masterLibraryItems?.length,
+      libraryItems: libraryItems?.length,
+      localLoading,
+      localError: localError?.message,
+      searchTerm,
+      selectedCategory,
+    });
+
+    if (localLibraryItems && localLibraryItems.length > 0) {
+      console.log(
+        "🎉 Local library items found:",
+        localLibraryItems.map(item => ({
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          category: item.category,
+        }))
+      );
+    }
+
+    if (localError) {
+      console.error("❌ Local library error:", localError);
+    }
+  }, [
     activeTab,
-    localLibraryItems: localLibraryItems?.length,
-    masterLibraryItems: masterLibraryItems?.length,
-    libraryItems: libraryItems?.length,
+    localLibraryItems,
+    masterLibraryItems,
+    libraryItems,
     localLoading,
-    localError: localError?.message,
+    localError,
     searchTerm,
     selectedCategory,
-  });
+  ]);
 
   const { data: stats, refetch: refetchStats } =
     trpc.library.getStats.useQuery();
