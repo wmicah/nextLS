@@ -1438,48 +1438,96 @@ export const appRouter = router({
         })
       )
       .query(async ({ input }) => {
-        const { getUser } = getKindeServerSession();
-        const user = await getUser();
+        try {
+          console.log("🔍 Library list query called with input:", input);
 
-        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+          const { getUser } = getKindeServerSession();
+          const user = await getUser();
 
-        // Verify user is a COACH
-        const coach = await db.user.findFirst({
-          where: { id: user.id, role: "COACH" },
-        });
+          if (!user?.id) {
+            console.error("❌ Library list: No user ID");
+            throw new TRPCError({ code: "UNAUTHORIZED" });
+          }
 
-        if (!coach) {
+          console.log("✅ Library list: User authenticated:", user.id);
+
+          // Verify user is a COACH
+          const coach = await db.user.findFirst({
+            where: { id: user.id, role: "COACH" },
+          });
+
+          if (!coach) {
+            console.error("❌ Library list: User is not a coach");
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Only coaches can view library",
+            });
+          }
+
+          console.log("✅ Library list: Coach verification passed");
+
+          const where: any = {
+            coachId: user.id,
+          };
+
+          if (input.search) {
+            where.OR = [
+              { title: { contains: input.search, mode: "insensitive" } },
+              { description: { contains: input.search, mode: "insensitive" } },
+            ];
+          }
+
+          if (input.category && input.category !== "All") {
+            where.category = input.category;
+          }
+
+          if (input.type && input.type !== "all") {
+            where.type = input.type;
+          }
+
+          console.log(
+            "🔍 Library list: Query where clause:",
+            JSON.stringify(where, null, 2)
+          );
+
+          const resources = await db.libraryResource.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+          });
+
+          console.log(`✅ Library list: Found ${resources.length} resources`);
+          console.log(
+            "📋 Library list: Resources:",
+            resources.map(r => ({
+              id: r.id,
+              title: r.title,
+              type: r.type,
+              category: r.category,
+            }))
+          );
+
+          return resources;
+        } catch (error) {
+          console.error("❌ Library list query failed:", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+            input,
+            timestamp: new Date().toISOString(),
+          });
+
+          // Re-throw TRPC errors as-is
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+
+          // Wrap other errors
           throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Only coaches can view library",
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Library list failed: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
           });
         }
-
-        const where: any = {
-          coachId: user.id,
-        };
-
-        if (input.search) {
-          where.OR = [
-            { title: { contains: input.search, mode: "insensitive" } },
-            { description: { contains: input.search, mode: "insensitive" } },
-          ];
-        }
-
-        if (input.category && input.category !== "All") {
-          where.category = input.category;
-        }
-
-        if (input.type && input.type !== "all") {
-          where.type = input.type;
-        }
-
-        const resources = await db.libraryResource.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-        });
-
-        return resources;
       }),
 
     getStats: publicProcedure.query(async () => {

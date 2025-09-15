@@ -38,7 +38,7 @@ const categories = [
 ];
 
 function LibraryPage() {
-  const [activeTab, setActiveTab] = useState<"master" | "local">("master");
+  const [activeTab, setActiveTab] = useState<"master" | "local">("local");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -84,7 +84,15 @@ function LibraryPage() {
       search: searchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
     },
-    { enabled: activeTab === "local" }
+    {
+      enabled: activeTab === "local",
+      onSuccess: data => {
+        console.log("🎉 Local library query success:", data?.length, "items");
+      },
+      onError: error => {
+        console.error("❌ Local library query error:", error);
+      },
+    }
   );
 
   // Combine data based on active tab
@@ -92,6 +100,18 @@ function LibraryPage() {
     activeTab === "master" ? masterLibraryItems : localLibraryItems;
   const isLoading = activeTab === "master" ? masterLoading : localLoading;
   const error = activeTab === "master" ? masterError : localError;
+
+  // Debug logging
+  console.log("🔍 LibraryPage Debug:", {
+    activeTab,
+    localLibraryItems: localLibraryItems?.length,
+    masterLibraryItems: masterLibraryItems?.length,
+    libraryItems: libraryItems?.length,
+    localLoading,
+    localError: localError?.message,
+    searchTerm,
+    selectedCategory,
+  });
 
   const { data: stats, refetch: refetchStats } =
     trpc.library.getStats.useQuery();
