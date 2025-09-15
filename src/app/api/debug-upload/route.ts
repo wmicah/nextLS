@@ -12,7 +12,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Test database connection
-    let dbTest = { success: false, error: null };
+    let dbTest: { success: boolean; error: string | null } = {
+      success: false,
+      error: null,
+    };
     try {
       await db.user.findUnique({ where: { id: user.id } });
       dbTest = { success: true, error: null };
