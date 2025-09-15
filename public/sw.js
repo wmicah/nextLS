@@ -1,7 +1,7 @@
 // Service Worker for enhanced caching and offline functionality
-const CACHE_NAME = "nextls-v3";
-const STATIC_CACHE = "nextls-static-v3";
-const DYNAMIC_CACHE = "nextls-dynamic-v3";
+const CACHE_NAME = "nextls-v4";
+const STATIC_CACHE = "nextls-static-v4";
+const DYNAMIC_CACHE = "nextls-dynamic-v4";
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -28,6 +28,8 @@ const API_CACHE_PATTERNS = [
 const NO_CACHE_PATTERNS = [
   "/api/trpc/library.list",
   "/api/trpc/library.getStats",
+  "/api/trpc/library.upload",
+  "/api/trpc/library.delete",
 ];
 
 // Install event - cache static files
