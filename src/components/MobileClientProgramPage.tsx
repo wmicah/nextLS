@@ -55,7 +55,7 @@ export default function MobileClientProgramPage() {
 
   // Fetch program data
   const { data: program, isLoading: programLoading } =
-    trpc.clientRouter.getClientProgram.useQuery();
+    trpc.clientRouter.getAssignedProgram.useQuery();
 
   // Fetch video assignments
   const { data: videoAssignments = [], isLoading: videosLoading } =
