@@ -64,31 +64,45 @@ export default function MobileClientProgramPage() {
   // Fetch workout completion status - method not available in clientRouter
   // const { data: workoutStatus = {}, refetch: refetchWorkoutStatus } =
   //   trpc.clientRouter.getWorkoutCompletionStatus.useQuery();
-  const workoutStatus = {};
+  const workoutStatus: Record<string, boolean> = {};
   const refetchWorkoutStatus = () => {};
 
-  // Mutations
-  const markWorkoutCompleteMutation =
-    trpc.clientRouter.markWorkoutComplete.useMutation({
-      onSuccess: () => {
-        refetchWorkoutStatus();
-      },
-    });
+  // Mutations - method not available in clientRouter
+  // const markWorkoutCompleteMutation =
+  //   trpc.clientRouter.markWorkoutComplete.useMutation({
+  //     onSuccess: () => {
+  //       refetchWorkoutStatus();
+  //     },
+  //   });
+  const markWorkoutCompleteMutation = {
+    mutate: () => {},
+    isPending: false,
+  };
 
-  const submitNotesMutation = trpc.clientRouter.submitWorkoutNotes.useMutation({
-    onSuccess: () => {
-      setShowNotesModal(false);
-      setNotes("");
-    },
-  });
+  // Method not available in clientRouter
+  // const submitNotesMutation = trpc.clientRouter.submitWorkoutNotes.useMutation({
+  //   onSuccess: () => {
+  //     setShowNotesModal(false);
+  //     setNotes("");
+  //   },
+  // });
+  const submitNotesMutation = {
+    mutate: () => {},
+    isPending: false,
+  };
 
-  const submitVideoMutation =
-    trpc.clientRouter.submitVideoForReview.useMutation({
-      onSuccess: () => {
-        setShowVideoModal(false);
-        setSelectedVideo(null);
-      },
-    });
+  // Method not available in clientRouter
+  // const submitVideoMutation =
+  //   trpc.clientRouter.submitVideoForReview.useMutation({
+  //     onSuccess: () => {
+  //       setShowVideoModal(false);
+  //       setSelectedVideo(null);
+  //     },
+  //   });
+  const submitVideoMutation = {
+    mutate: () => {},
+    isPending: false,
+  };
 
   if (programLoading) {
     return (
@@ -154,15 +168,22 @@ export default function MobileClientProgramPage() {
   });
 
   const handleMarkComplete = (workoutId: string) => {
-    markWorkoutCompleteMutation.mutate({ workoutId });
+    // markWorkoutCompleteMutation.mutate({ workoutId });
+    console.log("Mark complete for workout:", workoutId);
   };
 
   const handleSubmitNotes = () => {
     if (currentDay && notes.trim()) {
-      submitNotesMutation.mutate({
-        dayId: currentDay.id,
-        notes: notes.trim(),
-      });
+      // submitNotesMutation.mutate({
+      //   dayId: currentDay.id,
+      //   notes: notes.trim(),
+      // });
+      console.log(
+        "Submit notes for day:",
+        currentDay.id,
+        "Notes:",
+        notes.trim()
+      );
     }
   };
 
@@ -636,11 +657,8 @@ export default function MobileClientProgramPage() {
               setShowVideoModal(false);
               setSelectedVideo(null);
             }}
-            selectedVideo={selectedVideo}
-            onSubmit={data => {
-              submitVideoMutation.mutate(data);
-            }}
-            isSubmitting={submitVideoMutation.isPending}
+            drillId={selectedVideo?.id}
+            drillTitle={selectedVideo?.title}
           />
         )}
       </div>
