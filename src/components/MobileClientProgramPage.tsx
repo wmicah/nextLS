@@ -61,9 +61,11 @@ export default function MobileClientProgramPage() {
   const { data: videoAssignments = [], isLoading: videosLoading } =
     trpc.clientRouter.getVideoAssignments.useQuery();
 
-  // Fetch workout completion status
-  const { data: workoutStatus = {}, refetch: refetchWorkoutStatus } =
-    trpc.clientRouter.getWorkoutCompletionStatus.useQuery();
+  // Fetch workout completion status - method not available in clientRouter
+  // const { data: workoutStatus = {}, refetch: refetchWorkoutStatus } =
+  //   trpc.clientRouter.getWorkoutCompletionStatus.useQuery();
+  const workoutStatus = {};
+  const refetchWorkoutStatus = () => {};
 
   // Mutations
   const markWorkoutCompleteMutation =
