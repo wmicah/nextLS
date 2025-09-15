@@ -1,7 +1,7 @@
 // Service Worker for enhanced caching and offline functionality
-const CACHE_NAME = "nextls-v4";
-const STATIC_CACHE = "nextls-static-v4";
-const DYNAMIC_CACHE = "nextls-dynamic-v4";
+const CACHE_NAME = "nextls-v6";
+const STATIC_CACHE = "nextls-static-v6";
+const DYNAMIC_CACHE = "nextls-dynamic-v6";
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -26,10 +26,15 @@ const API_CACHE_PATTERNS = [
 
 // API endpoints that should NOT be cached (always fetch fresh)
 const NO_CACHE_PATTERNS = [
-  "/api/trpc/library.list",
-  "/api/trpc/library.getStats",
-  "/api/trpc/library.upload",
-  "/api/trpc/library.delete",
+  "/api/trpc/",
+  "/api/library/",
+  "/api/clients/",
+  "/api/programs/",
+  "/api/schedule/",
+  "/api/messages/",
+  "/api/notifications/",
+  "/api/analytics/",
+  "/api/admin/",
 ];
 
 // Install event - cache static files
@@ -82,38 +87,22 @@ self.addEventListener("activate", event => {
   );
 });
 
-// Fetch event - serve from cache when possible
+// Fetch event - NO CACHING for Vercel
 self.addEventListener("fetch", event => {
   const { request } = event;
   const url = new URL(request.url);
-
-  // Skip non-GET requests
-  if (request.method !== "GET") {
-    return;
-  }
 
   // Skip external requests
   if (url.origin !== location.origin) {
     return;
   }
 
-  // Handle API requests
-  if (url.pathname.startsWith("/api/")) {
-    event.respondWith(handleApiRequest(request));
-    return;
-  }
-
-  // Handle static assets
-  if (
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/public/")
-  ) {
-    event.respondWith(handleStaticRequest(request));
-    return;
-  }
-
-  // Handle page requests
-  event.respondWith(handlePageRequest(request));
+  // For Vercel: Don't cache anything, let everything go through normally
+  console.log(
+    "Service Worker: Allowing request to go through without caching:",
+    url.pathname
+  );
+  return;
 });
 
 // Handle API requests with cache-first strategy
