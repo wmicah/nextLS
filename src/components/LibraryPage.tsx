@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -40,6 +40,7 @@ const categories = [
 function LibraryPage() {
   const [activeTab, setActiveTab] = useState<"master" | "local">("local");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
@@ -52,6 +53,15 @@ function LibraryPage() {
     youtubeId?: string;
   } | null>(null);
   const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false);
+
+  // Debounce search term to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const handleItemClick = (item: {
     id: string;
@@ -81,7 +91,7 @@ function LibraryPage() {
     refetch: refetchLocal,
   } = trpc.library.list.useQuery(
     {
-      search: searchTerm || undefined,
+      search: debouncedSearchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
     },
     { enabled: activeTab === "local" }
@@ -103,13 +113,30 @@ function LibraryPage() {
       localLoading,
       localError: localError?.message,
       searchTerm,
+      debouncedSearchTerm,
       selectedCategory,
+      timestamp: new Date().toISOString(),
     });
 
     if (localLibraryItems && localLibraryItems.length > 0) {
       console.log(
         "🎉 Local library items found:",
         localLibraryItems.map(item => ({
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          category: item.category,
+          createdAt: item.createdAt,
+        }))
+      );
+    } else if (localLibraryItems && localLibraryItems.length === 0) {
+      console.log("⚠️ Local library items array is empty");
+    }
+
+    if (masterLibraryItems && masterLibraryItems.length > 0) {
+      console.log(
+        "🎉 Master library items found:",
+        masterLibraryItems.map(item => ({
           id: item.id,
           title: item.title,
           type: item.type,
@@ -121,6 +148,10 @@ function LibraryPage() {
     if (localError) {
       console.error("❌ Local library error:", localError);
     }
+
+    if (masterError) {
+      console.error("❌ Master library error:", masterError);
+    }
   }, [
     activeTab,
     localLibraryItems,
@@ -128,7 +159,9 @@ function LibraryPage() {
     libraryItems,
     localLoading,
     localError,
+    masterError,
     searchTerm,
+    debouncedSearchTerm,
     selectedCategory,
   ]);
 

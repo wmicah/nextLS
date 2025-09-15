@@ -77,9 +77,24 @@ export async function GET(req: NextRequest) {
 
     // Test the library list query with different filters
     let libraryListTest: {
-      all: Array<{ id: string; title: string; type: string }> | null;
-      video: Array<{ id: string; title: string; type: string }> | null;
-      document: Array<{ id: string; title: string; type: string }> | null;
+      all: Array<{
+        id: string;
+        title: string;
+        type: string;
+        createdAt: Date;
+      }> | null;
+      video: Array<{
+        id: string;
+        title: string;
+        type: string;
+        createdAt: Date;
+      }> | null;
+      document: Array<{
+        id: string;
+        title: string;
+        type: string;
+        createdAt: Date;
+      }> | null;
       error: string | null;
     } = {
       all: null,
@@ -92,27 +107,47 @@ export async function GET(req: NextRequest) {
       libraryListTest.all = await db.libraryResource.findMany({
         where: { coachId: user.id },
         orderBy: { createdAt: "desc" },
-        take: 3,
-        select: { id: true, title: true, type: true },
+        take: 10,
+        select: { id: true, title: true, type: true, createdAt: true },
       });
 
       // Test with video filter
       libraryListTest.video = await db.libraryResource.findMany({
         where: { coachId: user.id, type: "video" },
         orderBy: { createdAt: "desc" },
-        take: 3,
-        select: { id: true, title: true, type: true },
+        take: 10,
+        select: { id: true, title: true, type: true, createdAt: true },
       });
 
       // Test with document filter
       libraryListTest.document = await db.libraryResource.findMany({
         where: { coachId: user.id, type: "document" },
         orderBy: { createdAt: "desc" },
-        take: 3,
-        select: { id: true, title: true, type: true },
+        take: 10,
+        select: { id: true, title: true, type: true, createdAt: true },
       });
     } catch (error) {
       libraryListTest.error =
+        error instanceof Error ? error.message : "Unknown error";
+    }
+
+    // Test database connection stability
+    let dbStabilityTest = {
+      connectionTime: 0,
+      queryTime: 0,
+      error: null,
+    };
+
+    try {
+      const startTime = Date.now();
+      await db.$queryRaw`SELECT 1`;
+      dbStabilityTest.connectionTime = Date.now() - startTime;
+
+      const queryStartTime = Date.now();
+      await db.libraryResource.count({ where: { coachId: user.id } });
+      dbStabilityTest.queryTime = Date.now() - queryStartTime;
+    } catch (error) {
+      dbStabilityTest.error =
         error instanceof Error ? error.message : "Unknown error";
     }
 
@@ -125,12 +160,22 @@ export async function GET(req: NextRequest) {
         role: userRole,
       },
       database: dbTest,
+      databaseStability: dbStabilityTest,
       environmentVariables: envTest,
       recentResources,
       libraryListTest,
       vercel: {
         region: process.env.VERCEL_REGION,
         url: process.env.VERCEL_URL,
+        functionTimeout: process.env.VERCEL_FUNCTION_TIMEOUT,
+        memoryLimit: process.env.VERCEL_FUNCTION_MEMORY,
+      },
+      system: {
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        uptime: process.uptime(),
+        memoryUsage: process.memoryUsage(),
       },
     });
   } catch (error) {
