@@ -76,7 +76,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Test the library list query with different filters
-    let libraryListTest = {
+    let libraryListTest: {
+      all: Array<{ id: string; title: string; type: string }> | null;
+      video: Array<{ id: string; title: string; type: string }> | null;
+      document: Array<{ id: string; title: string; type: string }> | null;
+      error: string | null;
+    } = {
       all: null,
       video: null,
       document: null,
