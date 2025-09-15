@@ -1,7 +1,7 @@
 // Service Worker for enhanced caching and offline functionality
-const CACHE_NAME = "nextls-v1";
-const STATIC_CACHE = "nextls-static-v1";
-const DYNAMIC_CACHE = "nextls-dynamic-v1";
+const CACHE_NAME = "nextls-v2";
+const STATIC_CACHE = "nextls-static-v2";
+const DYNAMIC_CACHE = "nextls-dynamic-v2";
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -22,6 +22,12 @@ const API_CACHE_PATTERNS = [
   "/api/health",
   "/api/thumbnail/",
   "/api/master-video/",
+];
+
+// API endpoints that should NOT be cached (always fetch fresh)
+const NO_CACHE_PATTERNS = [
+  "/api/trpc/library.list",
+  "/api/trpc/library.getStats",
 ];
 
 // Install event - cache static files
@@ -106,6 +112,16 @@ self.addEventListener("fetch", event => {
 // Handle API requests with cache-first strategy
 async function handleApiRequest(request) {
   const url = new URL(request.url);
+
+  // Check if this API should NOT be cached (always fetch fresh)
+  const shouldNotCache = NO_CACHE_PATTERNS.some(pattern =>
+    url.pathname.includes(pattern)
+  );
+
+  if (shouldNotCache) {
+    console.log("Fetching fresh data (no cache):", url.pathname);
+    return fetch(request);
+  }
 
   // Check if this API should be cached
   const shouldCache = API_CACHE_PATTERNS.some(pattern =>
