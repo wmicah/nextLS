@@ -132,7 +132,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Test database connection stability
-    let dbStabilityTest = {
+    let dbStabilityTest: {
+      connectionTime: number;
+      queryTime: number;
+      error: string | null;
+    } = {
       connectionTime: 0,
       queryTime: 0,
       error: null,
