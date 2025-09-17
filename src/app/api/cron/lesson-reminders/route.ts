@@ -192,7 +192,7 @@ Looking forward to seeing you!
 
         results.push({
           lessonId: lesson.id,
-          clientName: lesson.client.name,
+          clientName: lesson.client?.name || "Unknown Client",
           lessonTime: lesson.date.toISOString(),
           hoursUntilLesson,
           status: "sent",
@@ -209,7 +209,7 @@ Looking forward to seeing you!
         console.error(`Error sending reminder for lesson ${lesson.id}:`, error);
         results.push({
           lessonId: lesson.id,
-          clientName: lesson.client.name,
+          clientName: lesson.client?.name || "Unknown Client",
           lessonTime: lesson.date.toISOString(),
           status: "error",
           error: error instanceof Error ? error.message : "Unknown error",
