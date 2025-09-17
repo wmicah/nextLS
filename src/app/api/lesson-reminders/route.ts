@@ -116,10 +116,10 @@ export async function POST(request: NextRequest) {
     for (const lesson of lessonsToProcess) {
       try {
         // Check if client has notifications enabled
-        if (!lesson.client.user) {
+        if (!lesson.client?.user) {
           results.push({
             lessonId: lesson.id,
-            clientName: lesson.client.name,
+            clientName: lesson.client?.name || "Unknown Client",
             status: "skipped",
             reason: "No user account",
           });
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
           where: {
             type: "COACH_CLIENT",
             coachId: lesson.coachId,
-            clientId: lesson.client.user.id,
+            clientId: lesson.client?.user?.id,
           },
         });
 
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
             data: {
               type: "COACH_CLIENT",
               coachId: lesson.coachId,
-              clientId: lesson.client.user.id,
+              clientId: lesson.client?.user?.id,
             },
           });
         }
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
         if (existingReminder) {
           results.push({
             lessonId: lesson.id,
-            clientName: lesson.client.name,
+            clientName: lesson.client?.name || "Unknown Client",
             status: "skipped",
             reason: "Reminder already sent today",
           });
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
         // Create the reminder message with improved formatting
         const reminderMessage = `🔔 **Lesson Reminder**
 
-Hi ${lesson.client.name}! 
+Hi ${lesson.client?.name || "there"}! 
 
 This is a friendly reminder that you have a lesson scheduled for **tomorrow** (${lessonDate}) at **${lessonTime}**.
 
@@ -221,7 +221,7 @@ Looking forward to seeing you!
 
         results.push({
           lessonId: lesson.id,
-          clientName: lesson.client.name,
+          clientName: lesson.client?.name || "Unknown Client",
           status: "sent",
           messageId: message.id,
         });
@@ -229,7 +229,7 @@ Looking forward to seeing you!
         console.error(`Error sending reminder for lesson ${lesson.id}:`, error);
         results.push({
           lessonId: lesson.id,
-          clientName: lesson.client.name,
+          clientName: lesson.client?.name || "Unknown Client",
           status: "error",
           error: error instanceof Error ? error.message : "Unknown error",
         });

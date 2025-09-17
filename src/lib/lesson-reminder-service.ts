@@ -126,15 +126,21 @@ class LessonReminderService {
           // Check if we already sent a reminder for this lesson (in-memory check)
           if (sentReminders.has(reminderKey)) {
             console.log(
-              `⏭️ Skipping ${lesson.client.name} - reminder already sent`
+              `⏭️ Skipping ${
+                lesson.client?.name || "Unknown Client"
+              } - reminder already sent`
             );
             skippedCount++;
             continue;
           }
 
           // Check if client has notifications enabled
-          if (!lesson.client.user) {
-            console.log(`⏭️ Skipping ${lesson.client.name} - no user account`);
+          if (!lesson.client?.user) {
+            console.log(
+              `⏭️ Skipping ${
+                lesson.client?.name || "Unknown Client"
+              } - no user account`
+            );
             skippedCount++;
             continue;
           }
@@ -144,7 +150,7 @@ class LessonReminderService {
             where: {
               type: "COACH_CLIENT",
               coachId: lesson.coachId,
-              clientId: lesson.client.user.id,
+              clientId: lesson.client?.user?.id,
             },
           });
 
@@ -154,7 +160,7 @@ class LessonReminderService {
               data: {
                 type: "COACH_CLIENT",
                 coachId: lesson.coachId,
-                clientId: lesson.client.user.id,
+                clientId: lesson.client?.user?.id,
               },
             });
           }
@@ -176,7 +182,9 @@ class LessonReminderService {
 
           if (existingReminder) {
             console.log(
-              `⏭️ Skipping ${lesson.client.name} - reminder already in database`
+              `⏭️ Skipping ${
+                lesson.client?.name || "Unknown Client"
+              } - reminder already in database`
             );
             skippedCount++;
             continue;
@@ -202,7 +210,7 @@ class LessonReminderService {
           // Create the reminder message with improved formatting
           const reminderMessage = `🔔 **Lesson Reminder**
 
-Hi ${lesson.client.name}! 
+Hi ${lesson.client?.name || "there"}! 
 
 This is a friendly reminder that you have a lesson scheduled for **${lessonDate}** at **${lessonTime}** (in ${hoursUntilLesson} hours).
 
@@ -238,7 +246,9 @@ Looking forward to seeing you!
           sentCount++;
 
           console.log(
-            `✅ Sent reminder to ${lesson.client.name} for lesson in ${hoursUntilLesson} hours (${lessonTime})`
+            `✅ Sent reminder to ${
+              lesson.client?.name || "Unknown Client"
+            } for lesson in ${hoursUntilLesson} hours (${lessonTime})`
           );
         } catch (error) {
           console.error(
