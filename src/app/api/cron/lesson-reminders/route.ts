@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         if (sentReminders.has(reminderKey)) {
           results.push({
             lessonId: lesson.id,
-            clientName: lesson.client.name,
+            clientName: lesson.client?.name || "Unknown Client",
             lessonTime: lesson.date.toISOString(),
             status: "skipped",
             reason: "Reminder already sent for this lesson (in-memory)",
@@ -78,10 +78,10 @@ export async function GET(request: NextRequest) {
         }
 
         // Check if client has notifications enabled
-        if (!lesson.client.user) {
+        if (!lesson.client?.user) {
           results.push({
             lessonId: lesson.id,
-            clientName: lesson.client.name,
+            clientName: lesson.client?.name || "Unknown Client",
             lessonTime: lesson.date.toISOString(),
             status: "skipped",
             reason: "No user account",
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
           where: {
             type: "COACH_CLIENT",
             coachId: lesson.coachId,
-            clientId: lesson.client.user.id,
+            clientId: lesson.client?.user?.id,
           },
         });
 
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
             data: {
               type: "COACH_CLIENT",
               coachId: lesson.coachId,
-              clientId: lesson.client.user.id,
+              clientId: lesson.client?.user?.id,
             },
           });
         }
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
         if (existingReminder) {
           results.push({
             lessonId: lesson.id,
-            clientName: lesson.client.name,
+            clientName: lesson.client?.name || "Unknown Client",
             lessonTime: lesson.date.toISOString(),
             status: "skipped",
             reason: "Reminder already sent for this lesson (database)",
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
         // Create the reminder message with improved formatting
         const reminderMessage = `🔔 **Lesson Reminder**
 
-Hi ${lesson.client.name}! 
+Hi ${lesson.client?.name || "there"}! 
 
 This is a friendly reminder that you have a lesson scheduled for **${lessonDate}** at **${lessonTime}** (in ${hoursUntilLesson} hours).
 
@@ -201,7 +201,9 @@ Looking forward to seeing you!
         sentCount++;
 
         console.log(
-          `✅ Sent reminder to ${lesson.client.name} for lesson in ${hoursUntilLesson} hours (${lessonTime})`
+          `✅ Sent reminder to ${
+            lesson.client?.name || "Unknown Client"
+          } for lesson in ${hoursUntilLesson} hours (${lessonTime})`
         );
       } catch (error) {
         console.error(`Error sending reminder for lesson ${lesson.id}:`, error);
