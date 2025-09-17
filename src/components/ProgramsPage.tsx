@@ -49,10 +49,10 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Skeleton } from "./ui/skeleton";
 import { useToast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import CreateProgramModal from "./CreateProgramModal";
+import SeamlessProgramModal from "./SeamlessProgramModal";
 import AssignProgramModal from "./AssignProgramModal";
 import ProgramDetailsModal from "./ProgramDetailsModal";
-import CreateRoutineModal from "@/components/CreateRoutineModal";
+import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
 import RoutinesTab from "@/components/RoutinesTab";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
 import { withMobileDetection } from "@/lib/mobile-detection";
@@ -137,6 +137,14 @@ function ProgramsPage() {
   const [isRoutineDetailsOpen, setIsRoutineDetailsOpen] = useState(false);
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   const [isVideoLibraryOpen, setIsVideoLibraryOpen] = useState(false);
+  const [selectedVideoFromLibrary, setSelectedVideoFromLibrary] = useState<{
+    id: string;
+    title: string;
+    description?: string;
+    duration?: string;
+    url?: string;
+    thumbnail?: string;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState<"programs" | "routines">(
     "programs"
   );
@@ -318,28 +326,29 @@ function ProgramsPage() {
     description: string;
     exercises: RoutineExercise[];
   }) => {
-    if (routine.id) {
-      // Update existing routine
-      updateRoutine.mutate({
-        id: routine.id,
-        name: routine.name,
-        description: routine.description,
-        exercises: routine.exercises.map((exercise, index) => ({
-          ...exercise,
-          order: index + 1,
-        })),
-      });
+    // For new routines (empty name and description), set selectedRoutine to null
+    // This will make the modal show "Create New Routine" instead of "Edit Routine"
+    if (
+      !routine.name &&
+      !routine.description &&
+      routine.exercises.length === 0
+    ) {
+      setSelectedRoutine(null);
     } else {
-      // Create new routine
-      createRoutine.mutate({
+      // For existing routines (like duplicates), set the routine data
+      const routineData: Routine = {
+        id: routine.id || "",
         name: routine.name,
         description: routine.description,
-        exercises: routine.exercises.map((exercise, index) => ({
-          ...exercise,
-          order: index + 1,
-        })),
-      });
+        exercises: routine.exercises,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setSelectedRoutine(routineData);
     }
+    setIsRoutineModalOpen(true);
+    // Ensure details modal is closed
+    setIsRoutineDetailsOpen(false);
   };
 
   const handleUpdateRoutine = (routine: {
@@ -374,30 +383,7 @@ function ProgramsPage() {
     }
   };
 
-  const handleRoutineModalSubmit = (routine: {
-    id?: string;
-    name: string;
-    description: string;
-    exercises: RoutineExercise[];
-  }) => {
-    if (routine.id) {
-      // Update existing routine
-      updateRoutine.mutate({
-        id: routine.id,
-        name: routine.name,
-        description: routine.description,
-        exercises: routine.exercises.map((exercise, index) => ({
-          ...exercise,
-          order: index + 1,
-        })),
-      });
-    } else {
-      // Create new routine
-      handleCreateRoutine(routine);
-    }
-    setIsRoutineModalOpen(false);
-    setSelectedRoutine(null);
-  };
+  // Note: handleRoutineModalSubmit removed - new SeamlessRoutineModal handles submission internally
 
   const handleDeleteRoutine = (routineId: string) => {
     const routine = routines.find(r => r.id === routineId);
@@ -1027,13 +1013,18 @@ function ProgramsPage() {
           )}
 
           {/* Modals */}
-          <CreateProgramModal
+          <SeamlessProgramModal
             isOpen={isCreateModalOpen}
             onClose={() => {
-              console.log("CreateProgramModal onClose called - closing modal");
+              console.log(
+                "SeamlessProgramModal onClose called - closing modal"
+              );
               setIsCreateModalOpen(false);
             }}
             onSubmit={handleCreateProgram}
+            onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
+            selectedVideoFromLibrary={selectedVideoFromLibrary}
+            onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
           />
 
           <AssignProgramModal
@@ -1049,15 +1040,17 @@ function ProgramsPage() {
             program={selectedProgram as any}
           />
 
-          <CreateRoutineModal
+          <SeamlessRoutineModal
             isOpen={isRoutineModalOpen}
             onClose={() => {
               setIsRoutineModalOpen(false);
               setSelectedRoutine(null);
+              setSelectedVideoFromLibrary(null);
             }}
-            onSubmit={handleRoutineModalSubmit}
             routine={selectedRoutine}
             onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
+            selectedVideoFromLibrary={selectedVideoFromLibrary}
+            onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
           />
 
           {/* Routine Details Modal */}
@@ -1170,6 +1163,8 @@ function ProgramsPage() {
         onClose={() => setIsVideoLibraryOpen(false)}
         onSelectVideo={video => {
           console.log("Video selected:", video);
+          // Store the selected video so it can be passed to the modal
+          setSelectedVideoFromLibrary(video);
           setIsVideoLibraryOpen(false);
         }}
         editingItem={null}

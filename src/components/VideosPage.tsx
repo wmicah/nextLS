@@ -213,7 +213,7 @@ function VideosPage() {
                       className="text-4xl font-bold mb-2"
                       style={{ color: "#C3BCC2" }}
                     >
-                      Video Library
+                      Video Feedback
                     </h1>
                     <p
                       className="flex items-center gap-2 text-lg"

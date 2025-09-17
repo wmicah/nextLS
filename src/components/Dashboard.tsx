@@ -2,90 +2,38 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 // Removed complex SSE hooks - using simple polling instead
 import {
-  Calendar,
-  Dumbbell,
-  User,
-  Plus,
-  Edit,
-  Trash2,
-  Clock,
-  ArrowRight,
-  Users,
-  BookOpen,
-  Activity,
-  Star,
   Bell,
-  Target as TargetIcon,
+  Users,
   TrendingUp as TrendingUpIcon,
+  Clock,
+  Activity,
+  BarChart3,
+  Calendar,
+  UserCheck,
+  Target,
 } from "lucide-react";
-import { format } from "date-fns";
-import AddClientModal from "./AddClientModal";
 import Sidebar from "./Sidebar";
-import ProfilePictureUploader from "./ProfilePictureUploader";
+import WeekAtAGlance from "@/components/WeekAtAGlance";
 
 export default function Dashboard() {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const router = useRouter();
 
   // Get user profile to check role
   const { data: userProfile } = trpc.user.getProfile.useQuery();
 
-  // Only fetch clients data if user is a coach
-  const {
-    data: clients = [],
-    isLoading,
-    error,
-  } = trpc.clients.list.useQuery(
-    { archived: false },
-    {
-      enabled: userProfile?.role === "COACH",
+  // Redirect to client dashboard if user is a client
+  useEffect(() => {
+    if (userProfile?.role === "CLIENT") {
+      router.push("/client-dashboard");
     }
-  );
+  }, [userProfile?.role, router]);
 
-  // Debug: Log client data to see if avatar field is present
-  console.log("Clients data:", clients);
-  console.log("First client user data:", clients[0]?.user);
-  console.log(
-    "First client avatar URL:",
-    clients[0]?.user?.settings?.avatarUrl
-  );
-  const { data: stats } = trpc.library.getStats.useQuery(undefined, {
-    enabled: userProfile?.role === "COACH",
-  });
-  const utils = trpc.useUtils();
-
-  const deleteClient = trpc.clients.delete.useMutation({
-    onSuccess: () => {
-      utils.clients.list.invalidate();
-      setDeletingClientId(null);
-    },
-    onError: error => {
-      console.error("Failed to delete client:", error);
-      setDeletingClientId(null);
-    },
-  });
-
-  const handleDeleteClient = (clientId: string, clientName: string) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${clientName}? This action cannot be undone.`
-      )
-    ) {
-      setDeletingClientId(clientId);
-      deleteClient.mutate({ id: clientId });
-    }
-  };
-
-  // If user is not a coach, redirect to client dashboard
+  // If user is not a coach, show loading while redirecting
   if (userProfile?.role === "CLIENT") {
-    window.location.href = "/client-dashboard";
-    return null;
-  }
-
-  if (isLoading) {
     return (
       <Sidebar>
         <div className="flex items-center justify-center h-64">
@@ -97,21 +45,6 @@ export default function Dashboard() {
       </Sidebar>
     );
   }
-
-  if (error) {
-    return (
-      <Sidebar>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-red-400">Error loading clients: {error.message}</p>
-        </div>
-      </Sidebar>
-    );
-  }
-
-  const upcomingLessons = clients.filter((c: any) => c.nextLessonDate).length;
-  const activeWorkouts = clients.filter(
-    (c: any) => c.lastCompletedWorkout
-  ).length;
 
   return (
     <Sidebar>
@@ -141,11 +74,7 @@ export default function Dashboard() {
                       style={{ color: "#ABA4AA" }}
                     >
                       <TrendingUpIcon className="h-4 w-4 md:h-5 md:w-5 text-yellow-400" />
-                      {clients.length > 0
-                        ? `Growing strong with ${clients.length} ${
-                            clients.length === 1 ? "athlete" : "athletes"
-                          }`
-                        : "Ready to build your coaching empire"}
+                      Ready to build your coaching empire
                     </p>
                   </div>
                 </div>
@@ -167,620 +96,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
-          <div
-            className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#3A4040";
-              e.currentTarget.style.borderColor = "#4A5A70";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#353A3A";
-              e.currentTarget.style.borderColor = "#606364";
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-              }}
-            />
-            <div className="relative p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: "#4A5A70" }}
-                >
-                  <Users className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                </div>
-                <TrendingUpIcon className="h-5 w-5 text-green-400" />
-              </div>
-              <div>
-                <p
-                  className="text-sm font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Total Athletes
-                </p>
-                <p
-                  className="text-3xl font-bold mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {clients.length}
-                </p>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                  {clients.length > 0 ? "+2 this month" : "Start your journey"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#3A4040";
-              e.currentTarget.style.borderColor = "#4A5A70";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#353A3A";
-              e.currentTarget.style.borderColor = "#606364";
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
-              }}
-            />
-            <div className="relative p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: "#DC2626" }}
-                >
-                  <Calendar className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                </div>
-                <Clock className="h-5 w-5 text-red-400" />
-              </div>
-              <div>
-                <p
-                  className="text-sm font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Upcoming Lessons
-                </p>
-                <p
-                  className="text-3xl font-bold mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {upcomingLessons}
-                </p>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                  {upcomingLessons > 0 ? "This week" : "Schedule now"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#3A4040";
-              e.currentTarget.style.borderColor = "#4A5A70";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#353A3A";
-              e.currentTarget.style.borderColor = "#606364";
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
-              }}
-            />
-            <div className="relative p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: "#10B981" }}
-                >
-                  <Dumbbell className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                </div>
-                <Activity className="h-5 w-5 text-green-400" />
-              </div>
-              <div>
-                <p
-                  className="text-sm font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Active Programs
-                </p>
-                <p
-                  className="text-3xl font-bold mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {activeWorkouts}
-                </p>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                  {activeWorkouts > 0 ? "In progress" : "Create first"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#3A4040";
-              e.currentTarget.style.borderColor = "#4A5A70";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#353A3A";
-              e.currentTarget.style.borderColor = "#606364";
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)",
-              }}
-            />
-            <div className="relative p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: "#F59E0B" }}
-                >
-                  <BookOpen className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                </div>
-                <Star className="h-5 w-5 text-yellow-400" />
-              </div>
-              <div>
-                <p
-                  className="text-sm font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Library
-                </p>
-                <p
-                  className="text-3xl font-bold mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {stats?.total || 0}
-                </p>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                  Browse Library
-                </p>
-              </div>
-            </div>
-          </div>
+        {/* Week at a Glance */}
+        <div className="mb-6 md:mb-8">
+          <WeekAtAGlance />
         </div>
 
-        {/* Enhanced Quick Actions */}
-        <div
-          className="rounded-2xl shadow-xl border mb-8 relative overflow-hidden group"
-          style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-        >
-          <div
-            className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-            style={{
-              background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-            }}
-          />
-          <div className="relative p-6">
-            <h3
-              className="text-xl font-bold mb-6 flex items-center gap-3"
-              style={{ color: "#C3BCC2" }}
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <TargetIcon className="h-4 w-4" style={{ color: "#C3BCC2" }} />
-              </div>
-              Quick Actions
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                  e.currentTarget.style.borderColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#353A3A";
-                  e.currentTarget.style.borderColor = "#606364";
-                }}
-              >
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover/action:scale-110"
-                  style={{ backgroundColor: "#4A5A70" }}
-                >
-                  <Plus className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-                </div>
-                <span
-                  className="font-medium text-sm md:text-base"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  Add Client
-                </span>
-              </button>
-
-              <Link
-                href="/schedule"
-                className="flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                  e.currentTarget.style.borderColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#353A3A";
-                  e.currentTarget.style.borderColor = "#606364";
-                }}
-              >
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover/action:scale-110"
-                  style={{ backgroundColor: "#DC2626" }}
-                >
-                  <Calendar className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-                </div>
-                <span
-                  className="font-medium text-sm md:text-base"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  Schedule Lesson
-                </span>
-              </Link>
-
-              <Link
-                href="/programs"
-                className="flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                  e.currentTarget.style.borderColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#353A3A";
-                  e.currentTarget.style.borderColor = "#606364";
-                }}
-              >
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover/action:scale-110"
-                  style={{ backgroundColor: "#10B981" }}
-                >
-                  <Dumbbell className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-                </div>
-                <span
-                  className="font-medium text-sm md:text-base"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  Create Program
-                </span>
-              </Link>
-
-              <Link
-                href="/library"
-                className="flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg border group/action"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                  e.currentTarget.style.borderColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#353A3A";
-                  e.currentTarget.style.borderColor = "#606364";
-                }}
-              >
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover/action:scale-110"
-                  style={{ backgroundColor: "#F59E0B" }}
-                >
-                  <BookOpen className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-                </div>
-                <span
-                  className="font-medium text-sm md:text-base"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  Browse Library
-                </span>
-              </Link>
-            </div>
-          </div>
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-2 gap-6">
+          <RecentNotificationsSection />
+          <TodaysScheduleSection />
+          <RecentClientActivitySection />
+          <QuickStatsSection />
         </div>
-
-        {/* Recent Notifications Section */}
-        <RecentNotificationsSection />
-
-        {/* Enhanced Athletes Section - improved mobile layout */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-          <div>
-            <h2
-              className="text-xl md:text-2xl font-bold flex items-center gap-3 mb-2"
-              style={{ color: "#C3BCC2" }}
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Users className="h-4 w-4" style={{ color: "#C3BCC2" }} />
-              </div>
-              Your Athletes
-            </h2>
-            <p
-              className="flex items-center gap-2 text-sm md:text-base"
-              style={{ color: "#ABA4AA" }}
-            >
-              <Clock className="h-4 w-4" />
-              {clients.length} {clients.length === 1 ? "athlete" : "athletes"}{" "}
-              waiting for you
-            </p>
-          </div>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-4 py-3 md:px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium border w-full md:w-auto"
-            style={{
-              backgroundColor: "#353A3A",
-              color: "#C3BCC2",
-              borderColor: "#606364",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#3A4040";
-              e.currentTarget.style.borderColor = "#4A5A70";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#353A3A";
-              e.currentTarget.style.borderColor = "#606364";
-            }}
-          >
-            <Plus className="h-5 w-5" />
-            Add New Athlete
-          </button>
-        </div>
-
-        {/* Enhanced Athletes List */}
-        {clients.length === 0 ? (
-          <div
-            className="rounded-2xl shadow-xl border text-center relative overflow-hidden group"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-          >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-              }}
-            />
-            <div className="relative p-12">
-              <div
-                className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Users className="h-10 w-10" style={{ color: "#C3BCC2" }} />
-              </div>
-              <h3
-                className="text-2xl font-bold mb-3"
-                style={{ color: "#C3BCC2" }}
-              >
-                Ready to Start Coaching?
-              </h3>
-              <p
-                className="mb-8 max-w-md mx-auto text-lg"
-                style={{ color: "#ABA4AA" }}
-              >
-                Add your first athlete to begin building your coaching career
-                and transforming lives.
-              </p>
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium mx-auto border"
-                style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#C3BCC2",
-                  borderColor: "#606364",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#606364";
-                  e.currentTarget.style.boxShadow =
-                    "0 10px 25px rgba(0, 0, 0, 0.3)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 15px rgba(0, 0, 0, 0.2)";
-                }}
-              >
-                <Plus className="h-5 w-5" />
-                Add Your First Athlete
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            {clients.map((client: any, index: number) => (
-              <div
-                key={client.id}
-                className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-                style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
-                  animationDelay: `${index * 100}ms`,
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                  e.currentTarget.style.borderColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#353A3A";
-                  e.currentTarget.style.borderColor = "#606364";
-                }}
-              >
-                <div
-                  className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-                  }}
-                />
-                <div className="relative p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <ProfilePictureUploader
-                      currentAvatarUrl={
-                        client.user?.settings?.avatarUrl || client.avatar
-                      }
-                      userName={client.name}
-                      onAvatarChange={() => {}}
-                      size="md"
-                      readOnly={true}
-                      className="flex-shrink-0"
-                    />
-                    {/* Debug: {client.avatar ? `Avatar: ${client.avatar}` : 'No avatar'} */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
-                        style={{ color: "#ABA4AA" }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.color = "#C3BCC2";
-                          e.currentTarget.style.backgroundColor = "#3A4040";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.color = "#ABA4AA";
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleDeleteClient(client.id, client.name);
-                        }}
-                        disabled={deletingClientId === client.id}
-                        className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
-                        style={{ color: "#ABA4AA" }}
-                        onMouseEnter={e => {
-                          if (!e.currentTarget.disabled) {
-                            e.currentTarget.style.color = "#EF4444";
-                            e.currentTarget.style.backgroundColor = "#3A4040";
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (!e.currentTarget.disabled) {
-                            e.currentTarget.style.color = "#ABA4AA";
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
-                          }
-                        }}
-                      >
-                        {deletingClientId === client.id ? (
-                          <div
-                            className="animate-spin rounded-full h-4 w-4 border-b-2"
-                            style={{ borderColor: "#EF4444" }}
-                          />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <h3
-                      className="text-lg font-bold mb-2"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {client.name}
-                    </h3>
-                    <p className="text-sm mb-3" style={{ color: "#ABA4AA" }}>
-                      Added{" "}
-                      {client.createdAt
-                        ? format(new Date(client.createdAt), "MMM d, yyyy")
-                        : "Recently"}
-                    </p>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div
-                        className="rounded-lg p-3"
-                        style={{ backgroundColor: "#3A4040" }}
-                      >
-                        <p
-                          className="text-xs font-medium mb-1"
-                          style={{ color: "#ABA4AA" }}
-                        >
-                          Next Lesson
-                        </p>
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {client.nextLessonDate
-                            ? format(new Date(client.nextLessonDate), "MMM d")
-                            : "Not scheduled"}
-                        </p>
-                      </div>
-                      <div
-                        className="rounded-lg p-3"
-                        style={{ backgroundColor: "#3A4040" }}
-                      >
-                        <p
-                          className="text-xs font-medium mb-1"
-                          style={{ color: "#ABA4AA" }}
-                        >
-                          Last Workout
-                        </p>
-                        <p
-                          className="text-sm font-semibold truncate"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {client.lastCompletedWorkout || "None"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium`}
-                        style={{
-                          backgroundColor: client.nextLessonDate
-                            ? "#10B981"
-                            : "#3A4040",
-                          color: client.nextLessonDate ? "#DCFCE7" : "#C3BCC2",
-                          borderColor: client.nextLessonDate
-                            ? "#059669"
-                            : "#4A5A70",
-                        }}
-                      >
-                        {client.nextLessonDate ? "🔥 Active" : "💤 Available"}
-                      </span>
-                      <Link
-                        href={`/clients/${client.id}`}
-                        className="flex items-center gap-1 text-xs font-medium group"
-                        style={{ color: "#4A5A70" }}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        View Details
-                        <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform duration-200" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <AddClientModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onAddClient={newClient => {
-            console.log("Client added successfully!");
-          }}
-        />
       </div>
     </Sidebar>
   );
@@ -798,8 +125,8 @@ function RecentNotificationsSection() {
   const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
+      refetchInterval: 60000, // Poll every 60 seconds (reduced from 10 seconds)
+      refetchOnWindowFocus: false, // Disabled to reduce unnecessary calls
       refetchOnReconnect: true,
     }
   );
@@ -811,7 +138,11 @@ function RecentNotificationsSection() {
   return (
     <div
       className="rounded-2xl shadow-xl border mb-8 relative overflow-hidden group"
-      style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+      style={{
+        backgroundColor: "#353A3A",
+        borderColor: "#606364",
+        minHeight: "320px",
+      }}
     >
       <div
         className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
@@ -863,7 +194,7 @@ function RecentNotificationsSection() {
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-1">
                   {notification.type === "CLIENT_JOIN_REQUEST" ? (
-                    <User className="h-4 w-4 text-green-400" />
+                    <Users className="h-4 w-4 text-green-400" />
                   ) : (
                     <Bell className="h-4 w-4 text-gray-400" />
                   )}
@@ -898,6 +229,361 @@ function RecentNotificationsSection() {
                   </div>
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Today's Schedule Section Component
+function TodaysScheduleSection() {
+  const today = new Date();
+  const { data: todaysLessons = [] } =
+    trpc.scheduling.getCoachSchedule.useQuery({
+      month: today.getMonth(),
+      year: today.getFullYear(),
+    });
+
+  // Fetch events (which includes reminders)
+  const { data: events = [] } = trpc.events.getUpcoming.useQuery();
+
+  // Filter lessons for today
+  const todaysLessonsFiltered = todaysLessons.filter((lesson: any) => {
+    const lessonDate = new Date(lesson.date);
+    return lessonDate.toDateString() === today.toDateString();
+  });
+
+  // Filter reminders for today
+  const todaysReminders = events.filter((event: any) => {
+    const eventDate = new Date(event.date);
+    return (
+      eventDate.toDateString() === today.toDateString() &&
+      event.status === "PENDING" &&
+      event.clientId === null
+    );
+  });
+
+  // Combine lessons and reminders, sort by time
+  const todaysSchedule = [
+    ...todaysLessonsFiltered.map((lesson: any) => ({
+      ...lesson,
+      type: "lesson",
+      time: new Date(lesson.date).getTime(),
+    })),
+    ...todaysReminders.map((reminder: any) => ({
+      ...reminder,
+      type: "reminder",
+      time: new Date(reminder.date).getTime(),
+    })),
+  ].sort((a, b) => a.time - b.time);
+
+  return (
+    <div
+      className="rounded-2xl shadow-xl border relative overflow-hidden group"
+      style={{
+        backgroundColor: "#353A3A",
+        borderColor: "#606364",
+        minHeight: "320px",
+      }}
+    >
+      <div
+        className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+        style={{
+          background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+        }}
+      />
+      <div className="relative p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3
+            className="text-xl font-bold flex items-center gap-3"
+            style={{ color: "#C3BCC2" }}
+          >
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#4A5A70" }}
+            >
+              <Calendar className="h-4 w-4" style={{ color: "#C3BCC2" }} />
+            </div>
+            Today's Schedule
+          </h3>
+        </div>
+
+        {todaysSchedule.length > 0 ? (
+          <div className="space-y-3">
+            {todaysSchedule.slice(0, 5).map((item: any, index: number) => (
+              <div
+                key={item.id}
+                className="p-3 rounded-lg border transition-colors"
+                style={{
+                  backgroundColor: "#2A2F2F",
+                  borderColor: "#606364",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {item.type === "lesson" ? (
+                      <Clock className="h-4 w-4 text-blue-400" />
+                    ) : (
+                      <Bell className="h-4 w-4 text-orange-400" />
+                    )}
+                    <div>
+                      <p className="text-white font-medium">
+                        {new Date(item.date).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      <p className="text-gray-400 text-sm">
+                        {item.type === "lesson"
+                          ? item.client?.name || "Unknown Client"
+                          : item.title}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                    style={{
+                      backgroundColor:
+                        item.type === "lesson"
+                          ? item.status === "CONFIRMED"
+                            ? "#10B981"
+                            : "#F59E0B"
+                          : "#F59E0B",
+                      color:
+                        item.type === "lesson"
+                          ? item.status === "CONFIRMED"
+                            ? "#DCFCE7"
+                            : "#FEF3C7"
+                          : "#FEF3C7",
+                    }}
+                  >
+                    {item.type === "lesson" ? item.status : "REMINDER"}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {todaysSchedule.length > 5 && (
+              <p className="text-sm text-gray-400 text-center">
+                +{todaysSchedule.length - 5} more items today
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+            <p className="text-gray-400">No lessons or reminders for today</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Recent Client Activity Section Component
+function RecentClientActivitySection() {
+  const { data: clients = [] } = trpc.clients.list.useQuery({
+    archived: false,
+  });
+
+  // For now, show recent client updates based on lastActivity field
+  // This will show real data when clients have activity
+  const recentActivity = clients
+    .filter((client: any) => client.lastActivity)
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
+    .slice(0, 4)
+    .map((client: any) => ({
+      clientName: client.name,
+      activity: client.lastActivity || "Updated profile",
+      completedAt: client.updatedAt,
+    }));
+
+  return (
+    <div
+      className="rounded-2xl shadow-xl border relative overflow-hidden group"
+      style={{
+        backgroundColor: "#353A3A",
+        borderColor: "#606364",
+        minHeight: "320px",
+      }}
+    >
+      <div
+        className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+        style={{
+          background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+        }}
+      />
+      <div className="relative p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3
+            className="text-xl font-bold flex items-center gap-3"
+            style={{ color: "#C3BCC2" }}
+          >
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#4A5A70" }}
+            >
+              <Activity className="h-4 w-4" style={{ color: "#C3BCC2" }} />
+            </div>
+            Recent Activity
+          </h3>
+        </div>
+
+        {recentActivity.length > 0 ? (
+          <div className="space-y-3">
+            {recentActivity.slice(0, 4).map((activity: any, index: number) => (
+              <div
+                key={`${activity.clientName}-${activity.completedAt}-${index}`}
+                className="p-3 rounded-lg border transition-colors"
+                style={{
+                  backgroundColor: "#2A2F2F",
+                  borderColor: "#606364",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#4A5A70" }}
+                  >
+                    <UserCheck
+                      className="h-4 w-4"
+                      style={{ color: "#C3BCC2" }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white font-medium text-sm">
+                      {activity.clientName}
+                    </p>
+                    <p className="text-gray-400 text-xs">{activity.activity}</p>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {new Date(activity.completedAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Activity className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+            <p className="text-gray-400">No recent activity</p>
+            <p className="text-gray-500 text-xs mt-1">
+              Clients need to complete drills to show activity
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Quick Stats Section Component
+function QuickStatsSection() {
+  const { data: clients = [] } = trpc.clients.list.useQuery({
+    archived: false,
+  });
+
+  const today = new Date();
+  const { data: todaysLessons = [] } =
+    trpc.scheduling.getCoachSchedule.useQuery({
+      month: today.getMonth(),
+      year: today.getFullYear(),
+    });
+
+  // Fetch events and programs for analytics
+  const { data: events = [] } = trpc.events.getUpcoming.useQuery();
+  const { data: programs = [] } = trpc.programs.list.useQuery();
+  const { data: analyticsData } = trpc.analytics.getDashboardData.useQuery({
+    timeRange: "30d",
+  });
+
+  // Calculate total lessons (all time)
+  const totalLessons = todaysLessons.length;
+
+  // Calculate analytics - total programs created
+  const totalPrograms = programs.length;
+
+  // Get completion rate from analytics data
+  const completionRate = analyticsData?.completionRate || 0;
+
+  const stats = [
+    {
+      label: "Active Clients",
+      value: clients.length,
+      icon: Users,
+      color: "#3B82F6", // Blue
+    },
+    {
+      label: "Scheduled Lessons",
+      value: totalLessons,
+      icon: Clock,
+      color: "#10B981", // Green
+    },
+    {
+      label: "Programs Created",
+      value: totalPrograms,
+      icon: Target,
+      color: "#8B5CF6", // Purple
+    },
+    {
+      label: "Completion Rate",
+      value: `${completionRate}%`,
+      icon: TrendingUpIcon,
+      color: "#F59E0B", // Yellow
+    },
+  ];
+
+  return (
+    <div
+      className="rounded-2xl shadow-xl border relative overflow-hidden group"
+      style={{
+        backgroundColor: "#353A3A",
+        borderColor: "#606364",
+        minHeight: "320px",
+      }}
+    >
+      <div
+        className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+        style={{
+          background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+        }}
+      />
+      <div className="relative p-6">
+        <h3
+          className="text-xl font-bold flex items-center gap-3 mb-6"
+          style={{ color: "#C3BCC2" }}
+        >
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: "#4A5A70" }}
+          >
+            <BarChart3 className="h-4 w-4" style={{ color: "#C3BCC2" }} />
+          </div>
+          Quick Stats
+        </h3>
+
+        <div className="grid grid-cols-2 gap-4">
+          {stats.map((stat, index) => (
+            <div
+              key={index}
+              className="p-4 rounded-lg border text-center"
+              style={{
+                backgroundColor: "#2A2F2F",
+                borderColor: "#606364",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2"
+                style={{ backgroundColor: stat.color + "20" }}
+              >
+                <stat.icon className="h-5 w-5" style={{ color: stat.color }} />
+              </div>
+              <p className="text-2xl font-bold text-white mb-1">{stat.value}</p>
+              <p className="text-xs text-gray-400">{stat.label}</p>
             </div>
           ))}
         </div>

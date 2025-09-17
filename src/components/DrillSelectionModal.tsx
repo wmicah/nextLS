@@ -124,7 +124,7 @@ export default function DrillSelectionModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] overflow-y-auto bg-[#2A3133] border-gray-600">
         <DialogHeader>
           <div className="flex items-center justify-between">

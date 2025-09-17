@@ -76,10 +76,10 @@ import { CSS } from "@dnd-kit/utilities";
 // Types
 type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 
-interface ProgramItem {
+export interface ProgramItem {
   id: string;
   title: string;
-  type?: "exercise" | "drill" | "video" | "routine" | "rest";
+  type?: "exercise" | "drill" | "video" | "routine" | "superset" | "rest";
   description?: string;
   notes?: string;
   sets?: number;
@@ -102,7 +102,7 @@ interface Routine {
   exercises: ProgramItem[];
 }
 
-interface Week {
+export interface Week {
   id: string;
   name: string; // "Week 1", "Week 2", etc.
   days: Record<DayKey, ProgramItem[]>;
@@ -615,8 +615,10 @@ function ProgramBuilder({
             // Set both items as part of the same superset
             item.supersetId = supersetGroupId;
             item.supersetOrder = 1;
+            item.type = "superset";
             superset.supersetId = supersetGroupId;
             superset.supersetOrder = 2;
+            superset.type = "superset";
 
             return { ...week, days: updatedDays };
           }
@@ -647,6 +649,7 @@ function ProgramBuilder({
             supersetItems.forEach(supersetItem => {
               supersetItem.supersetId = undefined;
               supersetItem.supersetOrder = undefined;
+              supersetItem.type = "exercise"; // Reset to default type
             });
 
             return { ...week, days: updatedDays };
@@ -914,7 +917,7 @@ function ProgramBuilder({
 
       {/* Superset Modal */}
       <Dialog open={isSupersetModalOpen} onOpenChange={setIsSupersetModalOpen}>
-        <DialogContent className="bg-[#2A3133] border-gray-600">
+        <DialogContent className="bg-[#2A3133] border-gray-600 z-[120]">
           <DialogHeader>
             <DialogTitle className="text-white">Create Superset</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -972,7 +975,7 @@ function ProgramBuilder({
         open={isCreateRoutineModalOpen}
         onOpenChange={setIsCreateRoutineModalOpen}
       >
-        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-4xl">
+        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-4xl z-[110]">
           <DialogHeader>
             <DialogTitle className="text-white">Create New Routine</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -1214,7 +1217,7 @@ function ProgramBuilder({
         open={isAddRoutineModalOpen}
         onOpenChange={setIsAddRoutineModalOpen}
       >
-        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-2xl">
+        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-2xl z-[120]">
           <DialogHeader>
             <DialogTitle className="text-white">Add Routine to Day</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -1501,7 +1504,40 @@ function DayCard({
 }: DayCardProps) {
   // Filter out rest day items and check if it's a rest day
   const nonRestItems = items.filter(item => item.type !== "rest");
-  const isRestDay = nonRestItems.length === 0;
+
+  // Create a local getSupersetGroups function that works with the local items array
+  const getLocalSupersetGroups = useCallback(() => {
+    const groups: { [key: string]: ProgramItem[] } = {};
+    nonRestItems.forEach(item => {
+      if (item.supersetId) {
+        if (!groups[item.supersetId]) {
+          groups[item.supersetId] = [];
+        }
+        groups[item.supersetId].push(item);
+      }
+    });
+    return Object.values(groups).map((items, index) => ({
+      name: `Superset ${index + 1}`,
+      items: items.sort(
+        (a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)
+      ),
+    }));
+  }, [nonRestItems]);
+
+  // For supersets, only show the first item in each group to avoid duplicates
+  const filteredItems = nonRestItems.filter(item => {
+    if (item.supersetId) {
+      // Find the superset group using local function
+      const supersetGroup = getLocalSupersetGroups().find(group =>
+        group.items.some(groupItem => groupItem.id === item.id)
+      );
+      // Only show the first item in the superset group
+      return supersetGroup && supersetGroup.items[0]?.id === item.id;
+    }
+    return true;
+  });
+
+  const isRestDay = filteredItems.length === 0;
 
   // Create sensors outside of conditional rendering
   const daySensors = useSensors(
@@ -1543,13 +1579,15 @@ function DayCard({
               onDragEnd={event => {
                 const { active, over } = event;
                 if (over && active.id !== over.id) {
-                  const oldIndex = nonRestItems.findIndex(
+                  const oldIndex = filteredItems.findIndex(
                     item => item.id === active.id
                   );
-                  const newIndex = nonRestItems.findIndex(
+                  const newIndex = filteredItems.findIndex(
                     item => item.id === over.id
                   );
                   if (oldIndex !== -1 && newIndex !== -1) {
+                    // For reordering, we need to work with the original items array
+                    // but maintain the superset grouping
                     const newItems = arrayMove(
                       nonRestItems,
                       oldIndex,
@@ -1562,11 +1600,11 @@ function DayCard({
               }}
             >
               <SortableContext
-                items={nonRestItems.map(item => item.id)}
+                items={filteredItems.map(item => item.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-2">
-                  {nonRestItems.map(item => (
+                  {filteredItems.map(item => (
                     <SortableDrillItem
                       key={item.id}
                       item={item}
@@ -1576,7 +1614,7 @@ function DayCard({
                       routines={routines}
                       onCreateSuperset={onCreateSuperset}
                       onRemoveSuperset={onRemoveSuperset}
-                      getSupersetGroups={getSupersetGroups}
+                      getSupersetGroups={getLocalSupersetGroups}
                     />
                   ))}
                 </div>
@@ -1652,6 +1690,22 @@ function SortableDrillItem({
   const isRoutine = item.type === "routine";
   const isSuperset = item.supersetId !== undefined;
 
+  // Get superset group if this is a superset
+  const supersetGroup = isSuperset
+    ? getSupersetGroups().find(group =>
+        group.items.some(groupItem => groupItem.id === item.id)
+      )
+    : null;
+
+  // For supersets, only render the first item in the group to avoid duplicates
+  const isFirstInSuperset =
+    isSuperset && supersetGroup && supersetGroup.items[0]?.id === item.id;
+
+  // Don't render if this is a superset but not the first item
+  if (isSuperset && !isFirstInSuperset) {
+    return null;
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -1693,45 +1747,40 @@ function SortableDrillItem({
 
         {/* Item content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-white truncate">
-              {item.title}
-            </span>
-          </div>
+          {/* For supersets, show both titles stacked */}
+          {isSuperset && supersetGroup ? (
+            <div className="space-y-1">
+              {supersetGroup.items.map((supersetItem, index) => (
+                <div key={supersetItem.id} className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-white truncate">
+                    {supersetItem.title}
+                  </span>
+                  {index === 0 && (
+                    <span className="text-xs text-purple-300 font-medium">
+                      +
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium text-white truncate">
+                {item.title}
+              </span>
+            </div>
+          )}
 
-          {/* Exercise details in horizontal layout */}
-          <div className="flex flex-wrap gap-2 text-xs text-gray-300 mb-2">
-            {item.sets && (
-              <span className="px-2 py-1 bg-gray-700/50 rounded">
-                Sets: {item.sets}
-              </span>
-            )}
-            {item.reps && (
-              <span className="px-2 py-1 bg-gray-700/50 rounded">
-                Reps: {item.reps}
-              </span>
-            )}
-            {item.tempo && (
-              <span className="px-2 py-1 bg-gray-700/50 rounded">
-                Tempo: {item.tempo}
-              </span>
-            )}
-            {item.duration && (
-              <span className="px-2 py-1 bg-gray-700/50 rounded flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {item.duration}
-              </span>
-            )}
-          </div>
-
-          {/* Notes */}
-          {item.notes && (
-            <p className="text-xs text-gray-400 line-clamp-2">{item.notes}</p>
+          {/* Notes - show notes from first item in superset */}
+          {(isSuperset ? supersetGroup?.items[0]?.notes : item.notes) && (
+            <p className="text-xs text-gray-400 line-clamp-2">
+              {isSuperset ? supersetGroup?.items[0]?.notes : item.notes}
+            </p>
           )}
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1">
           {/* Superset Chain Link Button */}
           {!item.supersetId ? (
             <Button
@@ -1773,6 +1822,25 @@ function SortableDrillItem({
           </Button>
         </div>
       </div>
+
+      {/* Exercise details at bottom - use first item's data for supersets */}
+      {(() => {
+        const displayItem = isSuperset ? supersetGroup?.items[0] : item;
+        const details = [
+          displayItem?.sets && `${displayItem.sets}s`,
+          displayItem?.reps && `${displayItem.reps}r`,
+          displayItem?.tempo && displayItem.tempo,
+          displayItem?.duration && displayItem.duration,
+        ].filter(Boolean);
+
+        return (
+          details.length > 0 && (
+            <div className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-600/50">
+              {details.join(" • ")}
+            </div>
+          )
+        );
+      })()}
     </div>
   );
 }
@@ -1979,111 +2047,150 @@ function VideoDetailsDialog({
     });
   };
 
+  const handleQuickAdd = () => {
+    // Add video with default values - no modal needed
+    onSubmit({
+      notes: "",
+      sets: 3,
+      reps: 10,
+      tempo: "",
+    });
+  };
+
   if (!video) return null;
 
-  console.log("VideoDetailsDialog rendering with video:", video);
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-800 border-gray-600 text-white z-[100]">
+    <Dialog open={isOpen} onOpenChange={() => {}}>
+      <DialogContent className="bg-[#2A3133] border-gray-600 text-white z-[110] max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Video Details</DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Add optional details for {video.title}
+          <DialogTitle className="text-white text-lg">Add Video</DialogTitle>
+          <DialogDescription className="text-gray-400 text-sm">
+            {video.title}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="notes" className="text-white">
-              Notes (Optional)
-            </Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={e =>
-                setFormData(prev => ({ ...prev, notes: e.target.value }))
-              }
-              className="bg-gray-700 border-gray-600 text-white"
-              placeholder="Additional instructions or notes..."
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Label htmlFor="sets" className="text-white">
-                Sets (Optional)
-              </Label>
-              <Input
-                id="sets"
-                type="number"
-                value={formData.sets || ""}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    sets: e.target.value ? parseInt(e.target.value) : undefined,
-                  }))
-                }
-                className="bg-gray-700 border-gray-600 text-white"
-                placeholder="3"
-                min="1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="reps" className="text-white">
-                Reps (Optional)
-              </Label>
-              <Input
-                id="reps"
-                type="number"
-                value={formData.reps || ""}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    reps: e.target.value ? parseInt(e.target.value) : undefined,
-                  }))
-                }
-                className="bg-gray-700 border-gray-600 text-white"
-                placeholder="10"
-                min="1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="tempo" className="text-white">
-                Tempo (Optional)
-              </Label>
-              <Input
-                id="tempo"
-                value={formData.tempo}
-                onChange={e =>
-                  setFormData(prev => ({ ...prev, tempo: e.target.value }))
-                }
-                className="bg-gray-700 border-gray-600 text-white"
-                placeholder="2-0-2"
-              />
+        <div className="space-y-4">
+          {/* Quick Add Option */}
+          <div className="p-3 bg-[#353A3A] rounded-lg border border-gray-600">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white text-sm font-medium">Quick Add</p>
+                <p className="text-gray-400 text-xs">
+                  Add with default settings (3 sets, 10 reps)
+                </p>
+              </div>
+              <Button
+                onClick={handleQuickAdd}
+                className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1"
+              >
+                Add Now
+              </Button>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Add Video
-            </Button>
-          </DialogFooter>
-        </form>
+          {/* Custom Settings */}
+          <div className="border-t border-gray-600 pt-4">
+            <p className="text-white text-sm font-medium mb-3">
+              Custom Settings (Optional)
+            </p>
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label htmlFor="sets" className="text-gray-400 text-xs">
+                    Sets
+                  </Label>
+                  <Input
+                    id="sets"
+                    type="number"
+                    value={formData.sets || ""}
+                    onChange={e =>
+                      setFormData(prev => ({
+                        ...prev,
+                        sets: e.target.value
+                          ? parseInt(e.target.value)
+                          : undefined,
+                      }))
+                    }
+                    className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
+                    placeholder="3"
+                    min="1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="reps" className="text-gray-400 text-xs">
+                    Reps
+                  </Label>
+                  <Input
+                    id="reps"
+                    type="number"
+                    value={formData.reps || ""}
+                    onChange={e =>
+                      setFormData(prev => ({
+                        ...prev,
+                        reps: e.target.value
+                          ? parseInt(e.target.value)
+                          : undefined,
+                      }))
+                    }
+                    className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
+                    placeholder="10"
+                    min="1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tempo" className="text-gray-400 text-xs">
+                    Tempo
+                  </Label>
+                  <Input
+                    id="tempo"
+                    value={formData.tempo}
+                    onChange={e =>
+                      setFormData(prev => ({ ...prev, tempo: e.target.value }))
+                    }
+                    className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
+                    placeholder="2-0-2"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="notes" className="text-gray-400 text-xs">
+                  Notes
+                </Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={e =>
+                    setFormData(prev => ({ ...prev, notes: e.target.value }))
+                  }
+                  className="bg-[#353A3A] border-gray-600 text-white text-sm resize-none"
+                  placeholder="Additional instructions..."
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white text-sm flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm flex-1"
+                >
+                  Add Custom
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

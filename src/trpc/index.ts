@@ -3544,16 +3544,145 @@ export const appRouter = router({
       const user = await getUser();
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-      // Example: Fetch upcoming events for the client
-      // Replace with your actual logic
-      return await db.event.findMany({
-        where: {
-          clientId: user.id, // Changed from userId to clientId
-          date: { gte: new Date() },
-        },
-        orderBy: { date: "asc" },
+      // Get user role to determine query
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id },
+        select: { role: true },
       });
+
+      if (!dbUser) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      if (dbUser.role === "COACH") {
+        // For coaches, get all events they're coaching
+        return await db.event.findMany({
+          where: {
+            coachId: user.id,
+            date: { gte: new Date() },
+          },
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { date: "asc" },
+        });
+      } else {
+        // For clients, get their events
+        return await db.event.findMany({
+          where: {
+            clientId: user.id,
+            date: { gte: new Date() },
+          },
+          include: {
+            coach: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { date: "asc" },
+        });
+      }
     }),
+
+    createReminder: publicProcedure
+      .input(
+        z.object({
+          title: z.string().min(1, "Title is required"),
+          description: z.string().optional(),
+          date: z.string(),
+          time: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can create reminders",
+          });
+        }
+
+        // Combine date and time into a single Date object
+        const dateStr = input.date;
+        const timeStr = input.time;
+
+        // Parse the time string (e.g., "14:30")
+        const [hours, minutes] = timeStr.split(":").map(Number);
+
+        // Create date in local timezone to avoid timezone issues
+        const reminderDate = new Date(dateStr + "T" + timeStr + ":00");
+
+        // Create the reminder event
+        const reminder = await db.event.create({
+          data: {
+            title: input.title,
+            description: input.description || "",
+            date: reminderDate,
+            status: "PENDING",
+            coachId: user.id,
+          },
+        });
+
+        return reminder;
+      }),
+
+    deleteEvent: publicProcedure
+      .input(z.object({ eventId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can delete events",
+          });
+        }
+
+        // Find the event and verify ownership
+        const event = await db.event.findFirst({
+          where: {
+            id: input.eventId,
+            coachId: user.id,
+          },
+        });
+
+        if (!event) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message:
+              "Event not found or you don't have permission to delete it",
+          });
+        }
+
+        // Delete the event
+        await db.event.delete({
+          where: { id: input.eventId },
+        });
+
+        return { success: true };
+      }),
 
     createConfirmationToken: publicProcedure
       .input(z.object({ lessonId: z.string() }))
@@ -3596,6 +3725,13 @@ export const appRouter = router({
         const { createLessonToken } = await import("@/lib/jwt");
 
         // Create the confirmation token
+        if (!lesson.clientId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Lesson must have a client to create confirmation token",
+          });
+        }
+
         const token = await createLessonToken({
           lessonId: lesson.id,
           clientId: lesson.clientId,
@@ -4381,6 +4517,8 @@ export const appRouter = router({
                       sets: z.number().optional(),
                       reps: z.number().optional(),
                       tempo: z.string().optional(),
+                      supersetId: z.string().optional(),
+                      supersetOrder: z.number().optional(),
                     })
                   ),
                 })
@@ -4442,6 +4580,8 @@ export const appRouter = router({
                           sets: drill.sets || null, // Optional field, set to null if not provided
                           reps: drill.reps || null, // Optional field, set to null if not provided
                           tempo: drill.tempo || null, // Optional field, set to null if not provided
+                          supersetId: drill.supersetId || null,
+                          supersetOrder: drill.supersetOrder || null,
                         })),
                       },
                     };
@@ -4560,6 +4700,8 @@ export const appRouter = router({
                         videoTitle: z.string().optional(),
                         videoThumbnail: z.string().optional(),
                         routineId: z.string().optional(),
+                        supersetId: z.string().optional(),
+                        supersetOrder: z.number().optional(),
                       })
                     ),
                   })
@@ -4662,6 +4804,8 @@ export const appRouter = router({
                       videoTitle: drill.videoTitle,
                       videoThumbnail: drill.videoThumbnail,
                       routineId: drill.routineId,
+                      supersetId: drill.supersetId,
+                      supersetOrder: drill.supersetOrder,
                     },
                   });
                 }
@@ -9281,7 +9425,7 @@ export const appRouter = router({
           where: { id: lesson.id },
           data: {
             title: `Lesson with ${
-              lesson.client.name || lesson.client.email || "Client"
+              lesson.client?.name || lesson.client?.email || "Client"
             }`,
           },
         })
@@ -9348,13 +9492,13 @@ export const appRouter = router({
           data: {
             status: "CONFIRMED",
             title: `Lesson with ${
-              event.client.name || event.client.email || "Client"
+              event.client?.name || event.client?.email || "Client"
             }`,
           },
         });
 
         // Create notification for the client
-        if (event.client.userId) {
+        if (event.client?.userId) {
           await db.notification.create({
             data: {
               userId: event.client.userId,
@@ -9433,7 +9577,7 @@ export const appRouter = router({
         });
 
         // Create notification for the client
-        if (event.client.userId) {
+        if (event.client?.userId) {
           await db.notification.create({
             data: {
               userId: event.client.userId,

@@ -81,7 +81,7 @@ type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 interface ProgramBuilderItem {
   id: string;
   title: string;
-  type?: "exercise" | "drill" | "video" | "routine" | "rest";
+  type?: "exercise" | "drill" | "video" | "routine" | "superset" | "rest";
   notes?: string;
   sets?: number;
   reps?: number;
@@ -92,6 +92,7 @@ interface ProgramBuilderItem {
   videoTitle?: string;
   videoThumbnail?: string;
   routineId?: string;
+  supersetId?: string;
 }
 
 interface ProgramBuilderWeek {
@@ -430,38 +431,55 @@ function CreateProgramModalContent({
         weekNumber: weekIndex + 1,
         title: builderWeek.name,
         description: "",
-        days: Object.entries(builderWeek.days).map(
-          ([dayKey, items], dayIndex) => {
-            // If the day has no items, make it a rest day
-            if (items.length === 0) {
-              return {
-                dayNumber: dayIndex + 1,
-                title: "Rest Day",
-                description: "Recovery and rest day",
-                drills: [], // No drills for rest days
-              };
-            }
+        days: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map(dayKey => {
+          const items =
+            builderWeek.days[dayKey as keyof typeof builderWeek.days];
+          const dayNumber =
+            dayKey === "sun"
+              ? 1
+              : dayKey === "mon"
+              ? 2
+              : dayKey === "tue"
+              ? 3
+              : dayKey === "wed"
+              ? 4
+              : dayKey === "thu"
+              ? 5
+              : dayKey === "fri"
+              ? 6
+              : 7;
 
-            // Convert items to drills format
+          // If the day has no items, make it a rest day
+          if (items.length === 0) {
             return {
-              dayNumber: dayIndex + 1,
-              title: `Day ${dayIndex + 1}`,
-              description: "",
-              drills: items.map((item, itemIndex) => ({
-                order: itemIndex + 1,
-                title: item.title,
-                description: item.notes || "",
-                duration: item.duration || "",
-                videoUrl: item.videoUrl || "",
-                notes: item.notes || "",
-                type: item.type || "exercise",
-                sets: item.sets,
-                reps: item.reps,
-                tempo: item.tempo || "",
-              })),
+              dayNumber,
+              title: "Rest Day",
+              description: "Recovery and rest day",
+              drills: [], // No drills for rest days
             };
           }
-        ),
+
+          // Convert items to drills format
+          return {
+            dayNumber,
+            title: `Day ${dayNumber}`,
+            description: "",
+            drills: items.map((item, itemIndex) => ({
+              order: itemIndex + 1,
+              title: item.title,
+              description: item.notes || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              routineId: item.routineId,
+              supersetId: item.supersetId,
+            })),
+          };
+        }),
       })
     );
 
@@ -719,7 +737,7 @@ function CreateProgramModalContent({
               <div className="border border-gray-600 rounded-lg overflow-hidden">
                 <ProgramBuilder
                   onSave={handleProgramBuilderSave}
-                  initialWeeks={programBuilderWeeks}
+                  initialWeeks={programBuilderWeeks as any}
                   programDetails={undefined}
                   onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
                   selectedVideoFromLibrary={selectedVideoFromLibrary}

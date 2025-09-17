@@ -72,24 +72,16 @@ export default function VideoLibraryDialog({
     return matchesSearch;
   });
 
-  // Close dialog on escape key
+  // Handle body overflow when dialog is open
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
-
     if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
       document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "unset";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // Reset search when dialog opens
   useEffect(() => {
@@ -113,12 +105,7 @@ export default function VideoLibraryDialog({
         backgroundColor: "rgba(0, 0, 0, 0.75)",
         backdropFilter: "blur(4px)",
       }}
-      onClick={e => {
-        // Only close if clicking directly on the backdrop, not on child elements
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+      // Removed click-outside-to-close behavior - only close via X button
     >
       <div
         className="w-full max-w-4xl bg-[#2A3133] rounded-xl border border-gray-600 shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"

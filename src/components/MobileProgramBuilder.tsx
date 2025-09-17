@@ -81,7 +81,7 @@ type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 interface ProgramItem {
   id: string;
   title: string;
-  type?: "exercise" | "drill" | "video" | "routine" | "rest";
+  type?: "exercise" | "drill" | "video" | "routine" | "superset" | "rest";
   description?: string;
   notes?: string;
   sets?: number;
@@ -1443,7 +1443,40 @@ function MobileDayCard({
   onOpenAddRoutine,
 }: MobileDayCardProps) {
   const nonRestItems = items.filter(item => item.type !== "rest");
-  const isRestDay = nonRestItems.length === 0;
+
+  // Create a local getSupersetGroups function that works with the local items array
+  const getLocalSupersetGroups = useCallback(() => {
+    const groups: { [key: string]: ProgramItem[] } = {};
+    nonRestItems.forEach(item => {
+      if (item.supersetId) {
+        if (!groups[item.supersetId]) {
+          groups[item.supersetId] = [];
+        }
+        groups[item.supersetId].push(item);
+      }
+    });
+    return Object.values(groups).map((items, index) => ({
+      name: `Superset ${index + 1}`,
+      items: items.sort(
+        (a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)
+      ),
+    }));
+  }, [nonRestItems]);
+
+  // For supersets, only show the first item in each group to avoid duplicates
+  const filteredItems = nonRestItems.filter(item => {
+    if (item.supersetId) {
+      // Find the superset group using local function
+      const supersetGroup = getLocalSupersetGroups().find(group =>
+        group.items.some(groupItem => groupItem.id === item.id)
+      );
+      // Only show the first item in the superset group
+      return supersetGroup && supersetGroup.items[0]?.id === item.id;
+    }
+    return true;
+  });
+
+  const isRestDay = filteredItems.length === 0;
 
   // Create sensors outside of conditional rendering
   const daySensors = useSensors(
@@ -1485,10 +1518,10 @@ function MobileDayCard({
               onDragEnd={event => {
                 const { active, over } = event;
                 if (over && active.id !== over.id) {
-                  const oldIndex = nonRestItems.findIndex(
+                  const oldIndex = filteredItems.findIndex(
                     item => item.id === active.id
                   );
-                  const newIndex = nonRestItems.findIndex(
+                  const newIndex = filteredItems.findIndex(
                     item => item.id === over.id
                   );
                   if (oldIndex !== -1 && newIndex !== -1) {
@@ -1503,11 +1536,11 @@ function MobileDayCard({
               }}
             >
               <SortableContext
-                items={nonRestItems.map(item => item.id)}
+                items={filteredItems.map(item => item.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-2">
-                  {nonRestItems.map(item => (
+                  {filteredItems.map(item => (
                     <MobileSortableDrillItem
                       key={item.id}
                       item={item}
@@ -1517,7 +1550,7 @@ function MobileDayCard({
                       routines={routines}
                       onCreateSuperset={onCreateSuperset}
                       onRemoveSuperset={onRemoveSuperset}
-                      getSupersetGroups={getSupersetGroups}
+                      getSupersetGroups={getLocalSupersetGroups}
                     />
                   ))}
                 </div>
@@ -1593,6 +1626,22 @@ function MobileSortableDrillItem({
   const isRoutine = item.type === "routine";
   const isSuperset = item.supersetId !== undefined;
 
+  // Get superset group if this is a superset
+  const supersetGroup = isSuperset
+    ? getSupersetGroups().find(group =>
+        group.items.some(groupItem => groupItem.id === item.id)
+      )
+    : null;
+
+  // For supersets, only render the first item in the group to avoid duplicates
+  const isFirstInSuperset =
+    isSuperset && supersetGroup && supersetGroup.items[0]?.id === item.id;
+
+  // Don't render if this is a superset but not the first item
+  if (isSuperset && !isFirstInSuperset) {
+    return null;
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -1634,36 +1683,59 @@ function MobileSortableDrillItem({
 
         {/* Item content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-[#C3BCC2] break-words">
-              {item.title}
-            </span>
-          </div>
+          {/* For supersets, show both titles stacked */}
+          {isSuperset && supersetGroup ? (
+            <div className="space-y-1 mb-2">
+              {supersetGroup.items.map((supersetItem, index) => (
+                <div key={supersetItem.id} className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-[#C3BCC2] break-words">
+                    {supersetItem.title}
+                  </span>
+                  {index === 0 && (
+                    <span className="text-xs text-purple-300 font-medium">
+                      +
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium text-[#C3BCC2] break-words">
+                {item.title}
+              </span>
+            </div>
+          )}
 
-          {/* Exercise details */}
-          <div className="flex flex-wrap gap-1 text-xs text-[#ABA4AA] mb-2">
-            {item.sets && (
-              <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
-                Sets: {item.sets}
-              </span>
-            )}
-            {item.reps && (
-              <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
-                Reps: {item.reps}
-              </span>
-            )}
-            {item.tempo && (
-              <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
-                Tempo: {item.tempo}
-              </span>
-            )}
-            {item.duration && (
-              <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {item.duration}
-              </span>
-            )}
-          </div>
+          {/* Exercise details - use first item's data for supersets */}
+          {(() => {
+            const displayItem = isSuperset ? supersetGroup?.items[0] : item;
+            return (
+              <div className="flex flex-wrap gap-1 text-xs text-[#ABA4AA] mb-2">
+                {displayItem?.sets && (
+                  <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
+                    Sets: {displayItem.sets}
+                  </span>
+                )}
+                {displayItem?.reps && (
+                  <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
+                    Reps: {displayItem.reps}
+                  </span>
+                )}
+                {displayItem?.tempo && (
+                  <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
+                    Tempo: {displayItem.tempo}
+                  </span>
+                )}
+                {displayItem?.duration && (
+                  <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {displayItem.duration}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Notes */}
           {item.notes && (
@@ -1767,7 +1839,7 @@ function VideoDetailsDialog({
   if (!video) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] z-[100]">
         <DialogHeader>
           <DialogTitle>Add Video Details</DialogTitle>

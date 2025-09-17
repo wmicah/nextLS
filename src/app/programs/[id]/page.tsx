@@ -6,35 +6,16 @@ import { trpc } from "@/app/_trpc/client";
 import { ArrowLeft, Save, Plus } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import ProgramBuilder from "@/components/ProgramBuilder";
+import type {
+  Week as ProgramBuilderWeek,
+  ProgramItem as ProgramBuilderItem,
+} from "@/components/ProgramBuilder";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
 // Types for ProgramBuilder integration
 type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
-
-interface ProgramBuilderItem {
-  id: string;
-  title: string;
-  type?: "exercise" | "drill" | "video" | "routine" | "rest";
-  notes?: string;
-  sets?: number;
-  reps?: number;
-  tempo?: string;
-  duration?: string;
-  videoUrl?: string;
-  videoId?: string;
-  videoTitle?: string;
-  videoThumbnail?: string;
-  routineId?: string;
-}
-
-interface ProgramBuilderWeek {
-  id: string;
-  name: string;
-  days: Record<DayKey, ProgramBuilderItem[]>;
-  collapsed?: boolean;
-}
 
 function ProgramEditorPageContent() {
   const params = useParams();
@@ -115,31 +96,16 @@ function ProgramEditorPageContent() {
           days: {
             sun:
               week.days
-                .find(d => d.dayNumber === 7)
-                ?.drills?.map(drill => ({
-                  id: drill.id,
-                  title: drill.title,
-                  type:
-                    (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.description || drill.notes || "",
-                  sets: drill.sets || undefined,
-                  reps: drill.reps || undefined,
-                  tempo: drill.tempo || "",
-                  duration: drill.duration || "",
-                  videoUrl: drill.videoUrl || "",
-                  videoId: drill.videoId || "",
-                  videoTitle: drill.videoTitle || "",
-                  videoThumbnail: drill.videoThumbnail || "",
-                  routineId: drill.routineId || undefined,
-                })) || [],
-            mon:
-              week.days
                 .find(d => d.dayNumber === 1)
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type:
-                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  type: drill.routineId
+                    ? "routine"
+                    : drill.supersetId
+                    ? "superset"
+                    : (drill.type as "exercise" | "drill" | "video") ||
+                      undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -150,15 +116,20 @@ function ProgramEditorPageContent() {
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
+                  supersetId: drill.supersetId || undefined,
                 })) || [],
-            tue:
+            mon:
               week.days
                 .find(d => d.dayNumber === 2)
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type:
-                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  type: drill.routineId
+                    ? "routine"
+                    : drill.supersetId
+                    ? "superset"
+                    : (drill.type as "exercise" | "drill" | "video") ||
+                      undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -169,15 +140,20 @@ function ProgramEditorPageContent() {
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
+                  supersetId: drill.supersetId || undefined,
                 })) || [],
-            wed:
+            tue:
               week.days
                 .find(d => d.dayNumber === 3)
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type:
-                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  type: drill.routineId
+                    ? "routine"
+                    : drill.supersetId
+                    ? "superset"
+                    : (drill.type as "exercise" | "drill" | "video") ||
+                      undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -188,15 +164,20 @@ function ProgramEditorPageContent() {
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
+                  supersetId: drill.supersetId || undefined,
                 })) || [],
-            thu:
+            wed:
               week.days
                 .find(d => d.dayNumber === 4)
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type:
-                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  type: drill.routineId
+                    ? "routine"
+                    : drill.supersetId
+                    ? "superset"
+                    : (drill.type as "exercise" | "drill" | "video") ||
+                      undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -207,15 +188,20 @@ function ProgramEditorPageContent() {
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
+                  supersetId: drill.supersetId || undefined,
                 })) || [],
-            fri:
+            thu:
               week.days
                 .find(d => d.dayNumber === 5)
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type:
-                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  type: drill.routineId
+                    ? "routine"
+                    : drill.supersetId
+                    ? "superset"
+                    : (drill.type as "exercise" | "drill" | "video") ||
+                      undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -226,15 +212,20 @@ function ProgramEditorPageContent() {
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
+                  supersetId: drill.supersetId || undefined,
                 })) || [],
-            sat:
+            fri:
               week.days
                 .find(d => d.dayNumber === 6)
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type:
-                    (drill.type as "exercise" | "drill" | "video") || undefined,
+                  type: drill.routineId
+                    ? "routine"
+                    : drill.supersetId
+                    ? "superset"
+                    : (drill.type as "exercise" | "drill" | "video") ||
+                      undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -245,6 +236,31 @@ function ProgramEditorPageContent() {
                   videoTitle: drill.videoTitle || "",
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
+                  supersetId: drill.supersetId || undefined,
+                })) || [],
+            sat:
+              week.days
+                .find(d => d.dayNumber === 7)
+                ?.drills?.map(drill => ({
+                  id: drill.id,
+                  title: drill.title,
+                  type: drill.routineId
+                    ? "routine"
+                    : drill.supersetId
+                    ? "superset"
+                    : (drill.type as "exercise" | "drill" | "video") ||
+                      undefined,
+                  notes: drill.description || drill.notes || "",
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo || "",
+                  duration: drill.duration || "",
+                  videoUrl: drill.videoUrl || "",
+                  videoId: drill.videoId || "",
+                  videoTitle: drill.videoTitle || "",
+                  videoThumbnail: drill.videoThumbnail || "",
+                  routineId: drill.routineId || undefined,
+                  supersetId: drill.supersetId || undefined,
                 })) || [],
           },
         })
@@ -290,57 +306,58 @@ function ProgramEditorPageContent() {
         weekNumber: weekIndex + 1,
         title: builderWeek.name,
         description: "",
-        days: Object.entries(builderWeek.days).map(
-          ([dayKey, items], dayIndex) => {
-            const dayNumber =
-              dayKey === "sun"
-                ? 7
-                : dayKey === "mon"
-                ? 1
-                : dayKey === "tue"
-                ? 2
-                : dayKey === "wed"
-                ? 3
-                : dayKey === "thu"
-                ? 4
-                : dayKey === "fri"
-                ? 5
-                : 6;
+        days: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map(dayKey => {
+          const items =
+            builderWeek.days[dayKey as keyof typeof builderWeek.days];
+          const dayNumber =
+            dayKey === "sun"
+              ? 1
+              : dayKey === "mon"
+              ? 2
+              : dayKey === "tue"
+              ? 3
+              : dayKey === "wed"
+              ? 4
+              : dayKey === "thu"
+              ? 5
+              : dayKey === "fri"
+              ? 6
+              : 7;
 
-            // If the day has no items, make it a rest day
-            if (items.length === 0) {
-              return {
-                dayNumber,
-                title: "Rest Day",
-                description: "Recovery and rest day",
-                drills: [], // No drills for rest days
-              };
-            }
-
-            // Convert items to drills format
+          // If the day has no items, make it a rest day
+          if (items.length === 0) {
             return {
               dayNumber,
-              title: `Day ${dayNumber}`,
-              description: "",
-              drills: items.map((item, itemIndex) => ({
-                id: item.id,
-                title: item.title,
-                description: item.notes || "",
-                duration: item.duration || "",
-                videoUrl: item.videoUrl || "",
-                notes: item.notes || "",
-                type: item.type || "exercise",
-                sets: item.sets,
-                reps: item.reps,
-                tempo: item.tempo || "",
-                videoId: item.videoId,
-                videoTitle: item.videoTitle,
-                videoThumbnail: item.videoThumbnail,
-                routineId: item.routineId,
-              })),
+              title: "Rest Day",
+              description: "Recovery and rest day",
+              drills: [], // No drills for rest days
             };
           }
-        ),
+
+          // Convert items to drills format
+          return {
+            dayNumber,
+            title: `Day ${dayNumber}`,
+            description: "",
+            drills: items.map((item, itemIndex) => ({
+              id: item.id,
+              title: item.title,
+              description: item.notes || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              videoId: item.videoId,
+              videoTitle: item.videoTitle,
+              videoThumbnail: item.videoThumbnail,
+              routineId: item.routineId,
+              supersetId: item.supersetId,
+            })),
+          };
+        }),
       }));
 
       console.log("Converted back to database format:", convertedWeeks);
@@ -397,7 +414,7 @@ function ProgramEditorPageContent() {
           {/* Program Builder */}
           <ProgramBuilder
             onSave={handleProgramBuilderSave}
-            initialWeeks={programBuilderWeeks}
+            initialWeeks={programBuilderWeeks as any}
             programDetails={{
               title: program.title || "Untitled Program",
               description: program.description || "",

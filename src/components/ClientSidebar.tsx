@@ -104,8 +104,8 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
   // Use the optimized unread counts endpoint
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
+      refetchInterval: 60000, // Poll every 60 seconds (reduced from 10 seconds)
+      refetchOnWindowFocus: false, // Disabled to reduce unnecessary calls
       refetchOnReconnect: true,
     });
 
@@ -129,8 +129,8 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
 
   const { data: unreadNotificationCount = 0 } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
+      refetchInterval: 60000, // Poll every 60 seconds (reduced from 10 seconds)
+      refetchOnWindowFocus: false, // Disabled to reduce unnecessary calls
       refetchOnReconnect: true,
     });
 

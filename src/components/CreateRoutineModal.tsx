@@ -47,6 +47,15 @@ interface CreateRoutineModalProps {
     exercises: RoutineExercise[];
   } | null;
   onOpenVideoLibrary?: () => void;
+  selectedVideoFromLibrary?: {
+    id: string;
+    title: string;
+    description?: string;
+    duration?: string;
+    url?: string;
+    thumbnail?: string;
+  } | null;
+  onVideoProcessed?: () => void;
 }
 
 export default function CreateRoutineModal({
@@ -55,6 +64,8 @@ export default function CreateRoutineModal({
   onSubmit,
   routine,
   onOpenVideoLibrary,
+  selectedVideoFromLibrary,
+  onVideoProcessed,
 }: CreateRoutineModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -74,19 +85,6 @@ export default function CreateRoutineModal({
       }
     }
   }, [isOpen, routine]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (name.trim() && description.trim()) {
-      onSubmit({
-        id: routine?.id,
-        name: name.trim(),
-        description: description.trim(),
-        exercises,
-      });
-      onClose();
-    }
-  };
 
   const handleVideoSelect = (video: {
     id: string;
@@ -109,6 +107,27 @@ export default function CreateRoutineModal({
     };
     setExercises(prev => [...prev, newExercise]);
     // Video library will be closed by parent component
+  };
+
+  // Handle video selection from library
+  useEffect(() => {
+    if (selectedVideoFromLibrary) {
+      handleVideoSelect(selectedVideoFromLibrary);
+      onVideoProcessed?.();
+    }
+  }, [selectedVideoFromLibrary, onVideoProcessed]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim() && description.trim()) {
+      onSubmit({
+        id: routine?.id,
+        name: name.trim(),
+        description: description.trim(),
+        exercises,
+      });
+      onClose();
+    }
   };
 
   const updateExercise = (
@@ -166,7 +185,7 @@ export default function CreateRoutineModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={() => {}}>
         <DialogContent
           className="bg-[#2A3133] border-gray-600 max-w-4xl max-h-[90vh] z-[100] overflow-hidden flex flex-col"
           style={{ zIndex: 100 }}

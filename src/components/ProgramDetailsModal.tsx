@@ -131,7 +131,7 @@ export default function ProgramDetailsModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] bg-[#2A3133] border-gray-600">
         <DialogHeader>
           <DialogTitle className="text-white text-2xl">

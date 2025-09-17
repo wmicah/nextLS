@@ -215,11 +215,11 @@ model Event {
   description String?
   date        DateTime
   status      EventStatus @default(PENDING)
-  clientId    String
+  clientId    String?
   coachId     String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   coach       User     @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
 
   @@map("events")
