@@ -978,11 +978,14 @@ function ClientSchedulePageClient() {
                     const coachDayLessons = getLessonsForDate(selectedDate);
                     // Filter out the client's own lessons from coach's lessons section
                     const myLessons = getClientLessonsForDate(selectedDate);
-                    const myClientIds = myLessons.map(
-                      (lesson: { clientId: string }) => lesson.clientId
-                    );
+                    const myClientIds = myLessons
+                      .map(
+                        (lesson: { clientId: string | null }) => lesson.clientId
+                      )
+                      .filter((id): id is string => id !== null);
                     const otherClientLessons = coachDayLessons.filter(
-                      (lesson: { clientId: string }) =>
+                      (lesson: { clientId: string | null }) =>
+                        lesson.clientId !== null &&
                         !myClientIds.includes(lesson.clientId)
                     );
                     return otherClientLessons.length > 0 ? (
