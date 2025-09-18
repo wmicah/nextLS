@@ -532,9 +532,9 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                   style={{
                     width: `${complianceData?.completionRate || 0}%`,
                     backgroundColor:
-                      complianceData?.completionRate >= 80
+                      (complianceData?.completionRate || 0) >= 80
                         ? "#10B981"
-                        : complianceData?.completionRate >= 60
+                        : (complianceData?.completionRate || 0) >= 60
                         ? "#F59E0B"
                         : "#EF4444",
                   }}
