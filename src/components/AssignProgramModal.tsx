@@ -21,6 +21,7 @@ interface AssignProgramModalProps {
   programTitle?: string;
   clientId?: string;
   clientName?: string;
+  startDate?: string; // Pre-filled start date
 }
 
 interface Client {
@@ -64,6 +65,7 @@ export default function AssignProgramModal({
   onClose,
   programId,
   clientId,
+  startDate: propStartDate,
 }: // programTitle,
 // clientName,
 AssignProgramModalProps) {
@@ -77,13 +79,24 @@ AssignProgramModalProps) {
       setSelectedProgram(programId);
     }
   }, [programId]);
+
+  // Update startDate when propStartDate changes
+  useEffect(() => {
+    if (propStartDate) {
+      setStartDate(propStartDate);
+    }
+  }, [propStartDate]);
   const [selectedClients, setSelectedClients] = useState<string[]>(
     clientId ? [clientId] : []
   );
   const [startDate, setStartDate] = useState<string>(() => {
+    if (propStartDate) {
+      return propStartDate;
+    }
     const today = new Date();
     return today.toISOString().split("T")[0];
   });
+  const [repetitions, setRepetitions] = useState<number>(1);
   const [isAssigning, setIsAssigning] = useState(false);
   const [viewMode, setViewMode] = useState<"assign" | "manage">("assign");
 
@@ -117,11 +130,16 @@ AssignProgramModalProps) {
       addToast({
         type: "success",
         title: "Program assigned",
-        message: `Program has been assigned to ${selectedClients.length} client(s) successfully.`,
+        message: `Program has been assigned to ${
+          selectedClients.length
+        } client(s) with ${repetitions} repetition${
+          repetitions > 1 ? "s" : ""
+        } successfully.`,
       });
       onClose();
       setSelectedProgram("");
       setSelectedClients([]);
+      setRepetitions(1);
       const today = new Date();
       setStartDate(today.toISOString().split("T")[0]);
 
@@ -204,6 +222,7 @@ AssignProgramModalProps) {
       programId: selectedProgram,
       clientIds: selectedClients,
       startDate: startDate,
+      repetitions: repetitions,
     };
 
     console.log("Sending assignment request:", requestData);
@@ -351,6 +370,41 @@ AssignProgramModalProps) {
                 />
                 <p className="text-gray-400 text-sm mt-2">
                   Choose when this program should start for the client
+                </p>
+              </div>
+
+              {/* Repetitions */}
+              <div>
+                <label className="text-white text-sm font-medium mb-3 block">
+                  Repetitions <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={repetitions}
+                  onChange={e => setRepetitions(Number(e.target.value))}
+                  className="w-full p-4 rounded-xl border border-gray-600/50 text-white bg-[#2B3038] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
+                    <option key={num} value={num}>
+                      {num} {num === 1 ? "time" : "times"} (
+                      {num === 1
+                        ? "Run once"
+                        : `Repeat ${num} times in sequence`}
+                      )
+                    </option>
+                  ))}
+                </select>
+                <p className="text-gray-400 text-sm mt-2">
+                  {selectedProgramData && repetitions > 1 && (
+                    <>
+                      Total duration:{" "}
+                      {selectedProgramData.duration * repetitions} weeks
+                      <br />
+                      Program will restart automatically after each{" "}
+                      {selectedProgramData.duration}-week cycle
+                    </>
+                  )}
+                  {(!selectedProgramData || repetitions === 1) &&
+                    "How many times should this program be repeated in sequence?"}
                 </p>
               </div>
 

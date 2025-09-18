@@ -59,6 +59,7 @@ model User {
   clientAnalytics          ClientAnalytics[]
   coachAnalytics           CoachAnalytics?
   routines                 Routine[]        @relation("CoachRoutines")
+  programReplacements      ProgramDayReplacement[]
 
   @@map("users")
 }
@@ -98,6 +99,7 @@ model Client {
   coach                User      @relation("CoachClients", fields: [coachId], references: [id])
   user                 User?     @relation("UserClient", fields: [userId], references: [id])
   programAssignments   ProgramAssignment[]
+  programReplacements  ProgramDayReplacement[]
   events               Event[]
   videos               Video[]
   drillCompletions     DrillCompletion[]
@@ -350,6 +352,7 @@ model Program {
   
   // Program assignments
   assignments ProgramAssignment[]
+  replacements ProgramDayReplacement[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -565,14 +568,17 @@ model ProgramAssignment {
   startDate   DateTime?
   completedAt DateTime?
   progress    Int      @default(0) // percentage
+  repetitions Int      @default(1) // number of times to repeat the program
+  currentCycle Int     @default(1) // which cycle/iteration this assignment represents
   
   program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
   client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  replacements ProgramDayReplacement[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([programId, clientId])
+  @@unique([programId, clientId, currentCycle])
   @@map("program_assignments")
 }
 
@@ -900,4 +906,26 @@ model AdminAuditLog {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("admin_audit_logs")
+}
+
+model ProgramDayReplacement {
+  id                String   @id @default(cuid())
+  assignmentId      String   // Reference to the program assignment
+  programId         String   // Reference to the program
+  clientId          String   // Reference to the client
+  coachId           String   // Reference to the coach
+  replacedDate      DateTime // The date when the program day was replaced
+  lessonId          String   // Reference to the lesson that replaced it
+  replacementReason String   // Why it was replaced
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  assignment        ProgramAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  program           Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
+  client            Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach             User             @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  
+  @@unique([assignmentId, replacedDate]) // One replacement per assignment per date
+  @@map("program_day_replacements")
 }

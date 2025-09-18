@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   X,
@@ -31,6 +31,12 @@ interface ScheduleLessonModalProps {
   clientId: string;
   clientName: string;
   clientEmail?: string | null;
+  startDate?: string; // Pre-filled start date
+  replacementData?: {
+    programId: string;
+    programTitle: string;
+    dayDate: string;
+  } | null; // Data for workout replacement
 }
 
 export default function ScheduleLessonModal({
@@ -39,12 +45,23 @@ export default function ScheduleLessonModal({
   clientId,
   clientName,
   clientEmail,
+  startDate: propStartDate,
+  replacementData,
 }: ScheduleLessonModalProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    propStartDate ? new Date(propStartDate) : null
+  );
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [isScheduling, setIsScheduling] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Update selectedDate when replacementData changes
+  useEffect(() => {
+    if (replacementData?.dayDate) {
+      setSelectedDate(new Date(replacementData.dayDate));
+    }
+  }, [replacementData]);
 
   // Fetch coach's profile for working hours
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
@@ -147,6 +164,25 @@ export default function ScheduleLessonModal({
     },
   });
 
+  const replaceWorkoutMutation =
+    trpc.clients.replaceWorkoutWithLesson.useMutation({
+      onSuccess: () => {
+        setIsScheduling(false);
+        onClose();
+        setSelectedDate(null);
+        setSelectedTime("");
+
+        // Invalidate and refetch client data to show updated schedule
+        utils.clients.getById.invalidate({ id: clientId });
+        utils.scheduling.getWeeklySchedule.invalidate({ clientId });
+        utils.scheduling.getCoachSchedule.invalidate();
+      },
+      onError: error => {
+        setIsScheduling(false);
+        alert(`Error replacing workout with lesson: ${error.message}`);
+      },
+    });
+
   const handleSchedule = async () => {
     if (!selectedDate || !selectedTime) {
       alert("Please select a date and time");
@@ -176,11 +212,26 @@ export default function ScheduleLessonModal({
     const lessonDate = new Date(selectedDate);
     lessonDate.setHours(hour, parseInt(minutes), 0, 0);
 
-    scheduleLessonMutation.mutate({
-      clientId,
-      lessonDate: lessonDate.toISOString(),
-      sendEmail,
-    });
+    if (replacementData) {
+      // Replace workout with lesson
+      replaceWorkoutMutation.mutate({
+        clientId,
+        programId: replacementData.programId,
+        dayDate: replacementData.dayDate,
+        lessonData: {
+          time: selectedTime,
+          title: `Lesson - ${replacementData.programTitle}`,
+          description: `Replaced workout from ${replacementData.programTitle}`,
+        },
+      });
+    } else {
+      // Regular lesson scheduling
+      scheduleLessonMutation.mutate({
+        clientId,
+        lessonDate: lessonDate.toISOString(),
+        sendEmail,
+      });
+    }
   };
 
   const navigateMonth = (direction: "prev" | "next") => {
@@ -231,7 +282,11 @@ export default function ScheduleLessonModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Schedule Lesson</h2>
+          <h2 className="text-xl font-bold text-white">
+            {replacementData
+              ? "Replace Workout with Lesson"
+              : "Schedule Lesson"}
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
@@ -251,6 +306,25 @@ export default function ScheduleLessonModal({
             <p className="text-sm text-gray-400">{clientEmail}</p>
           )}
         </div>
+
+        {/* Replacement Info */}
+        {replacementData && (
+          <div
+            className="mb-4 p-3 rounded-lg border"
+            style={{
+              backgroundColor: "#1E3A8A",
+              borderColor: "#3B82F6",
+            }}
+          >
+            <p className="text-sm text-blue-200">Replacing workout from:</p>
+            <p className="text-white font-medium">
+              {replacementData.programTitle}
+            </p>
+            <p className="text-xs text-blue-300">
+              This will schedule a lesson instead of the regular workout
+            </p>
+          </div>
+        )}
 
         {/* Coach Working Hours Info */}
         <div
@@ -465,7 +539,7 @@ export default function ScheduleLessonModal({
             ) : (
               <>
                 <Check className="h-4 w-4" />
-                Schedule Lesson
+                {replacementData ? "Replace with Lesson" : "Schedule Lesson"}
               </>
             )}
           </button>

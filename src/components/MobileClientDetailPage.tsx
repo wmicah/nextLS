@@ -329,14 +329,6 @@ export default function MobileClientDetailPage({
               >
                 <BookOpen className="w-5 h-5 text-white" />
               </button>
-              <button
-                onClick={() => setShowAssignVideoModal(true)}
-                className="p-3 rounded-lg transition-all duration-200"
-                style={{ backgroundColor: "#8B5CF6" }}
-                title="Assign Video"
-              >
-                <Video className="w-5 h-5 text-white" />
-              </button>
             </div>
           </div>
         </div>

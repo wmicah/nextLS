@@ -498,7 +498,7 @@ function QuickStatsSection() {
   const { data: events = [] } = trpc.events.getUpcoming.useQuery();
   const { data: programs = [] } = trpc.programs.list.useQuery();
   const { data: analyticsData } = trpc.analytics.getDashboardData.useQuery({
-    timeRange: "30d",
+    timeRange: "4w",
   });
 
   // Calculate total lessons (all time)

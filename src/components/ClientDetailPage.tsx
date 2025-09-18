@@ -84,6 +84,14 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const [activeTab, setActiveTab] = useState<"lessons" | "programs" | "videos">(
     "lessons"
   );
+  const [compliancePeriod, setCompliancePeriod] = useState<
+    "4" | "6" | "8" | "all"
+  >("4");
+  const [replacementData, setReplacementData] = useState<{
+    programId: string;
+    programTitle: string;
+    dayDate: string;
+  } | null>(null);
 
   // Fetch client data
   const { data: client, isLoading: clientLoading } =
@@ -124,6 +132,13 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
 
   // Fetch coach's working hours for time slot generation
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
+
+  // Fetch client compliance data
+  const { data: complianceData, isLoading: complianceLoading } =
+    trpc.clients.getComplianceData.useQuery({
+      clientId,
+      period: compliancePeriod,
+    });
 
   const utils = trpc.useUtils();
 
@@ -178,6 +193,18 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
     const programsForDate: any[] = [];
 
     assignedPrograms.forEach((assignment: any) => {
+      // Check if this specific date has been replaced with a lesson
+      const hasReplacement = assignment.replacements?.some(
+        (replacement: any) => {
+          const replacementDate = new Date(replacement.replacedDate);
+          return isSameDay(replacementDate, date);
+        }
+      );
+
+      // Skip this assignment if the date has been replaced
+      if (hasReplacement) {
+        return;
+      }
       const program = assignment.program;
       const startDate = new Date(assignment.startDate || assignment.assignedAt);
 
@@ -407,14 +434,6 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                 <BookOpen className="h-4 w-4" />
                 Assign Program
               </button>
-              <button
-                onClick={() => setShowAssignVideoModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{ backgroundColor: "#8B5CF6", color: "#FFFFFF" }}
-              >
-                <Video className="h-4 w-4" />
-                Assign Video
-              </button>
             </div>
           </div>
 
@@ -464,20 +483,74 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               className="rounded-2xl p-6 shadow-xl border"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <div>
                   <p
                     className="text-sm font-medium"
                     style={{ color: "#ABA4AA" }}
                   >
-                    Video Assignments
+                    Compliance Rate
                   </p>
                   <p className="text-2xl font-bold text-white">
-                    {videoAssignments.length}
+                    {complianceLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      `${complianceData?.completionRate || 0}%`
+                    )}
                   </p>
                 </div>
-                <Video className="h-8 w-8" style={{ color: "#8B5CF6" }} />
+                <Target className="h-8 w-8" style={{ color: "#10B981" }} />
               </div>
+
+              {/* Period Selector */}
+              <div className="flex gap-1 mb-3">
+                {["4", "6", "8", "all"].map(period => (
+                  <button
+                    key={period}
+                    onClick={() =>
+                      setCompliancePeriod(period as "4" | "6" | "8" | "all")
+                    }
+                    className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                      compliancePeriod === period
+                        ? "text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                    style={{
+                      backgroundColor:
+                        compliancePeriod === period ? "#4A5A70" : "transparent",
+                    }}
+                  >
+                    {period === "all" ? "All" : `${period}w`}
+                  </button>
+                ))}
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-700 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${complianceData?.completionRate || 0}%`,
+                    backgroundColor:
+                      complianceData?.completionRate >= 80
+                        ? "#10B981"
+                        : complianceData?.completionRate >= 60
+                        ? "#F59E0B"
+                        : "#EF4444",
+                  }}
+                />
+              </div>
+
+              {/* Stats */}
+              {complianceData && (
+                <div
+                  className="flex justify-between text-xs mt-2"
+                  style={{ color: "#ABA4AA" }}
+                >
+                  <span>{complianceData.completed || 0} completed</span>
+                  <span>{complianceData.total || 0} total</span>
+                </div>
+              )}
             </div>
 
             <div
@@ -703,6 +776,11 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               onClose={() => setShowAssignProgramModal(false)}
               clientId={clientId}
               clientName={client.name}
+              startDate={
+                selectedDate
+                  ? selectedDate.toISOString().split("T")[0]
+                  : undefined
+              }
             />
           )}
 
@@ -718,10 +796,19 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
           {showScheduleLessonModal && (
             <ScheduleLessonModal
               isOpen={showScheduleLessonModal}
-              onClose={() => setShowScheduleLessonModal(false)}
+              onClose={() => {
+                setShowScheduleLessonModal(false);
+                setReplacementData(null);
+              }}
               clientId={clientId}
               clientName={client.name}
               clientEmail={client.user?.email}
+              startDate={
+                selectedDate
+                  ? selectedDate.toISOString().split("T")[0]
+                  : undefined
+              }
+              replacementData={replacementData}
             />
           )}
 
@@ -804,16 +891,60 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                               key={index}
                               className="p-4 rounded-lg bg-blue-500/20 text-blue-100 border border-blue-400"
                             >
-                              <div className="flex items-center gap-2">
-                                <BookOpen className="h-4 w-4" />
-                                <div>
-                                  <div className="font-medium">
-                                    {program.title}
-                                  </div>
-                                  <div className="text-sm opacity-80">
-                                    {program.description}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="h-4 w-4" />
+                                  <div>
+                                    <div className="font-medium">
+                                      {program.title}
+                                    </div>
+                                    <div className="text-sm opacity-80">
+                                      {program.description}
+                                    </div>
                                   </div>
                                 </div>
+                                <button
+                                  onClick={() => {
+                                    // Store the program info for replacement
+                                    console.log(
+                                      "🔍 Full program object:",
+                                      program
+                                    );
+                                    console.log(
+                                      "🔍 Assignment object:",
+                                      program.assignment
+                                    );
+                                    console.log(
+                                      "🔍 Program object:",
+                                      program.program
+                                    );
+                                    console.log("🔍 Replacement data:", {
+                                      programId: program.assignment.programId,
+                                      assignmentId: program.assignment.id,
+                                      programTitle: program.title,
+                                      dayDate:
+                                        selectedDate
+                                          ?.toISOString()
+                                          .split("T")[0] || "",
+                                    });
+
+                                    setReplacementData({
+                                      programId: program.assignment.programId,
+                                      programTitle: program.title,
+                                      dayDate:
+                                        selectedDate
+                                          ?.toISOString()
+                                          .split("T")[0] || "",
+                                    });
+                                    setShowScheduleLessonModal(true);
+                                    setShowDayDetailsModal(false);
+                                  }}
+                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:bg-opacity-80"
+                                  style={{ backgroundColor: "#10B981" }}
+                                  title="Replace workout with lesson"
+                                >
+                                  Replace with Lesson
+                                </button>
                               </div>
                             </div>
                           )
@@ -829,42 +960,74 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                     )}
                   </div>
 
-                  {/* Videos */}
+                  {/* Schedule Actions */}
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-4">
-                      Video Assignments
+                      Schedule for {format(selectedDate, "MMMM d, yyyy")}
                     </h3>
-                    {getVideosForDate(selectedDate).length > 0 ? (
-                      <div className="space-y-3">
-                        {getVideosForDate(selectedDate).map(
-                          (video: any, index: number) => (
-                            <div
-                              key={index}
-                              className="p-4 rounded-lg bg-purple-500/20 text-purple-100 border border-purple-400"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Video className="h-4 w-4" />
-                                <div>
-                                  <div className="font-medium">
-                                    {video.title}
-                                  </div>
-                                  <div className="text-sm opacity-80">
-                                    {video.description}
-                                  </div>
-                                </div>
+                    {(() => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0); // Reset time to start of day
+                      const selectedDay = new Date(selectedDate);
+                      selectedDay.setHours(0, 0, 0, 0);
+                      const isPastDate = selectedDay < today;
+
+                      if (isPastDate) {
+                        return (
+                          <div className="text-center py-8">
+                            <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+                            <p className="text-gray-400">
+                              Cannot schedule for past dates
+                            </p>
+                            <p className="text-gray-500 text-sm mt-1">
+                              Only future dates can be scheduled
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <button
+                            onClick={() => {
+                              setShowScheduleLessonModal(true);
+                              setShowDayDetailsModal(false);
+                            }}
+                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border-transparent hover:border-emerald-500/30"
+                            style={{ backgroundColor: "#10B981" }}
+                          >
+                            <Calendar className="h-6 w-6 text-white" />
+                            <div className="text-left">
+                              <div className="font-medium text-white">
+                                Schedule Lesson
+                              </div>
+                              <div className="text-sm text-emerald-100">
+                                Book a lesson for this day
                               </div>
                             </div>
-                          )
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Video className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                        <p className="text-gray-400">
-                          No video assignments for this day
-                        </p>
-                      </div>
-                    )}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setShowAssignProgramModal(true);
+                              setShowDayDetailsModal(false);
+                            }}
+                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border-transparent hover:border-blue-500/30"
+                            style={{ backgroundColor: "#3B82F6" }}
+                          >
+                            <BookOpen className="h-6 w-6 text-white" />
+                            <div className="text-left">
+                              <div className="font-medium text-white">
+                                Assign Program
+                              </div>
+                              <div className="text-sm text-blue-100">
+                                Start a program on this day
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

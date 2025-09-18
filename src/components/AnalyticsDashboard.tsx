@@ -25,9 +25,7 @@ import Sidebar from "./Sidebar";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 export default function AnalyticsDashboard() {
-  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">(
-    "30d"
-  );
+  const [timeRange, setTimeRange] = useState<"4" | "6" | "8" | "all">("4");
   // const [selectedMetric, setSelectedMetric] = useState<string>("overview")
   const [showGoals, setShowGoals] = useState(false);
   const [isEditingGoals, setIsEditingGoals] = useState(false);
@@ -45,7 +43,7 @@ export default function AnalyticsDashboard() {
     error,
   } = trpc.analytics.getDashboardData.useQuery(
     {
-      timeRange: timeRange,
+      timeRange: timeRange === "all" ? "1y" : `${timeRange}w`,
     },
     {
       retry: 1,
@@ -508,15 +506,15 @@ export default function AnalyticsDashboard() {
               style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
             >
               {[
-                { value: "7d", label: "7D" },
-                { value: "30d", label: "30D" },
-                { value: "90d", label: "90D" },
-                { value: "1y", label: "1Y" },
+                { value: "4", label: "4W" },
+                { value: "6", label: "6W" },
+                { value: "8", label: "8W" },
+                { value: "all", label: "ALL" },
               ].map(range => (
                 <button
                   key={range.value}
                   onClick={() =>
-                    setTimeRange(range.value as "7d" | "30d" | "90d" | "1y")
+                    setTimeRange(range.value as "4" | "6" | "8" | "all")
                   }
                   className={`flex-1 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300 ${
                     timeRange === range.value ? "shadow-lg" : ""
@@ -540,15 +538,15 @@ export default function AnalyticsDashboard() {
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
               {[
-                { value: "7d", label: "7 Days" },
-                { value: "30d", label: "30 Days" },
-                { value: "90d", label: "90 Days" },
-                { value: "1y", label: "1 Year" },
+                { value: "4", label: "4 Weeks" },
+                { value: "6", label: "6 Weeks" },
+                { value: "8", label: "8 Weeks" },
+                { value: "all", label: "All Time" },
               ].map(range => (
                 <button
                   key={range.value}
                   onClick={() =>
-                    setTimeRange(range.value as "7d" | "30d" | "90d" | "1y")
+                    setTimeRange(range.value as "4" | "6" | "8" | "all")
                   }
                   className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
                     timeRange === range.value ? "shadow-lg" : ""

@@ -1233,6 +1233,11 @@ export const appRouter = router({
                 },
               },
             },
+            replacements: {
+              orderBy: {
+                replacedDate: "asc",
+              },
+            },
           },
           orderBy: {
             assignedAt: "desc",
@@ -1425,6 +1430,347 @@ export const appRouter = router({
         });
 
         return { success: true };
+      }),
+
+    getComplianceData: publicProcedure
+      .input(
+        z.object({
+          clientId: z.string(),
+          period: z.enum(["4", "6", "8", "all"]),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can view client compliance data",
+          });
+        }
+
+        // Verify the client belongs to this coach
+        const client = await db.client.findFirst({
+          where: {
+            id: input.clientId,
+            coachId: user.id,
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found or not assigned to you",
+          });
+        }
+
+        // Calculate date range based on period
+        const now = new Date();
+        let startDate: Date;
+
+        switch (input.period) {
+          case "4":
+            startDate = new Date(now.getTime() - 4 * 7 * 24 * 60 * 60 * 1000);
+            break;
+          case "6":
+            startDate = new Date(now.getTime() - 6 * 7 * 24 * 60 * 60 * 1000);
+            break;
+          case "8":
+            startDate = new Date(now.getTime() - 8 * 7 * 24 * 60 * 60 * 1000);
+            break;
+          case "all":
+            startDate = new Date(0); // Beginning of time
+            break;
+        }
+
+        // Get all drill completions for this client in the time range
+        const completions = await db.drillCompletion.findMany({
+          where: {
+            clientId: client.id,
+            completedAt: {
+              gte: startDate,
+            },
+          },
+        });
+
+        // Get all assigned programs for this client
+        const programAssignments = await db.programAssignment.findMany({
+          where: {
+            clientId: client.id,
+            assignedAt: {
+              gte: startDate,
+            },
+          },
+          include: {
+            program: {
+              include: {
+                weeks: {
+                  include: {
+                    days: {
+                      include: {
+                        drills: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            replacements: {
+              orderBy: {
+                replacedDate: "asc",
+              },
+            },
+          },
+        });
+
+        // Calculate total drills assigned and completed
+        let totalDrills = 0;
+        let completedDrills = 0;
+
+        programAssignments.forEach(assignment => {
+          if (!assignment.startDate) return;
+
+          const assignmentStartDate = new Date(assignment.startDate);
+
+          assignment.program.weeks.forEach((week, weekIndex) => {
+            week.days.forEach((day, dayIndex) => {
+              // Calculate the actual date this day should be completed
+              const dayDate = new Date(assignmentStartDate);
+              dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex);
+
+              // Check if this day has been replaced with a lesson
+              const hasReplacement = assignment.replacements?.some(
+                (replacement: any) => {
+                  const replacementDate = new Date(replacement.replacedDate);
+                  const replacementDateOnly = new Date(
+                    replacementDate.getFullYear(),
+                    replacementDate.getMonth(),
+                    replacementDate.getDate()
+                  );
+                  const dayDateOnly = new Date(
+                    dayDate.getFullYear(),
+                    dayDate.getMonth(),
+                    dayDate.getDate()
+                  );
+                  return (
+                    replacementDateOnly.getTime() === dayDateOnly.getTime()
+                  );
+                }
+              );
+
+              // Only count drills from days that have already passed and haven't been replaced
+              if (dayDate <= now && !hasReplacement) {
+                totalDrills += day.drills.length;
+              }
+            });
+          });
+        });
+
+        // Count completed drills (this already filters by date range)
+        completedDrills = completions.length;
+
+        // Calculate completion rate
+        const completionRate =
+          totalDrills > 0
+            ? Math.round((completedDrills / totalDrills) * 100)
+            : 0;
+
+        return {
+          completionRate,
+          completed: completedDrills,
+          total: totalDrills,
+          period: input.period,
+        };
+      }),
+
+    // Replace workout day with lesson
+    replaceWorkoutWithLesson: publicProcedure
+      .input(
+        z.object({
+          clientId: z.string(),
+          programId: z.string(),
+          dayDate: z.string(), // The specific day to replace
+          lessonData: z.object({
+            time: z.string(),
+            title: z.string(),
+            description: z.string().optional(),
+          }),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can replace workouts with lessons",
+          });
+        }
+
+        // Verify the client belongs to this coach
+        const client = await db.client.findFirst({
+          where: {
+            id: input.clientId,
+            coachId: user.id,
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found or not assigned to you",
+          });
+        }
+
+        // Debug logging
+        console.log("🔍 Replace workout debug:", {
+          programId: input.programId,
+          clientId: input.clientId,
+          coachId: user.id,
+          dayDate: input.dayDate,
+        });
+
+        // Let's also check what assignments exist for this client
+        const allClientAssignments = await db.programAssignment.findMany({
+          where: {
+            clientId: input.clientId,
+          },
+          select: {
+            id: true,
+            programId: true,
+            clientId: true,
+          },
+        });
+
+        console.log(
+          "🔍 All assignments for this client:",
+          allClientAssignments
+        );
+
+        // Verify the program assignment exists and belongs to this coach
+        const programAssignment = await db.programAssignment.findFirst({
+          where: {
+            programId: input.programId,
+            clientId: input.clientId,
+            client: {
+              coachId: user.id, // Ensure the client belongs to this coach
+            },
+          },
+          include: {
+            program: true,
+            client: true,
+          },
+        });
+
+        console.log("🔍 Program assignment found:", programAssignment);
+
+        if (!programAssignment) {
+          // Let's also check what assignments DO exist for this client
+          const allAssignments = await db.programAssignment.findMany({
+            where: {
+              clientId: input.clientId,
+              client: {
+                coachId: user.id,
+              },
+            },
+            include: {
+              program: true,
+            },
+          });
+
+          console.log("🔍 All assignments for this client:", allAssignments);
+
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Program assignment not found. Looking for programId: ${input.programId}, clientId: ${input.clientId}. Found ${allAssignments.length} other assignments.`,
+          });
+        }
+
+        // Create a note/annotation for this replacement
+        const replacementNote = `Workout replaced with lesson: ${input.lessonData.title}`;
+
+        // Create the lesson
+        console.log("🔍 Creating lesson with data:", {
+          title: input.lessonData.title,
+          description: input.lessonData.description || replacementNote,
+          dayDate: input.dayDate,
+          time: input.lessonData.time,
+          dateString: `${input.dayDate}T${input.lessonData.time}`,
+        });
+
+        // Parse and format the date properly
+        const [year, month, day] = input.dayDate.split("-").map(Number);
+        const [time, period] = input.lessonData.time.split(" ");
+        const [hours, minutes] = time.split(":").map(Number);
+
+        // Convert to 24-hour format if needed
+        let hour24 = hours;
+        if (period === "PM" && hours !== 12) {
+          hour24 = hours + 12;
+        } else if (period === "AM" && hours === 12) {
+          hour24 = 0;
+        }
+
+        const lessonDate = new Date(
+          year,
+          month - 1,
+          day,
+          hour24,
+          minutes || 0,
+          0,
+          0
+        );
+
+        console.log("🔍 Parsed lesson date:", lessonDate);
+
+        const lesson = await db.event.create({
+          data: {
+            title: input.lessonData.title,
+            description: input.lessonData.description || replacementNote,
+            date: lessonDate,
+            status: "CONFIRMED",
+            clientId: input.clientId,
+            coachId: user.id,
+          },
+        });
+
+        // Create a program day replacement record to track that this day was replaced
+        const replacementRecord = await db.programDayReplacement.create({
+          data: {
+            assignmentId: programAssignment.id,
+            programId: input.programId,
+            clientId: input.clientId,
+            coachId: user.id,
+            replacedDate: lessonDate,
+            lessonId: lesson.id,
+            replacementReason: `Replaced with lesson: ${input.lessonData.title}`,
+          },
+        });
+
+        console.log("🔍 Created replacement record:", replacementRecord);
+
+        return {
+          success: true,
+          lesson,
+          replacementRecord,
+          message: `Workout replaced with lesson successfully`,
+        };
       }),
   }),
 
@@ -5621,6 +5967,7 @@ export const appRouter = router({
           programId: z.string(),
           clientIds: z.array(z.string()),
           startDate: z.string(),
+          repetitions: z.number().min(1).max(12).default(1), // Allow 1-12 repetitions
         })
       )
       .mutation(async ({ input }) => {
@@ -5713,10 +6060,11 @@ export const appRouter = router({
           }
 
           // Check if this specific program is already assigned to this client
-          const existingAssignment = client.programAssignments.find(
+          // Allow multiple assignments if repetitions > 1, but check for conflicts
+          const existingAssignments = client.programAssignments.filter(
             assignment => assignment.programId === input.programId
           );
-          if (existingAssignment) {
+          if (existingAssignments.length > 0 && input.repetitions === 1) {
             errors.push(`${client.name} already has this program assigned.`);
             continue;
           }
@@ -5730,7 +6078,8 @@ export const appRouter = router({
           console.log("Parsed startDate:", startDate);
           console.log("startDate.toISOString():", startDate.toISOString());
           const programEndDate = new Date(
-            startDate.getTime() + program.duration * 7 * 24 * 60 * 60 * 1000
+            startDate.getTime() +
+              program.duration * input.repetitions * 7 * 24 * 60 * 60 * 1000
           );
 
           for (const existingAssignment of client.programAssignments) {
@@ -5756,16 +6105,25 @@ export const appRouter = router({
             }
           }
 
-          // If no conflicts, create the assignment
+          // If no conflicts, create the assignments (one for each repetition)
           if (!errors.some(error => error.includes(client.name))) {
-            const assignment = await db.programAssignment.create({
-              data: {
-                programId: input.programId,
-                clientId: client.id,
-                startDate,
-              },
-            });
-            assignments.push(assignment);
+            for (let cycle = 1; cycle <= input.repetitions; cycle++) {
+              const cycleStartDate = new Date(
+                startDate.getTime() +
+                  (cycle - 1) * program.duration * 7 * 24 * 60 * 60 * 1000
+              );
+
+              const assignment = await db.programAssignment.create({
+                data: {
+                  programId: input.programId,
+                  clientId: client.id,
+                  startDate: cycleStartDate,
+                  repetitions: input.repetitions,
+                  currentCycle: cycle,
+                },
+              });
+              assignments.push(assignment);
+            }
           }
         }
 
@@ -6611,7 +6969,7 @@ export const appRouter = router({
   // Analytics
   analytics: router({
     getDashboardData: publicProcedure
-      .input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+      .input(z.object({ timeRange: z.enum(["4w", "6w", "8w", "1y"]) }))
       .query(async ({ input }) => {
         const { getUser } = getKindeServerSession();
         const user = await getUser();
@@ -6636,17 +6994,17 @@ export const appRouter = router({
         const previousPeriodStart = new Date();
 
         switch (input.timeRange) {
-          case "7d":
-            currentPeriodStart.setDate(now.getDate() - 7);
-            previousPeriodStart.setDate(now.getDate() - 14);
+          case "4w":
+            currentPeriodStart.setDate(now.getDate() - 28);
+            previousPeriodStart.setDate(now.getDate() - 56);
             break;
-          case "30d":
-            currentPeriodStart.setDate(now.getDate() - 30);
-            previousPeriodStart.setDate(now.getDate() - 60);
+          case "6w":
+            currentPeriodStart.setDate(now.getDate() - 42);
+            previousPeriodStart.setDate(now.getDate() - 84);
             break;
-          case "90d":
-            currentPeriodStart.setDate(now.getDate() - 90);
-            previousPeriodStart.setDate(now.getDate() - 180);
+          case "8w":
+            currentPeriodStart.setDate(now.getDate() - 56);
+            previousPeriodStart.setDate(now.getDate() - 112);
             break;
           case "1y":
             currentPeriodStart.setFullYear(now.getFullYear() - 1);
@@ -6671,30 +7029,6 @@ export const appRouter = router({
 
         const activeClients = allActiveClients.length;
 
-        // Debug: Log what we found
-        console.log(`Analytics Debug - Coach ${user.id}:`);
-        console.log(
-          `- Total clients: ${await db.client.count({
-            where: { coachId: user.id },
-          })}`
-        );
-        console.log(`- Clients in programs: ${activeClients}`);
-        console.log(
-          `- Program assignments: ${await db.programAssignment.count({
-            where: { program: { coachId: user.id } },
-          })}`
-        );
-        console.log(
-          `- Assigned workouts: ${await db.assignedWorkout.count({
-            where: { coachId: user.id },
-          })}`
-        );
-        console.log(
-          `- Completed workouts: ${await db.assignedWorkout.count({
-            where: { coachId: user.id, completed: true },
-          })}`
-        );
-
         // Get previous period active clients for trend calculation
         const previousActiveClients = await db.client.count({
           where: {
@@ -6713,23 +7047,40 @@ export const appRouter = router({
               100
             : 0;
 
-        // Get workout completion data
-        const assignedWorkouts = await db.assignedWorkout.findMany({
+        // Get drill completion data (this is the main completion tracking)
+        const drillCompletions = await db.drillCompletion.findMany({
           where: {
-            coachId: user.id,
-            scheduledDate: {
+            completedAt: {
               gte: currentPeriodStart,
+            },
+            client: {
+              coachId: user.id,
             },
           },
         });
 
-        const completedWorkouts = assignedWorkouts.filter(
-          workout => workout.completed
-        ).length;
+        // Get total drills assigned to calculate completion rate
+        const totalDrillsAssigned = await db.programDrill.count({
+          where: {
+            day: {
+              week: {
+                program: {
+                  assignments: {
+                    some: {
+                      client: {
+                        coachId: user.id,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
 
         const workoutCompletionRate =
-          assignedWorkouts.length > 0
-            ? (completedWorkouts / assignedWorkouts.length) * 100
+          totalDrillsAssigned > 0
+            ? (drillCompletions.length / totalDrillsAssigned) * 100
             : 0;
 
         // Get program assignments and calculate average progress
@@ -6761,16 +7112,17 @@ export const appRouter = router({
             ? (completedPrograms / programAssignments.length) * 100
             : 0;
 
-        // Calculate retention rate (clients who have completed workouts in the last 30 days)
+        // Calculate retention rate (clients who have completed drills in the last 30 days)
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(now.getDate() - 30);
 
-        const recentWorkoutActivity = await db.assignedWorkout.findMany({
+        const recentDrillActivity = await db.drillCompletion.findMany({
           where: {
-            coachId: user.id,
-            completed: true,
             completedAt: {
               gte: thirtyDaysAgo,
+            },
+            client: {
+              coachId: user.id,
             },
           },
           select: {
@@ -6779,7 +7131,7 @@ export const appRouter = router({
         });
 
         const uniqueActiveClients = new Set(
-          recentWorkoutActivity.map(a => a.clientId)
+          recentDrillActivity.map(a => a.clientId)
         ).size;
         const retentionRate =
           activeClients > 0 ? (uniqueActiveClients / activeClients) * 100 : 0;
@@ -6797,15 +7149,18 @@ export const appRouter = router({
           },
         });
 
-        const previousPeriodWorkouts = await db.assignedWorkout.findMany({
-          where: {
-            coachId: user.id,
-            scheduledDate: {
-              gte: previousPeriodStart,
-              lt: currentPeriodStart,
+        const previousPeriodDrillCompletions =
+          await db.drillCompletion.findMany({
+            where: {
+              completedAt: {
+                gte: previousPeriodStart,
+                lt: currentPeriodStart,
+              },
+              client: {
+                coachId: user.id,
+              },
             },
-          },
-        });
+          });
 
         const previousAverageProgress =
           previousPeriodAssignments.length > 0
@@ -6824,12 +7179,29 @@ export const appRouter = router({
               100
             : 0;
 
-        const previousCompletedWorkouts = previousPeriodWorkouts.filter(
-          workout => workout.completed
-        ).length;
+        const previousTotalDrillsAssigned = await db.programDrill.count({
+          where: {
+            day: {
+              week: {
+                program: {
+                  assignments: {
+                    some: {
+                      client: {
+                        coachId: user.id,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
         const previousWorkoutCompletionRate =
-          previousPeriodWorkouts.length > 0
-            ? (previousCompletedWorkouts / previousPeriodWorkouts.length) * 100
+          previousTotalDrillsAssigned > 0
+            ? (previousPeriodDrillCompletions.length /
+                previousTotalDrillsAssigned) *
+              100
             : 0;
 
         const averageProgressTrend =
@@ -6883,22 +7255,70 @@ export const appRouter = router({
               100
             : 0;
 
+        // Debug: Log what we found
+        console.log(`Analytics Debug - Coach ${user.id}:`);
+        console.log(`- Active clients: ${activeClients}`);
+        console.log(`- Total drills assigned: ${totalDrillsAssigned}`);
+        console.log(`- Drill completions: ${drillCompletions.length}`);
+        console.log(
+          `- Recent drill activity (30 days): ${recentDrillActivity.length}`
+        );
+        console.log(`- Unique active clients: ${uniqueActiveClients}`);
+        console.log(`- Workout completion rate: ${workoutCompletionRate}%`);
+        console.log(`- Retention rate: ${retentionRate}%`);
+        console.log(`- Average progress: ${averageProgress}%`);
+
+        // Additional debug info
+        console.log(
+          `- Current period start: ${currentPeriodStart.toISOString()}`
+        );
+        console.log(
+          `- Total drill completions in DB: ${await db.drillCompletion.count()}`
+        );
+        console.log(
+          `- Total program drills in DB: ${await db.programDrill.count()}`
+        );
+        console.log(
+          `- Total program assignments: ${await db.programAssignment.count()}`
+        );
+
+        // Check for any drill completions for this coach's clients (no date filter)
+        const allDrillCompletionsForCoach = await db.drillCompletion.findMany({
+          where: {
+            client: {
+              coachId: user.id,
+            },
+          },
+        });
+        console.log(
+          `- All drill completions for coach: ${allDrillCompletionsForCoach.length}`
+        );
+
+        if (allDrillCompletionsForCoach.length > 0) {
+          console.log(
+            `- Sample completion dates: ${allDrillCompletionsForCoach
+              .slice(0, 3)
+              .map(c => c.completedAt.toISOString())
+              .join(", ")}`
+          );
+        }
+
         // If no real data exists, provide meaningful defaults
-        const hasRealData = activeClients > 0 || assignedWorkouts.length > 0;
+        const hasRealData = activeClients > 0 || drillCompletions.length > 0;
 
         if (!hasRealData) {
           console.log("No real analytics data found - using demo data");
           return {
-            activeClients: 0,
-            activeClientsTrend: 0,
-            averageProgress: 0,
-            averageProgressTrend: 0,
-            completionRate: 0,
-            completionRateTrend: 0,
-            workoutCompletionRate: 0,
-            workoutCompletionRateTrend: 0,
-            retentionRate: 0,
-            retentionRateTrend: 0,
+            activeClients: 3,
+            activeClientsTrend: 15.5,
+            averageProgress: 68.2,
+            averageProgressTrend: 12.3,
+            completionRate: 45.8,
+            completionRateTrend: 8.7,
+            workoutCompletionRate: 72.1,
+            workoutCompletionRateTrend: 5.2,
+            retentionRate: 85.4,
+            retentionRateTrend: 3.1,
           };
         }
 
@@ -6917,7 +7337,7 @@ export const appRouter = router({
       }),
 
     getClientProgress: publicProcedure
-      .input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+      .input(z.object({ timeRange: z.enum(["4w", "6w", "8w", "1y"]) }))
       .query(async ({ input }) => {
         const { getUser } = getKindeServerSession();
         const user = await getUser();
@@ -7031,7 +7451,7 @@ export const appRouter = router({
       }),
 
     getProgramPerformance: publicProcedure
-      .input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+      .input(z.object({ timeRange: z.enum(["4w", "6w", "8w", "1y"]) }))
       .query(async ({ input }) => {
         const { getUser } = getKindeServerSession();
         const user = await getUser();
@@ -7095,7 +7515,7 @@ export const appRouter = router({
       }),
 
     getEngagementMetrics: publicProcedure
-      .input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+      .input(z.object({ timeRange: z.enum(["4w", "6w", "8w", "1y"]) }))
       .query(async ({ input }) => {
         const { getUser } = getKindeServerSession();
         const user = await getUser();
@@ -7119,14 +7539,14 @@ export const appRouter = router({
         const periodStart = new Date();
 
         switch (input.timeRange) {
-          case "7d":
-            periodStart.setDate(now.getDate() - 7);
+          case "4w":
+            periodStart.setDate(now.getDate() - 28);
             break;
-          case "30d":
-            periodStart.setDate(now.getDate() - 30);
+          case "6w":
+            periodStart.setDate(now.getDate() - 42);
             break;
-          case "90d":
-            periodStart.setDate(now.getDate() - 90);
+          case "8w":
+            periodStart.setDate(now.getDate() - 56);
             break;
           case "1y":
             periodStart.setFullYear(now.getFullYear() - 1);
@@ -7240,6 +7660,11 @@ export const appRouter = router({
                     },
                   },
                 },
+                replacements: {
+                  orderBy: {
+                    replacedDate: "asc",
+                  },
+                },
               },
             },
           },
@@ -7291,10 +7716,33 @@ export const appRouter = router({
                     (day.dayNumber - 1)
                 );
 
-                if (dayDate >= startDate && dayDate <= endDate) {
-                  if (!day.isRestDay) {
-                    totalDrillsAssigned += day.drills.length;
+                // Check if this day has been replaced with a lesson
+                const hasReplacement = assignment.replacements?.some(
+                  (replacement: any) => {
+                    const replacementDate = new Date(replacement.replacedDate);
+                    const replacementDateOnly = new Date(
+                      replacementDate.getFullYear(),
+                      replacementDate.getMonth(),
+                      replacementDate.getDate()
+                    );
+                    const dayDateOnly = new Date(
+                      dayDate.getFullYear(),
+                      dayDate.getMonth(),
+                      dayDate.getDate()
+                    );
+                    return (
+                      replacementDateOnly.getTime() === dayDateOnly.getTime()
+                    );
                   }
+                );
+
+                if (
+                  dayDate >= startDate &&
+                  dayDate <= endDate &&
+                  !day.isRestDay &&
+                  !hasReplacement
+                ) {
+                  totalDrillsAssigned += day.drills.length;
                 }
               });
             });
@@ -8609,6 +9057,11 @@ export const appRouter = router({
                     },
                   },
                 },
+                replacements: {
+                  orderBy: {
+                    replacedDate: "asc",
+                  },
+                },
               },
               orderBy: { assignedAt: "desc" },
             },
@@ -8646,6 +9099,31 @@ export const appRouter = router({
                   dayDate: dayDate.toISOString(),
                   dateString,
                 });
+              }
+
+              // Check if this specific date has been replaced with a lesson
+              const hasReplacement = assignment.replacements?.some(
+                (replacement: any) => {
+                  const replacementDate = new Date(replacement.replacedDate);
+                  const replacementDateOnly = new Date(
+                    replacementDate.getFullYear(),
+                    replacementDate.getMonth(),
+                    replacementDate.getDate()
+                  );
+                  const dayDateOnly = new Date(
+                    dayDate.getFullYear(),
+                    dayDate.getMonth(),
+                    dayDate.getDate()
+                  );
+                  return (
+                    replacementDateOnly.getTime() === dayDateOnly.getTime()
+                  );
+                }
+              );
+
+              // Skip this day if it has been replaced
+              if (hasReplacement) {
+                continue;
               }
 
               // Only include days in the requested month
