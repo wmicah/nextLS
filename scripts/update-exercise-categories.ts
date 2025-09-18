@@ -126,10 +126,10 @@ async function updateExerciseCategories() {
   console.log("🔄 Starting exercise category update...");
 
   try {
-    // Get all library resources that don't have a category or have empty category
+    // Get all library resources that have empty category
     const resources = await prisma.libraryResource.findMany({
       where: {
-        OR: [{ category: "" }, { category: null }, { category: undefined }],
+        category: "",
       },
     });
 
@@ -188,4 +188,3 @@ if (require.main === module) {
 }
 
 export { updateExerciseCategories };
-
