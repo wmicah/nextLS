@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { trpc } from "@/app/_trpc/client";
@@ -463,6 +464,14 @@ export default function Sidebar({ user, children }: SidebarProps) {
         <div
           className="fixed inset-0 bg-black/70 z-40 md:hidden transition-all duration-300 backdrop-blur-md"
           onClick={() => setIsMobileOpen(false)}
+          onKeyDown={e => {
+            if (e.key === "Escape") {
+              setIsMobileOpen(false);
+            }
+          }}
+          tabIndex={-1}
+          role="button"
+          aria-label="Close mobile menu"
           style={{
             animation: "fadeIn 0.3s ease-out",
           }}
@@ -511,10 +520,13 @@ export default function Sidebar({ user, children }: SidebarProps) {
                   title="Double-click to collapse/expand"
                   style={{ backgroundColor: "#4A5A70" }}
                 >
-                  <img
+                  <Image
                     src="/logo image.png"
                     alt="Next Level Softball"
+                    width={40}
+                    height={40}
                     className="w-full h-full object-cover group-active:scale-95 transition-transform"
+                    priority
                   />
                 </div>
                 Next Level Softball
@@ -533,10 +545,13 @@ export default function Sidebar({ user, children }: SidebarProps) {
                 title="Double-click to expand"
                 style={{ backgroundColor: "#4A5A70" }}
               >
-                <img
+                <Image
                   src="/logo image.png"
                   alt="Next Level Softball"
+                  width={32}
+                  height={32}
                   className="w-full h-full object-cover"
+                  priority
                 />
               </div>
             </span>
@@ -697,6 +712,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
                       onClick={() => setShowClientSearch(true)}
                       className="text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl"
                       style={{ color: "#606364" }}
+                      aria-label="Search clients"
                       onMouseEnter={e => {
                         e.currentTarget.style.color = "#4A5A70";
                         e.currentTarget.style.backgroundColor =
@@ -708,7 +724,6 @@ export default function Sidebar({ user, children }: SidebarProps) {
                         e.currentTarget.style.backgroundColor = "transparent";
                         e.currentTarget.style.borderColor = "transparent";
                       }}
-                      aria-label="Jump to client"
                       title="Jump to Client (⌘K)"
                     >
                       {link.icon}
@@ -745,6 +760,11 @@ export default function Sidebar({ user, children }: SidebarProps) {
                         showNotifications ? "scale-110" : ""
                       }`}
                       style={{ color: "#606364" }}
+                      aria-label={
+                        showNotifications
+                          ? "Close notifications"
+                          : "Open notifications"
+                      }
                       onMouseEnter={e => {
                         e.currentTarget.style.color = "#4A5A70";
                         e.currentTarget.style.backgroundColor =
@@ -756,7 +776,6 @@ export default function Sidebar({ user, children }: SidebarProps) {
                         e.currentTarget.style.backgroundColor = "transparent";
                         e.currentTarget.style.borderColor = "transparent";
                       }}
-                      aria-label="Toggle notifications"
                       title="Notifications"
                     >
                       <div className="relative">

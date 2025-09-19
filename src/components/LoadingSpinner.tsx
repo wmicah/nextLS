@@ -1,36 +1,46 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
+import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
-  size?: "sm" | "md" | "lg"
-  color?: string
+  size?: "sm" | "md" | "lg" | "xl";
+  color?: "primary" | "secondary" | "white" | "gray";
+  className?: string;
+  text?: string;
 }
 
-export default function LoadingSpinner({ 
-  size = "md", 
-  color = "#4A5A70" 
-}: LoadingSpinnerProps) {
-  const sizeClasses = {
-    sm: "h-4 w-4",
-    md: "h-8 w-8", 
-    lg: "h-12 w-12"
-  }
+const sizeClasses = {
+  sm: "w-4 h-4",
+  md: "w-6 h-6",
+  lg: "w-8 h-8",
+  xl: "w-12 h-12",
+};
 
+const colorClasses = {
+  primary: "text-blue-600",
+  secondary: "text-gray-600",
+  white: "text-white",
+  gray: "text-gray-400",
+};
+
+export default function LoadingSpinner({
+  size = "md",
+  color = "primary",
+  className,
+  text,
+}: LoadingSpinnerProps) {
   return (
-    <div className="flex items-center justify-center">
-      <motion.div
-        className={`${sizeClasses[size]} border-2 rounded-full`}
-        style={{ 
-          borderColor: `${color} transparent transparent transparent` 
-        }}
-        animate={{ rotate: 360 }}
-        transition={{ 
-          duration: 1, 
-          repeat: Infinity, 
-          ease: "linear" 
-        }}
-      />
+    <div className={cn("flex items-center justify-center", className)}>
+      <div className="flex flex-col items-center gap-2">
+        <div
+          className={cn(
+            "animate-spin rounded-full border-2 border-current border-t-transparent",
+            sizeClasses[size],
+            colorClasses[color]
+          )}
+        />
+        {text && <p className={cn("text-sm", colorClasses[color])}>{text}</p>}
+      </div>
     </div>
-  )
+  );
 }

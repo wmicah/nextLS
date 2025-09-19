@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Analytics from "@/components/Analytics";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import Toast from "@/components/common/Toast";

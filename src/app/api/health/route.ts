@@ -1,55 +1,85 @@
 import { NextRequest, NextResponse } from "next/server";
-import lessonReminderService from "@/lib/lesson-reminder-service";
-
-// Force dynamic rendering and disable caching
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+import { db } from "@/db";
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
-    const now = new Date();
-
-    // Get lesson reminder service health
-    const reminderServiceHealth = lessonReminderService.getHealth();
-
-    const healthData = {
+    // Basic health check
+    const health = {
       status: "healthy",
-      timestamp: now.toISOString(),
+      timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || "development",
-      services: {
-        lessonReminders: reminderServiceHealth,
-      },
-      memory: {
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024), // MB
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024), // MB
-      },
+      version: process.env.npm_package_version || "1.0.0",
+      environment: process.env.NODE_ENV,
     };
 
-    // Determine overall health status
-    const isHealthy = reminderServiceHealth.isProductionReady;
-    const statusCode = isHealthy ? 200 : 503; // 503 Service Unavailable if reminders not ready
+    // Database health check
+    let dbStatus = "healthy";
+    let dbResponseTime = 0;
 
-    return NextResponse.json(healthData, { status: statusCode });
+    try {
+      const dbStart = Date.now();
+      await db.$queryRaw`SELECT 1`;
+      dbResponseTime = Date.now() - dbStart;
+    } catch (error) {
+      dbStatus = "unhealthy";
+      console.error("Database health check failed:", error);
+    }
+
+    // Memory usage
+    const memoryUsage = process.memoryUsage();
+
+    const response = {
+      ...health,
+      checks: {
+        database: {
+          status: dbStatus,
+          responseTime: dbResponseTime,
+        },
+        memory: {
+          used: Math.round(memoryUsage.heapUsed / 1024 / 1024), // MB
+          total: Math.round(memoryUsage.heapTotal / 1024 / 1024), // MB
+          external: Math.round(memoryUsage.external / 1024 / 1024), // MB
+        },
+        system: {
+          platform: process.platform,
+          nodeVersion: process.version,
+          pid: process.pid,
+        },
+      },
+      responseTime: Date.now() - startTime,
+    };
+
+    const statusCode = dbStatus === "healthy" ? 200 : 503;
+
+    return NextResponse.json(response, {
+      status: statusCode,
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
   } catch (error) {
-    console.error("Health check error:", error);
+    console.error("Health check failed:", error);
+
     return NextResponse.json(
       {
         status: "unhealthy",
-        error: "Health check failed",
         timestamp: new Date().toISOString(),
+        error:
+          process.env.NODE_ENV === "development"
+            ? (error as Error).message
+            : "Internal server error",
+        responseTime: Date.now() - startTime,
       },
-      { status: 500 }
+      {
+        status: 503,
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        },
+      }
     );
   }
-}
-
-// Health check for load balancers (simple ping)
-export async function HEAD() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    },
-  });
 }

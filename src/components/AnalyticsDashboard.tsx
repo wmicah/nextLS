@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
-import { ErrorBoundary } from "./ErrorBoundary";
+import ErrorBoundary from "./ErrorBoundary";
 
 export default function AnalyticsDashboard() {
   const [timeRange, setTimeRange] = useState<"4" | "6" | "8" | "all">("4");
@@ -51,15 +51,8 @@ export default function AnalyticsDashboard() {
     }
   );
 
-  // Debug logging
-  console.log("Analytics Dashboard - Raw data:", analyticsData);
-  console.log("Analytics Dashboard - Loading:", isLoading);
-  console.log("Analytics Dashboard - Error:", error);
-
   // Extract data from the response
   const analytics = analyticsData || ({} as any);
-
-  console.log("Analytics Dashboard - Raw data:", analytics);
 
   // Extract metrics from the response
   const activeClients = analytics.activeClients || 0;
@@ -83,7 +76,7 @@ export default function AnalyticsDashboard() {
   const updateGoalsMutation = {
     isLoading: false,
     mutate: (data: any) => {
-      console.log("Goals update (simulated):", data);
+      // Goals update handled silently
     },
   };
 

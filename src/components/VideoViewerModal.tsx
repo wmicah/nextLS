@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { X, Play, Pause, Trash2, Edit3, Shield } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
 import EditVideoModal from "./EditVideoModal";
@@ -18,6 +19,7 @@ export default function VideoViewerModal({
   item,
   onDelete,
 }: VideoViewerModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -43,7 +45,6 @@ export default function VideoViewerModal({
       onClose(); // Close the modal
     },
     onError: error => {
-      console.error("Delete error:", error);
       alert(`Delete failed: ${error.message}`);
     },
   });
@@ -52,6 +53,14 @@ export default function VideoViewerModal({
     if (isOpen) {
       document.body.style.overflow = "hidden";
       setVideoError(null); // Clear any previous errors
+
+      // Focus management for accessibility
+      const focusableElements = modalRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusableElements && focusableElements.length > 0) {
+        (focusableElements[0] as HTMLElement)?.focus();
+      }
     } else {
       document.body.style.overflow = "unset";
     }
@@ -76,7 +85,6 @@ export default function VideoViewerModal({
   const renderVideoPlayer = () => {
     if (item.isYoutube && item.youtubeId) {
       // YouTube video
-      console.log("Rendering YouTube video:", item.youtubeId);
       return (
         <div className="w-full h-full flex items-center justify-center relative">
           <iframe
@@ -124,19 +132,11 @@ export default function VideoViewerModal({
       );
     } else if ((item.type === "Video" || item.type === "video") && item.url) {
       // Master library video or user uploaded video with protection
-      console.log(
-        "Rendering video player for type:",
-        item.type,
-        "URL:",
-        item.url
-      );
-
       if (item.url.startsWith("secure://")) {
         // For master library videos, use the secure streaming API
         const streamUrl = `/api/stream-master-video?filename=${encodeURIComponent(
           item.filename || ""
         )}`;
-        console.log("Using secure streaming URL:", streamUrl);
 
         return (
           <div className="w-full h-full relative">
@@ -175,7 +175,6 @@ export default function VideoViewerModal({
         );
       } else {
         // Regular uploaded video with protection
-        console.log("Using regular video URL:", item.url);
         return (
           <video
             controls
@@ -187,7 +186,7 @@ export default function VideoViewerModal({
             onPause={() => setIsPlaying(false)}
             onContextMenu={e => e.preventDefault()} // Disable right-click
             onError={e => {
-              console.error("Video load error:", e);
+              // Video load error handled silently
             }}
           >
             <source src={item.url} type="video/mp4" />
@@ -261,8 +260,12 @@ export default function VideoViewerModal({
 
   return (
     <div
+      ref={modalRef}
       className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
       onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="video-modal-title"
     >
       <div
         className="rounded-lg w-full max-w-6xl max-h-[95vh] overflow-y-auto"
@@ -351,6 +354,7 @@ export default function VideoViewerModal({
             {/* Main Content */}
             <div className={isAdmin ? "lg:col-span-2" : "w-full"}>
               <h1
+                id="video-modal-title"
                 className="text-3xl font-bold mb-4"
                 style={{ color: "#C3BCC2" }}
               >
@@ -481,9 +485,11 @@ export default function VideoViewerModal({
                           >
                             <div className="flex items-center gap-3 mb-3">
                               {comment.client?.avatar ? (
-                                <img
+                                <Image
                                   src={comment.client.avatar}
                                   alt={comment.client.name}
+                                  width={32}
+                                  height={32}
                                   className="w-8 h-8 rounded-full object-cover"
                                 />
                               ) : (

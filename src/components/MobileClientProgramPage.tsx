@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { trpc } from "@/app/_trpc/client";
 import {
   Calendar,
@@ -504,9 +505,11 @@ export default function MobileClientProgramPage() {
                     style={{ backgroundColor: "#606364" }}
                   >
                     {video.thumbnail ? (
-                      <img
+                      <Image
                         src={video.thumbnail}
                         alt={video.title}
+                        width={200}
+                        height={120}
                         className="w-full h-full object-cover"
                       />
                     ) : (

@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { ErrorBoundary } from "../ErrorBoundary";
+import ErrorBoundary from "../ErrorBoundary";
 
 // Mock the monitoring function
 jest.mock("@/lib/monitoring", () => ({

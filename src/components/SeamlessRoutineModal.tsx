@@ -351,7 +351,6 @@ export default function SeamlessRoutineModal({
                     onChange={e => setName(e.target.value)}
                     placeholder="e.g., Drive Warm-up, Core Stability, Power Development"
                     className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12 text-lg"
-                    autoFocus
                   />
                 </div>
 

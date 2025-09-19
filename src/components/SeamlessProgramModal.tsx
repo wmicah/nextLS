@@ -441,7 +441,6 @@ export default function SeamlessProgramModal({
                       {...register("title")}
                       placeholder="e.g., Advanced Hitting Program, Beginner Pitching Development"
                       className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12 text-lg"
-                      autoFocus
                     />
                     {errors.title && (
                       <p className="text-red-400 text-sm mt-1">
