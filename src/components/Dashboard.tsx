@@ -125,7 +125,7 @@ function RecentNotificationsSection() {
   const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 60000, // Poll every 60 seconds (reduced from 10 seconds)
+      refetchInterval: 120000, // Poll every 2 minutes (reduced from 60 seconds)
       refetchOnWindowFocus: false, // Disabled to reduce unnecessary calls
       refetchOnReconnect: true,
     }

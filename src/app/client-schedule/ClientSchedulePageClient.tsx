@@ -13,6 +13,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  ArrowRightLeft,
+  Loader2,
 } from "lucide-react";
 import {
   format,
@@ -29,12 +31,17 @@ import {
 import ClientSidebar from "@/components/ClientSidebar";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientSchedulePage from "@/components/MobileClientSchedulePage";
+import TimeSwap from "@/components/TimeSwap";
+import SwapRequests from "@/components/SwapRequests";
 
 function ClientSchedulePageClient() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [showSwapRequests, setShowSwapRequests] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedSwapLesson, setSelectedSwapLesson] = useState<any>(null);
   const [requestForm, setRequestForm] = useState({
     date: "",
     time: "",
@@ -59,10 +66,54 @@ function ClientSchedulePageClient() {
   const { data: upcomingLessons = [] } =
     trpc.clientRouter.getClientUpcomingLessons.useQuery();
 
+  // Fetch existing swap requests to show which lessons already have pending requests
+  const { data: existingSwapRequests = [], isLoading: isLoadingSwapRequests } =
+    trpc.timeSwap.getSwapRequests.useQuery();
+
+  // Get current client info
+  const { data: currentClient } = trpc.user.getProfile.useQuery();
+
   // Fetch coach's profile for working hours
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
 
   const utils = trpc.useUtils();
+
+  // Helper function to check if a lesson already has a pending swap request
+  const hasPendingSwapRequest = (lessonId: string) => {
+    if (isLoadingSwapRequests || !Array.isArray(existingSwapRequests)) {
+      return false;
+    }
+    return existingSwapRequests.some(
+      (request: any) =>
+        (request.requesterEventId === lessonId ||
+          request.targetEventId === lessonId) &&
+        request.status === "PENDING"
+    );
+  };
+
+  // Helper function to check if there's already a pending request between current client and target lesson's client
+  const hasPendingRequestWithTarget = (targetLesson: any) => {
+    if (
+      isLoadingSwapRequests ||
+      !Array.isArray(existingSwapRequests) ||
+      !currentClient?.id
+    ) {
+      return false;
+    }
+
+    const currentClientId = currentClient.id;
+
+    return existingSwapRequests.some(
+      (request: any) =>
+        // Check if there's a pending request where current client is requester and target lesson's client is target
+        ((request.requesterId === currentClientId &&
+          request.targetId === targetLesson.clientId) ||
+          // Or if target lesson's client is requester and current client is target
+          (request.requesterId === targetLesson.clientId &&
+            request.targetId === currentClientId)) &&
+        request.status === "PENDING"
+    );
+  };
   const requestScheduleChangeMutation =
     trpc.clientRouter.requestScheduleChange.useMutation({
       onSuccess: () => {
@@ -75,6 +126,33 @@ function ClientSchedulePageClient() {
       },
       onError: error => {
         alert(`Error requesting schedule change: ${error.message}`);
+      },
+    });
+
+  // Swap request mutation
+  const createSwapRequestMutation =
+    trpc.timeSwap.createSwapRequestFromLesson.useMutation({
+      onSuccess: data => {
+        alert(data.message);
+        // Close modals and refresh data
+        setSelectedSwapLesson(null);
+        setShowDayOverviewModal(false);
+        setSelectedDate(null);
+        utils.clientRouter.getCoachScheduleForClient.invalidate();
+        utils.clientRouter.getClientLessons.invalidate();
+        utils.timeSwap.getSwapRequests.invalidate();
+        utils.messaging.getConversations.invalidate();
+      },
+      onError: error => {
+        if (error.message.includes("already exists")) {
+          alert(
+            "You've already sent a swap request for these lessons. Please wait for a response."
+          );
+        } else {
+          alert(`Error creating swap request: ${error.message}`);
+        }
+        // Close the lesson selection modal on error
+        setSelectedSwapLesson(null);
       },
     });
 
@@ -399,6 +477,17 @@ function ClientSchedulePageClient() {
                   Request Schedule Change
                 </span>
               </button>
+              <button
+                onClick={() => setShowSwapRequests(true)}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation"
+                style={{
+                  backgroundColor: "#F59E0B",
+                  color: "#FFFFFF",
+                }}
+              >
+                <Users className="h-4 w-4" />
+                <span className="whitespace-nowrap">Swap Requests</span>
+              </button>
             </div>
           </div>
 
@@ -695,7 +784,7 @@ function ClientSchedulePageClient() {
                           .map((lesson: any, index: number) => (
                             <div
                               key={`coach-${index}`}
-                              className="text-xs p-1.5 md:p-2 rounded bg-sky-500/40 text-sky-100 border-2 border-sky-400 shadow-md overflow-hidden"
+                              className="w-full text-xs p-1.5 md:p-2 rounded bg-sky-500/40 text-sky-100 border-2 border-sky-400 shadow-md overflow-hidden"
                             >
                               <div className="flex items-start justify-between gap-1">
                                 <div className="flex-1 min-w-0">
@@ -1016,6 +1105,33 @@ function ClientSchedulePageClient() {
                                     {lesson.title}
                                   </div>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  {!isPast &&
+                                    upcomingLessons.length > 0 &&
+                                    !hasPendingRequestWithTarget(lesson) && (
+                                      <button
+                                        onClick={() => {
+                                          setSelectedSwapLesson(lesson);
+                                        }}
+                                        className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+                                      >
+                                        <ArrowRightLeft className="h-4 w-4" />
+                                        Request Swap
+                                      </button>
+                                    )}
+                                  {!isPast && upcomingLessons.length === 0 && (
+                                    <span className="text-xs text-gray-400">
+                                      No lessons to swap
+                                    </span>
+                                  )}
+                                  {!isPast &&
+                                    upcomingLessons.length > 0 &&
+                                    hasPendingRequestWithTarget(lesson) && (
+                                      <span className="text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded">
+                                        Request Pending
+                                      </span>
+                                    )}
+                                </div>
                               </div>
                             );
                           }
@@ -1072,6 +1188,212 @@ function ClientSchedulePageClient() {
                       </div>
                     );
                   })()}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Time Swap Modal */}
+          {showSwapModal && (
+            <TimeSwap onClose={() => setShowSwapModal(false)} />
+          )}
+
+          {/* Swap Requests Modal */}
+          {showSwapRequests && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div
+                className="rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                style={{ backgroundColor: "#2A3133" }}
+              >
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2
+                      className="text-2xl font-bold"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      Time Swap Requests
+                    </h2>
+                    <button
+                      onClick={() => setShowSwapRequests(false)}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+                  <SwapRequests />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Lesson Selection Modal for Swap */}
+          {selectedSwapLesson && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div
+                className="rounded-2xl shadow-xl border p-6 w-full max-w-md mx-4"
+                style={{
+                  backgroundColor: "#353A3A",
+                  borderColor: "#606364",
+                }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      Choose Your Lesson to Swap
+                    </h2>
+                    <p className="text-gray-400 text-sm">
+                      Select which of your lessons you want to swap with{" "}
+                      {selectedSwapLesson.client?.name ||
+                        selectedSwapLesson.client?.email ||
+                        "this client"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedSwapLesson(null);
+                    }}
+                    className="text-gray-400 hover:text-white transition-colors"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="font-medium text-blue-900">
+                          Target Lesson:{" "}
+                          {new Date(
+                            selectedSwapLesson.date
+                          ).toLocaleDateString()}{" "}
+                          at{" "}
+                          {new Date(selectedSwapLesson.date).toLocaleTimeString(
+                            [],
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          {selectedSwapLesson.title}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-white mb-3">
+                    Your Available Lessons:
+                  </h3>
+
+                  {isLoadingSwapRequests ? (
+                    <div className="text-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-400 mx-auto mb-3" />
+                      <p className="text-gray-400">Loading lesson status...</p>
+                    </div>
+                  ) : upcomingLessons.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {upcomingLessons.map((myLesson: any, index: number) => {
+                        const hasPendingRequest = hasPendingSwapRequest(
+                          myLesson.id
+                        );
+                        const hasPendingWithTarget =
+                          hasPendingRequestWithTarget(selectedSwapLesson);
+                        const isDisabled =
+                          hasPendingRequest ||
+                          hasPendingWithTarget ||
+                          createSwapRequestMutation.isPending;
+
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              if (!isDisabled) {
+                                createSwapRequestMutation.mutate({
+                                  targetEventId: selectedSwapLesson.id,
+                                  requesterEventId: myLesson.id,
+                                });
+                              }
+                            }}
+                            disabled={isDisabled}
+                            className={`w-full p-3 rounded-lg border text-left transition-all duration-200 ${
+                              isDisabled
+                                ? "opacity-50 cursor-not-allowed bg-gray-600/20 border-gray-500"
+                                : "hover:bg-sky-500/10 hover:border-sky-500/30"
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            style={{
+                              backgroundColor: isDisabled
+                                ? "#1F2937"
+                                : "#2A2F2F",
+                              borderColor: isDisabled ? "#4B5563" : "#606364",
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-white">
+                                  {new Date(myLesson.date).toLocaleDateString()}{" "}
+                                  at{" "}
+                                  {new Date(myLesson.date).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                  {hasPendingRequest && (
+                                    <span className="ml-2 text-xs text-yellow-400">
+                                      (Swap Request Pending)
+                                    </span>
+                                  )}
+                                  {hasPendingWithTarget &&
+                                    !hasPendingRequest && (
+                                      <span className="ml-2 text-xs text-yellow-400">
+                                        (Request Pending with this client)
+                                      </span>
+                                    )}
+                                </p>
+                                <p className="text-sm text-gray-300">
+                                  {myLesson.title}
+                                </p>
+                              </div>
+                              {createSwapRequestMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+                              ) : isDisabled ? (
+                                <CheckCircle className="h-4 w-4 text-yellow-400" />
+                              ) : (
+                                <ArrowRightLeft className="h-4 w-4 text-blue-400" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+                      <p className="text-gray-400">
+                        No lessons available to swap
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setSelectedSwapLesson(null);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    style={{
+                      backgroundColor: "#2A2F2F",
+                      borderColor: "#606364",
+                      color: "#E5E7EB",
+                    }}
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             </div>

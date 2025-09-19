@@ -105,6 +105,8 @@ model Client {
   drillCompletions     DrillCompletion[]
   videoSubmissions     ClientVideoSubmission[]
   analytics            ClientAnalytics?
+  swapRequestsSent     TimeSwapRequest[] @relation("SwapRequester")
+  swapRequestsReceived TimeSwapRequest[] @relation("SwapTarget")
 
   @@map("clients")
 }
@@ -185,6 +187,9 @@ model Message {
   acknowledgedAt         DateTime?
   acknowledgedBy         String? // User ID who acknowledged
   
+  // Additional data for special message types (like swap requests)
+  data          Json?            // Additional data like swapRequestId, etc.
+  
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
@@ -223,6 +228,8 @@ model Event {
   updatedAt   DateTime @updatedAt
   client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   coach       User     @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
+  swapRequestsAsRequester TimeSwapRequest[] @relation("SwapRequesterEvent")
+  swapRequestsAsTarget   TimeSwapRequest[] @relation("SwapTargetEvent")
 
   @@map("events")
 }
@@ -928,4 +935,34 @@ model ProgramDayReplacement {
   
   @@unique([assignmentId, replacedDate]) // One replacement per assignment per date
   @@map("program_day_replacements")
+}
+
+// Time Swap Request System
+model TimeSwapRequest {
+  id                String   @id @default(cuid())
+  requesterId       String   // Client who wants to swap
+  targetId          String   // Client they want to swap with
+  requesterEventId  String   // Event ID of the requester
+  targetEventId     String   // Event ID of the target
+  status            SwapStatus @default(PENDING)
+  message           String   @default("Hey, could we switch times this week?")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  approvedAt        DateTime?
+  
+  // Relations
+  requester         Client   @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target            Client   @relation("SwapTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  requesterEvent    Event    @relation("SwapRequesterEvent", fields: [requesterEventId], references: [id], onDelete: Cascade)
+  targetEvent       Event    @relation("SwapTargetEvent", fields: [targetEventId], references: [id], onDelete: Cascade)
+  
+  @@unique([requesterId, targetId, requesterEventId, targetEventId])
+  @@map("time_swap_requests")
+}
+
+enum SwapStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  EXPIRED
 }

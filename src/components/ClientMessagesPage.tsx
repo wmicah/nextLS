@@ -21,6 +21,7 @@ import ProfilePictureUploader from "./ProfilePictureUploader";
 import RichMessageInput from "./RichMessageInput";
 import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
+import SwapRequestMessage from "./SwapRequestMessage";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientMessagesPage from "./MobileClientMessagesPage";
 // Removed complex SSE hooks - using simple polling instead
@@ -50,22 +51,13 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
       attachmentSize: number;
     };
   } | null>(null);
-  const [pendingMessages, setPendingMessages] = useState<
-    Array<{
-      id: string;
-      content: string;
-      timestamp: Date;
-      status: "sending" | "sent" | "failed";
-      attachmentUrl?: string;
-      attachmentType?: string;
-      attachmentName?: string;
-    }>
-  >([]);
+  const [pendingMessages, setPendingMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Get current user info
   const { data: currentUser } = trpc.user.getProfile.useQuery();
+  const utils = trpc.useUtils();
 
   // Get conversations
   const { data: conversations = [], refetch: refetchConversations } =
@@ -113,32 +105,28 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   const { data: otherClients = [] } = trpc.clients.getOtherClients.useQuery();
 
   // Mutations
-  const sendMessageMutation = trpc.messaging.sendMessage.useMutation({
-    onMutate: async variables => {
-      // Create optimistic message
+  const sendMessageMutation = (trpc.messaging.sendMessage.useMutation as any)({
+    onMutate: async (variables: any) => {
       const tempId = `temp-${Date.now()}`;
-      const optimisticMessage = {
+      const message: any = {
         id: tempId,
         content: variables.content || "",
         timestamp: new Date(),
-        status: "sending" as const,
-        ...(variables.attachmentUrl && {
-          attachmentUrl: variables.attachmentUrl,
-          attachmentType: variables.attachmentType,
-          attachmentName: variables.attachmentName,
-        }),
+        status: "sending",
       };
 
-      // Add to pending messages
-      setPendingMessages(prev => [...prev, optimisticMessage]);
+      if (variables.attachmentUrl) {
+        message.attachmentUrl = variables.attachmentUrl;
+        message.attachmentType = variables.attachmentType;
+        message.attachmentName = variables.attachmentName;
+      }
 
-      // Clear input immediately
+      setPendingMessages(prev => [...prev, message]);
       setMessageText("");
       setSelectedFile(null);
-
       return { tempId };
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data: any, variables: any, context: any) => {
       // Mark as sent first
       setPendingMessages(prev =>
         prev.map(msg =>
@@ -155,7 +143,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
       });
       refetchConversations();
     },
-    onError: (error, variables, context) => {
+    onError: (error: any, variables: any, context: any) => {
       // Mark message as failed
       setPendingMessages(prev =>
         prev.map(msg =>
@@ -237,6 +225,15 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
     e?.preventDefault();
     if (!messageText.trim() && !selectedFile) return;
 
+    // Check if this is a client-to-client conversation
+    const conversation = conversations.find(
+      (c: any) => c.id === selectedConversation
+    );
+    if (conversation?.type === "CLIENT_CLIENT") {
+      // Prevent sending messages in client-to-client conversations
+      return;
+    }
+
     sendMessageMutation.mutate({
       conversationId: selectedConversation!,
       content: messageText.trim(),
@@ -263,7 +260,11 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   };
 
   const handleCreateConversation = (otherClientId: string) => {
-    createConversationMutation.mutate({ otherClientId });
+    // Prevent creating client-to-client conversations for free messaging
+    // Only allow swap requests through the schedule page
+    alert(
+      "Client-to-client conversations are restricted to time swap requests only. Please use the schedule page to request lesson swaps."
+    );
   };
 
   const filteredConversations = conversations.filter((conversation: any) => {
@@ -489,7 +490,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                               >
                                 {format(
                                   new Date(lastMessage.createdAt),
-                                  "HH:mm"
+                                  "h:mm a"
                                 )}
                               </span>
                             )}
@@ -516,7 +517,12 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                                   className="text-sm truncate"
                                   style={{ color: "#ABA4AA" }}
                                 >
-                                  {lastMessage.content}
+                                  {lastMessage.content.length > 20
+                                    ? `${lastMessage.content.substring(
+                                        0,
+                                        20
+                                      )}...`
+                                    : lastMessage.content}
                                 </p>
                               )}
                             </div>
@@ -656,29 +662,56 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                       >
                         <div
                           className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-                            isCurrentUser
-                              ? "bg-blue-500 text-white"
-                              : "bg-gray-700 text-gray-100"
+                            isCurrentUser ? "text-white" : "text-gray-100"
                           }`}
+                          style={{
+                            backgroundColor: isCurrentUser
+                              ? "#2A3133"
+                              : "#353A3A",
+                            borderColor: isCurrentUser ? "#4A5A70" : "#606364",
+                            border: "1px solid",
+                          }}
                         >
                           <div className="text-sm">
-                            <FormattedMessage content={message.content} />
+                            {message.data &&
+                            (message.data.type === "SWAP_REQUEST" ||
+                              message.data.type === "SWAP_CANCELLATION" ||
+                              message.data.type === "SWAP_APPROVAL" ||
+                              message.data.type === "SWAP_DECLINE") ? (
+                              <SwapRequestMessage
+                                message={message}
+                                onResponse={() => {
+                                  // Refresh conversations after swap response
+                                  utils.messaging.getConversations.invalidate();
+                                }}
+                              />
+                            ) : (
+                              <FormattedMessage content={message.content} />
+                            )}
                           </div>
 
-                          {/* Message Acknowledgment */}
-                          <MessageAcknowledgment
-                            messageId={message.id}
-                            requiresAcknowledgment={
-                              message.requiresAcknowledgment || false
-                            }
-                            isAcknowledged={message.isAcknowledged || false}
-                            acknowledgedAt={
-                              message.acknowledgedAt
-                                ? new Date(message.acknowledgedAt)
-                                : null
-                            }
-                            isOwnMessage={isCurrentUser}
-                          />
+                          {/* Message Acknowledgment - Skip for swap request messages */}
+                          {!(
+                            message.data &&
+                            (message.data.type === "SWAP_REQUEST" ||
+                              message.data.type === "SWAP_CANCELLATION" ||
+                              message.data.type === "SWAP_APPROVAL" ||
+                              message.data.type === "SWAP_DECLINE")
+                          ) && (
+                            <MessageAcknowledgment
+                              messageId={message.id}
+                              requiresAcknowledgment={
+                                message.requiresAcknowledgment || false
+                              }
+                              isAcknowledged={message.isAcknowledged || false}
+                              acknowledgedAt={
+                                message.acknowledgedAt
+                                  ? new Date(message.acknowledgedAt)
+                                  : null
+                              }
+                              isOwnMessage={isCurrentUser}
+                            />
+                          )}
 
                           {message.attachmentUrl && (
                             <div className="mt-2">
@@ -709,7 +742,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                                   : "text-gray-400"
                               }`}
                             >
-                              {format(new Date(message.createdAt), "HH:mm")}
+                              {format(new Date(message.createdAt), "h:mm a")}
                             </span>
                             {isCurrentUser && (
                               <CheckCheck
@@ -730,9 +763,14 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                   {pendingMessages.map(pendingMessage => (
                     <div key={pendingMessage.id} className="flex justify-end">
                       <div
-                        className={`max-w-[70%] px-4 py-3 rounded-2xl bg-blue-500 text-white ${
+                        className={`max-w-[70%] px-4 py-3 rounded-2xl text-white ${
                           pendingMessage.status === "failed" ? "opacity-60" : ""
                         }`}
+                        style={{
+                          backgroundColor: "#2A3133",
+                          borderColor: "#4A5A70",
+                          border: "1px solid",
+                        }}
                       >
                         <div className="text-sm">
                           <FormattedMessage content={pendingMessage.content} />
@@ -789,23 +827,61 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                     </div>
                   ))}
 
+                  {messages.length === 0 && (
+                    <div className="text-center py-8">
+                      <File
+                        className="h-12 w-12 mx-auto mb-4 opacity-50"
+                        style={{ color: "#ABA4AA" }}
+                      />
+                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                        No messages yet
+                      </p>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Message Input */}
+                {/* Message Input - Restricted for client-to-client conversations */}
                 <div
                   className="p-6 border-t"
                   style={{ borderColor: "#2a2a2a" }}
                 >
-                  <RichMessageInput
-                    value={messageText}
-                    onChange={setMessageText}
-                    onSend={() => handleSendMessage()}
-                    onFileUpload={() => setShowFileUpload(true)}
-                    placeholder="Type a message..."
-                    disabled={false}
-                    isPending={sendMessageMutation.isPending}
-                  />
+                  {(() => {
+                    const conversation = conversations.find(
+                      (c: any) => c.id === selectedConversation
+                    );
+                    const isClientToClient =
+                      conversation?.type === "CLIENT_CLIENT";
+
+                    if (isClientToClient) {
+                      return (
+                        <div className="text-center py-4">
+                          <div className="text-gray-400 mb-2">
+                            <File className="h-8 w-8 mx-auto mb-2" />
+                            <p className="text-sm">
+                              Client-to-client messaging is restricted to time
+                              swap requests only.
+                            </p>
+                            <p className="text-xs mt-1">
+                              Use the schedule page to request lesson swaps.
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <RichMessageInput
+                        value={messageText}
+                        onChange={setMessageText}
+                        onSend={() => handleSendMessage()}
+                        onFileUpload={() => setShowFileUpload(true)}
+                        placeholder="Type a message..."
+                        disabled={false}
+                        isPending={sendMessageMutation.isPending}
+                      />
+                    );
+                  })()}
                 </div>
               </>
             ) : (
@@ -843,7 +919,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                     className="text-xl font-semibold"
                     style={{ color: "#C3BCC2" }}
                   >
-                    Start New Conversation
+                    Client-to-Client Messaging
                   </h3>
                   <button
                     onClick={() => setShowCreateModal(false)}
@@ -856,6 +932,27 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
               </div>
 
               <div className="p-6">
+                <div
+                  className="mb-4 p-4 rounded-lg border"
+                  style={{ backgroundColor: "#2A3133", borderColor: "#4A5A70" }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <File className="h-4 w-4" style={{ color: "#ABA4AA" }} />
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      Client-to-Client Messaging Restricted
+                    </p>
+                  </div>
+                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
+                    Direct messaging between clients is not allowed.
+                    Client-to-client communication is restricted to time swap
+                    requests only. Use the schedule page to request lesson
+                    swaps.
+                  </p>
+                </div>
+
                 <div className="mb-4">
                   <div className="relative">
                     <Search
@@ -879,85 +976,20 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                       onBlur={e => {
                         e.currentTarget.style.borderColor = "#606364";
                       }}
+                      disabled={true}
                     />
                   </div>
                 </div>
 
                 <div className="max-h-64 overflow-y-auto">
-                  {filteredClients.length === 0 ? (
-                    <div className="text-center py-4">
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                        {clientSearchTerm
-                          ? "No clients found"
-                          : "No other clients available"}
-                      </p>
-                    </div>
-                  ) : (
-                    filteredClients.map((client: any) => (
-                      <button
-                        key={client.id}
-                        onClick={() => handleCreateConversation(client.id)}
-                        disabled={createConversationMutation.isPending}
-                        className="w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                          borderColor: "#606364",
-                          color: "#C3BCC2",
-                        }}
-                        onMouseEnter={e => {
-                          if (!createConversationMutation.isPending) {
-                            e.currentTarget.style.backgroundColor = "#3A4040";
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (!createConversationMutation.isPending) {
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
-                          }
-                        }}
-                      >
-                        {createConversationMutation.isPending && (
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
-                          </div>
-                        )}
-                        <div className="flex items-center gap-3">
-                          <ProfilePictureUploader
-                            currentAvatarUrl={
-                              client.user?.settings?.avatarUrl || client.avatar
-                            }
-                            userName={client.name || client.email || "User"}
-                            onAvatarChange={() => {}}
-                            size="sm"
-                            readOnly={true}
-                            className="flex-shrink-0"
-                          />
-                          <div className="text-left">
-                            <p
-                              className="font-medium"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              {client.name ||
-                                client.email?.split("@")[0] ||
-                                "Unknown"}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <p
-                                className="text-sm"
-                                style={{ color: "#ABA4AA" }}
-                              >
-                                {client.email || "No email"}
-                              </p>
-                              {!client.userId && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-                                  No Account
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  )}
+                  <div className="text-center py-4">
+                    <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                      Client-to-client messaging is disabled
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "#ABA4AA" }}>
+                      Use the schedule page to request lesson swaps
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

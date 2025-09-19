@@ -81,7 +81,7 @@ function ClientDashboard() {
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000, // Poll every 10 seconds
+      refetchInterval: 30000, // Poll every 30 seconds (reduced from 10)
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     }
@@ -92,11 +92,11 @@ function ClientDashboard() {
     trpc.notifications.getNotifications.useQuery(
       { limit: 5, unreadOnly: false },
       {
-        refetchInterval: 30000, // Poll every 30 seconds
+        refetchInterval: 60000, // Poll every 60 seconds (reduced from 30)
         refetchOnWindowFocus: true,
         refetchOnReconnect: true,
-        staleTime: 15 * 1000, // Cache for 15 seconds
-        gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
+        staleTime: 30 * 1000, // Cache for 30 seconds
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
       }
     );
 

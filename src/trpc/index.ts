@@ -9751,9 +9751,11 @@ export const appRouter = router({
         const now = new Date();
 
         // Get all events (lessons) for the coach in the specified month
+        // Exclude reminders (events without clientId) - those are coach-only
         const events = await db.event.findMany({
           where: {
             coachId: client.coachId,
+            clientId: { not: null }, // Only show events with a client (not reminders)
             date: {
               gte: monthStart,
               lte: monthEnd,
@@ -10858,6 +10860,947 @@ export const appRouter = router({
 
       return upcomingLessons;
     }),
+  }),
+
+  // Time Swap System
+  timeSwap: router({
+    // Get all clients for the current client to request swaps with
+    getAvailableClients: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get current client
+      const currentClient = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!currentClient) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // Get all other clients under the same coach
+      const otherClients = await db.client.findMany({
+        where: {
+          coachId: currentClient.coachId,
+          id: { not: currentClient.id },
+          archived: false,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatar: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+      return otherClients;
+    }),
+
+    // Get upcoming events for a specific client
+    getClientEvents: publicProcedure
+      .input(z.object({ clientId: z.string() }))
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // Get current client
+        const currentClient = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!currentClient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client profile not found",
+          });
+        }
+
+        // Verify the target client is under the same coach
+        const targetClient = await db.client.findFirst({
+          where: {
+            id: input.clientId,
+            coachId: currentClient.coachId,
+          },
+        });
+
+        if (!targetClient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Target client not found or not under same coach",
+          });
+        }
+
+        const now = new Date();
+        const oneWeekFromNow = new Date();
+        oneWeekFromNow.setDate(now.getDate() + 7);
+
+        // Get upcoming events for the target client
+        const events = await db.event.findMany({
+          where: {
+            clientId: input.clientId,
+            date: {
+              gte: now.toISOString(),
+              lte: oneWeekFromNow.toISOString(),
+            },
+            status: "CONFIRMED",
+          },
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            date: "asc",
+          },
+        });
+
+        return events;
+      }),
+
+    // Create a swap request from calendar lesson click
+    createSwapRequestFromLesson: publicProcedure
+      .input(
+        z.object({
+          targetEventId: z.string(), // The event the current client wants to swap with
+          requesterEventId: z.string(), // The current client's event
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // Get current client
+        const currentClient = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!currentClient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client profile not found",
+          });
+        }
+
+        // Get the target event and its client
+        const targetEvent = await db.event.findFirst({
+          where: {
+            id: input.targetEventId,
+          },
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                userId: true,
+              },
+            },
+          },
+        });
+
+        if (!targetEvent || !targetEvent.client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Target event or client not found",
+          });
+        }
+
+        // Get the requester's event
+        const requesterEvent = await db.event.findFirst({
+          where: {
+            id: input.requesterEventId,
+            clientId: currentClient.id,
+          },
+        });
+
+        if (!requesterEvent) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Your event not found",
+          });
+        }
+
+        // Prevent clients from swapping with themselves
+        if (targetEvent.client.id === currentClient.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "You cannot swap with your own lesson",
+          });
+        }
+
+        // Check if a swap request already exists (either direction)
+        const existingRequest = await db.timeSwapRequest.findFirst({
+          where: {
+            OR: [
+              // Same request already exists
+              {
+                requesterId: currentClient.id,
+                targetId: targetEvent.client.id,
+                requesterEventId: input.requesterEventId,
+                targetEventId: input.targetEventId,
+                status: "PENDING",
+              },
+              // Reverse request already exists (target already requested from requester)
+              {
+                requesterId: targetEvent.client.id,
+                targetId: currentClient.id,
+                requesterEventId: input.targetEventId,
+                targetEventId: input.requesterEventId,
+                status: "PENDING",
+              },
+            ],
+          },
+        });
+
+        if (existingRequest) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "A swap request already exists between these clients for these lessons",
+          });
+        }
+
+        // Create the swap request
+        const swapRequest = await db.timeSwapRequest.create({
+          data: {
+            requesterId: currentClient.id,
+            targetId: targetEvent.client.id,
+            requesterEventId: input.requesterEventId,
+            targetEventId: input.targetEventId,
+            message: "Hey, could we switch times this week?",
+          },
+        });
+
+        // Send a message to the target client
+        if (targetEvent.client.userId) {
+          // Find or create conversation between clients
+          let conversation = await db.conversation.findFirst({
+            where: {
+              OR: [
+                {
+                  client1Id: currentClient.userId,
+                  client2Id: targetEvent.client.userId,
+                },
+                {
+                  client1Id: targetEvent.client.userId,
+                  client2Id: currentClient.userId,
+                },
+              ],
+              type: "CLIENT_CLIENT",
+            },
+          });
+
+          if (!conversation) {
+            conversation = await db.conversation.create({
+              data: {
+                type: "CLIENT_CLIENT",
+                client1Id: currentClient.userId,
+                client2Id: targetEvent.client.userId || "",
+              },
+            });
+            console.log("New conversation created:", conversation.id);
+          } else {
+            console.log("Existing conversation found:", conversation.id);
+          }
+
+          // Send the swap request message
+          const message = await db.message.create({
+            data: {
+              conversationId: conversation.id,
+              senderId: currentClient.userId || "",
+              content: `Hey, could we switch times this week? I'd like to swap my lesson on ${new Date(
+                requesterEvent.date
+              ).toLocaleDateString()} at ${new Date(
+                requesterEvent.date
+              ).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })} for your lesson on ${new Date(
+                targetEvent.date
+              ).toLocaleDateString()} at ${new Date(
+                targetEvent.date
+              ).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}.`,
+              requiresAcknowledgment: true,
+              data: {
+                type: "SWAP_REQUEST",
+                swapRequestId: swapRequest.id,
+                requesterEventId: input.requesterEventId,
+                targetEventId: input.targetEventId,
+                requesterName: currentClient.name,
+                requesterEventTitle: requesterEvent.title,
+                targetEventTitle: targetEvent.title,
+                requesterEventDate: requesterEvent.date,
+                targetEventDate: targetEvent.date,
+              },
+            },
+          });
+
+          console.log("Swap request message created:", message.id);
+        }
+
+        return {
+          swapRequest,
+          message: "Swap request sent successfully",
+        };
+      }),
+
+    // Get swap request status
+    getSwapRequestStatus: publicProcedure
+      .input(
+        z.object({
+          swapRequestId: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const swapRequest = await db.timeSwapRequest.findUnique({
+          where: { id: input.swapRequestId },
+          select: { status: true },
+        });
+
+        if (!swapRequest) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Swap request not found",
+          });
+        }
+
+        return { status: swapRequest.status };
+      }),
+
+    // Cancel a swap request
+    cancelSwapRequest: publicProcedure
+      .input(
+        z.object({
+          swapRequestId: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // Get current client
+        const currentClient = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!currentClient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client profile not found",
+          });
+        }
+
+        // Get the swap request
+        const swapRequest = await db.timeSwapRequest.findFirst({
+          where: {
+            id: input.swapRequestId,
+            requesterId: currentClient.id,
+            status: "PENDING",
+          },
+          include: {
+            target: {
+              select: {
+                id: true,
+                userId: true,
+                name: true,
+              },
+            },
+            requesterEvent: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+              },
+            },
+            targetEvent: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+              },
+            },
+          },
+        });
+
+        if (!swapRequest) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Swap request not found or already processed",
+          });
+        }
+
+        // Update the swap request status to EXPIRED (we'll use this as cancelled)
+        const updatedSwapRequest = await db.timeSwapRequest.update({
+          where: { id: input.swapRequestId },
+          data: { status: "EXPIRED" },
+        });
+
+        // Send cancellation message to the target client
+        if (swapRequest.target.userId) {
+          // Find the conversation between the two clients
+          const conversation = await db.conversation.findFirst({
+            where: {
+              OR: [
+                {
+                  client1Id: currentClient.userId,
+                  client2Id: swapRequest.target.userId,
+                },
+                {
+                  client1Id: swapRequest.target.userId,
+                  client2Id: currentClient.userId,
+                },
+              ],
+              type: "CLIENT_CLIENT",
+            },
+          });
+
+          if (conversation) {
+            // Send cancellation message
+            await db.message.create({
+              data: {
+                conversationId: conversation.id,
+                senderId: currentClient.userId || "",
+                content: `Swap request cancelled. ${
+                  currentClient.name || "Client"
+                } has cancelled their request to swap lessons.`,
+                requiresAcknowledgment: false,
+                data: {
+                  type: "SWAP_CANCELLATION",
+                  swapRequestId: swapRequest.id,
+                  cancelledBy: currentClient.name || "Client",
+                },
+              },
+            });
+          }
+        }
+
+        return {
+          swapRequest: updatedSwapRequest,
+          message: "Swap request cancelled successfully",
+        };
+      }),
+
+    // Get swap requests for the current client
+    getSwapRequests: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get current client
+      const currentClient = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!currentClient) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // Get both sent and received swap requests
+      const [sentRequests, receivedRequests] = await Promise.all([
+        db.timeSwapRequest.findMany({
+          where: {
+            requesterId: currentClient.id,
+            status: "PENDING",
+          },
+          include: {
+            target: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+            requesterEvent: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                description: true,
+              },
+            },
+            targetEvent: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                description: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        }),
+        db.timeSwapRequest.findMany({
+          where: {
+            targetId: currentClient.id,
+            status: "PENDING",
+          },
+          include: {
+            requester: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+            requesterEvent: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                description: true,
+              },
+            },
+            targetEvent: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                description: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        }),
+      ]);
+
+      return {
+        sent: sentRequests,
+        received: receivedRequests,
+      };
+    }),
+
+    // Approve a swap request
+    approveSwapRequest: publicProcedure
+      .input(z.object({ requestId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // Get current client
+        const currentClient = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!currentClient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client profile not found",
+          });
+        }
+
+        // Get the swap request
+        const swapRequest = await db.timeSwapRequest.findFirst({
+          where: {
+            id: input.requestId,
+            targetId: currentClient.id,
+            status: "PENDING",
+          },
+          include: {
+            requester: true,
+            requesterEvent: true,
+            targetEvent: true,
+          },
+        });
+
+        if (!swapRequest) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Swap request not found or already processed",
+          });
+        }
+
+        // Use a transaction to ensure atomicity
+        const result = await db.$transaction(async tx => {
+          // Update the swap request status
+          const updatedRequest = await tx.timeSwapRequest.update({
+            where: { id: input.requestId },
+            data: {
+              status: "APPROVED",
+              approvedAt: new Date(),
+            },
+          });
+
+          // Swap the events
+          await tx.event.update({
+            where: { id: swapRequest.requesterEventId },
+            data: { clientId: swapRequest.targetId },
+          });
+
+          await tx.event.update({
+            where: { id: swapRequest.targetEventId },
+            data: { clientId: swapRequest.requesterId },
+          });
+
+          // Create notification for the coach
+          await tx.notification.create({
+            data: {
+              userId: swapRequest.requesterEvent.coachId,
+              type: "SCHEDULE_REQUEST",
+              title: "Time Swap Approved",
+              message: `${swapRequest.requester.name} and ${currentClient.name} have swapped their lesson times.`,
+              data: {
+                swapRequestId: input.requestId,
+                requesterName: swapRequest.requester.name,
+                targetName: currentClient.name,
+                requesterEventTitle: swapRequest.requesterEvent.title,
+                targetEventTitle: swapRequest.targetEvent.title,
+              },
+            },
+          });
+
+          return updatedRequest;
+        });
+
+        return result;
+      }),
+
+    // Decline a swap request
+    declineSwapRequest: publicProcedure
+      .input(z.object({ requestId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // Get current client
+        const currentClient = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!currentClient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client profile not found",
+          });
+        }
+
+        // Update the swap request status
+        const updatedRequest = await db.timeSwapRequest.update({
+          where: {
+            id: input.requestId,
+            targetId: currentClient.id,
+            status: "PENDING",
+          },
+          data: {
+            status: "DECLINED",
+          },
+        });
+
+        if (!updatedRequest) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Swap request not found or already processed",
+          });
+        }
+
+        return updatedRequest;
+      }),
+
+    // Handle swap response from message
+    respondToSwapRequest: publicProcedure
+      .input(
+        z.object({
+          swapRequestId: z.string(),
+          response: z.enum(["APPROVED", "DECLINED"]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // Get current client
+        const currentClient = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!currentClient) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client profile not found",
+          });
+        }
+
+        // Get the swap request
+        const swapRequest = await db.timeSwapRequest.findFirst({
+          where: {
+            id: input.swapRequestId,
+            targetId: currentClient.id,
+            status: "PENDING",
+          },
+          include: {
+            requester: true,
+            requesterEvent: true,
+            targetEvent: true,
+          },
+        });
+
+        if (!swapRequest) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Swap request not found or already processed",
+          });
+        }
+
+        if (input.response === "APPROVED") {
+          // Use a transaction to ensure atomicity
+          const result = await db.$transaction(async tx => {
+            // Update the swap request status
+            const updatedRequest = await tx.timeSwapRequest.update({
+              where: { id: input.swapRequestId },
+              data: {
+                status: "APPROVED",
+                approvedAt: new Date(),
+              },
+            });
+
+            // Swap the events
+            await tx.event.update({
+              where: { id: swapRequest.requesterEventId },
+              data: { clientId: swapRequest.targetId },
+            });
+
+            await tx.event.update({
+              where: { id: swapRequest.targetEventId },
+              data: { clientId: swapRequest.requesterId },
+            });
+
+            // Create notification for the coach
+            await tx.notification.create({
+              data: {
+                userId: swapRequest.requesterEvent.coachId,
+                type: "SCHEDULE_REQUEST",
+                title: "Time Swap Approved",
+                message: `${swapRequest.requester.name} and ${currentClient.name} have swapped their lesson times.`,
+                data: {
+                  swapRequestId: input.swapRequestId,
+                  requesterName: swapRequest.requester.name,
+                  targetName: currentClient.name,
+                  requesterEventTitle: swapRequest.requesterEvent.title,
+                  targetEventTitle: swapRequest.targetEvent.title,
+                },
+              },
+            });
+
+            // Send automatic message to the requester about approval
+            if (swapRequest.requester.userId) {
+              // Find the conversation between the two clients
+              const conversation = await tx.conversation.findFirst({
+                where: {
+                  OR: [
+                    {
+                      client1Id: currentClient.userId,
+                      client2Id: swapRequest.requester.userId,
+                    },
+                    {
+                      client1Id: swapRequest.requester.userId,
+                      client2Id: currentClient.userId,
+                    },
+                  ],
+                  type: "CLIENT_CLIENT",
+                },
+              });
+
+              if (conversation) {
+                await tx.message.create({
+                  data: {
+                    conversationId: conversation.id,
+                    senderId: currentClient.userId || "",
+                    content: `Great! I've approved your swap request. Our lessons have been automatically swapped.`,
+                    data: {
+                      type: "SWAP_APPROVAL",
+                      swapRequestId: input.swapRequestId,
+                      requesterName: swapRequest.requester.name,
+                      targetName: currentClient.name,
+                    },
+                  },
+                });
+              }
+            }
+
+            return updatedRequest;
+          });
+
+          return {
+            success: true,
+            message: "Time swap approved and completed!",
+            swapRequest: result,
+          };
+        } else {
+          // Decline the swap request
+          const updatedRequest = await db.timeSwapRequest.update({
+            where: { id: input.swapRequestId },
+            data: {
+              status: "DECLINED",
+            },
+          });
+
+          // Send automatic message to the requester about decline
+          if (swapRequest.requester.userId) {
+            // Find the conversation between the two clients
+            const conversation = await db.conversation.findFirst({
+              where: {
+                OR: [
+                  {
+                    client1Id: currentClient.userId,
+                    client2Id: swapRequest.requester.userId,
+                  },
+                  {
+                    client1Id: swapRequest.requester.userId,
+                    client2Id: currentClient.userId,
+                  },
+                ],
+                type: "CLIENT_CLIENT",
+              },
+            });
+
+            if (conversation) {
+              await db.message.create({
+                data: {
+                  conversationId: conversation.id,
+                  senderId: currentClient.userId || "",
+                  content: `Sorry, I can't swap lessons this time. Maybe another time!`,
+                  data: {
+                    type: "SWAP_DECLINE",
+                    swapRequestId: input.swapRequestId,
+                    requesterName: swapRequest.requester.name,
+                    targetName: currentClient.name,
+                  },
+                },
+              });
+            }
+          }
+
+          return {
+            success: true,
+            message: "Time swap declined",
+            swapRequest: updatedRequest,
+          };
+        }
+      }),
   }),
 
   admin: adminRouter,
