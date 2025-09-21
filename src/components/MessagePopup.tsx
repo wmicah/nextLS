@@ -60,56 +60,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
       }
     );
 
-  const sendMessageMutation = trpc.messaging.sendMessage.useMutation({
-    onMutate: async variables => {
-      // Create optimistic message
-      const tempId = `temp-${Date.now()}`;
-      const optimisticMessage = {
-        id: tempId,
-        content: variables.content,
-        timestamp: new Date(),
-        status: "sending" as const,
-      };
-
-      // Add to pending messages
-      setPendingMessages(prev => [...prev, optimisticMessage]);
-
-      // Clear input immediately
-      setMessageText("");
-
-      return { tempId };
-    },
-    onSuccess: (data, variables, context) => {
-      // Mark as sent first
-      setPendingMessages(prev =>
-        prev.map(msg =>
-          msg.id === context?.tempId ? { ...msg, status: "sent" as const } : msg
-        )
-      );
-
-      // Refetch messages to get the real message
-      refetchMessages().then(() => {
-        // Remove pending message after refetch completes
-        setPendingMessages(prev =>
-          prev.filter(msg => msg.id !== context?.tempId)
-        );
-      });
-      refetchConversations();
-    },
-    onError: (error, variables, context) => {
-      // Mark message as failed
-      setPendingMessages(prev =>
-        prev.map(msg =>
-          msg.id === context?.tempId
-            ? { ...msg, status: "failed" as const }
-            : msg
-        )
-      );
-
-      // Restore message text for retry
-      setMessageText(variables.content);
-    },
-  });
+  const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
 
   // Handle click outside to close
   useEffect(() => {
@@ -147,10 +98,54 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
     e?.preventDefault();
     if (!messageText.trim() || !selectedConversation) return;
 
-    sendMessageMutation.mutate({
-      conversationId: selectedConversation,
-      content: messageText.trim(),
-    });
+    const tempId = `temp-${Date.now()}`;
+    const messageContent = messageText.trim();
+
+    // Create optimistic message
+    const optimisticMessage = {
+      id: tempId,
+      content: messageContent,
+      timestamp: new Date(),
+      status: "sending" as const,
+    };
+
+    // Add optimistic message and clear input
+    setPendingMessages(prev => [...prev, optimisticMessage]);
+    setMessageText("");
+
+    sendMessageMutation.mutate(
+      {
+        conversationId: selectedConversation,
+        content: messageContent,
+      },
+      {
+        onSuccess: () => {
+          // Mark as sent
+          setPendingMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId ? { ...msg, status: "sent" as const } : msg
+            )
+          );
+
+          // Refetch messages to get the real message
+          refetchMessages().then(() => {
+            setPendingMessages(prev => prev.filter(msg => msg.id !== tempId));
+          });
+          refetchConversations();
+        },
+        onError: () => {
+          // Mark message as failed
+          setPendingMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId ? { ...msg, status: "failed" as const } : msg
+            )
+          );
+
+          // Restore message text for retry
+          setMessageText(messageContent);
+        },
+      }
+    );
   };
 
   const formatTime = (date: string) => {

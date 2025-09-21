@@ -105,73 +105,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   const { data: otherClients = [] } = trpc.clients.getOtherClients.useQuery();
 
   // Mutations
-  const sendMessageMutation = (trpc.messaging.sendMessage.useMutation as any)({
-    onMutate: async (variables: any) => {
-      const tempId = `temp-${Date.now()}`;
-      const message: any = {
-        id: tempId,
-        content: variables.content || "",
-        timestamp: new Date(),
-        status: "sending",
-      };
-
-      if (variables.attachmentUrl) {
-        message.attachmentUrl = variables.attachmentUrl;
-        message.attachmentType = variables.attachmentType;
-        message.attachmentName = variables.attachmentName;
-      }
-
-      setPendingMessages(prev => [...prev, message]);
-      setMessageText("");
-      setSelectedFile(null);
-      return { tempId };
-    },
-    onSuccess: (data: any, variables: any, context: any) => {
-      // Mark as sent first
-      setPendingMessages(prev =>
-        prev.map(msg =>
-          msg.id === context?.tempId ? { ...msg, status: "sent" as const } : msg
-        )
-      );
-
-      // Refetch messages to get the real message
-      refetchMessages().then(() => {
-        // Remove pending message after refetch completes
-        setPendingMessages(prev =>
-          prev.filter(msg => msg.id !== context?.tempId)
-        );
-      });
-      refetchConversations();
-    },
-    onError: (error: any, variables: any, context: any) => {
-      // Mark message as failed
-      setPendingMessages(prev =>
-        prev.map(msg =>
-          msg.id === context?.tempId
-            ? { ...msg, status: "failed" as const }
-            : msg
-        )
-      );
-
-      // Restore message text and file for retry
-      setMessageText(variables.content || "");
-      if (variables.attachmentUrl) {
-        // Note: We can't restore the file object, but we can show the attachment info
-        setSelectedFile({
-          file: new (File as any)([""], variables.attachmentName || "file", {
-            type: variables.attachmentType || "application/octet-stream",
-          }),
-          uploadData: {
-            attachmentUrl: variables.attachmentUrl,
-            attachmentType:
-              variables.attachmentType || "application/octet-stream",
-            attachmentName: variables.attachmentName || "file",
-            attachmentSize: variables.attachmentSize || 0,
-          },
-        });
-      }
-    },
-  });
+  const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
 
   // Helper function to get the other user from a conversation
   const getOtherUser = (conversation: any, currentUserId: string) => {
@@ -234,16 +168,88 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
       return;
     }
 
-    sendMessageMutation.mutate({
-      conversationId: selectedConversation!,
-      content: messageText.trim(),
+    const tempId = `temp-${Date.now()}`;
+    const messageContent = messageText.trim();
+    const attachmentData = selectedFile
+      ? {
+          attachmentUrl: selectedFile.uploadData.attachmentUrl,
+          attachmentType: selectedFile.uploadData.attachmentType,
+          attachmentName: selectedFile.uploadData.attachmentName,
+          attachmentSize: selectedFile.uploadData.attachmentSize,
+        }
+      : {};
+
+    // Create optimistic message
+    const optimisticMessage = {
+      id: tempId,
+      content: messageContent,
+      timestamp: new Date(),
+      status: "sending" as const,
       ...(selectedFile && {
         attachmentUrl: selectedFile.uploadData.attachmentUrl,
         attachmentType: selectedFile.uploadData.attachmentType,
         attachmentName: selectedFile.uploadData.attachmentName,
-        attachmentSize: selectedFile.uploadData.attachmentSize,
       }),
-    });
+    };
+
+    // Add optimistic message and clear inputs
+    setPendingMessages(prev => [...prev, optimisticMessage]);
+    setMessageText("");
+    setSelectedFile(null);
+
+    sendMessageMutation.mutate(
+      {
+        conversationId: selectedConversation!,
+        content: messageContent,
+        ...attachmentData,
+      },
+      {
+        onSuccess: () => {
+          // Mark as sent
+          setPendingMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId ? { ...msg, status: "sent" as const } : msg
+            )
+          );
+
+          // Refetch messages to get the real message
+          refetchMessages().then(() => {
+            setPendingMessages(prev => prev.filter(msg => msg.id !== tempId));
+          });
+          refetchConversations();
+        },
+        onError: () => {
+          // Mark message as failed
+          setPendingMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId ? { ...msg, status: "failed" as const } : msg
+            )
+          );
+
+          // Restore inputs for retry
+          setMessageText(messageContent);
+          if (selectedFile) {
+            setSelectedFile({
+              file: new (File as any)(
+                [""],
+                attachmentData.attachmentName || "file",
+                {
+                  type:
+                    attachmentData.attachmentType || "application/octet-stream",
+                }
+              ),
+              uploadData: {
+                attachmentUrl: attachmentData.attachmentUrl || "",
+                attachmentType:
+                  attachmentData.attachmentType || "application/octet-stream",
+                attachmentName: attachmentData.attachmentName || "file",
+                attachmentSize: attachmentData.attachmentSize || 0,
+              },
+            });
+          }
+        },
+      }
+    );
   };
 
   const handleFileSelect = (

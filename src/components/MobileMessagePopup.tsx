@@ -55,56 +55,7 @@ export default function MobileMessagePopup({
       }
     );
 
-  const sendMessageMutation = trpc.messaging.sendMessage.useMutation({
-    onMutate: async variables => {
-      // Create optimistic message
-      const tempId = `temp-${Date.now()}`;
-      const optimisticMessage = {
-        id: tempId,
-        content: variables.content,
-        timestamp: new Date(),
-        status: "sending" as const,
-      };
-
-      // Add to pending messages
-      setPendingMessages(prev => [...prev, optimisticMessage]);
-
-      // Clear input immediately
-      setMessageText("");
-
-      return { tempId };
-    },
-    onSuccess: (data, variables, context) => {
-      // Mark as sent first
-      setPendingMessages(prev =>
-        prev.map(msg =>
-          msg.id === context?.tempId ? { ...msg, status: "sent" as const } : msg
-        )
-      );
-
-      // Refetch messages to get the real message
-      refetchMessages().then(() => {
-        // Remove pending message after refetch completes
-        setPendingMessages(prev =>
-          prev.filter(msg => msg.id !== context?.tempId)
-        );
-      });
-      refetchConversations();
-    },
-    onError: (error, variables, context) => {
-      // Mark message as failed
-      setPendingMessages(prev =>
-        prev.map(msg =>
-          msg.id === context?.tempId
-            ? { ...msg, status: "failed" as const }
-            : msg
-        )
-      );
-
-      // Restore message text for retry
-      setMessageText(variables.content);
-    },
-  });
+  const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
 
   // Handle click outside to close (only on desktop)
   useEffect(() => {
@@ -142,10 +93,55 @@ export default function MobileMessagePopup({
     e?.preventDefault();
     if (!messageText.trim() || !selectedConversation) return;
 
-    sendMessageMutation.mutate({
-      conversationId: selectedConversation,
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      id: tempId,
       content: messageText.trim(),
-    });
+      timestamp: new Date(),
+      status: "sending" as const,
+    };
+
+    // Add optimistic message
+    setPendingMessages(prev => [...prev, optimisticMessage]);
+
+    // Clear input immediately
+    const messageContent = messageText.trim();
+    setMessageText("");
+
+    sendMessageMutation.mutate(
+      {
+        conversationId: selectedConversation,
+        content: messageContent,
+      },
+      {
+        onSuccess: () => {
+          // Mark as sent
+          setPendingMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId ? { ...msg, status: "sent" as const } : msg
+            )
+          );
+
+          // Refetch messages to get the real message
+          refetchMessages().then(() => {
+            // Remove pending message after refetch completes
+            setPendingMessages(prev => prev.filter(msg => msg.id !== tempId));
+          });
+          refetchConversations();
+        },
+        onError: () => {
+          // Mark message as failed
+          setPendingMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId ? { ...msg, status: "failed" as const } : msg
+            )
+          );
+
+          // Restore message text for retry
+          setMessageText(messageContent);
+        },
+      }
+    );
   };
 
   const formatTime = (date: string) => {
@@ -280,9 +276,7 @@ export default function MobileMessagePopup({
                       onClick={() => setSelectedConversation(conversation.id)}
                     >
                       <ProfilePictureUploader
-                        currentAvatarUrl={
-                          otherUser?.settings?.avatarUrl || otherUser?.avatar
-                        }
+                        currentAvatarUrl={otherUser?.settings?.avatarUrl}
                         userName={otherUser?.name || otherUser?.email || "User"}
                         onAvatarChange={() => {}}
                         size="md"
