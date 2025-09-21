@@ -453,10 +453,12 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigateWeek("prev")}
-                className="p-2 rounded-lg transition-all duration-300 hover:scale-110"
+                className="p-3 sm:p-2 rounded-lg transition-all duration-300 hover:scale-110 touch-manipulation"
                 style={{
                   backgroundColor: "#3A4040",
                   color: "#E5E7EB",
+                  minWidth: "44px",
+                  minHeight: "44px",
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = "#4A5A70";
@@ -465,15 +467,16 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                   e.currentTarget.style.backgroundColor = "#3A4040";
                 }}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
 
               <button
                 onClick={goToToday}
-                className="px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105"
+                className="px-4 py-2 sm:px-3 sm:py-1 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 touch-manipulation"
                 style={{
                   backgroundColor: "#4A5A70",
                   color: "#E5E7EB",
+                  minHeight: "44px",
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = "#606364";
@@ -487,10 +490,12 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
 
               <button
                 onClick={() => navigateWeek("next")}
-                className="p-2 rounded-lg transition-all duration-300 hover:scale-110"
+                className="p-3 sm:p-2 rounded-lg transition-all duration-300 hover:scale-110 touch-manipulation"
                 style={{
                   backgroundColor: "#3A4040",
                   color: "#E5E7EB",
+                  minWidth: "44px",
+                  minHeight: "44px",
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = "#4A5A70";
@@ -499,7 +504,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                   e.currentTarget.style.backgroundColor = "#3A4040";
                 }}
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
               </button>
             </div>
           </div>
@@ -512,7 +517,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
           </div>
 
           {/* Week Grid */}
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
             {weekDays.map((day, index) => {
               const dayKey = format(day, "yyyy-MM-dd");
               const dayEvents = eventsByDay[dayKey] || [];
@@ -524,7 +529,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
               return (
                 <div
                   key={dayKey}
-                  className={`rounded-lg min-h-[300px] transition-all duration-700 ease-in-out ${
+                  className={`rounded-lg min-h-[200px] sm:min-h-[250px] md:min-h-[300px] transition-all duration-700 ease-in-out ${
                     isCurrentDay ? "ring-2" : ""
                   } ${isFlipped ? "rotate-y-180" : ""}`}
                   style={{
@@ -550,9 +555,9 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                       }}
                     >
                       {/* Day Header */}
-                      <div className="text-center mb-1">
+                      <div className="text-center mb-2">
                         <p
-                          className={`text-xs font-medium uppercase tracking-wide ${
+                          className={`text-sm sm:text-xs font-medium uppercase tracking-wide ${
                             isCurrentDay ? "font-bold" : ""
                           }`}
                           style={{
@@ -562,7 +567,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                           {format(day, "EEE")}
                         </p>
                         <p
-                          className={`text-sm font-bold ${
+                          className={`text-lg sm:text-sm font-bold ${
                             isCurrentDay ? "text-white" : ""
                           }`}
                           style={{
@@ -586,7 +591,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                           return (
                             <div
                               key={event.id}
-                              className="rounded px-2 py-1 text-xs group"
+                              className="rounded px-2 py-1.5 text-xs sm:text-xs group"
                               style={{
                                 backgroundColor: isReminder
                                   ? "#F59E0B"
@@ -679,14 +684,16 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
 
                       {/* Add Button - Always at bottom */}
                       {!isPast && (
-                        <div className="flex justify-center mt-auto pt-1">
+                        <div className="flex justify-center mt-auto pt-2">
                           <button
                             onClick={() => toggleCardFlip(dayKey)}
-                            className="p-1 rounded transition-all duration-300 hover:scale-110"
+                            className="p-2 sm:p-1 rounded transition-all duration-300 hover:scale-110 touch-manipulation flex items-center justify-center"
                             style={{
                               backgroundColor: "#1F2937",
                               color: "#F9FAFB",
                               border: "1px solid #374151",
+                              minWidth: "44px",
+                              minHeight: "44px",
                             }}
                             onMouseEnter={e => {
                               e.currentTarget.style.backgroundColor = "#111827";
@@ -699,7 +706,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                               e.currentTarget.style.color = "#F9FAFB";
                             }}
                           >
-                            <Plus className="h-2.5 w-2.5" />
+                            <Plus className="h-4 w-4 sm:h-2.5 sm:w-2.5" />
                           </button>
                         </div>
                       )}
@@ -716,33 +723,36 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                       {/* Header with close button */}
                       <div className="flex items-center justify-between mb-3">
                         <h4
-                          className="text-sm font-semibold"
+                          className="text-base sm:text-sm font-semibold"
                           style={{ color: "#E5E7EB" }}
                         >
                           Quick Actions
                         </h4>
                         <button
                           onClick={() => toggleCardFlip(dayKey)}
-                          className="p-1 rounded transition-all duration-300 hover:scale-110"
+                          className="p-2 sm:p-1 rounded transition-all duration-300 hover:scale-110 touch-manipulation"
                           style={{
                             backgroundColor: "#1F2937",
                             color: "#F9FAFB",
                             border: "1px solid #374151",
+                            minWidth: "44px",
+                            minHeight: "44px",
                           }}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-4 w-4 sm:h-3 sm:w-3" />
                         </button>
                       </div>
 
                       {/* Quick action buttons */}
-                      <div className="space-y-1 flex-1">
+                      <div className="space-y-2 flex-1">
                         <button
                           onClick={() => handleQuickAction("schedule", day)}
-                          className="w-full p-2 rounded transition-all duration-200 hover:bg-opacity-80 flex items-center gap-2 group"
+                          className="w-full p-3 sm:p-2 rounded transition-all duration-200 hover:bg-opacity-80 flex items-center gap-3 sm:gap-2 group touch-manipulation"
                           style={{
                             backgroundColor: "rgba(31, 41, 55, 0.5)",
                             color: "#E5E7EB",
                             border: "1px solid rgba(55, 65, 81, 0.4)",
+                            minHeight: "48px",
                           }}
                           onMouseEnter={e => {
                             e.currentTarget.style.backgroundColor =
@@ -758,25 +768,26 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                           }}
                         >
                           <div
-                            className="p-1 rounded"
+                            className="p-1.5 sm:p-1 rounded"
                             style={{
                               backgroundColor: "rgba(55, 65, 81, 0.4)",
                             }}
                           >
-                            <Calendar className="h-3 w-3" />
+                            <Calendar className="h-4 w-4 sm:h-3 sm:w-3" />
                           </div>
-                          <span className="text-xs font-medium">
+                          <span className="text-sm sm:text-xs font-medium">
                             Schedule Lesson
                           </span>
                         </button>
 
                         <button
                           onClick={() => handleQuickAction("reminder", day)}
-                          className="w-full p-2 rounded transition-all duration-200 hover:bg-opacity-80 flex items-center gap-2 group"
+                          className="w-full p-3 sm:p-2 rounded transition-all duration-200 hover:bg-opacity-80 flex items-center gap-3 sm:gap-2 group touch-manipulation"
                           style={{
                             backgroundColor: "rgba(17, 24, 39, 0.6)",
                             color: "#D1D5DB",
                             border: "1px solid rgba(31, 41, 55, 0.4)",
+                            minHeight: "48px",
                           }}
                           onMouseEnter={e => {
                             e.currentTarget.style.backgroundColor =
@@ -792,12 +803,12 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                           }}
                         >
                           <div
-                            className="p-1 rounded"
+                            className="p-1.5 sm:p-1 rounded"
                             style={{ backgroundColor: "rgba(31, 41, 55, 0.4)" }}
                           >
-                            <Bell className="h-3 w-3" />
+                            <Bell className="h-4 w-4 sm:h-3 sm:w-3" />
                           </div>
-                          <span className="text-xs font-medium">
+                          <span className="text-sm sm:text-xs font-medium">
                             Add Reminder
                           </span>
                         </button>
@@ -846,9 +857,9 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
 
       {/* Day Overview Modal */}
       {showDayOverviewModal && selectedDate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div
-            className="rounded-2xl shadow-xl border p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+            className="rounded-2xl shadow-xl border p-4 sm:p-6 w-full max-w-2xl max-h-[95vh] overflow-y-auto"
             style={{
               backgroundColor: "#353A3A",
               borderColor: "#606364",
@@ -963,7 +974,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                 });
 
                 return availableSlots.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {availableSlots.map((slot, index) => (
                       <button
                         key={index}
@@ -975,11 +986,12 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                           setShowDayOverviewModal(false);
                           setShowScheduleModal(true);
                         }}
-                        className="p-3 rounded-lg border text-center transition-all duration-200 hover:bg-sky-500/10 hover:border-sky-500/30"
+                        className="p-3 sm:p-2 rounded-lg border text-center transition-all duration-200 hover:bg-sky-500/10 hover:border-sky-500/30 touch-manipulation text-sm sm:text-xs"
                         style={{
                           backgroundColor: "#2A2F2F",
                           borderColor: "#606364",
                           color: "#FFFFFF",
+                          minHeight: "48px",
                         }}
                       >
                         {slot}
@@ -1000,9 +1012,9 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
 
       {/* Schedule Lesson Modal */}
       {showScheduleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div
-            className="rounded-2xl shadow-xl border p-6 w-full max-w-md mx-4"
+            className="rounded-2xl shadow-xl border p-4 sm:p-6 w-full max-w-md max-h-[95vh] overflow-y-auto"
             style={{
               backgroundColor: "#353A3A",
               borderColor: "#606364",
@@ -1145,9 +1157,9 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
 
       {/* Add Reminder Modal */}
       {showAddReminderModal && selectedDate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div
-            className="rounded-2xl shadow-xl border p-6 w-full max-w-md mx-4"
+            className="rounded-2xl shadow-xl border p-4 sm:p-6 w-full max-w-md max-h-[95vh] overflow-y-auto"
             style={{
               backgroundColor: "#353A3A",
               borderColor: "#606364",
