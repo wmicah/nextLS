@@ -730,7 +730,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                         </h4>
                         <button
                           onClick={() => toggleCardFlip(dayKey)}
-                          className="p-2 sm:p-1 rounded transition-all duration-300 hover:scale-110 touch-manipulation"
+                          className="p-2 sm:p-1 rounded transition-all duration-300 hover:scale-110 touch-manipulation flex items-center justify-center"
                           style={{
                             backgroundColor: "#1F2937",
                             color: "#F9FAFB",

@@ -404,11 +404,11 @@ function VideosPage() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredVideos.map(video => (
                 <div
                   key={video.id}
-                  className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
+                  className="group relative rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border"
                   style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                   onMouseEnter={e => {
                     e.currentTarget.style.backgroundColor = "#3A4040";
@@ -426,104 +426,127 @@ function VideosPage() {
                         "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
                     }}
                   />
-                  <div className="relative p-6">
-                    {/* Video Thumbnail */}
-                    <div className="relative mb-3 md:mb-4 bg-black rounded-lg md:rounded-xl overflow-hidden aspect-video">
-                      {video.thumbnail ? (
-                        <img
-                          src={video.thumbnail}
-                          alt={video.title}
-                          className="w-full h-full object-cover"
+
+                  {/* Video Thumbnail */}
+                  <div
+                    className="relative aspect-video overflow-hidden"
+                    style={{ backgroundColor: "#2A3133" }}
+                  >
+                    {video.thumbnail ? (
+                      <img
+                        src={video.thumbnail}
+                        alt={video.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Video
+                          className="w-8 h-8"
+                          style={{ color: "#ABA4AA" }}
                         />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Video
-                            className="w-12 h-12 md:w-16 md:h-16"
-                            style={{ color: "#ABA4AA" }}
+                      </div>
+                    )}
+
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: "#4A5A70" }}
+                        >
+                          <Play
+                            className="w-6 h-6 ml-1"
+                            style={{ color: "#C3BCC2" }}
                           />
                         </div>
-                      )}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                        <Play
-                          className="w-8 h-8 md:w-10 md:h-10 opacity-0 hover:opacity-100 transition-opacity"
-                          style={{ color: "#C3BCC2" }}
-                        />
                       </div>
                     </div>
 
-                    {/* Video Info */}
-                    <div className="space-y-2 md:space-y-3">
-                      <div className="flex items-start justify-between">
-                        <h3
-                          className="font-semibold text-sm md:text-lg line-clamp-2"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {video.title}
-                        </h3>
+                    {/* Category Badge */}
+                    <div className="absolute top-3 left-3">
+                      <span
+                        className="px-2 py-1 text-xs font-medium rounded-full"
+                        style={{ backgroundColor: "#4A5A70", color: "#ABA4AA" }}
+                      >
+                        {video.category}
+                      </span>
+                    </div>
+
+                    {/* Duration */}
+                    {video.duration && (
+                      <div className="absolute bottom-3 right-3">
                         <span
-                          className="text-xs px-2 py-1 md:px-3 rounded-full flex-shrink-0 ml-2"
+                          className="px-2 py-1 text-xs font-medium rounded"
                           style={{
-                            backgroundColor: "#4A5A70",
-                            color: "#ABA4AA",
-                          }}
-                        >
-                          {video.category}
-                        </span>
-                      </div>
-
-                      {video.description && (
-                        <p
-                          className="text-xs md:text-sm line-clamp-2"
-                          style={{ color: "#ABA4AA" }}
-                        >
-                          {video.description}
-                        </p>
-                      )}
-
-                      <div
-                        className="flex items-center justify-between text-xs md:text-sm"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        <span>{formatDuration(video.duration)}</span>
-                        <span>{formatFileSize(video.fileSize)}</span>
-                      </div>
-
-                      <div
-                        className="flex items-center justify-between text-xs md:text-sm"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        <span>By {video.uploader.name}</span>
-                        <span>
-                          {new Date(video.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-2 md:gap-3 pt-2 md:pt-3">
-                        <Link
-                          href={`/videos/${video.id}`}
-                          className="flex items-center gap-1 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 hover:scale-105"
-                          style={{
-                            backgroundColor: "#4A5A70",
+                            backgroundColor: "#2A3133",
                             color: "#C3BCC2",
                           }}
                         >
-                          <Eye className="w-3 h-3 md:w-4 md:h-4" />
-                          <span className="hidden sm:inline">Review</span>
-                        </Link>
-                        {video.feedback && video.feedback.length > 0 && (
-                          <span
-                            className="text-xs px-2 py-1 rounded-full"
-                            style={{
-                              backgroundColor: "#10b981",
-                              color: "#ffffff",
-                            }}
-                          >
-                            {video.feedback.length}
-                          </span>
-                        )}
+                          {formatDuration(video.duration)}
+                        </span>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="relative p-4 space-y-3">
+                    {/* Title */}
+                    <div>
+                      <h3
+                        className="font-semibold text-sm line-clamp-2 group-hover:text-blue-400 transition-colors"
+                        style={{ color: "#C3BCC2" }}
+                      >
+                        {video.title}
+                      </h3>
                     </div>
+
+                    {/* Description */}
+                    {video.description && (
+                      <p
+                        className="text-xs line-clamp-2"
+                        style={{ color: "#ABA4AA" }}
+                      >
+                        {video.description}
+                      </p>
+                    )}
+
+                    {/* Meta Info */}
+                    <div
+                      className="flex items-center justify-between text-xs"
+                      style={{ color: "#ABA4AA" }}
+                    >
+                      <div className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        <span>{video.uploader.name}</span>
+                      </div>
+                      <span>
+                        {new Date(video.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    {/* Stats */}
+                    <div
+                      className="flex items-center justify-between text-xs"
+                      style={{ color: "#ABA4AA" }}
+                    >
+                      <span>{formatFileSize(video.fileSize)}</span>
+                      {video.feedback && video.feedback.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3" />
+                          <span>{video.feedback.length} feedback</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Button */}
+                    <Link
+                      href={`/videos/${video.id}`}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105"
+                      style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Review</span>
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -698,11 +721,11 @@ function VideosPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredClientSubmissions.map(submission => (
                   <div
                     key={submission.id}
-                    className="rounded-xl md:rounded-2xl border transition-all duration-300 transform hover:-translate-y-1 cursor-pointer relative overflow-hidden group"
+                    className="group relative rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border"
                     style={{
                       backgroundColor: "#353A3A",
                       borderColor: "#606364",
@@ -716,159 +739,130 @@ function VideosPage() {
                       e.currentTarget.style.borderColor = "#606364";
                     }}
                   >
-                    <div className="relative p-3 md:p-6">
-                      {/* Header with client info and timestamp */}
-                      <div className="flex items-start justify-between mb-3 md:mb-4">
-                        <div className="flex items-center gap-2 md:gap-3">
+                    <div
+                      className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+                      }}
+                    />
+
+                    {/* Video Thumbnail */}
+                    <div
+                      className="relative aspect-video overflow-hidden"
+                      style={{ backgroundColor: "#2A3133" }}
+                    >
+                      {submission.thumbnail ? (
+                        <img
+                          src={submission.thumbnail}
+                          alt={submission.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Video
+                            className="w-8 h-8"
+                            style={{ color: "#ABA4AA" }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <div
-                            className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center"
+                            className="w-12 h-12 rounded-full flex items-center justify-center"
                             style={{ backgroundColor: "#4A5A70" }}
                           >
-                            <User
-                              className="w-4 h-4 md:w-5 md:h-5"
+                            <Play
+                              className="w-6 h-6 ml-1"
                               style={{ color: "#C3BCC2" }}
                             />
                           </div>
-                          <div>
-                            <p
-                              className="font-semibold text-sm md:text-base"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              {submission.client.name}
-                            </p>
-                            <p
-                              className="text-xs md:text-sm"
-                              style={{ color: "#ABA4AA" }}
-                            >
-                              {getTimeAgo(submission.createdAt)}
-                            </p>
-                          </div>
                         </div>
+                      </div>
+
+                      {/* Client Badge */}
+                      <div className="absolute top-3 left-3">
                         <span
-                          className="text-xs px-2 py-1 md:px-3 rounded-full flex-shrink-0"
+                          className="px-2 py-1 text-xs font-medium rounded-full"
                           style={{
                             backgroundColor: "#10B981",
                             color: "#ffffff",
                           }}
                         >
-                          <span className="hidden sm:inline">
-                            Client Submission
-                          </span>
-                          <span className="sm:hidden">Client</span>
+                          Client
                         </span>
                       </div>
 
-                      {/* Video Thumbnail */}
-                      <div className="relative mb-3 md:mb-4 bg-black rounded-lg md:rounded-xl overflow-hidden aspect-video">
-                        {submission.thumbnail ? (
-                          <img
-                            src={submission.thumbnail}
-                            alt={submission.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Video
-                              className="w-12 h-12 md:w-16 md:h-16"
-                              style={{ color: "#ABA4AA" }}
-                            />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                          <Play
-                            className="w-8 h-8 md:w-10 md:h-10 opacity-0 hover:opacity-100 transition-opacity"
-                            style={{ color: "#C3BCC2" }}
-                          />
-                        </div>
+                      {/* Client Submission Badge */}
+                      <div className="absolute bottom-3 right-3">
+                        <span
+                          className="px-2 py-1 text-xs font-medium rounded"
+                          style={{
+                            backgroundColor: "#2A3133",
+                            color: "#C3BCC2",
+                          }}
+                        >
+                          Submission
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="relative p-4 space-y-3">
+                      {/* Title */}
+                      <div>
+                        <h3
+                          className="font-semibold text-sm line-clamp-2 group-hover:text-blue-400 transition-colors"
+                          style={{ color: "#C3BCC2" }}
+                        >
+                          {submission.title}
+                        </h3>
                       </div>
 
-                      {/* Submission Details */}
-                      <div className="space-y-2 md:space-y-3">
-                        <div>
-                          <h3
-                            className="font-semibold text-sm md:text-lg mb-1 md:mb-2"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            {submission.title}
-                          </h3>
-                          {submission.description && (
-                            <p
-                              className="text-xs md:text-sm line-clamp-2"
-                              style={{ color: "#ABA4AA" }}
-                            >
-                              {submission.description}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Drill Info if available */}
-                        {submission.drill && (
-                          <div
-                            className="p-2 md:p-3 rounded-lg"
-                            style={{ backgroundColor: "#2A3133" }}
-                          >
-                            <p
-                              className="text-xs md:text-sm font-medium"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              <span className="hidden sm:inline">
-                                Related Drill:{" "}
-                              </span>
-                              {submission.drill.title}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Metadata */}
-                        <div
-                          className="flex items-center justify-between text-xs md:text-sm"
+                      {/* Description */}
+                      {submission.description && (
+                        <p
+                          className="text-xs line-clamp-2"
                           style={{ color: "#ABA4AA" }}
                         >
-                          <div className="flex items-center gap-2 md:gap-4">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                              <span className="hidden sm:inline">
-                                {formatDate(new Date(submission.createdAt))}
-                              </span>
-                              <span className="sm:hidden">
-                                {getTimeAgo(submission.createdAt)}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
+                          {submission.description}
+                        </p>
+                      )}
 
-                        {/* Action Buttons */}
-                        <div className="flex items-center gap-2 md:gap-3 pt-2 md:pt-3">
-                          <Link
-                            href={`/videos/${submission.id}`}
-                            className="flex items-center gap-1 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 hover:scale-105"
-                            style={{
-                              backgroundColor: "#4A5A70",
-                              color: "#C3BCC2",
-                            }}
-                          >
-                            <Eye className="w-3 h-3 md:w-4 md:h-4" />
-                            <span className="hidden sm:inline">
-                              Review & Respond
-                            </span>
-                            <span className="sm:hidden">Review</span>
-                          </Link>
-                          {submission.description && (
-                            <span
-                              className="text-xs px-2 py-1 rounded-full flex items-center gap-1"
-                              style={{
-                                backgroundColor: "#3B82F6",
-                                color: "#ffffff",
-                              }}
-                            >
-                              <MessageSquare className="w-3 h-3" />
-                              <span className="hidden sm:inline">
-                                Has Comment
-                              </span>
-                            </span>
-                          )}
+                      {/* Meta Info */}
+                      <div
+                        className="flex items-center justify-between text-xs"
+                        style={{ color: "#ABA4AA" }}
+                      >
+                        <div className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          <span>{submission.client.name}</span>
                         </div>
+                        <span>
+                          {new Date(submission.createdAt).toLocaleDateString()}
+                        </span>
                       </div>
+
+                      {/* Stats */}
+                      <div
+                        className="flex items-center justify-between text-xs"
+                        style={{ color: "#ABA4AA" }}
+                      >
+                        <span>Client Submission</span>
+                        <span>{getTimeAgo(submission.createdAt)}</span>
+                      </div>
+
+                      {/* Action Button */}
+                      <Link
+                        href={`/videos/${submission.id}`}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105"
+                        style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>Review</span>
+                      </Link>
                     </div>
                   </div>
                 ))}

@@ -62,6 +62,9 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
 
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
 
+  // Get current user data
+  const { data: currentUser } = trpc.user.getProfile.useQuery();
+
   // Handle click outside to close
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -259,11 +262,16 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                 </div>
               ) : (
                 filteredConversations.map((conversation: any) => {
+                  // Determine the other user (not the current user)
                   const otherUser =
-                    conversation.coach.id !==
-                    conversation.messages[0]?.sender?.id
-                      ? conversation.coach
-                      : conversation.client;
+                    conversation.coach.id === currentUser?.id
+                      ? conversation.client
+                      : conversation.coach;
+
+                  // Debug: Check what avatar URL we're getting
+                  const avatarUrl =
+                    otherUser?.settings?.avatarUrl || otherUser?.avatar;
+                  console.log(`Avatar for ${otherUser?.name}:`, avatarUrl);
                   const lastMessage = conversation.messages[0];
                   // Get actual unread count from the unreadCounts data
                   const unreadCount = unreadCounts[conversation.id] || 0;
@@ -280,14 +288,12 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                       onClick={() => setSelectedConversation(conversation.id)}
                     >
                       <ProfilePictureUploader
-                        currentAvatarUrl={
-                          otherUser?.settings?.avatarUrl || otherUser?.avatar
-                        }
+                        currentAvatarUrl={avatarUrl}
                         userName={otherUser?.name || otherUser?.email || "User"}
                         onAvatarChange={() => {}}
-                        size="sm"
+                        size="md"
                         readOnly={true}
-                        className="flex-shrink-0"
+                        className="flex-shrink-0 border-2 border-red-500"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
@@ -347,10 +353,7 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {messages.map((message: any) => {
-                const isCurrentUser =
-                  message.sender.id ===
-                  conversations.find(c => c.id === selectedConversation)
-                    ?.coachId;
+                const isCurrentUser = message.sender.id === currentUser?.id;
 
                 return (
                   <div
@@ -367,6 +370,63 @@ export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
                       }`}
                     >
                       <FormattedMessage content={message.content} />
+
+                      {/* Video Attachment */}
+                      {message.attachmentType === "video" &&
+                        message.attachmentUrl && (
+                          <div className="mt-3 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-gray-600 rounded-lg flex items-center justify-center">
+                                <svg
+                                  className="w-6 h-6 text-gray-300"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white truncate">
+                                  {message.attachmentName || "Video Attachment"}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  Video message
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  // Navigate to video annotation page
+                                  window.open(
+                                    `/videos/${message.id}`,
+                                    "_blank"
+                                  );
+                                }}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                              >
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                  />
+                                </svg>
+                                Annotate
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                       {/* Message Acknowledgment */}
                       <MessageAcknowledgment

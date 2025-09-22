@@ -1054,17 +1054,22 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                   e.currentTarget.style.boxShadow = "none";
                                 }}
                               >
-                                <div
-                                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 transition-transform duration-200 hover:scale-110"
-                                  style={{
-                                    backgroundColor: "#4A5A70",
-                                    color: "white",
-                                  }}
-                                >
-                                  {(otherUser.name || otherUser.email)
-                                    .charAt(0)
-                                    .toUpperCase()}
-                                </div>
+                                <ProfilePictureUploader
+                                  currentAvatarUrl={
+                                    otherUser?.settings?.avatarUrl ||
+                                    otherUser?.avatar ||
+                                    null
+                                  }
+                                  userName={
+                                    otherUser?.name ||
+                                    otherUser?.email ||
+                                    "User"
+                                  }
+                                  onAvatarChange={() => {}}
+                                  size="sm"
+                                  readOnly={true}
+                                  className="flex-shrink-0"
+                                />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
                                     <p

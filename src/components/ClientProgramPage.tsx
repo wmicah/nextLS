@@ -2640,7 +2640,10 @@ function ClientProgramPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => {
-                                    setSelectedDrillForVideo(drill);
+                                    setSelectedDrillForVideo({
+                                      id: drill.id,
+                                      title: drill.title,
+                                    });
                                     setIsVideoSubmissionModalOpen(true);
                                   }}
                                   className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"

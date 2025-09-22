@@ -1,118 +1,93 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "./ui/button"
-import { Input } from "./ui/input"
-import { Label } from "./ui/label"
-import { Textarea } from "./ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Upload, Video, FileText } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import VideoUpload from "./VideoUpload";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Video, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function VideoUploadPage() {
-	const [title, setTitle] = useState("")
-	const [description, setDescription] = useState("")
-	const [videoFile, setVideoFile] = useState<File | null>(null)
-	const [isUploading, setIsUploading] = useState(false)
+  const [uploadComplete, setUploadComplete] = useState(false);
+  const router = useRouter();
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0]
-		if (file) {
-			setVideoFile(file)
-		}
-	}
+  const handleUploadComplete = (videoId: string) => {
+    console.log("Video uploaded successfully:", videoId);
+    setUploadComplete(true);
+    // Redirect to videos page after successful upload
+    setTimeout(() => {
+      router.push("/videos");
+    }, 2000);
+  };
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault()
-		if (!videoFile) return
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Link
+              href="/videos"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105"
+              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Videos</span>
+            </Link>
+          </div>
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-white mb-2">Upload Video</h1>
+            <p className="text-gray-400">
+              Upload bullpen footage, practice videos, or game footage for
+              review
+            </p>
+          </div>
+        </div>
 
-		setIsUploading(true)
-		// TODO: Implement video upload logic
-		console.log("Uploading video:", { title, description, videoFile })
+        {/* Upload Success Message */}
+        {uploadComplete && (
+          <div className="mb-6 p-4 rounded-xl border-2 border-green-500 bg-green-500/10">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                <svg
+                  className="w-4 h-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-green-400 font-semibold">
+                  Video uploaded successfully!
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  Redirecting to videos page...
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
-		// Simulate upload delay
-		setTimeout(() => {
-			setIsUploading(false)
-			setTitle("")
-			setDescription("")
-			setVideoFile(null)
-		}, 2000)
-	}
-
-	return (
-		<div className="container mx-auto px-4 py-8">
-			<div className="max-w-2xl mx-auto">
-				<Card className="bg-[#2A3133] border-gray-600">
-					<CardHeader>
-						<CardTitle className="text-white flex items-center gap-2">
-							<Video className="h-5 w-5" />
-							Upload Video
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<form onSubmit={handleSubmit} className="space-y-4">
-							<div>
-								<Label htmlFor="title" className="text-white">
-									Video Title
-								</Label>
-								<Input
-									id="title"
-									value={title}
-									onChange={(e) => setTitle(e.target.value)}
-									className="bg-[#3A4245] border-gray-600 text-white"
-									placeholder="Enter video title"
-									required
-								/>
-							</div>
-
-							<div>
-								<Label htmlFor="description" className="text-white">
-									Description
-								</Label>
-								<Textarea
-									id="description"
-									value={description}
-									onChange={(e) => setDescription(e.target.value)}
-									className="bg-[#3A4245] border-gray-600 text-white"
-									placeholder="Enter video description"
-									rows={3}
-								/>
-							</div>
-
-							<div>
-								<Label htmlFor="video" className="text-white">
-									Video File
-								</Label>
-								<Input
-									id="video"
-									type="file"
-									accept="video/*"
-									onChange={handleFileChange}
-									className="bg-[#3A4245] border-gray-600 text-white"
-									required
-								/>
-							</div>
-
-							<Button
-								type="submit"
-								disabled={!videoFile || isUploading}
-								className="w-full bg-blue-600 hover:bg-blue-700"
-							>
-								{isUploading ? (
-									<>
-										<Upload className="h-4 w-4 mr-2 animate-spin" />
-										Uploading...
-									</>
-								) : (
-									<>
-										<Upload className="h-4 w-4 mr-2" />
-										Upload Video
-									</>
-								)}
-							</Button>
-						</form>
-					</CardContent>
-				</Card>
-			</div>
-		</div>
-	)
+        {/* Upload Component */}
+        <Card className="bg-[#2A3133] border-gray-600">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Video className="h-5 w-5" />
+              Video Upload
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VideoUpload onUploadComplete={handleUploadComplete} />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }

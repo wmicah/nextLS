@@ -491,7 +491,9 @@ function MessagesPage({}: MessagesPageProps) {
                       <div className="flex items-center gap-4">
                         <ProfilePictureUploader
                           currentAvatarUrl={
-                            otherUser?.settings?.avatarUrl || otherUser?.avatar
+                            otherUser?.settings?.avatarUrl ||
+                            otherUser?.avatar ||
+                            null
                           }
                           userName={
                             otherUser?.name || otherUser?.email || "User"
@@ -615,7 +617,7 @@ function MessagesPage({}: MessagesPageProps) {
                     </div>
                   ) : (
                     <>
-                      {messages.map(message => (
+                      {messages.map((message: any) => (
                         <div
                           key={message.id}
                           className={`flex ${
@@ -688,16 +690,52 @@ function MessagesPage({}: MessagesPageProps) {
                                 ) : message.attachmentType?.startsWith(
                                     "video/"
                                   ) ? (
-                                  <video
-                                    src={message.attachmentUrl}
-                                    controls
-                                    className="max-w-full rounded-lg"
-                                    style={{ maxHeight: "300px" }}
-                                    preload="metadata"
-                                    poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23374151'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23f9fafb' font-size='12'%3ELoading...%3C/text%3E%3C/svg%3E"
-                                  >
-                                    Your browser does not support the video tag.
-                                  </video>
+                                  <div className="space-y-2">
+                                    <video
+                                      src={message.attachmentUrl}
+                                      controls
+                                      className="max-w-full rounded-lg"
+                                      style={{ maxHeight: "300px" }}
+                                      preload="metadata"
+                                      poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23374151'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23f9fafb' font-size='12'%3ELoading...%3C/text%3E%3C/svg%3E"
+                                    >
+                                      Your browser does not support the video
+                                      tag.
+                                    </video>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => {
+                                          // Navigate to video annotation page
+                                          window.open(
+                                            `/videos/${message.id}`,
+                                            "_blank"
+                                          );
+                                        }}
+                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                                      >
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                          />
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                          />
+                                        </svg>
+                                        Annotate Video
+                                      </button>
+                                    </div>
+                                  </div>
                                 ) : (
                                   <a
                                     href={message.attachmentUrl}
