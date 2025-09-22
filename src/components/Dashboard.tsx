@@ -101,7 +101,6 @@ export default function Dashboard() {
           <WeekAtAGlance />
         </div>
 
-
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-2 gap-6">
           <RecentNotificationsSection />
