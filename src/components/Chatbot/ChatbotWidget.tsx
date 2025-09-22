@@ -150,7 +150,7 @@ export default function ChatbotWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 z-50">
       {/* Floating Chat Button */}
       <AnimatePresence>
         {!isOpen && (
@@ -166,19 +166,19 @@ export default function ChatbotWidget() {
             className="relative"
           >
             {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-xl animate-pulse" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-lg animate-pulse" />
 
             <Button
               onClick={() => setIsOpen(true)}
-              size="lg"
+              size="icon"
               aria-label="Open chat with AI assistant"
-              className="relative h-16 w-16 rounded-full bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-800 shadow-2xl border-0 transition-all duration-300 hover:scale-105 hover:shadow-blue-500/25"
+              className="relative h-12 w-12 rounded-full bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-800 shadow-lg border-0 transition-all duration-300 hover:scale-110 hover:shadow-blue-500/20"
             >
-              <MessageCircle className="h-7 w-7 text-white" />
+              <MessageCircle className="h-5 w-5 text-white" />
 
               {/* AI indicator */}
-              <div className="absolute -top-1 -right-1 h-6 w-6 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
-                <Sparkles className="h-3 w-3 text-white" />
+              <div className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center border border-white shadow-md">
+                <Sparkles className="h-2 w-2 text-white" />
               </div>
             </Button>
           </motion.div>
@@ -274,10 +274,10 @@ export default function ChatbotWidget() {
                       )}
                       {/* Desktop: Online indicator */}
                       {!isMobile && (
-                        <>
+                        <div className="flex items-center gap-2">
                           <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
                           <span className="text-xs text-gray-600">Online</span>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>

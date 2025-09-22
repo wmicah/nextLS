@@ -912,20 +912,15 @@ function ClientsPage() {
               }}
             >
               {viewMode === "grid" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filteredAndSortedClients.map(
                     (client: Client, index: number) => (
                       <div
                         key={client.id}
-                        className="rounded-2xl shadow-xl border transition-all duration-500 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
+                        className="rounded-xl border transition-all duration-300 hover:border-gray-500 cursor-pointer relative overflow-hidden group"
                         style={{
                           backgroundColor: "#353A3A",
                           borderColor: "#606364",
-                          animationName: "fadeInUp",
-                          animationDuration: "0.6s",
-                          animationTimingFunction: "ease-out",
-                          animationFillMode: "forwards",
-                          animationDelay: `${index * 100}ms`,
                         }}
                         onClick={() => handleOpenProfile(client)}
                         onMouseEnter={e => {
@@ -937,59 +932,70 @@ function ClientsPage() {
                           e.currentTarget.style.borderColor = "#606364";
                         }}
                       >
-                        <div
-                          className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-                          }}
-                        />
-                        <div className="relative p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <ProfilePictureUploader
-                              currentAvatarUrl={
-                                client.user?.settings?.avatarUrl ||
-                                client.avatar
-                              }
-                              userName={client.name}
-                              onAvatarChange={() => {}} // No-op for client cards
-                              readOnly={true}
-                            />
+                        <div className="p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <ProfilePictureUploader
+                                currentAvatarUrl={
+                                  client.user?.settings?.avatarUrl ||
+                                  client.avatar
+                                }
+                                userName={client.name}
+                                onAvatarChange={() => {}}
+                                readOnly={true}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3
+                                    className="text-base font-semibold truncate"
+                                    style={{ color: "#C3BCC2" }}
+                                  >
+                                    {client.name}
+                                  </h3>
+                                  {/* Next Lesson Indicator */}
+                                  {isValidLessonDate(client.nextLessonDate) && (
+                                    <span
+                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                      style={{
+                                        backgroundColor: "#10B981",
+                                        color: "#FFFFFF",
+                                      }}
+                                    >
+                                      <Calendar className="h-3 w-3 mr-1" />
+                                      {format(
+                                        new Date(client.nextLessonDate!),
+                                        "MMM d"
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs truncate text-gray-400">
+                                  {client.email || "No email"}
+                                </p>
+                              </div>
+                            </div>
+
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
                                   openFeedback(client);
                                 }}
-                                className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
+                                className="p-1.5 rounded-lg transition-all duration-300 hover:bg-gray-600/50"
                                 style={{ color: "#ABA4AA" }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.color = "#C3BCC2";
-                                  e.currentTarget.style.backgroundColor =
-                                    "#3A4040";
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.color = "#ABA4AA";
-                                  e.currentTarget.style.backgroundColor =
-                                    "transparent";
-                                }}
                                 title="Add feedback"
                               >
                                 <MessageCircle className="h-4 w-4" />
                               </button>
                               <button
-                                className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setSelectedClientForProfile(client);
+                                  setIsProfileModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg transition-all duration-300 hover:bg-gray-600/50"
                                 style={{ color: "#ABA4AA" }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.color = "#C3BCC2";
-                                  e.currentTarget.style.backgroundColor =
-                                    "#3A4040";
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.color = "#ABA4AA";
-                                  e.currentTarget.style.backgroundColor =
-                                    "transparent";
-                                }}
+                                title="Edit client"
                               >
                                 <Edit className="h-4 w-4" />
                               </button>
@@ -1006,25 +1012,13 @@ function ClientsPage() {
                                   }
                                 }}
                                 disabled={archivingClientId === client.id}
-                                className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
+                                className="p-1.5 rounded-lg transition-all duration-300 hover:bg-gray-600/50 disabled:opacity-50"
                                 style={{ color: "#ABA4AA" }}
-                                onMouseEnter={e => {
-                                  if (!e.currentTarget.disabled) {
-                                    e.currentTarget.style.color =
-                                      activeTab === "active"
-                                        ? "#F59E0B"
-                                        : "#10B981";
-                                    e.currentTarget.style.backgroundColor =
-                                      "#3A4040";
-                                  }
-                                }}
-                                onMouseLeave={e => {
-                                  if (!e.currentTarget.disabled) {
-                                    e.currentTarget.style.color = "#ABA4AA";
-                                    e.currentTarget.style.backgroundColor =
-                                      "transparent";
-                                  }
-                                }}
+                                title={
+                                  activeTab === "active"
+                                    ? "Archive client"
+                                    : "Unarchive client"
+                                }
                               >
                                 {archivingClientId === client.id ? (
                                   <div
@@ -1040,190 +1034,6 @@ function ClientsPage() {
                                   <Archive className="h-4 w-4" />
                                 )}
                               </button>
-                            </div>
-                          </div>
-                          <div>
-                            <h3
-                              className="text-lg font-bold mb-2"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              {client.name}
-                            </h3>
-                            <p
-                              className="text-sm mb-3"
-                              style={{ color: "#9ca3af" }}
-                            >
-                              Added{" "}
-                              {format(
-                                new Date(client.createdAt),
-                                "MMM d, yyyy"
-                              )}
-                            </p>
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                              <div
-                                className="rounded-lg p-3"
-                                style={{ backgroundColor: "#2A2F2F" }}
-                              >
-                                <p
-                                  className="text-xs font-medium mb-1"
-                                  style={{ color: "#ABA4AA" }}
-                                >
-                                  Next Lesson
-                                </p>
-                                <p
-                                  className="text-sm font-semibold"
-                                  style={{ color: "#C3BCC2" }}
-                                >
-                                  {isValidLessonDate(client.nextLessonDate)
-                                    ? format(
-                                        new Date(client.nextLessonDate!),
-                                        "MMM d"
-                                      )
-                                    : "Not scheduled"}
-                                </p>
-                              </div>
-                              <div
-                                className="rounded-lg p-3"
-                                style={{ backgroundColor: "#2A2F2F" }}
-                              >
-                                <p
-                                  className="text-xs font-medium mb-1"
-                                  style={{ color: "#ABA4AA" }}
-                                >
-                                  Last Workout
-                                </p>
-                                <p
-                                  className="text-sm font-semibold truncate"
-                                  style={{ color: "#C3BCC2" }}
-                                >
-                                  {client.lastCompletedWorkout || "None"}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Pitching Information */}
-
-                            {/* Program Assignments */}
-                            {client.programAssignments &&
-                              client.programAssignments.length > 0 && (
-                                <div className="mb-4">
-                                  <p
-                                    className="text-xs font-medium mb-2"
-                                    style={{ color: "#ABA4AA" }}
-                                  >
-                                    Active Programs
-                                  </p>
-                                  <div className="space-y-2">
-                                    {client.programAssignments
-                                      .slice(0, 2)
-                                      .map(assignment => (
-                                        <div
-                                          key={assignment.id}
-                                          className="flex items-center justify-between p-2 rounded-lg"
-                                          style={{
-                                            backgroundColor: "#2A2F2F",
-                                          }}
-                                        >
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-white truncate">
-                                              {assignment.program.title}
-                                            </p>
-                                            <p className="text-xs text-gray-400">
-                                              {assignment.program.sport ||
-                                                "General"}{" "}
-                                              • {assignment.program.level}
-                                            </p>
-                                          </div>
-                                          <div className="text-right">
-                                            <p className="text-xs text-white font-medium">
-                                              {assignment.progress}%
-                                            </p>
-                                            <div className="w-12 h-1 bg-gray-600 rounded-full mt-1">
-                                              <div
-                                                className="h-1 bg-blue-500 rounded-full"
-                                                style={{
-                                                  width: `${assignment.progress}%`,
-                                                }}
-                                              />
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    {client.programAssignments.length > 2 && (
-                                      <p className="text-xs text-gray-400 text-center">
-                                        +{client.programAssignments.length - 2}{" "}
-                                        more programs
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                            <div className="flex items-center justify-between">
-                              <span
-                                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium`}
-                                style={{
-                                  backgroundColor: isValidLessonDate(
-                                    client.nextLessonDate
-                                  )
-                                    ? "#10B981"
-                                    : "#3A4040",
-                                  color: isValidLessonDate(
-                                    client.nextLessonDate
-                                  )
-                                    ? "#DCFCE7"
-                                    : "#C3BCC2",
-                                  borderColor: isValidLessonDate(
-                                    client.nextLessonDate
-                                  )
-                                    ? "#059669"
-                                    : "#4A5A70",
-                                }}
-                              >
-                                {isValidLessonDate(client.nextLessonDate)
-                                  ? "🔥 Active"
-                                  : "💤 Available"}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                {client.email && (
-                                  <button
-                                    className="p-2 rounded-lg transition-all duration-300 transform hover:scale-110"
-                                    style={{ color: "#ABA4AA" }}
-                                    onMouseEnter={e => {
-                                      e.currentTarget.style.color = "#C3BCC2";
-                                      e.currentTarget.style.backgroundColor =
-                                        "#3A4040";
-                                    }}
-                                    onMouseLeave={e => {
-                                      e.currentTarget.style.color = "#ABA4AA";
-                                      e.currentTarget.style.backgroundColor =
-                                        "transparent";
-                                    }}
-                                    title={client.email}
-                                  >
-                                    <Mail className="h-3 w-3" />
-                                  </button>
-                                )}
-                                {client.phone && (
-                                  <button
-                                    className="p-2 rounded-lg transition-all duration-300 transform hover:scale-110"
-                                    style={{ color: "#ABA4AA" }}
-                                    onMouseEnter={e => {
-                                      e.currentTarget.style.color = "#C3BCC2";
-                                      e.currentTarget.style.backgroundColor =
-                                        "#3A4040";
-                                    }}
-                                    onMouseLeave={e => {
-                                      e.currentTarget.style.color = "#ABA4AA";
-                                      e.currentTarget.style.backgroundColor =
-                                        "transparent";
-                                    }}
-                                    title={client.phone}
-                                  >
-                                    <Phone className="h-3 w-3" />
-                                  </button>
-                                )}
-                              </div>
                             </div>
                           </div>
                         </div>

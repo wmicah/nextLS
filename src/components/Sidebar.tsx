@@ -1366,7 +1366,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
           paddingTop: "5rem", // Space for mobile hamburger button
         }}
       >
-        <div className="max-w-full mx-auto">{children}</div>
+        <div className="max-w-full mx-auto pb-20">{children}</div>
       </div>
 
       {/* Client Search Modal */}

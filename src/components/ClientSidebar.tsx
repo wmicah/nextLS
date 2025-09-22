@@ -1091,7 +1091,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
           isOpen ? "md:ml-64" : "md:ml-20"
         } ml-0 p-4 md:p-8 pt-20 md:pt-8`}
       >
-        {children}
+        <div className="pb-20">{children}</div>
       </div>
 
       {/* Add custom keyframes for animations */}
