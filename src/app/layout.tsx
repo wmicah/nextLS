@@ -13,6 +13,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import MessagingServiceProvider from "@/components/MessagingServiceProvider";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import PWAProvider from "@/components/PWAProvider";
+import SessionManager from "@/components/SessionManager";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -208,6 +209,7 @@ export default function RootLayout({
               <ChatbotProvider>
                 <MessagingServiceProvider>
                   <PWAProvider>
+                    <SessionManager />
                     <ConditionalNavbar />
                     {children}
                     <Toast />

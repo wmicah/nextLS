@@ -322,7 +322,6 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
         className="h-screen flex flex-col overflow-hidden"
         style={{
           backgroundColor: "#2A3133",
-          height: "100vh",
           height: "100dvh", // Dynamic viewport height for mobile
         }}
       >
