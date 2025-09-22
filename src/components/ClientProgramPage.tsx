@@ -585,11 +585,9 @@ function ClientProgramPage() {
           "📚 All YouTube items in library:",
           libraryItems?.filter(item => item.isYoutube)
         );
-        setVideoError({
-          message: "Video not available",
-          details: `YouTube video "${drillData.title}" could not be found. Please contact your coach.`,
-          canRetry: false,
-        });
+        setVideoError(
+          `YouTube video "${drillData.title}" could not be found. Please contact your coach.`
+        );
         return;
       }
     }
