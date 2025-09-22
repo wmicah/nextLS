@@ -151,29 +151,28 @@ export default function SeamlessProgramModal({
 
   const watchedValues = watch();
 
-  // Initialize with one week by default
+  // Initialize weeks based on duration
   useEffect(() => {
     if (!initializedRef.current && programBuilderWeeks.length === 0) {
-      const initialWeeks = [
-        {
-          id: `week-${Date.now()}`,
-          name: "Week 1",
-          days: {
-            sun: [],
-            mon: [],
-            tue: [],
-            wed: [],
-            thu: [],
-            fri: [],
-            sat: [],
-          },
-          collapsed: false,
+      const duration = watchedValues.duration || 1;
+      const initialWeeks = Array.from({ length: duration }, (_, index) => ({
+        id: `week-${Date.now()}-${index}`,
+        name: `Week ${index + 1}`,
+        days: {
+          sun: [],
+          mon: [],
+          tue: [],
+          wed: [],
+          thu: [],
+          fri: [],
+          sat: [],
         },
-      ];
+        collapsed: false,
+      }));
       setProgramBuilderWeeks(initialWeeks);
       initializedRef.current = true;
     }
-  }, [programBuilderWeeks.length]);
+  }, [programBuilderWeeks.length, watchedValues.duration]);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -187,8 +186,48 @@ export default function SeamlessProgramModal({
       });
       setCurrentStep("details");
       initializedRef.current = false;
+      setProgramBuilderWeeks([]);
     }
   }, [isOpen, reset]);
+
+  // Regenerate weeks when duration changes
+  useEffect(() => {
+    if (
+      initializedRef.current &&
+      watchedValues.duration &&
+      watchedValues.duration > 0
+    ) {
+      const currentDuration = watchedValues.duration;
+      const currentWeeks = programBuilderWeeks.length;
+
+      if (currentDuration !== currentWeeks) {
+        if (currentDuration > currentWeeks) {
+          // Add more weeks
+          const newWeeks = Array.from(
+            { length: currentDuration - currentWeeks },
+            (_, index) => ({
+              id: `week-${Date.now()}-${currentWeeks + index}`,
+              name: `Week ${currentWeeks + index + 1}`,
+              days: {
+                sun: [],
+                mon: [],
+                tue: [],
+                wed: [],
+                thu: [],
+                fri: [],
+                sat: [],
+              },
+              collapsed: false,
+            })
+          );
+          setProgramBuilderWeeks(prev => [...prev, ...newWeeks]);
+        } else if (currentDuration < currentWeeks) {
+          // Remove excess weeks
+          setProgramBuilderWeeks(prev => prev.slice(0, currentDuration));
+        }
+      }
+    }
+  }, [watchedValues.duration]);
 
   const handleProgramBuilderSave = useCallback(
     (weeks: ProgramBuilderWeek[]) => {
@@ -300,28 +339,6 @@ export default function SeamlessProgramModal({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const addWeek = () => {
-    const newWeek: ProgramBuilderWeek = {
-      id: `week-${Date.now()}`,
-      name: `Week ${programBuilderWeeks.length + 1}`,
-      days: {
-        sun: [],
-        mon: [],
-        tue: [],
-        wed: [],
-        thu: [],
-        fri: [],
-        sat: [],
-      },
-      collapsed: false,
-    };
-    setProgramBuilderWeeks(prev => [...prev, newWeek]);
-  };
-
-  const removeWeek = (weekId: string) => {
-    setProgramBuilderWeeks(prev => prev.filter(week => week.id !== weekId));
   };
 
   const getLevelColor = (level: string) => {
@@ -565,44 +582,13 @@ export default function SeamlessProgramModal({
                     </Card>
                   ) : (
                     <div className="space-y-4">
-                      {programBuilderWeeks.map((week, index) => (
-                        <Card
-                          key={week.id}
-                          className="bg-[#353A3A] border-gray-600"
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-[#4A5A70] rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                  {index + 1}
-                                </div>
-                                <h5 className="text-lg font-medium text-white">
-                                  {week.name}
-                                </h5>
-                              </div>
-                              {programBuilderWeeks.length > 1 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeWeek(week.id)}
-                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                            <ProgramBuilder
-                              onSave={handleProgramBuilderSave}
-                              initialWeeks={[week]}
-                              onOpenVideoLibrary={onOpenVideoLibrary}
-                              selectedVideoFromLibrary={
-                                selectedVideoFromLibrary
-                              }
-                              onVideoProcessed={onVideoProcessed}
-                            />
-                          </CardContent>
-                        </Card>
-                      ))}
+                      <ProgramBuilder
+                        onSave={handleProgramBuilderSave}
+                        initialWeeks={programBuilderWeeks}
+                        onOpenVideoLibrary={onOpenVideoLibrary}
+                        selectedVideoFromLibrary={selectedVideoFromLibrary}
+                        onVideoProcessed={onVideoProcessed}
+                      />
                     </div>
                   )}
                 </div>

@@ -259,6 +259,8 @@ function ProgramBuilder({
     };
     const updatedWeeks = [...weeks, newWeek];
     setWeeks(updatedWeeks);
+    // Call onSave to keep parent state in sync
+    onSave?.(updatedWeeks);
   }, [weeks, onSave]);
 
   const deleteWeek = useCallback(
@@ -266,6 +268,8 @@ function ProgramBuilder({
       if (weeks.length === 1) return; // Don't delete the last week
       const updatedWeeks = weeks.filter(week => week.id !== weekId);
       setWeeks(updatedWeeks);
+      // Call onSave to keep parent state in sync
+      onSave?.(updatedWeeks);
     },
     [weeks, onSave]
   );
@@ -284,22 +288,38 @@ function ProgramBuilder({
       };
       const updatedWeeks = [...weeks, newWeek];
       setWeeks(updatedWeeks);
+      // Call onSave to keep parent state in sync
+      onSave?.(updatedWeeks);
     },
     [weeks, onSave]
   );
 
-  const toggleCollapse = useCallback((weekId: string) => {
-    setWeeks(prev =>
-      prev.map(week =>
-        week.id === weekId ? { ...week, collapsed: !week.collapsed } : week
-      )
-    );
-  }, []);
+  const toggleCollapse = useCallback(
+    (weekId: string) => {
+      setWeeks(prev => {
+        const updatedWeeks = prev.map(week =>
+          week.id === weekId ? { ...week, collapsed: !week.collapsed } : week
+        );
+        // Call onSave to keep parent state in sync
+        onSave?.(updatedWeeks);
+        return updatedWeeks;
+      });
+    },
+    [onSave]
+  );
 
   const toggleCollapseAll = useCallback(() => {
     const allCollapsed = weeks.every(week => week.collapsed);
-    setWeeks(prev => prev.map(week => ({ ...week, collapsed: !allCollapsed })));
-  }, [weeks]);
+    setWeeks(prev => {
+      const updatedWeeks = prev.map(week => ({
+        ...week,
+        collapsed: !allCollapsed,
+      }));
+      // Call onSave to keep parent state in sync
+      onSave?.(updatedWeeks);
+      return updatedWeeks;
+    });
+  }, [weeks, onSave]);
 
   const addItem = useCallback(
     (weekId: string, dayKey: DayKey, item: Omit<ProgramItem, "id">) => {

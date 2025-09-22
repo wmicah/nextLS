@@ -24,6 +24,7 @@ import {
   FiChevronRight,
   FiBarChart2,
   FiVideo,
+  FiTrendingUp,
 } from "react-icons/fi";
 import { LogOut, Settings, UserIcon, MessageCircle } from "lucide-react";
 // Removed complex SSE hooks - using simple polling instead

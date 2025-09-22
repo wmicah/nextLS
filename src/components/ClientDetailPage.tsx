@@ -81,9 +81,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
   const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false);
   const [showDayDetailsModal, setShowDayDetailsModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"lessons" | "programs" | "videos">(
-    "lessons"
-  );
+  const [activeTab, setActiveTab] = useState<"lessons">("lessons");
   const [compliancePeriod, setCompliancePeriod] = useState<
     "4" | "6" | "8" | "all"
   >("4");

@@ -1,609 +1,689 @@
-"use client"
+"use client";
 
-import { trpc } from "@/app/_trpc/client"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { trpc } from "@/app/_trpc/client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-	Mail,
-	Phone,
-	Calendar,
-	Activity,
-	Edit,
-	ArrowLeft,
-	Dumbbell,
-	MessageCircle,
-	Plus,
-} from "lucide-react"
-import { format } from "date-fns"
-import Link from "next/link"
-import Sidebar from "@/components/Sidebar"
-import AssignProgramModal from "@/components/AssignProgramModal"
-import ScheduleLessonModal from "@/components/ScheduleLessonModal"
-import EditClientModal from "@/components/EditClientModal"
+  Mail,
+  Phone,
+  Calendar,
+  Activity,
+  Edit,
+  ArrowLeft,
+  Dumbbell,
+  MessageCircle,
+  Plus,
+} from "lucide-react";
+import { format } from "date-fns";
+import Link from "next/link";
+import Sidebar from "@/components/Sidebar";
+import AssignProgramModal from "@/components/AssignProgramModal";
+import ScheduleLessonModal from "@/components/ScheduleLessonModal";
+import EditClientModal from "@/components/EditClientModal";
+import ClientProgressCard from "@/components/ProgressTracking/ClientProgressCard";
 
 interface ClientDetailsPageProps {
-	clientId: string
+  clientId: string;
 }
 
 export default function ClientDetailsPage({
-	clientId,
+  clientId,
 }: ClientDetailsPageProps) {
-	const router = useRouter()
-	const [showAssignProgramModal, setShowAssignProgramModal] = useState(false)
-	const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false)
-	const [showEditClientModal, setShowEditClientModal] = useState(false)
+  const router = useRouter();
+  const [showAssignProgramModal, setShowAssignProgramModal] = useState(false);
+  const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false);
+  const [showEditClientModal, setShowEditClientModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "progress">(
+    "overview"
+  );
 
-	const {
-		data: client,
-		isLoading,
-		error,
-	} = trpc.clients.getById.useQuery({ id: clientId })
-	const { data: clientWorkouts = [] } =
-		trpc.workouts.getClientWorkouts.useQuery({
-			clientId: clientId,
-		})
-	// const { data: clientProgress = [] } =
-	// 	trpc.progress.getClientProgressById.useQuery({
-	// 		clientId: clientId,
-	// 	})
-	// const { data: assignedVideos = [] } =
-	// 	trpc.library.getClientAssignedVideos.useQuery({
-	// 		clientId: clientId,
-	// 	})
-	const { data: assignedPrograms = [] } =
-		trpc.clients.getAssignedPrograms.useQuery({
-			clientId: clientId,
-		})
+  const {
+    data: client,
+    isLoading,
+    error,
+  } = trpc.clients.getById.useQuery({ id: clientId });
+  const { data: clientWorkouts = [] } =
+    trpc.workouts.getClientWorkouts.useQuery({
+      clientId: clientId,
+    });
+  // const { data: clientProgress = [] } =
+  // 	trpc.progress.getClientProgressById.useQuery({
+  // 		clientId: clientId,
+  // 	})
+  // const { data: assignedVideos = [] } =
+  // 	trpc.library.getClientAssignedVideos.useQuery({
+  // 		clientId: clientId,
+  // 	})
+  const { data: assignedPrograms = [] } =
+    trpc.clients.getAssignedPrograms.useQuery({
+      clientId: clientId,
+    });
 
-	if (isLoading) {
-		return (
-			<Sidebar>
-				<div className="flex items-center justify-center h-64">
-					<div
-						className="animate-spin rounded-full h-8 w-8 border-b-2"
-						style={{ borderColor: "#4A5A70" }}
-					 />
-				</div>
-			</Sidebar>
-		)
-	}
+  if (isLoading) {
+    return (
+      <Sidebar>
+        <div className="flex items-center justify-center h-64">
+          <div
+            className="animate-spin rounded-full h-8 w-8 border-b-2"
+            style={{ borderColor: "#4A5A70" }}
+          />
+        </div>
+      </Sidebar>
+    );
+  }
 
-	if (error || !client) {
-		return (
-			<Sidebar>
-				<div className="flex items-center justify-center h-64">
-					<div className="text-center">
-						<h2 className="text-xl font-semibold text-white mb-2">
-							Client Not Found
-						</h2>
-						<p className="text-gray-400 mb-4">
-							The client you&apos;re looking for doesn&apos;t exist.
-						</p>
-						<Link
-							href="/dashboard"
-							className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
-							style={{
-								backgroundColor: "#4A5A70",
-								color: "#FFFFFF",
-							}}
-						>
-							<ArrowLeft className="h-4 w-4" />
-							Back to Dashboard
-						</Link>
-					</div>
-				</div>
-			</Sidebar>
-		)
-	}
+  if (error || !client) {
+    return (
+      <Sidebar>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-white mb-2">
+              Client Not Found
+            </h2>
+            <p className="text-gray-400 mb-4">
+              The client you&apos;re looking for doesn&apos;t exist.
+            </p>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+              style={{
+                backgroundColor: "#4A5A70",
+                color: "#FFFFFF",
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+      </Sidebar>
+    );
+  }
 
-	return (
-		<Sidebar>
-			<div className="p-6 space-y-6">
-				{/* Header */}
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-4">
-						<Link
-							href="/dashboard"
-							className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-opacity-80"
-							style={{
-								backgroundColor: "#4A5A70",
-								color: "#FFFFFF",
-							}}
-						>
-							<ArrowLeft className="h-4 w-4" />
-							Back to Dashboard
-						</Link>
-						<h1 className="text-2xl font-bold text-white">Client Details</h1>
-					</div>
-					<button
-						className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-opacity-80 hover:scale-105 cursor-pointer"
-						style={{
-							backgroundColor: "#4A5A70",
-							color: "#FFFFFF",
-						}}
-						onClick={() => setShowEditClientModal(true)}
-					>
-						<Edit className="h-4 w-4" />
-						Edit Client
-					</button>
-				</div>
+  return (
+    <Sidebar>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-opacity-80"
+              style={{
+                backgroundColor: "#4A5A70",
+                color: "#FFFFFF",
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+            <h1 className="text-2xl font-bold text-white">Client Details</h1>
+          </div>
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-opacity-80 hover:scale-105 cursor-pointer"
+            style={{
+              backgroundColor: "#4A5A70",
+              color: "#FFFFFF",
+            }}
+            onClick={() => setShowEditClientModal(true)}
+          >
+            <Edit className="h-4 w-4" />
+            Edit Client
+          </button>
+        </div>
 
-				{/* Client Info Card */}
-				<div
-					className="rounded-2xl shadow-xl border p-6"
-					style={{
-						backgroundColor: "#353A3A",
-						borderColor: "#606364",
-					}}
-				>
-					<div className="flex items-start gap-6">
-						{/* Avatar */}
-						<div className="w-20 h-20 bg-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
-							<span className="text-white font-bold text-xl">
-								{client.name
-									.split(" ")
-									.map((n: string) => n[0])
-									.join("")
-									.toUpperCase()}
-							</span>
-						</div>
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-6">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === "overview"
+                ? "text-white"
+                : "text-gray-400 hover:text-gray-300"
+            }`}
+            style={{
+              backgroundColor:
+                activeTab === "overview" ? "#4A5A70" : "transparent",
+            }}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab("progress")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === "progress"
+                ? "text-white"
+                : "text-gray-400 hover:text-gray-300"
+            }`}
+            style={{
+              backgroundColor:
+                activeTab === "progress" ? "#4A5A70" : "transparent",
+            }}
+          >
+            Progress
+          </button>
+        </div>
 
-						{/* Client Details */}
-						<div className="flex-1 space-y-4">
-							<div>
-								<h2 className="text-2xl font-bold text-white mb-2">
-									{client.name}
-								</h2>
-								<div className="flex items-center gap-6 text-sm">
-									{client.email && (
-										<div className="flex items-center gap-2 text-gray-300">
-											<Mail className="h-4 w-4" />
-											{client.email}
-										</div>
-									)}
-									{client.phone && (
-										<div className="flex items-center gap-2 text-gray-300">
-											<Phone className="h-4 w-4" />
-											{client.phone}
-										</div>
-									)}
-								</div>
-							</div>
+        {/* Tab Content */}
+        {activeTab === "overview" ? (
+          <>
+            {/* Client Info Card */}
+            <div
+              className="rounded-2xl shadow-xl border p-6"
+              style={{
+                backgroundColor: "#353A3A",
+                borderColor: "#606364",
+              }}
+            >
+              <div className="flex items-start gap-6">
+                {/* Avatar */}
+                <div className="w-20 h-20 bg-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-xl">
+                    {client.name
+                      .split(" ")
+                      .map((n: string) => n[0])
+                      .join("")
+                      .toUpperCase()}
+                  </span>
+                </div>
 
-							{/* Stats Grid */}
-							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-								<div
-									className="text-center p-3 rounded-lg"
-									style={{ backgroundColor: "#2A2F2F" }}
-								>
-									<div className="text-2xl font-bold text-white">
-										{clientWorkouts.length}
-									</div>
-									<div className="text-xs text-gray-400">Total Workouts</div>
-								</div>
-								<div
-									className="text-center p-3 rounded-lg"
-									style={{ backgroundColor: "#2A2F2F" }}
-								>
-									<div className="text-2xl font-bold text-white">
-										{assignedPrograms.length}
-									</div>
-									<div className="text-xs text-gray-400">Assigned Programs</div>
-								</div>
-								<div
-									className="text-center p-3 rounded-lg"
-									style={{ backgroundColor: "#2A2F2F" }}
-								>
-									<div className="text-2xl font-bold text-white">
-										{
-											clientWorkouts.filter(
-												(w: { completed: boolean }) => w.completed
-											).length
-										}
-									</div>
-									<div className="text-xs text-gray-400">Completed</div>
-								</div>
-								<div
-									className="text-center p-3 rounded-lg"
-									style={{ backgroundColor: "#2A2F2F" }}
-								>
-									<div className="text-2xl font-bold text-white">
-										{client.createdAt
-											? format(new Date(client.createdAt), "MMM yyyy")
-											: "N/A"}
-									</div>
-									<div className="text-xs text-gray-400">Member Since</div>
-								</div>
-							</div>
+                {/* Client Details */}
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                      {client.name}
+                    </h2>
+                    <div className="flex items-center gap-6 text-sm">
+                      {client.email && (
+                        <div className="flex items-center gap-2 text-gray-300">
+                          <Mail className="h-4 w-4" />
+                          {client.email}
+                        </div>
+                      )}
+                      {client.phone && (
+                        <div className="flex items-center gap-2 text-gray-300">
+                          <Phone className="h-4 w-4" />
+                          {client.phone}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-							{/* Client Status */}
-							{!client.userId && (
-								<div
-									className="mt-4 p-3 rounded-lg border border-yellow-500/20"
-									style={{ backgroundColor: "#2A2F2F" }}
-								>
-									<div className="flex items-center gap-2">
-										<div className="w-2 h-2 rounded-full bg-yellow-500" />
-										<span className="text-sm text-yellow-400 font-medium">
-											Pending Registration
-										</span>
-									</div>
-									<p className="text-xs text-gray-400 mt-1">
-										This client hasn&apos;t signed up yet. They&apos;ll see
-										their assigned content once they create an account.
-									</p>
-								</div>
-							)}
-						</div>
-					</div>
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div
+                      className="text-center p-3 rounded-lg"
+                      style={{ backgroundColor: "#2A2F2F" }}
+                    >
+                      <div className="text-2xl font-bold text-white">
+                        {clientWorkouts.length}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Total Workouts
+                      </div>
+                    </div>
+                    <div
+                      className="text-center p-3 rounded-lg"
+                      style={{ backgroundColor: "#2A2F2F" }}
+                    >
+                      <div className="text-2xl font-bold text-white">
+                        {assignedPrograms.length}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Assigned Programs
+                      </div>
+                    </div>
+                    <div
+                      className="text-center p-3 rounded-lg"
+                      style={{ backgroundColor: "#2A2F2F" }}
+                    >
+                      <div className="text-2xl font-bold text-white">
+                        {
+                          clientWorkouts.filter(
+                            (w: { completed: boolean }) => w.completed
+                          ).length
+                        }
+                      </div>
+                      <div className="text-xs text-gray-400">Completed</div>
+                    </div>
+                    <div
+                      className="text-center p-3 rounded-lg"
+                      style={{ backgroundColor: "#2A2F2F" }}
+                    >
+                      <div className="text-2xl font-bold text-white">
+                        {client.createdAt
+                          ? format(new Date(client.createdAt), "MMM yyyy")
+                          : "N/A"}
+                      </div>
+                      <div className="text-xs text-gray-400">Member Since</div>
+                    </div>
+                  </div>
 
-					{/* Notes */}
-					{client.notes && (
-						<div
-							className="mt-6 p-4 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<h3 className="text-sm font-semibold text-white mb-2">Notes</h3>
-							<p className="text-sm text-gray-300">{client.notes}</p>
-						</div>
-					)}
-				</div>
+                  {/* Client Status */}
+                  {!client.userId && (
+                    <div
+                      className="mt-4 p-3 rounded-lg border border-yellow-500/20"
+                      style={{ backgroundColor: "#2A2F2F" }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                        <span className="text-sm text-yellow-400 font-medium">
+                          Pending Registration
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        This client hasn&apos;t signed up yet. They&apos;ll see
+                        their assigned content once they create an account.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-				{/* Softball Pitching Information */}
-				<div
-					className="rounded-2xl shadow-xl border p-6"
-					style={{
-						backgroundColor: "#353A3A",
-						borderColor: "#606364",
-					}}
-				>
-					<h3 className="text-xl font-bold text-white mb-4">
-						Pitching Information
-					</h3>
-					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-						{/* Basic Info */}
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Age</div>
-							<div className="text-sm font-medium text-white">
-								{client.age || "Not set"}
-							</div>
-						</div>
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Height</div>
-							<div className="text-sm font-medium text-white">
-								{client.height || "Not set"}
-							</div>
-						</div>
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Dominant Hand</div>
-							<div className="text-sm font-medium text-white">
-								{client.dominantHand || "Not set"}
-							</div>
-						</div>
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Movement Style</div>
-							<div className="text-sm font-medium text-white">
-								{client.movementStyle || "Not set"}
-							</div>
-						</div>
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Reaching Ability</div>
-							<div className="text-sm font-medium text-white">
-								{client.reachingAbility || "Not set"}
-							</div>
-						</div>
+              {/* Notes */}
+              {client.notes && (
+                <div
+                  className="mt-6 p-4 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <h3 className="text-sm font-semibold text-white mb-2">
+                    Notes
+                  </h3>
+                  <p className="text-sm text-gray-300">{client.notes}</p>
+                </div>
+              )}
+            </div>
 
-						{/* Speed Information */}
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Average Speed</div>
-							<div className="text-sm font-medium text-white">
-								{client.averageSpeed ? `${client.averageSpeed} mph` : "Not set"}
-							</div>
-						</div>
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Top Speed</div>
-							<div className="text-sm font-medium text-white">
-								{client.topSpeed ? `${client.topSpeed} mph` : "Not set"}
-							</div>
-						</div>
+            {/* Softball Pitching Information */}
+            <div
+              className="rounded-2xl shadow-xl border p-6"
+              style={{
+                backgroundColor: "#353A3A",
+                borderColor: "#606364",
+              }}
+            >
+              <h3 className="text-xl font-bold text-white mb-4">
+                Pitching Information
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* Basic Info */}
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">Age</div>
+                  <div className="text-sm font-medium text-white">
+                    {client.age || "Not set"}
+                  </div>
+                </div>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">Height</div>
+                  <div className="text-sm font-medium text-white">
+                    {client.height || "Not set"}
+                  </div>
+                </div>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">
+                    Dominant Hand
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {client.dominantHand || "Not set"}
+                  </div>
+                </div>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">
+                    Movement Style
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {client.movementStyle || "Not set"}
+                  </div>
+                </div>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">
+                    Reaching Ability
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {client.reachingAbility || "Not set"}
+                  </div>
+                </div>
 
-						{/* Spin Rates */}
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Drop Spin Rate</div>
-							<div className="text-sm font-medium text-white">
-								{client.dropSpinRate ? `${client.dropSpinRate} rpm` : "Not set"}
-							</div>
-						</div>
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">
-								Changeup Spin Rate
-							</div>
-							<div className="text-sm font-medium text-white">
-								{client.changeupSpinRate
-									? `${client.changeupSpinRate} rpm`
-									: "Not set"}
-							</div>
-						</div>
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Rise Spin Rate</div>
-							<div className="text-sm font-medium text-white">
-								{client.riseSpinRate ? `${client.riseSpinRate} rpm` : "Not set"}
-							</div>
-						</div>
-						<div
-							className="p-3 rounded-lg"
-							style={{ backgroundColor: "#2A2F2F" }}
-						>
-							<div className="text-xs text-gray-400 mb-1">Curve Spin Rate</div>
-							<div className="text-sm font-medium text-white">
-								{client.curveSpinRate
-									? `${client.curveSpinRate} rpm`
-									: "Not set"}
-							</div>
-						</div>
-					</div>
-				</div>
+                {/* Speed Information */}
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">
+                    Average Speed
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {client.averageSpeed
+                      ? `${client.averageSpeed} mph`
+                      : "Not set"}
+                  </div>
+                </div>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">Top Speed</div>
+                  <div className="text-sm font-medium text-white">
+                    {client.topSpeed ? `${client.topSpeed} mph` : "Not set"}
+                  </div>
+                </div>
 
-				{/* Recent Activity */}
-				<div
-					className="rounded-2xl shadow-xl border p-6"
-					style={{
-						backgroundColor: "#353A3A",
-						borderColor: "#606364",
-					}}
-				>
-					<div className="flex items-center justify-between mb-4">
-						<h3 className="text-xl font-bold text-white">Recent Activity</h3>
-						{clientWorkouts.length > 0 && (
-							<button
-								className="text-sm text-sky-400 hover:text-sky-300 hover:underline font-medium cursor-pointer transition-all duration-200"
-								onClick={() => {
-									// Navigate to all workouts for this client
-									router.push(`/workouts?clientId=${clientId}`)
-								}}
-							>
-								View All
-							</button>
-						)}
-					</div>
+                {/* Spin Rates */}
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">
+                    Drop Spin Rate
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {client.dropSpinRate
+                      ? `${client.dropSpinRate} rpm`
+                      : "Not set"}
+                  </div>
+                </div>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">
+                    Changeup Spin Rate
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {client.changeupSpinRate
+                      ? `${client.changeupSpinRate} rpm`
+                      : "Not set"}
+                  </div>
+                </div>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">
+                    Rise Spin Rate
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {client.riseSpinRate
+                      ? `${client.riseSpinRate} rpm`
+                      : "Not set"}
+                  </div>
+                </div>
+                <div
+                  className="p-3 rounded-lg"
+                  style={{ backgroundColor: "#2A2F2F" }}
+                >
+                  <div className="text-xs text-gray-400 mb-1">
+                    Curve Spin Rate
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {client.curveSpinRate
+                      ? `${client.curveSpinRate} rpm`
+                      : "Not set"}
+                  </div>
+                </div>
+              </div>
+            </div>
 
-					{clientWorkouts.length > 0 ? (
-						<div className="space-y-3">
-							{clientWorkouts
-								.slice(0, 5)
-								.map(
-									(workout: {
-										id: string
-										title: string
-										createdAt: string
-										completed: boolean
-									}) => (
-										<div
-											key={workout.id}
-											className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-opacity-80 hover:scale-[1.02] hover:shadow-lg transition-all duration-200 border border-transparent hover:border-sky-500/20"
-											style={{ backgroundColor: "#2A2F2F" }}
-											onClick={() => {
-												// Navigate to workout details page
-												router.push(`/workouts/${workout.id}`)
-											}}
-										>
-											<div className="flex items-center gap-3">
-												<Dumbbell className="h-5 w-5 text-gray-400" />
-												<div>
-													<div className="text-sm font-medium text-white">
-														{workout.title}
-													</div>
-													<div className="text-xs text-gray-400">
-														{workout.createdAt
-															? format(
-																	new Date(workout.createdAt),
-																	"MMM dd, yyyy"
-															  )
-															: "N/A"}
-													</div>
-												</div>
-											</div>
-											<div className="flex items-center gap-2">
-												{workout.completed ? (
-													<span className="text-xs px-2 py-1 rounded-full text-green-400 bg-green-400 bg-opacity-10">
-														Completed
-													</span>
-												) : (
-													<span className="text-xs px-2 py-1 rounded-full text-yellow-400 bg-yellow-400 bg-opacity-10">
-														Pending
-													</span>
-												)}
-											</div>
-										</div>
-									)
-								)}
-						</div>
-					) : (
-						<div className="text-center py-8">
-							<Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-							<p className="text-gray-400">No recent activity</p>
-						</div>
-					)}
-				</div>
+            {/* Recent Activity */}
+            <div
+              className="rounded-2xl shadow-xl border p-6"
+              style={{
+                backgroundColor: "#353A3A",
+                borderColor: "#606364",
+              }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">
+                  Recent Activity
+                </h3>
+                {clientWorkouts.length > 0 && (
+                  <button
+                    className="text-sm text-sky-400 hover:text-sky-300 hover:underline font-medium cursor-pointer transition-all duration-200"
+                    onClick={() => {
+                      // Navigate to all workouts for this client
+                      router.push(`/workouts?clientId=${clientId}`);
+                    }}
+                  >
+                    View All
+                  </button>
+                )}
+              </div>
 
-				{/* Assigned Programs */}
-				{assignedPrograms.length > 0 && (
-					<div
-						className="rounded-2xl shadow-xl border p-6"
-						style={{
-							backgroundColor: "#353A3A",
-							borderColor: "#606364",
-						}}
-					>
-						<h3 className="text-xl font-bold text-white mb-4">
-							Assigned Programs
-						</h3>
-						<div className="space-y-3">
-							{assignedPrograms.map(
-								(assignment: {
-									id: string
-									program: {
-										sport: string | null
-										title: string
-										level: string
-									}
-									progress: number
-									assignedAt: string
-								}) => (
-									<div
-										key={assignment.id}
-										className="flex items-center justify-between p-3 rounded-lg"
-										style={{ backgroundColor: "#2A2F2F" }}
-									>
-										<div className="flex items-center gap-3">
-											<div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
-												<span className="text-white font-bold text-sm">
-													{(assignment.program.sport || "G")
-														.charAt(0)
-														.toUpperCase()}
-												</span>
-											</div>
-											<div>
-												<div className="text-sm font-medium text-white">
-													{assignment.program.title}
-												</div>
-												<div className="text-xs text-gray-400">
-													{assignment.program.sport || "General"} •{" "}
-													{assignment.program.level}
-												</div>
-											</div>
-										</div>
-										<div className="flex items-center gap-2">
-											<div className="text-right">
-												<div className="text-sm text-white">
-													{assignment.progress}% Complete
-												</div>
-												<div className="text-xs text-gray-400">
-													Assigned{" "}
-													{format(
-														new Date(assignment.assignedAt),
-														"MMM dd, yyyy"
-													)}
-												</div>
-											</div>
-											<div className="w-16 bg-gray-600 rounded-full h-2">
-												<div
-													className="bg-sky-500 h-2 rounded-full transition-all duration-300"
-													style={{ width: `${assignment.progress}%` }}
-												 />
-											</div>
-										</div>
-									</div>
-								)
-							)}
-						</div>
-					</div>
-				)}
+              {clientWorkouts.length > 0 ? (
+                <div className="space-y-3">
+                  {clientWorkouts
+                    .slice(0, 5)
+                    .map(
+                      (workout: {
+                        id: string;
+                        title: string;
+                        createdAt: string;
+                        completed: boolean;
+                      }) => (
+                        <div
+                          key={workout.id}
+                          className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-opacity-80 hover:scale-[1.02] hover:shadow-lg transition-all duration-200 border border-transparent hover:border-sky-500/20"
+                          style={{ backgroundColor: "#2A2F2F" }}
+                          onClick={() => {
+                            // Navigate to workout details page
+                            router.push(`/workouts/${workout.id}`);
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Dumbbell className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <div className="text-sm font-medium text-white">
+                                {workout.title}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                {workout.createdAt
+                                  ? format(
+                                      new Date(workout.createdAt),
+                                      "MMM dd, yyyy"
+                                    )
+                                  : "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {workout.completed ? (
+                              <span className="text-xs px-2 py-1 rounded-full text-green-400 bg-green-400 bg-opacity-10">
+                                Completed
+                              </span>
+                            ) : (
+                              <span className="text-xs px-2 py-1 rounded-full text-yellow-400 bg-yellow-400 bg-opacity-10">
+                                Pending
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-400">No recent activity</p>
+                </div>
+              )}
+            </div>
 
-				{/* Quick Actions */}
-				<div
-					className="rounded-2xl shadow-xl border p-6"
-					style={{
-						backgroundColor: "#353A3A",
-						borderColor: "#606364",
-					}}
-				>
-					<h3 className="text-xl font-bold text-white mb-4">Quick Actions</h3>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<button
-							className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border border-transparent hover:border-sky-500/30"
-							style={{ backgroundColor: "#4A5A70" }}
-							onClick={() => setShowAssignProgramModal(true)}
-						>
-							<Plus className="h-6 w-6 text-white" />
-							<span className="text-sm font-medium text-white">
-								Assign Program
-							</span>
-						</button>
-						<button
-							className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border border-transparent hover:border-sky-500/30"
-							style={{ backgroundColor: "#4A5A70" }}
-							onClick={() => {
-								// Navigate to messaging page with this client
-								if (client?.userId) {
-									router.push(`/messages?clientId=${client.userId}`)
-								} else {
-									alert(
-										"This client hasn't signed up yet. They need to create an account before you can message them."
-									)
-								}
-							}}
-						>
-							<MessageCircle className="h-6 w-6 text-white" />
-							<span className="text-sm font-medium text-white">
-								Send Message
-							</span>
-						</button>
-						<button
-							className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border border-transparent hover:border-sky-500/30"
-							style={{ backgroundColor: "#4A5A70" }}
-							onClick={() => setShowScheduleLessonModal(true)}
-						>
-							<Calendar className="h-6 w-6 text-white" />
-							<span className="text-sm font-medium text-white">
-								Schedule Lesson
-							</span>
-						</button>
-					</div>
-				</div>
-			</div>
+            {/* Assigned Programs */}
+            {assignedPrograms.length > 0 && (
+              <div
+                className="rounded-2xl shadow-xl border p-6"
+                style={{
+                  backgroundColor: "#353A3A",
+                  borderColor: "#606364",
+                }}
+              >
+                <h3 className="text-xl font-bold text-white mb-4">
+                  Assigned Programs
+                </h3>
+                <div className="space-y-3">
+                  {assignedPrograms.map(
+                    (assignment: {
+                      id: string;
+                      program: {
+                        sport: string | null;
+                        title: string;
+                        level: string;
+                      };
+                      progress: number;
+                      assignedAt: string;
+                    }) => (
+                      <div
+                        key={assignment.id}
+                        className="flex items-center justify-between p-3 rounded-lg"
+                        style={{ backgroundColor: "#2A2F2F" }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
+                            <span className="text-white font-bold text-sm">
+                              {(assignment.program.sport || "G")
+                                .charAt(0)
+                                .toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-white">
+                              {assignment.program.title}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {assignment.program.sport || "General"} •{" "}
+                              {assignment.program.level}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <div className="text-sm text-white">
+                              {assignment.progress}% Complete
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              Assigned{" "}
+                              {format(
+                                new Date(assignment.assignedAt),
+                                "MMM dd, yyyy"
+                              )}
+                            </div>
+                          </div>
+                          <div className="w-16 bg-gray-600 rounded-full h-2">
+                            <div
+                              className="bg-sky-500 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${assignment.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
 
-			{/* Modals */}
-			<AssignProgramModal
-				isOpen={showAssignProgramModal}
-				onClose={() => setShowAssignProgramModal(false)}
-				clientId={clientId}
-				clientName={client.name}
-			/>
+            {/* Quick Actions */}
+            <div
+              className="rounded-2xl shadow-xl border p-6"
+              style={{
+                backgroundColor: "#353A3A",
+                borderColor: "#606364",
+              }}
+            >
+              <h3 className="text-xl font-bold text-white mb-4">
+                Quick Actions
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border border-transparent hover:border-sky-500/30"
+                  style={{ backgroundColor: "#4A5A70" }}
+                  onClick={() => setShowAssignProgramModal(true)}
+                >
+                  <Plus className="h-6 w-6 text-white" />
+                  <span className="text-sm font-medium text-white">
+                    Assign Program
+                  </span>
+                </button>
+                <button
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border border-transparent hover:border-sky-500/30"
+                  style={{ backgroundColor: "#4A5A70" }}
+                  onClick={() => {
+                    // Navigate to messaging page with this client
+                    if (client?.userId) {
+                      router.push(`/messages?clientId=${client.userId}`);
+                    } else {
+                      alert(
+                        "This client hasn't signed up yet. They need to create an account before you can message them."
+                      );
+                    }
+                  }}
+                >
+                  <MessageCircle className="h-6 w-6 text-white" />
+                  <span className="text-sm font-medium text-white">
+                    Send Message
+                  </span>
+                </button>
+                <button
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border border-transparent hover:border-sky-500/30"
+                  style={{ backgroundColor: "#4A5A70" }}
+                  onClick={() => setShowScheduleLessonModal(true)}
+                >
+                  <Calendar className="h-6 w-6 text-white" />
+                  <span className="text-sm font-medium text-white">
+                    Schedule Lesson
+                  </span>
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Progress Tab Content */
+          <div className="space-y-6">
+            <ClientProgressCard
+              clientId={clientId}
+              clientName={client.name}
+              timeRange="4"
+            />
+          </div>
+        )}
+      </div>
 
-			<ScheduleLessonModal
-				isOpen={showScheduleLessonModal}
-				onClose={() => setShowScheduleLessonModal(false)}
-				clientId={clientId}
-				clientName={client.name}
-				clientEmail={client.email}
-			/>
+      {/* Modals */}
+      <AssignProgramModal
+        isOpen={showAssignProgramModal}
+        onClose={() => setShowAssignProgramModal(false)}
+        clientId={clientId}
+        clientName={client.name}
+      />
 
-			<EditClientModal
-				isOpen={showEditClientModal}
-				onClose={() => setShowEditClientModal(false)}
-				client={client}
-			/>
-		</Sidebar>
-	)
+      <ScheduleLessonModal
+        isOpen={showScheduleLessonModal}
+        onClose={() => setShowScheduleLessonModal(false)}
+        clientId={clientId}
+        clientName={client.name}
+        clientEmail={client.email}
+      />
+
+      <EditClientModal
+        isOpen={showEditClientModal}
+        onClose={() => setShowEditClientModal(false)}
+        client={client}
+      />
+    </Sidebar>
+  );
 }
