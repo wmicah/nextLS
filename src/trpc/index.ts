@@ -3020,6 +3020,9 @@ export const appRouter = router({
         // Trigger SSE updates for real-time notifications
         try {
           const { sendToUser } = await import("@/app/api/sse/messages/route");
+          const { sendMessageNotification } = await import(
+            "@/lib/pushNotificationService"
+          );
 
           // Get the recipient's user ID
           const recipientId =
@@ -3036,6 +3039,14 @@ export const appRouter = router({
                 conversationId: input.conversationId,
               },
             });
+
+            // Send push notification
+            await sendMessageNotification(
+              recipientId,
+              message.sender.name || message.sender.email,
+              input.content,
+              input.conversationId
+            );
 
             // Update unread count for recipient
             const unreadCount = await db.message.count({

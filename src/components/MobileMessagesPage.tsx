@@ -61,6 +61,19 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   >([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Handle mobile keyboard and viewport changes
+  useEffect(() => {
+    const handleResize = () => {
+      // Scroll to bottom when keyboard appears/disappears
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Get current user info
   const { data: currentUser } = trpc.user.getProfile.useQuery();
 
@@ -306,8 +319,12 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
       }
     >
       <div
-        className="min-h-screen flex flex-col overflow-x-hidden"
-        style={{ backgroundColor: "#2A3133" }}
+        className="h-screen flex flex-col overflow-hidden"
+        style={{
+          backgroundColor: "#2A3133",
+          height: "100vh",
+          height: "100dvh", // Dynamic viewport height for mobile
+        }}
       >
         {/* Mobile Header */}
         <div
@@ -341,7 +358,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
 
         {/* Mobile Conversations List */}
         {!selectedConversation && (
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-hidden">
             {/* Search */}
             <div className="px-4 py-3">
               <div className="relative">
@@ -366,7 +383,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
             </div>
 
             {/* Conversations */}
-            <div className="flex-1 px-4 pb-4">
+            <div className="flex-1 px-4 pb-4 overflow-y-auto">
               <div className="space-y-1">
                 {filteredConversations.length === 0 ? (
                   <div className="text-center py-12">
@@ -496,7 +513,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
 
         {/* Mobile Chat Area */}
         {selectedConversation && (
-          <div className="flex flex-col h-[calc(100vh-80px)]">
+          <div className="flex-1 flex flex-col overflow-hidden">
             {/* Chat Header */}
             <div
               className="px-4 py-3 border-b flex items-center justify-between"
@@ -589,7 +606,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3">
+            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3 pb-4">
               {messages.map((message: any) => {
                 const isCurrentUser = message.sender.id === currentUser?.id;
 
@@ -806,7 +823,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
 
             {/* Message Input */}
             <div
-              className="px-4 py-3 border-t"
+              className="px-4 py-3 border-t flex-shrink-0"
               style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
             >
               <RichMessageInput
