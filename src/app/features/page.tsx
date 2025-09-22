@@ -46,7 +46,7 @@ import {
   Phone,
   ChevronRight,
   Sparkles,
-  Lightning,
+  Zap,
   Fire,
   Award,
   Medal,
