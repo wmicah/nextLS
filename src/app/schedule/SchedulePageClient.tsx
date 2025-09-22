@@ -1252,21 +1252,10 @@ function SchedulePageClient() {
 
                 {/* Existing Lessons */}
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="mb-4">
                     <h3 className="text-lg font-semibold text-white">
                       Scheduled Lessons
                     </h3>
-                    <button
-                      onClick={() => setShowScheduleModal(true)}
-                      className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200"
-                      style={{
-                        backgroundColor: "#10B981",
-                        color: "#FFFFFF",
-                      }}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Lesson
-                    </button>
                   </div>
 
                   {(() => {
