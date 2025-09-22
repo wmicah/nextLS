@@ -462,7 +462,7 @@ function ClientProgramPage() {
       setSelectedVideo({
         id: "youtube-" + drillData.youtubeId,
         isYoutube: true,
-        youtubeId: drillData.youtubeId,
+        youtubeId: drillData.youtubeId || undefined,
         title: drillData?.title || "YouTube Video",
         url: `https://www.youtube.com/watch?v=${drillData.youtubeId}`, // Generate proper YouTube URL
         type: "video",
@@ -572,7 +572,7 @@ function ClientProgramPage() {
         setSelectedVideo({
           id: "youtube-" + matchingVideo.youtubeId,
           isYoutube: true,
-          youtubeId: matchingVideo.youtubeId,
+          youtubeId: matchingVideo.youtubeId || undefined,
           title: matchingVideo.title,
           url: `https://www.youtube.com/watch?v=${matchingVideo.youtubeId}`,
           type: "video",
