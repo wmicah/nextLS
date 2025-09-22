@@ -5,8 +5,8 @@ import webpush from "web-push";
 webpush.setVapidDetails(
   "mailto:your-email@example.com",
   process.env.NEXT_PUBLIC_VAPID_KEY ||
-    "BEl62iUYgUivxIkv69yViEuiBIa40HIe8F5jWl-zF7Q",
-  process.env.VAPID_PRIVATE_KEY || "your-private-key"
+    "BASGj2aqEyH7dB9Y0HgHv0QqioUI2g2slsIevET97GCTYa0R5FZTLZyPJ42n1CctIE5Gwvwev7UYciJ6yqXAS_E",
+  process.env.VAPID_PRIVATE_KEY || "GbeggsV9EAnG69R5bKsViLVx5IERUpWr4h7Yjh2x4VQ"
 );
 
 export async function POST(request: NextRequest) {
