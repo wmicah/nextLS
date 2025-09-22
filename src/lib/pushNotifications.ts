@@ -7,7 +7,7 @@ export class PushNotificationService {
     // You'll need to generate VAPID keys for production
     this.vapidPublicKey =
       process.env.NEXT_PUBLIC_VAPID_KEY ||
-      "BEl62iUYgUivxIkv69yViEuiBIa40HIe8F5jWl+zF7Q=";
+      "BEl62iUYgUivxIkv69yViEuiBIa40HIe8F5jWl-zF7Q";
   }
 
   async requestPermission(): Promise<boolean> {

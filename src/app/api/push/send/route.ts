@@ -5,7 +5,7 @@ import webpush from "web-push";
 webpush.setVapidDetails(
   "mailto:your-email@example.com",
   process.env.NEXT_PUBLIC_VAPID_KEY ||
-    "BEl62iUYgUivxIkv69yViEuiBIa40HIe8F5jWl+zF7Q=",
+    "BEl62iUYgUivxIkv69yViEuiBIa40HIe8F5jWl-zF7Q",
   process.env.VAPID_PRIVATE_KEY || "your-private-key"
 );
 
