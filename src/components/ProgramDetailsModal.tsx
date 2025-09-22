@@ -1,6 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { trpc } from "@/app/_trpc/client";
+import { useToast } from "@/lib/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +20,8 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 import { Progress } from "./ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
@@ -32,6 +37,12 @@ import {
   BookOpen,
   Target,
   Award,
+  Edit3,
+  Save,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Dumbbell,
 } from "lucide-react";
 
 interface Program {
@@ -103,6 +114,92 @@ export default function ProgramDetailsModal({
   onClose,
   program,
 }: ProgramDetailsModalProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState("");
+  const [editedDescription, setEditedDescription] = useState("");
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
+
+  // Fetch program assignments when modal opens and program is available
+  const { data: assignments = [], isLoading: assignmentsLoading } =
+    trpc.programs.getProgramAssignments.useQuery(
+      { programId: program?.id || "" },
+      { enabled: !!program?.id && isOpen }
+    );
+
+  // Update mutation for program details
+  const updateProgram = trpc.programs.update.useMutation({
+    onSuccess: () => {
+      utils.programs.list.invalidate();
+      toast({
+        title: "Program updated",
+        description: "Program details have been updated successfully.",
+      });
+      setIsEditing(false);
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to update program",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Initialize editing state when program changes
+  useEffect(() => {
+    if (program) {
+      setEditedTitle(program.title);
+      setEditedDescription(program.description || "");
+    }
+  }, [program]);
+
+  // Toggle week expansion
+  const toggleWeekExpansion = (weekId: string) => {
+    const newExpanded = new Set(expandedWeeks);
+    if (newExpanded.has(weekId)) {
+      newExpanded.delete(weekId);
+    } else {
+      newExpanded.add(weekId);
+    }
+    setExpandedWeeks(newExpanded);
+  };
+
+  // Toggle day expansion
+  const toggleDayExpansion = (dayId: string) => {
+    const newExpanded = new Set(expandedDays);
+    if (newExpanded.has(dayId)) {
+      newExpanded.delete(dayId);
+    } else {
+      newExpanded.add(dayId);
+    }
+    setExpandedDays(newExpanded);
+  };
+
+  // Handle save
+  const handleSave = () => {
+    if (!program) return;
+
+    updateProgram.mutate({
+      id: program.id,
+      title: editedTitle,
+      description: editedDescription,
+    });
+  };
+
+  // Handle cancel editing
+  const handleCancel = () => {
+    if (program) {
+      setEditedTitle(program.title);
+      setEditedDescription(program.description || "");
+    }
+    setIsEditing(false);
+  };
+
   if (!program) return null;
 
   const getStatusColor = (activeClientCount: number) => {
@@ -134,12 +231,67 @@ export default function ProgramDetailsModal({
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] bg-[#2A3133] border-gray-600">
         <DialogHeader>
-          <DialogTitle className="text-white text-2xl">
-            {program.title}
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            {program.description || "No description provided"}
-          </DialogDescription>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              {isEditing ? (
+                <div className="space-y-3">
+                  <Input
+                    value={editedTitle}
+                    onChange={e => setEditedTitle(e.target.value)}
+                    className="text-white text-2xl font-bold bg-transparent border-gray-600 focus:border-blue-500"
+                    placeholder="Program title"
+                  />
+                  <Textarea
+                    value={editedDescription}
+                    onChange={e => setEditedDescription(e.target.value)}
+                    className="text-gray-400 bg-transparent border-gray-600 focus:border-blue-500 resize-none"
+                    placeholder="Program description"
+                    rows={2}
+                  />
+                </div>
+              ) : (
+                <>
+                  <DialogTitle className="text-white text-2xl">
+                    {program.title}
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    {program.description || "No description provided"}
+                  </DialogDescription>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              {isEditing ? (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={updateProgram.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancel}
+                    className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditing(true)}
+                  className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="mt-6">
@@ -286,92 +438,177 @@ export default function ProgramDetailsModal({
 
             <TabsContent value="structure" className="space-y-6 mt-6">
               <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-6">
-                  <BookOpen className="h-6 w-6 text-blue-400" />
-                  <h3 className="text-lg font-medium text-white">
-                    Program Structure
-                  </h3>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <BookOpen className="h-6 w-6 text-blue-400" />
+                    <h3 className="text-lg font-medium text-white">
+                      Program Structure
+                    </h3>
+                    <Badge
+                      variant="outline"
+                      className="text-blue-400 border-blue-400/30"
+                    >
+                      {program.totalWeeks} weeks
+                    </Badge>
+                  </div>
                 </div>
 
-                <p className="text-gray-400 mb-6">
-                  This program has {program.totalWeeks} weeks of training
-                  content.
-                </p>
-
                 {program.weeks && program.weeks.length > 0 ? (
-                  <div className="space-y-4">
-                    {program.weeks.map((week, weekIndex) => (
-                      <Card
-                        key={week.id || weekIndex}
-                        className="bg-gray-800/50 border-gray-700"
-                      >
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-white text-lg">
-                            Week {week.weekNumber || weekIndex + 1}:{" "}
-                            {week.title}
-                          </CardTitle>
-                          {week.description && (
-                            <CardDescription className="text-gray-400">
-                              {week.description}
-                            </CardDescription>
-                          )}
-                        </CardHeader>
-                        <CardContent>
-                          {week.days && week.days.length > 0 ? (
-                            <div className="space-y-3">
-                              {week.days.map((day, dayIndex) => (
-                                <div
-                                  key={day.id || dayIndex}
-                                  className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                                      <span className="text-blue-400 text-sm font-medium">
-                                        {day.dayNumber}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <p className="text-white font-medium">
-                                        {day.title}
-                                      </p>
-                                      {day.description && (
-                                        <p className="text-gray-400 text-sm">
-                                          {day.description}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {day.isRestDay ? (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-orange-400 border-orange-400/30"
-                                      >
-                                        Rest Day
-                                      </Badge>
-                                    ) : (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-green-400 border-green-400/30"
-                                      >
-                                        {day.drills?.length || 0} drills
-                                      </Badge>
+                  <ScrollArea className="h-[500px] pr-4">
+                    <div className="space-y-3">
+                      {program.weeks.map((week, weekIndex) => {
+                        const weekId = week.id || `week-${weekIndex}`;
+                        const isExpanded = expandedWeeks.has(weekId);
+
+                        return (
+                          <Card
+                            key={weekId}
+                            className="bg-[#3A4245] border-gray-600 hover:border-gray-500 transition-colors"
+                          >
+                            <CardHeader
+                              className="pb-3 cursor-pointer"
+                              onClick={() => toggleWeekExpansion(weekId)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                                  )}
+                                  <div>
+                                    <CardTitle className="text-white text-base">
+                                      Week {week.weekNumber || weekIndex + 1}:{" "}
+                                      {week.title}
+                                    </CardTitle>
+                                    {week.description && (
+                                      <CardDescription className="text-gray-400 text-sm">
+                                        {week.description}
+                                      </CardDescription>
                                     )}
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-gray-500 text-sm italic">
-                              No days configured for this week.
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                                <Badge
+                                  variant="outline"
+                                  className="text-gray-400 border-gray-400/30"
+                                >
+                                  {week.days?.length || 0} days
+                                </Badge>
+                              </div>
+                            </CardHeader>
+
+                            {isExpanded && (
+                              <CardContent className="pt-0">
+                                {week.days && week.days.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {week.days.map((day, dayIndex) => {
+                                      const dayId =
+                                        day.id ||
+                                        `day-${weekIndex}-${dayIndex}`;
+                                      const isDayExpanded =
+                                        expandedDays.has(dayId);
+
+                                      return (
+                                        <div
+                                          key={dayId}
+                                          className="bg-[#2A3133] rounded-lg border border-gray-700"
+                                        >
+                                          <div
+                                            className="flex items-center justify-between p-3 cursor-pointer"
+                                            onClick={() =>
+                                              toggleDayExpansion(dayId)
+                                            }
+                                          >
+                                            <div className="flex items-center gap-3">
+                                              {isDayExpanded ? (
+                                                <ChevronDown className="h-3 w-3 text-gray-400" />
+                                              ) : (
+                                                <ChevronRight className="h-3 w-3 text-gray-400" />
+                                              )}
+                                              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                                <span className="text-blue-400 text-xs font-medium">
+                                                  {day.dayNumber}
+                                                </span>
+                                              </div>
+                                              <div>
+                                                <p className="text-white font-medium text-sm">
+                                                  {day.title}
+                                                </p>
+                                                {day.description && (
+                                                  <p className="text-gray-400 text-xs">
+                                                    {day.description}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {day.isRestDay ? (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-orange-400 border-orange-400/30 text-xs"
+                                                >
+                                                  Rest Day
+                                                </Badge>
+                                              ) : (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-green-400 border-green-400/30 text-xs"
+                                                >
+                                                  {day.drills?.length || 0}{" "}
+                                                  drills
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {isDayExpanded &&
+                                            day.drills &&
+                                            day.drills.length > 0 && (
+                                              <div className="px-3 pb-3 border-t border-gray-700 pt-2">
+                                                <div className="space-y-1">
+                                                  {day.drills.map(
+                                                    (drill, drillIndex) => (
+                                                      <div
+                                                        key={
+                                                          drill.id || drillIndex
+                                                        }
+                                                        className="flex items-center gap-2 p-2 bg-gray-800/30 rounded text-xs"
+                                                      >
+                                                        <Dumbbell className="h-3 w-3 text-gray-400" />
+                                                        <span className="text-gray-300 flex-1">
+                                                          {drill.order}.{" "}
+                                                          {drill.title}
+                                                        </span>
+                                                        {drill.duration && (
+                                                          <span className="text-gray-500">
+                                                            {drill.duration}
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                    )
+                                                  )}
+                                                </div>
+                                              </div>
+                                            )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <p className="text-gray-500 text-sm italic">
+                                    No days configured for this week.
+                                  </p>
+                                )}
+                              </CardContent>
+                            )}
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <div className="text-center py-8">
+                    <BookOpen className="h-16 w-16 mx-auto mb-4 text-gray-500" />
                     <p className="text-gray-500">
                       No weeks configured for this program yet.
                     </p>
@@ -381,19 +618,88 @@ export default function ProgramDetailsModal({
             </TabsContent>
 
             <TabsContent value="assignments" className="space-y-6 mt-6">
-              <div className="text-center py-12">
-                <Users className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-                <h3 className="text-lg font-medium text-white mb-2">
-                  Client Assignments
-                </h3>
-                <p className="text-gray-400 mb-6">
-                  This program is assigned to {program.activeClientCount} active
-                  client{program.activeClientCount !== 1 ? "s" : ""}.
-                </p>
-                <p className="text-gray-500 text-sm">
-                  Detailed assignment information will be available when
-                  assignment data is loaded.
-                </p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-6">
+                  <Users className="h-6 w-6 text-blue-400" />
+                  <h3 className="text-lg font-medium text-white">
+                    Active Client Assignments
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className="text-blue-400 border-blue-400/30"
+                  >
+                    {assignments.length} client
+                    {assignments.length !== 1 ? "s" : ""}
+                  </Badge>
+                </div>
+
+                {assignmentsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+                  </div>
+                ) : assignments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="h-16 w-16 mx-auto mb-4 text-gray-500" />
+                    <h3 className="text-lg font-medium text-white mb-2">
+                      No Active Assignments
+                    </h3>
+                    <p className="text-gray-400 mb-6">
+                      This program hasn't been assigned to any clients yet.
+                    </p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[400px] pr-4">
+                    <div className="space-y-3">
+                      {assignments.map(assignment => (
+                        <Card
+                          key={assignment.id}
+                          className="bg-[#3A4245] border-gray-600 hover:border-gray-500 transition-colors"
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage
+                                    src={assignment.client.avatar || ""}
+                                  />
+                                  <AvatarFallback className="bg-blue-500/20 text-blue-300">
+                                    {assignment.client.name?.charAt(0) || "C"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h4 className="font-medium text-white">
+                                    {assignment.client.name}
+                                  </h4>
+                                  <p className="text-sm text-gray-400">
+                                    {assignment.client.email}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Progress
+                                    value={assignment.progress}
+                                    className="w-20 h-2"
+                                  />
+                                  <span className="text-sm text-gray-400">
+                                    {assignment.progress}%
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                  Assigned{" "}
+                                  {format(
+                                    new Date(assignment.assignedAt),
+                                    "MMM dd, yyyy"
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
               </div>
             </TabsContent>
 

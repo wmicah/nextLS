@@ -42,6 +42,11 @@ interface DrillSelectionModalProps {
     reps?: number;
     tempo?: string;
     supersetWithId?: string;
+    isYoutube?: boolean;
+    youtubeId?: string | null;
+    videoId?: string | null;
+    videoTitle?: string | null;
+    videoThumbnail?: string | null;
   }) => void;
 }
 
@@ -96,6 +101,12 @@ export default function DrillSelectionModal({
       reps: exerciseConfig.reps,
       tempo: exerciseConfig.tempo,
       supersetWithId: exerciseConfig.supersetWithId,
+      // Add YouTube-specific information
+      isYoutube: selectedDrill.isYoutube || false,
+      youtubeId: selectedDrill.youtubeId || null,
+      videoId: selectedDrill.id || null,
+      videoTitle: selectedDrill.title || null,
+      videoThumbnail: selectedDrill.thumbnail || null,
     });
 
     // Reset form but don't close modal - let user add more exercises

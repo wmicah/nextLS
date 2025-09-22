@@ -152,7 +152,12 @@ function ClientProgramPage() {
 
   // Get client's assigned program
   const { data: programInfo } = trpc.clientRouter.getAssignedProgram.useQuery();
-  const { data: calendarData } = trpc.clientRouter.getProgramCalendar.useQuery({
+  const {
+    data: calendarData,
+    error: calendarError,
+    isLoading: calendarLoading,
+    refetch: refetchCalendar,
+  } = trpc.clientRouter.getProgramCalendar.useQuery({
     year: currentDate.getFullYear(),
     month: currentDate.getMonth() + 1,
     viewMode,
@@ -192,6 +197,8 @@ function ClientProgramPage() {
     programInfo,
     weekCalendarData,
     calendarData,
+    calendarError,
+    calendarLoading,
     nextLesson,
     clientLessons,
     pitchingData,
@@ -306,8 +313,14 @@ function ClientProgramPage() {
     drillId: string,
     completed: boolean
   ) => {
+    console.log("🎯 handleMarkDrillComplete called with:", {
+      drillId,
+      completed,
+    });
+
     // Optimistic update FIRST
     if (selectedDay) {
+      console.log("📝 Updating selectedDay state optimistically");
       const updatedDrills = selectedDay.drills.map(drill =>
         drill.id === drillId ? { ...drill, completed } : drill
       );
@@ -320,6 +333,12 @@ function ClientProgramPage() {
         drills: updatedDrills,
         completedDrills,
       });
+      console.log(
+        "✅ Optimistic update applied - drill should now be",
+        completed ? "green" : "gray"
+      );
+    } else {
+      console.log("❌ No selectedDay found - cannot update state");
     }
 
     // Add brief celebration effect for completed drills (reduced)
@@ -336,11 +355,24 @@ function ClientProgramPage() {
 
     // Then perform the actual mutation
     try {
+      console.log("🚀 Calling markDrillCompleteMutation with:", {
+        drillId,
+        completed,
+      });
       await markDrillCompleteMutation.mutateAsync({
         drillId: drillId,
         completed,
       });
+      console.log(
+        "✅ markDrillCompleteMutation succeeded - data saved to backend"
+      );
+
+      // Subtle refetch to ensure UI stays in sync
+      console.log("🔄 Refreshing calendar data...");
+      await refetchCalendar();
+      console.log("✅ Calendar data refreshed");
     } catch (error) {
+      console.log("❌ markDrillCompleteMutation failed:", error);
       // Revert optimistic update on error
       if (selectedDay) {
         const revertedDrills = selectedDay.drills.map(drill =>
@@ -407,81 +439,194 @@ function ClientProgramPage() {
   };
 
   // Handle opening video player
-  const handleOpenVideo = async (videoUrl: string) => {
-    console.log("Opening video with URL:", videoUrl);
-    console.log("Available library items:", libraryItems);
+  const handleOpenVideo = async (videoUrl: string, drillData?: any) => {
+    console.log("🎬 Opening video with URL:", videoUrl);
+    console.log("📋 Drill data:", drillData);
+    console.log("🔍 YouTube metadata check:", {
+      isYoutube: drillData?.isYoutube,
+      youtubeId: drillData?.youtubeId,
+      videoId: drillData?.videoId,
+      videoTitle: drillData?.videoTitle,
+      videoThumbnail: drillData?.videoThumbnail,
+    });
 
-    // Clear any previous video errors and reset retry count
+    // Clear any previous video errors
     setVideoError(null);
-    setRetryCount(0);
 
-    // Find the video in the library based on the URL
-    console.log("Searching for video item with URL:", videoUrl);
-    const videoItem = libraryItems?.find(
-      (item: {
-        url?: string;
-        isYoutube?: boolean;
-        youtubeId?: string | null;
-      }) => {
-        // Direct URL match
-        if (item.url === videoUrl) return true;
-
-        // YouTube ID match
-        if (item.isYoutube && item.youtubeId) {
-          // Check if the videoUrl contains the YouTube ID
-          if (videoUrl.includes(item.youtubeId)) return true;
-
-          // Check if it's a YouTube embed URL
-          if (videoUrl.includes(`youtube.com/embed/${item.youtubeId}`))
-            return true;
-
-          // Check if it's a YouTube watch URL
-          if (videoUrl.includes(`youtube.com/watch?v=${item.youtubeId}`))
-            return true;
-        }
-
-        return false;
-      }
-    );
-
-    console.log("Found video item:", videoItem);
-
-    if (videoItem) {
+    // If drill data has YouTube information, use it directly (this is the simple approach!)
+    if (drillData?.isYoutube && drillData?.youtubeId) {
+      console.log(
+        "✅ Using YouTube metadata from drill data:",
+        drillData.youtubeId
+      );
       setSelectedVideo({
-        id: videoItem.id,
-        title: videoItem.title,
-        url: videoItem.url,
-        isYoutube: videoItem.isYoutube,
-        youtubeId: videoItem.youtubeId || undefined,
-        type: videoItem.type,
+        id: "youtube-" + drillData.youtubeId,
+        isYoutube: true,
+        youtubeId: drillData.youtubeId,
+        title: drillData?.title || "YouTube Video",
+        url: `https://www.youtube.com/watch?v=${drillData.youtubeId}`, // Generate proper YouTube URL
+        type: "video",
       });
       setIsVideoPlayerOpen(true);
-    } else {
-      // If no match found, try to extract YouTube ID from URL
+      return;
+    }
+
+    // Fallback: If we have an UploadThing URL but no YouTube metadata, search library for matching video
+    if (videoUrl && videoUrl.includes("utfs.io") && drillData?.title) {
+      console.log(
+        "⚠️ UploadThing URL detected, searching library for YouTube video:",
+        drillData.title
+      );
+      console.log("📚 Available library items:", libraryItems);
+
+      // Try multiple matching strategies
+      let matchingVideo = libraryItems?.find(
+        item =>
+          item.isYoutube &&
+          item.title &&
+          item.title.toLowerCase().trim() ===
+            drillData.title.toLowerCase().trim()
+      );
+
+      // If exact match fails, try partial match
+      if (!matchingVideo) {
+        matchingVideo = libraryItems?.find(
+          item =>
+            item.isYoutube &&
+            item.title &&
+            item.title.toLowerCase().includes(drillData.title.toLowerCase())
+        );
+      }
+
+      // If still no match, try reverse partial match
+      if (!matchingVideo) {
+        matchingVideo = libraryItems?.find(
+          item =>
+            item.isYoutube &&
+            item.title &&
+            drillData.title.toLowerCase().includes(item.title.toLowerCase())
+        );
+      }
+
+      // AGGRESSIVE FALLBACK: Look for videos with UploadThing URLs that might be YouTube videos
+      // This handles the case where YouTube videos were incorrectly stored with UploadThing URLs
+      if (!matchingVideo) {
+        console.log(
+          "🔍 Searching for videos with UploadThing URLs that might be YouTube videos..."
+        );
+
+        matchingVideo = libraryItems?.find(
+          item =>
+            item.title &&
+            item.title.toLowerCase().trim() ===
+              drillData.title.toLowerCase().trim() &&
+            item.url &&
+            item.url.includes("utfs.io") &&
+            // Check if the original URL field has YouTube info
+            (item.youtubeId ||
+              (item.url &&
+                (item.url.includes("youtube.com") ||
+                  item.url.includes("youtu.be"))))
+        );
+
+        if (matchingVideo) {
+          console.log(
+            "✅ Found potential YouTube video with UploadThing URL:",
+            matchingVideo
+          );
+
+          // Try to extract YouTube ID from the original URL or use stored youtubeId
+          let youtubeId = matchingVideo.youtubeId;
+
+          if (!youtubeId && matchingVideo.url) {
+            // Try to extract from the original URL field
+            const youtubeMatch = matchingVideo.url.match(
+              /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+            );
+            if (youtubeMatch) {
+              youtubeId = youtubeMatch[1];
+            }
+          }
+
+          if (youtubeId) {
+            console.log("✅ Extracted YouTube ID:", youtubeId);
+            setSelectedVideo({
+              id: "youtube-" + youtubeId,
+              isYoutube: true,
+              youtubeId: youtubeId,
+              title: matchingVideo.title,
+              url: `https://www.youtube.com/watch?v=${youtubeId}`,
+              type: "video",
+            });
+            setIsVideoPlayerOpen(true);
+            return;
+          }
+        }
+      }
+
+      if (matchingVideo) {
+        console.log(
+          "✅ Found matching YouTube video in library:",
+          matchingVideo
+        );
+        setSelectedVideo({
+          id: "youtube-" + matchingVideo.youtubeId,
+          isYoutube: true,
+          youtubeId: matchingVideo.youtubeId,
+          title: matchingVideo.title,
+          url: `https://www.youtube.com/watch?v=${matchingVideo.youtubeId}`,
+          type: "video",
+        });
+        setIsVideoPlayerOpen(true);
+        return;
+      } else {
+        console.log("❌ No matching YouTube video found in library");
+        console.log(
+          "📚 All YouTube items in library:",
+          libraryItems?.filter(item => item.isYoutube)
+        );
+        setVideoError({
+          message: "Video not available",
+          details: `YouTube video "${drillData.title}" could not be found. Please contact your coach.`,
+          canRetry: false,
+        });
+        return;
+      }
+    }
+
+    // Fallback: Try to detect YouTube from URL
+    if (
+      videoUrl &&
+      (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"))
+    ) {
       const youtubeIdMatch = videoUrl.match(
         /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
       );
+
       if (youtubeIdMatch) {
         const youtubeId = youtubeIdMatch[1];
         setSelectedVideo({
           id: "youtube-" + youtubeId,
           isYoutube: true,
           youtubeId: youtubeId,
-          title: "YouTube Video",
-          url: videoUrl,
-        });
-        setIsVideoPlayerOpen(true);
-      } else {
-        // Fallback: treat as direct video URL
-        setSelectedVideo({
-          id: "direct-" + Date.now(),
+          title: drillData?.title || "YouTube Video",
           url: videoUrl,
           type: "video",
-          title: "Video",
         });
         setIsVideoPlayerOpen(true);
+        return;
       }
     }
+
+    // For non-YouTube videos, treat as regular video
+    setSelectedVideo({
+      id: "video-" + Date.now(),
+      url: videoUrl,
+      type: "video",
+      title: drillData?.title || "Video",
+      isYoutube: false,
+    });
+    setIsVideoPlayerOpen(true);
   };
 
   // Handle closing video player
@@ -1779,210 +1924,229 @@ function ClientProgramPage() {
                 ))}
 
                 {/* Calendar days */}
-                {calendarDays.map((date, index) => {
-                  const dayData = getDayData(date);
-                  const isToday = isSameDay(date, new Date());
-                  const isCurrentMonth = isSameMonth(date, currentDate);
-                  const lessonsForDay = getLessonsForDate(date);
+                {calendarError && (
+                  <div className="col-span-7 p-4 text-center text-red-400">
+                    <p>Error loading calendar: {calendarError.message}</p>
+                    <p className="text-sm mt-2">
+                      Please try refreshing the page.
+                    </p>
+                  </div>
+                )}
+                {calendarLoading && (
+                  <div className="col-span-7 p-4 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="mt-2 text-gray-400">Loading calendar...</p>
+                  </div>
+                )}
+                {!calendarError &&
+                  !calendarLoading &&
+                  calendarDays.map((date, index) => {
+                    const dayData = getDayData(date);
+                    const isToday = isSameDay(date, new Date());
+                    const isCurrentMonth = isSameMonth(date, currentDate);
+                    const lessonsForDay = getLessonsForDate(date);
 
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        "min-h-[100px] md:min-h-[200px] lg:min-h-[320px] p-1 md:p-2 lg:p-6 rounded-lg md:rounded-xl lg:rounded-3xl transition-all duration-500 cursor-pointer hover:scale-105 hover:shadow-2xl border-2 touch-manipulation",
-                        isCurrentMonth
-                          ? "bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-gray-600/50 hover:border-gray-500 hover:bg-gradient-to-br hover:from-gray-700/90 hover:to-gray-800/90"
-                          : "bg-gray-900/30 border-gray-700/30",
-                        isToday &&
-                          "ring-4 ring-blue-500/30 border-blue-400/50 shadow-2xl"
-                      )}
-                      onClick={() => {
-                        if (
-                          dayData &&
-                          (dayData.drills.length > 0 || dayData.isRestDay)
-                        ) {
-                          setSelectedDay(dayData);
-                          setIsDaySheetOpen(true);
-                        }
-                      }}
-                    >
-                      {/* Date Header */}
-                      <div className="flex items-center justify-between mb-2 md:mb-6">
-                        <span
-                          className={cn(
-                            "text-lg md:text-3xl font-bold",
-                            isCurrentMonth ? "text-white" : "text-gray-500"
-                          )}
-                        >
-                          {format(date, "d")}
-                        </span>
-                        {dayData && dayData.totalDrills > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="text-xs md:text-sm px-2 md:px-4 py-1 md:py-2 rounded-full font-bold shadow-lg"
-                            style={{
-                              background:
-                                "linear-gradient(135deg, #10B981, #059669)",
-                              color: "#FFFFFF",
-                            }}
-                          >
-                            {dayData.completedDrills}/{dayData.totalDrills}
-                          </Badge>
+                    return (
+                      <div
+                        key={index}
+                        className={cn(
+                          "min-h-[100px] md:min-h-[200px] lg:min-h-[320px] p-1 md:p-2 lg:p-6 rounded-lg md:rounded-xl lg:rounded-3xl transition-all duration-500 cursor-pointer hover:scale-105 hover:shadow-2xl border-2 touch-manipulation",
+                          isCurrentMonth
+                            ? "bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20 hover:bg-white/10 hover:shadow-xl"
+                            : "bg-white/2 border-white/5",
+                          isToday &&
+                            "ring-4 ring-blue-500/30 border-blue-400/50 shadow-2xl bg-blue-500/10"
                         )}
-                      </div>
+                        onClick={() => {
+                          if (
+                            dayData &&
+                            (dayData.drills.length > 0 || dayData.isRestDay)
+                          ) {
+                            setSelectedDay(dayData);
+                            setIsDaySheetOpen(true);
+                          }
+                        }}
+                      >
+                        {/* Date Header */}
+                        <div className="flex items-center justify-between mb-2 md:mb-6">
+                          <span
+                            className={cn(
+                              "text-lg md:text-3xl font-bold",
+                              isCurrentMonth ? "text-white" : "text-gray-500"
+                            )}
+                          >
+                            {format(date, "d")}
+                          </span>
+                          {dayData && dayData.totalDrills > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs md:text-sm px-2 md:px-4 py-1 md:py-2 rounded-full font-bold shadow-lg"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #10B981, #059669)",
+                                color: "#FFFFFF",
+                              }}
+                            >
+                              {dayData.completedDrills}/{dayData.totalDrills}
+                            </Badge>
+                          )}
+                        </div>
 
-                      {/* Workout Details */}
-                      {dayData &&
-                        dayData.drills &&
-                        dayData.drills.length > 0 && (
-                          <div className="space-y-2 md:space-y-3">
-                            {dayData.drills
-                              .slice(0, 3)
-                              .map((drill, drillIndex) => (
-                                <div
-                                  key={drillIndex}
-                                  className={`p-2 md:p-4 rounded-xl md:rounded-2xl cursor-pointer hover:bg-gray-700/50 transition-all duration-300 hover:scale-102 ${
-                                    justCompletedDrills.has(drill.id)
-                                      ? "animate-pulse scale-105"
-                                      : ""
-                                  }`}
-                                  style={{
-                                    background: drill.completed
-                                      ? "linear-gradient(135deg, #1F2A1F, #2A3A2A)"
-                                      : "linear-gradient(135deg, #1F2426, #2A3133)",
-                                    border: drill.completed
-                                      ? "2px solid #10B981"
-                                      : "1px solid #353A3A",
-                                    boxShadow: justCompletedDrills.has(drill.id)
-                                      ? "0 0 20px rgba(16, 185, 129, 0.5)"
-                                      : "none",
-                                  }}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                      <div
-                                        className="font-semibold text-xs md:text-sm mb-1 md:mb-2 flex items-center gap-2"
-                                        style={{
-                                          color: drill.completed
-                                            ? "#10B981"
-                                            : "#FFFFFF",
-                                        }}
-                                      >
-                                        {drill.completed && (
-                                          <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-500 flex-shrink-0" />
-                                        )}
-                                        {drill.supersetId && (
-                                          <div className="flex items-center gap-1 text-xs text-purple-300">
-                                            <Link className="h-3 w-3" />
-                                            <span className="font-medium">
-                                              SUPERSET
-                                            </span>
-                                          </div>
-                                        )}
-                                        {drill.title}
+                        {/* Workout Details */}
+                        {dayData &&
+                          dayData.drills &&
+                          dayData.drills.length > 0 && (
+                            <div className="space-y-2 md:space-y-3">
+                              {dayData.drills
+                                .slice(0, 3)
+                                .map((drill, drillIndex) => (
+                                  <div
+                                    key={drillIndex}
+                                    className={`p-2 md:p-4 rounded-xl md:rounded-2xl cursor-pointer hover:bg-white/10 transition-all duration-300 hover:scale-102 backdrop-blur-sm ${
+                                      justCompletedDrills.has(drill.id)
+                                        ? "animate-pulse scale-105"
+                                        : ""
+                                    }`}
+                                    style={{
+                                      background: drill.completed
+                                        ? "linear-gradient(135deg, #1F2A1F, #2A3A2A)"
+                                        : "linear-gradient(135deg, #1F2426, #2A3133)",
+                                      border: drill.completed
+                                        ? "2px solid #10B981"
+                                        : "1px solid #353A3A",
+                                      boxShadow: justCompletedDrills.has(
+                                        drill.id
+                                      )
+                                        ? "0 0 20px rgba(16, 185, 129, 0.5)"
+                                        : "none",
+                                    }}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <div
+                                          className="font-semibold text-xs md:text-sm mb-1 md:mb-2 flex items-center gap-2"
+                                          style={{
+                                            color: drill.completed
+                                              ? "#10B981"
+                                              : "#FFFFFF",
+                                          }}
+                                        >
+                                          {drill.completed && (
+                                            <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-500 flex-shrink-0" />
+                                          )}
+                                          {drill.supersetId && (
+                                            <div className="flex items-center gap-1 text-xs text-purple-300">
+                                              <Link className="h-3 w-3" />
+                                              <span className="font-medium">
+                                                SUPERSET
+                                              </span>
+                                            </div>
+                                          )}
+                                          {drill.title}
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
+                                ))}
+                              {dayData.drills.length > 3 && (
+                                <div className="text-center py-2 md:py-3">
+                                  <span
+                                    className="text-xs md:text-sm"
+                                    style={{ color: "#ABA4AA" }}
+                                  >
+                                    +{dayData.drills.length - 3} more exercises
+                                  </span>
                                 </div>
-                              ))}
-                            {dayData.drills.length > 3 && (
-                              <div className="text-center py-2 md:py-3">
-                                <span
-                                  className="text-xs md:text-sm"
-                                  style={{ color: "#ABA4AA" }}
+                              )}
+                            </div>
+                          )}
+
+                        {/* Rest Day Indicator */}
+                        {dayData && dayData.isRestDay && (
+                          <div className="flex items-center justify-center h-20 md:h-32 mt-2 md:mt-4">
+                            <div
+                              className="text-center p-2 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 hover:scale-105"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #1F2426, #2A3133)",
+                                border: "2px solid #F59E0B",
+                                boxShadow:
+                                  "0 4px 16px rgba(245, 158, 11, 0.15)",
+                              }}
+                            >
+                              <div className="text-2xl md:text-3xl mb-1 md:mb-2">
+                                🔋
+                              </div>
+                              <div className="font-bold text-white text-sm md:text-base mb-1">
+                                Recharge Day
+                              </div>
+                              <div
+                                className="text-xs md:text-sm"
+                                style={{ color: "#F59E0B" }}
+                              >
+                                Recovery time
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Lessons */}
+                        {lessonsForDay.length > 0 && (
+                          <div className="mt-4 md:mt-6 space-y-2 md:space-y-3">
+                            <div className="text-xs md:text-sm font-semibold text-blue-400 mb-2 md:mb-3">
+                              📅 Lessons Today
+                            </div>
+                            {lessonsForDay.slice(0, 2).map(
+                              (
+                                lesson: {
+                                  id: string;
+                                  date: string;
+                                  title: string;
+                                  status: string;
+                                },
+                                lessonIndex: number
+                              ) => (
+                                <div
+                                  key={lessonIndex}
+                                  className="p-2 md:p-4 rounded-xl md:rounded-2xl"
+                                  style={{
+                                    background:
+                                      "linear-gradient(135deg, #10B981, #059669)",
+                                    border: "1px solid #059669",
+                                  }}
                                 >
-                                  +{dayData.drills.length - 3} more exercises
+                                  <div className="font-bold text-white text-xs md:text-sm">
+                                    {format(new Date(lesson.date), "h:mm a")}
+                                  </div>
+                                  <div className="text-xs text-green-100 truncate">
+                                    {lesson.title || "Lesson"}
+                                  </div>
+                                </div>
+                              )
+                            )}
+                            {lessonsForDay.length > 2 && (
+                              <div className="text-center">
+                                <span className="text-xs md:text-sm text-gray-400">
+                                  +{lessonsForDay.length - 2} more lessons
                                 </span>
                               </div>
                             )}
                           </div>
                         )}
 
-                      {/* Rest Day Indicator */}
-                      {dayData && dayData.isRestDay && (
-                        <div className="flex items-center justify-center h-20 md:h-32 mt-2 md:mt-4">
-                          <div
-                            className="text-center p-2 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 hover:scale-105"
-                            style={{
-                              background:
-                                "linear-gradient(135deg, #1F2426, #2A3133)",
-                              border: "2px solid #F59E0B",
-                              boxShadow: "0 4px 16px rgba(245, 158, 11, 0.15)",
-                            }}
-                          >
-                            <div className="text-2xl md:text-3xl mb-1 md:mb-2">
-                              🔋
-                            </div>
-                            <div className="font-bold text-white text-sm md:text-base mb-1">
-                              Recharge Day
-                            </div>
-                            <div
-                              className="text-xs md:text-sm"
-                              style={{ color: "#F59E0B" }}
-                            >
-                              Recovery time
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Lessons */}
-                      {lessonsForDay.length > 0 && (
-                        <div className="mt-4 md:mt-6 space-y-2 md:space-y-3">
-                          <div className="text-xs md:text-sm font-semibold text-blue-400 mb-2 md:mb-3">
-                            📅 Lessons Today
-                          </div>
-                          {lessonsForDay.slice(0, 2).map(
-                            (
-                              lesson: {
-                                id: string;
-                                date: string;
-                                title: string;
-                                status: string;
-                              },
-                              lessonIndex: number
-                            ) => (
-                              <div
-                                key={lessonIndex}
-                                className="p-2 md:p-4 rounded-xl md:rounded-2xl"
-                                style={{
-                                  background:
-                                    "linear-gradient(135deg, #10B981, #059669)",
-                                  border: "1px solid #059669",
-                                }}
-                              >
-                                <div className="font-bold text-white text-xs md:text-sm">
-                                  {format(new Date(lesson.date), "h:mm a")}
-                                </div>
-                                <div className="text-xs text-green-100 truncate">
-                                  {lesson.title || "Lesson"}
-                                </div>
-                              </div>
-                            )
-                          )}
-                          {lessonsForDay.length > 2 && (
+                        {/* Empty Day */}
+                        {!dayData && isCurrentMonth && (
+                          <div className="flex items-center justify-center h-20 md:h-40">
                             <div className="text-center">
-                              <span className="text-xs md:text-sm text-gray-400">
-                                +{lessonsForDay.length - 2} more lessons
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Empty Day */}
-                      {!dayData && isCurrentMonth && (
-                        <div className="flex items-center justify-center h-20 md:h-40">
-                          <div className="text-center">
-                            <div className="text-gray-500 text-xs md:text-sm">
-                              No program
+                              <div className="text-gray-500 text-xs md:text-sm">
+                                No program
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -2591,10 +2755,31 @@ function ClientProgramPage() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() =>
-                                        drill.videoUrl &&
-                                        handleOpenVideo(drill.videoUrl)
-                                      }
+                                      onClick={() => {
+                                        console.log(
+                                          "🔘 Watch Demo button clicked!"
+                                        );
+                                        console.log("🔍 Drill data:", drill);
+                                        console.log(
+                                          "🔍 Drill videoUrl:",
+                                          drill.videoUrl
+                                        );
+
+                                        if (drill.videoUrl) {
+                                          console.log(
+                                            "✅ Calling handleOpenVideo with:",
+                                            drill.videoUrl
+                                          );
+                                          handleOpenVideo(
+                                            drill.videoUrl,
+                                            drill
+                                          );
+                                        } else {
+                                          console.log(
+                                            "❌ No videoUrl found in drill"
+                                          );
+                                        }
+                                      }}
                                       className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
                                     >
                                       <Play className="h-4 w-4 mr-2" />
@@ -2609,12 +2794,18 @@ function ClientProgramPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
+                                  onClick={() => {
+                                    console.log(
+                                      "🔘 Checkmark button clicked for drill:",
+                                      drill.id,
+                                      "current status:",
+                                      drill.completed
+                                    );
                                     handleMarkDrillComplete(
                                       drill.id,
                                       !drill.completed
-                                    )
-                                  }
+                                    );
+                                  }}
                                   className={cn(
                                     "h-10 w-10 p-0 rounded-xl transition-all duration-300 transform hover:scale-110",
                                     drill.completed

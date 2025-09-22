@@ -298,6 +298,11 @@ function CreateProgramModalContent({
     duration?: string;
     videoUrl?: string;
     notes?: string;
+    isYoutube?: boolean;
+    youtubeId?: string | null;
+    videoId?: string | null;
+    videoTitle?: string | null;
+    videoThumbnail?: string | null;
   }) => {
     if (selectedWeekIndex === null || selectedDayIndex === null) return;
 
@@ -333,6 +338,12 @@ function CreateProgramModalContent({
       duration: drill.duration || "",
       videoUrl: drill.videoUrl || "",
       notes: drill.notes || "",
+      // Add YouTube-specific information
+      isYoutube: drill.isYoutube || false,
+      youtubeId: drill.youtubeId || null,
+      videoId: drill.videoId || null,
+      videoTitle: drill.videoTitle || null,
+      videoThumbnail: drill.videoThumbnail || null,
     };
     day.drills.push(newDrill);
     setWeeks(updatedWeeks);

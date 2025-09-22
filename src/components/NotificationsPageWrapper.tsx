@@ -16,3 +16,5 @@ export default function NotificationsPageWrapper({}: NotificationsPageWrapperPro
   return <NotificationsPage />;
 }
 
+
+
