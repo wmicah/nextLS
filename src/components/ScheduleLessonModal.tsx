@@ -66,6 +66,9 @@ export default function ScheduleLessonModal({
   // Fetch coach's profile for working hours
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
 
+  // Get current user's role to determine if they can book on non-working days
+  const { data: currentUser } = trpc.user.getProfile.useQuery();
+
   // Generate time slots based on coach's working hours and interval
   const generateTimeSlots = () => {
     // Use coach's working hours if available, otherwise default to 9 AM to 6 PM
@@ -209,8 +212,17 @@ export default function ScheduleLessonModal({
       hour = 0;
     }
 
-    const lessonDate = new Date(selectedDate);
-    lessonDate.setHours(hour, parseInt(minutes), 0, 0);
+    // Create the lesson date by combining the selected date with the selected time
+    // This ensures we maintain the correct local time without timezone conversion issues
+    const lessonDate = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      hour,
+      parseInt(minutes),
+      0,
+      0
+    );
 
     if (replacementData) {
       // Replace workout with lesson
@@ -336,6 +348,11 @@ export default function ScheduleLessonModal({
             {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
             {coachProfile?.workingHours?.endTime || "6:00 PM"}
           </p>
+          <p className="text-sm text-gray-400 mt-1">
+            Working Days:{" "}
+            {coachProfile?.workingHours?.workingDays?.join(", ") ||
+              "Monday - Sunday"}
+          </p>
         </div>
 
         {/* Month Navigation */}
@@ -374,13 +391,31 @@ export default function ScheduleLessonModal({
               const lessonsForDay = getLessonsForDate(day);
               const hasLessons = lessonsForDay.length > 0;
 
+              // Check if this is a working day
+              const dayName = format(day, "EEEE");
+              const workingDays = coachProfile?.workingHours?.workingDays || [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ];
+              const isWorkingDay = workingDays.includes(dayName);
+
+              // Determine if this day can be selected
+              // Coaches can book on any day, clients can only book on working days
+              const canSelect =
+                !isPast &&
+                isCurrentMonth &&
+                (currentUser?.role === "COACH" || isWorkingDay);
+
               return (
                 <button
                   key={day.toISOString()}
-                  onClick={() =>
-                    !isPast && isCurrentMonth && setSelectedDate(day)
-                  }
-                  disabled={isPast || !isCurrentMonth}
+                  onClick={() => canSelect && setSelectedDate(day)}
+                  disabled={!canSelect}
                   className={`
                     p-2 text-sm rounded-lg transition-all duration-200 relative
                     ${
@@ -388,9 +423,11 @@ export default function ScheduleLessonModal({
                         ? "bg-sky-500 text-white"
                         : isToday
                         ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
-                        : isPast || !isCurrentMonth
+                        : !canSelect
                         ? "text-gray-600 cursor-not-allowed"
-                        : "text-white hover:bg-sky-500/20 hover:text-sky-400"
+                        : isWorkingDay
+                        ? "text-white hover:bg-sky-500/20 hover:text-sky-400"
+                        : "text-orange-400 hover:bg-orange-500/20 hover:text-orange-300 border border-orange-500/30"
                     }
                    `}
                 >
@@ -398,13 +435,16 @@ export default function ScheduleLessonModal({
                   {hasLessons && (
                     <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                   )}
+                  {!isWorkingDay && currentUser?.role === "COACH" && (
+                    <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-orange-500 rounded-full" />
+                  )}
                 </button>
               );
             })}
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-4 mt-3 text-xs">
+          <div className="flex items-center gap-4 mt-3 text-xs flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-red-500 rounded-full" />
               <span className="text-gray-400">Existing lessons</span>
@@ -413,6 +453,22 @@ export default function ScheduleLessonModal({
               <div className="w-2 h-2 bg-sky-500 rounded-full" />
               <span className="text-gray-400">Available slots</span>
             </div>
+            {currentUser?.role === "COACH" && (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                <span className="text-gray-400">
+                  Non-working day (coach only)
+                </span>
+              </div>
+            )}
+            {currentUser?.role === "CLIENT" && (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-gray-600 rounded-full" />
+                <span className="text-gray-400">
+                  Non-working day (unavailable)
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -422,32 +478,73 @@ export default function ScheduleLessonModal({
             <h3 className="text-sm font-medium text-white mb-3">
               Select Time for {format(selectedDate, "EEEE, MMMM d, yyyy")}
             </h3>
-            <div className="grid grid-cols-3 gap-2">
-              {timeSlots.map(time => {
-                const isAvailable = isTimeSlotAvailable(selectedDate, time);
-                const isSelected = selectedTime === time;
+            {(() => {
+              // Check if this is a working day
+              const dayName = format(selectedDate, "EEEE");
+              const workingDays = coachProfile?.workingHours?.workingDays || [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ];
+              const isWorkingDay = workingDays.includes(dayName);
 
+              // If it's not a working day and user is a client, show message
+              if (!isWorkingDay && currentUser?.role === "CLIENT") {
                 return (
-                  <button
-                    key={time}
-                    onClick={() => isAvailable && setSelectedTime(time)}
-                    disabled={!isAvailable}
-                    className={`
-                    p-2 text-sm rounded-lg transition-all duration-200
-                    ${
-                      isSelected
-                        ? "bg-sky-500 text-white"
-                        : isAvailable
-                        ? "text-white hover:bg-sky-500/20 hover:text-sky-400"
-                        : "text-gray-600 cursor-not-allowed bg-gray-700"
-                    }
-                   `}
-                  >
-                    {time}
-                  </button>
+                  <div className="p-4 rounded-lg bg-orange-500/20 border border-orange-500/30">
+                    <p className="text-orange-300 text-sm">
+                      This is not a working day for your coach. Please select a
+                      different date.
+                    </p>
+                  </div>
                 );
-              })}
-            </div>
+              }
+
+              // If it's not a working day but user is a coach, show warning
+              if (!isWorkingDay && currentUser?.role === "COACH") {
+                return (
+                  <div className="mb-4 p-3 rounded-lg bg-orange-500/20 border border-orange-500/30">
+                    <p className="text-orange-300 text-sm">
+                      ⚠️ This is not a regular working day. You can still
+                      schedule lessons here.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-3 gap-2">
+                  {timeSlots.map(time => {
+                    const isAvailable = isTimeSlotAvailable(selectedDate, time);
+                    const isSelected = selectedTime === time;
+
+                    return (
+                      <button
+                        key={time}
+                        onClick={() => isAvailable && setSelectedTime(time)}
+                        disabled={!isAvailable}
+                        className={`
+                        p-2 text-sm rounded-lg transition-all duration-200
+                        ${
+                          isSelected
+                            ? "bg-sky-500 text-white"
+                            : isAvailable
+                            ? "text-white hover:bg-sky-500/20 hover:text-sky-400"
+                            : "text-gray-600 cursor-not-allowed bg-gray-700"
+                        }
+                       `}
+                      >
+                        {time}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 

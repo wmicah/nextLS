@@ -574,19 +574,6 @@ function SchedulePageClient() {
                   Current Working Hours
                 </h2>
               </div>
-              <button
-                onClick={() => fixPendingCoachLessonsMutation.mutate()}
-                disabled={fixPendingCoachLessonsMutation.isPending}
-                className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{
-                  backgroundColor: "#FF6B35",
-                  color: "#FFFFFF",
-                }}
-              >
-                {fixPendingCoachLessonsMutation.isPending
-                  ? "Fixing..."
-                  : "Fix Coach Lessons"}
-              </button>
             </div>
             <p className="text-gray-300">
               {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
@@ -809,7 +796,7 @@ function SchedulePageClient() {
           </div>
 
           {/* Calendar Legend */}
-          <div className="flex items-center gap-6 mb-4 text-sm">
+          <div className="flex items-center gap-6 mb-4 text-sm flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-400" />
               <span className="text-white font-medium">Scheduled Lessons</span>
@@ -821,6 +808,12 @@ function SchedulePageClient() {
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
               <span className="text-white font-medium">Today</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-orange-500/20 border-2 border-orange-500/50" />
+              <span className="text-orange-300 font-medium">
+                Non-working Day
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-gray-600 border-2 border-gray-500" />
@@ -861,6 +854,19 @@ function SchedulePageClient() {
                 const hasLessons = lessonsForDay.length > 0;
                 const hasPending = pendingForDay.length > 0;
 
+                // Check if this is a working day
+                const dayName = format(day, "EEEE");
+                const workingDays = coachProfile?.workingHours?.workingDays || [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday",
+                ];
+                const isWorkingDay = workingDays.includes(dayName);
+
                 return (
                   <div
                     key={day.toISOString()}
@@ -878,13 +884,21 @@ function SchedulePageClient() {
                           : isPast
                           ? "text-gray-500 bg-gray-700/30 border-gray-600"
                           : isCurrentMonth
-                          ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
+                          ? isWorkingDay
+                            ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
+                            : "text-orange-400 bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 hover:border-orange-400"
                           : "text-gray-600 bg-gray-900/30 border-gray-700"
                       }
                     `}
                   >
-                    <div className="font-bold text-sm md:text-lg mb-1 md:mb-2">
-                      {format(day, "d")}
+                    <div className="font-bold text-sm md:text-lg mb-1 md:mb-2 flex items-center justify-between">
+                      <span>{format(day, "d")}</span>
+                      {!isWorkingDay && isCurrentMonth && !isPast && (
+                        <div
+                          className="w-2 h-2 bg-orange-500 rounded-full"
+                          title="Non-working day"
+                        />
+                      )}
                     </div>
 
                     {/* Pending Requests */}
@@ -1188,6 +1202,25 @@ function SchedulePageClient() {
                       {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
                       {coachProfile?.workingHours?.endTime || "6:00 PM"}
                     </p>
+                    {(() => {
+                      const dayName = format(selectedDate, "EEEE");
+                      const workingDays = coachProfile?.workingHours
+                        ?.workingDays || [
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                        "Sunday",
+                      ];
+                      const isWorkingDay = workingDays.includes(dayName);
+
+                      if (!isWorkingDay) {
+                        return <p className="text-orange-400 text-sm mt-1"></p>;
+                      }
+                      return null;
+                    })()}
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -1315,8 +1348,184 @@ function SchedulePageClient() {
                     Available Time Slots
                   </h3>
                   {(() => {
+                    // Check if this is a working day
+                    const dayName = format(selectedDate, "EEEE");
+                    const workingDays = coachProfile?.workingHours
+                      ?.workingDays || [
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday",
+                      "Sunday",
+                    ];
+                    const isWorkingDay = workingDays.includes(dayName);
+
+                    // Generate time slots for the day (ignoring working day restrictions for coaches)
+                    const generateTimeSlotsForDay = (date: Date) => {
+                      const startTime =
+                        coachProfile?.workingHours?.startTime || "9:00 AM";
+                      const endTime =
+                        coachProfile?.workingHours?.endTime || "6:00 PM";
+                      const interval =
+                        coachProfile?.workingHours?.timeSlotInterval || 60;
+                      const slots = [];
+
+                      // Parse start and end times
+                      const startMatch = startTime.match(
+                        /(\d+):(\d+)\s*(AM|PM)/i
+                      );
+                      const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+
+                      if (!startMatch || !endMatch) {
+                        // Fallback to default hours with hourly slots
+                        for (let hour = 9; hour < 18; hour++) {
+                          const displayHour = hour > 12 ? hour - 12 : hour;
+                          const period = hour >= 12 ? "PM" : "AM";
+                          slots.push(`${displayHour}:00 ${period}`);
+                        }
+                        return slots;
+                      }
+
+                      const [, startHour, startMinute, startPeriod] =
+                        startMatch;
+                      const [, endHour, endMinute, endPeriod] = endMatch;
+
+                      // Convert to 24-hour format and total minutes
+                      let startTotalMinutes =
+                        parseInt(startHour) * 60 + parseInt(startMinute);
+                      if (
+                        startPeriod.toUpperCase() === "PM" &&
+                        parseInt(startHour) !== 12
+                      )
+                        startTotalMinutes += 12 * 60;
+                      if (
+                        startPeriod.toUpperCase() === "AM" &&
+                        parseInt(startHour) === 12
+                      )
+                        startTotalMinutes = parseInt(startMinute);
+
+                      let endTotalMinutes =
+                        parseInt(endHour) * 60 + parseInt(endMinute);
+                      if (
+                        endPeriod.toUpperCase() === "PM" &&
+                        parseInt(endHour) !== 12
+                      )
+                        endTotalMinutes += 12 * 60;
+                      if (
+                        endPeriod.toUpperCase() === "AM" &&
+                        parseInt(endHour) === 12
+                      )
+                        endTotalMinutes = parseInt(endMinute);
+
+                      // Get current time to filter out past slots for today
+                      const now = new Date();
+                      const isToday =
+                        format(now, "yyyy-MM-dd") ===
+                        format(date, "yyyy-MM-dd");
+                      const currentTotalMinutes =
+                        now.getHours() * 60 + now.getMinutes();
+
+                      // Get existing lessons for this date
+                      const existingLessons = getAllLessonsForDate(date);
+                      const bookedTimes = existingLessons.map(
+                        (lesson: { date: string }) => {
+                          const lessonDate = new Date(lesson.date);
+                          return format(lessonDate, "h:mm a");
+                        }
+                      );
+
+                      // Generate slots based on interval
+                      for (
+                        let totalMinutes = startTotalMinutes;
+                        totalMinutes < endTotalMinutes;
+                        totalMinutes += interval
+                      ) {
+                        // Skip past time slots for today
+                        if (isToday && totalMinutes <= currentTotalMinutes) {
+                          continue;
+                        }
+
+                        const hour24 = Math.floor(totalMinutes / 60);
+                        const minute = totalMinutes % 60;
+
+                        const displayHour =
+                          hour24 === 0
+                            ? 12
+                            : hour24 > 12
+                            ? hour24 - 12
+                            : hour24;
+                        const period = hour24 >= 12 ? "PM" : "AM";
+                        const minuteStr = minute.toString().padStart(2, "0");
+
+                        const timeSlot = `${displayHour}:${minuteStr} ${period}`;
+
+                        // Check if this slot is already booked
+                        if (!bookedTimes.includes(timeSlot)) {
+                          slots.push(timeSlot);
+                        }
+                      }
+
+                      return slots;
+                    };
+
                     const availableSlots =
-                      generateAvailableTimeSlots(selectedDate);
+                      generateTimeSlotsForDay(selectedDate);
+
+                    if (!isWorkingDay) {
+                      // Show warning message but still display time slots
+                      return (
+                        <div>
+                          <div className="mb-4 p-4 rounded-lg bg-orange-500/20 border border-orange-500/30">
+                            <p className="text-orange-300 text-sm mb-2">
+                              ⚠️ This isn't a normal working day for you
+                            </p>
+                            <p className="text-orange-200 text-sm">
+                              You can still schedule lessons outside your
+                              regular working hours if needed.
+                            </p>
+                          </div>
+                          {availableSlots.length > 0 ? (
+                            <div className="grid grid-cols-3 gap-2">
+                              {availableSlots.map((slot, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => {
+                                    setScheduleForm({
+                                      ...scheduleForm,
+                                      time: slot,
+                                    });
+                                    setShowDayOverviewModal(false);
+                                    setShowScheduleModal(true);
+                                  }}
+                                  className="p-3 rounded-lg border text-center transition-all duration-200 hover:bg-sky-500/10 hover:border-sky-500/30"
+                                  style={{
+                                    backgroundColor: "#2A2F2F",
+                                    borderColor: "#606364",
+                                    color: "#FFFFFF",
+                                  }}
+                                >
+                                  {slot}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6">
+                              <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                              <p className="text-gray-400">
+                                No available time slots
+                              </p>
+                              <p className="text-gray-500 text-sm">
+                                All working hours are booked
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // Regular working day display
                     return availableSlots.length > 0 ? (
                       <div className="grid grid-cols-3 gap-2">
                         {availableSlots.map((slot, index) => (

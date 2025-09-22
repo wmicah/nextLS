@@ -42,3 +42,4 @@ export function useSidebarState() {
 
   return isOpen;
 }
+

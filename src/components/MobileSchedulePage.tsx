@@ -585,6 +585,19 @@ export default function MobileSchedulePage() {
                 const lessonsForDay = getLessonsForDate(day);
                 const hasLessons = lessonsForDay.length > 0;
 
+                // Check if this is a working day
+                const dayName = format(day, "EEEE");
+                const workingDays = coachProfile?.workingHours?.workingDays || [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday",
+                ];
+                const isWorkingDay = workingDays.includes(dayName);
+
                 return (
                   <div
                     key={day.toISOString()}
@@ -602,13 +615,21 @@ export default function MobileSchedulePage() {
                         : isPast
                         ? "text-gray-500 bg-gray-700/30 border-gray-600"
                         : isCurrentMonth
-                        ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
+                        ? isWorkingDay
+                          ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
+                          : "text-orange-400 bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 hover:border-orange-400"
                         : "text-gray-600 bg-gray-900/30 border-gray-700"
                     }
                   `}
                   >
-                    <div className="font-bold text-sm mb-1">
-                      {format(day, "d")}
+                    <div className="font-bold text-sm mb-1 flex items-center justify-between">
+                      <span>{format(day, "d")}</span>
+                      {!isWorkingDay && isCurrentMonth && !isPast && (
+                        <div
+                          className="w-1.5 h-1.5 bg-orange-500 rounded-full"
+                          title="Non-working day"
+                        />
+                      )}
                     </div>
                     {hasLessons && (
                       <div className="flex justify-center items-center mt-1">

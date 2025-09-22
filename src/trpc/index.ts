@@ -9784,6 +9784,79 @@ export const appRouter = router({
         return filteredEvents;
       }),
 
+    // Get coach's profile for client (including working hours)
+    getCoachProfile: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get client record to find their coach
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // Get coach's profile including working hours
+      const coach = await db.user.findFirst({
+        where: { id: client.coachId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          workingHoursStart: true,
+          workingHoursEnd: true,
+          workingDays: true,
+          timeSlotInterval: true,
+        },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Coach not found",
+        });
+      }
+
+      // Format the working hours data to match the expected structure
+      return {
+        id: coach.id,
+        name: coach.name,
+        email: coach.email,
+        workingHours: {
+          startTime: coach.workingHoursStart || "9:00 AM",
+          endTime: coach.workingHoursEnd || "6:00 PM",
+          workingDays: coach.workingDays || [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+          ],
+          timeSlotInterval: coach.timeSlotInterval || 60,
+        },
+      };
+    }),
+
     // Get pending schedule requests for coach
     getPendingScheduleRequests: publicProcedure.query(async () => {
       const { getUser } = getKindeServerSession();

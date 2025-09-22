@@ -59,7 +59,7 @@ export default function MobileClientSchedulePage() {
     trpc.clientRouter.getClientUpcomingLessons.useQuery();
 
   // Fetch coach's profile for working hours
-  const { data: coachProfile } = trpc.user.getProfile.useQuery();
+  const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
 
   const utils = trpc.useUtils();
   const requestScheduleChangeMutation =
@@ -555,15 +555,21 @@ export default function MobileClientSchedulePage() {
                         : isPast
                         ? "text-gray-500 bg-gray-700/30 border-gray-600"
                         : !isWorkingDay
-                        ? "text-gray-500 bg-gray-800/20 border-gray-700"
+                        ? "text-orange-400 bg-orange-500/10 border-orange-500/30"
                         : isCurrentMonth
                         ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
                         : "text-gray-600 bg-gray-900/30 border-gray-700"
                     }
                   `}
                   >
-                    <div className="font-bold text-sm mb-1">
-                      {format(day, "d")}
+                    <div className="font-bold text-sm mb-1 flex items-center justify-between">
+                      <span>{format(day, "d")}</span>
+                      {!isWorkingDay && isCurrentMonth && !isPast && (
+                        <div
+                          className="w-1.5 h-1.5 bg-orange-500 rounded-full"
+                          title="Non-working day"
+                        />
+                      )}
                     </div>
                     {hasMyLessons && (
                       <div className="flex justify-center items-center mt-1">

@@ -74,7 +74,7 @@ function ClientSchedulePageClient() {
   const { data: currentClient } = trpc.user.getProfile.useQuery();
 
   // Fetch coach's profile for working hours
-  const { data: coachProfile } = trpc.user.getProfile.useQuery();
+  const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
 
   const utils = trpc.useUtils();
 
@@ -506,6 +506,11 @@ function ClientSchedulePageClient() {
               {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
               {coachProfile?.workingHours?.endTime || "6:00 PM"}
             </p>
+            <p className="text-gray-400 text-sm mt-1">
+              Working Days:{" "}
+              {coachProfile?.workingHours?.workingDays?.join(", ") ||
+                "Monday - Sunday"}
+            </p>
           </div>
 
           {/* Today's Lessons Summary */}
@@ -628,7 +633,7 @@ function ClientSchedulePageClient() {
           </div>
 
           {/* Calendar Legend */}
-          <div className="flex items-center gap-6 mb-4 text-sm">
+          <div className="flex items-center gap-6 mb-4 text-sm flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-400" />
               <span className="text-white font-medium">
@@ -644,6 +649,12 @@ function ClientSchedulePageClient() {
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
               <span className="text-white font-medium">Today</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-orange-500/20 border-2 border-orange-500/50" />
+              <span className="text-orange-300 font-medium">
+                Non-working Day
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-gray-600 border-2 border-gray-500" />
@@ -714,15 +725,21 @@ function ClientSchedulePageClient() {
                           : isPast
                           ? "text-gray-500 bg-gray-700/30 border-gray-600"
                           : !isWorkingDay
-                          ? "text-gray-500 bg-gray-800/20 border-gray-700"
+                          ? "text-orange-400 bg-orange-500/10 border-orange-500/30"
                           : isCurrentMonth
                           ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
                           : "text-gray-600 bg-gray-900/30 border-gray-700"
                       }
                     `}
                   >
-                    <div className="font-bold text-sm md:text-lg mb-1 md:mb-2">
-                      {format(day, "d")}
+                    <div className="font-bold text-sm md:text-lg mb-1 md:mb-2 flex items-center justify-between">
+                      <span>{format(day, "d")}</span>
+                      {!isWorkingDay && isCurrentMonth && !isPast && (
+                        <div
+                          className="w-2 h-2 bg-orange-500 rounded-full"
+                          title="Non-working day"
+                        />
+                      )}
                     </div>
 
                     {/* My Confirmed Lessons - Only show PENDING and DECLINED lessons */}
