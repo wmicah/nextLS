@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 // Lesson reminder service will be initialized via API route instead of layout
 import MessagingServiceProvider from "@/components/MessagingServiceProvider";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import PWAProvider from "@/components/PWAProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -139,6 +140,18 @@ export default function RootLayout({
         {/* PWA manifest */}
         <link rel="manifest" href="/site.webmanifest" />
 
+        {/* PWA meta tags */}
+        <meta name="application-name" content="Next Level Softball" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Next Level Softball" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        <meta name="msapplication-TileColor" content="#4A5A70" />
+        <meta name="msapplication-tap-highlight" content="no" />
+        <meta name="theme-color" content="#4A5A70" />
+
         {/* Favicon */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link
@@ -193,12 +206,14 @@ export default function RootLayout({
             <ThemeProvider>
               <ChatbotProvider>
                 <MessagingServiceProvider>
-                  <ConditionalNavbar />
-                  {children}
-                  <Toast />
-                  <ChatbotWrapper />
-                  <Analytics />
-                  <ServiceWorkerRegistration />
+                  <PWAProvider>
+                    <ConditionalNavbar />
+                    {children}
+                    <Toast />
+                    <ChatbotWrapper />
+                    <Analytics />
+                    <ServiceWorkerRegistration />
+                  </PWAProvider>
                 </MessagingServiceProvider>
               </ChatbotProvider>
             </ThemeProvider>

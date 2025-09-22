@@ -41,6 +41,14 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             <Link
+              href="/features"
+              className="relative px-4 py-2 text-sm font-medium text-white/90 hover:text-white transition-colors duration-200 group"
+            >
+              <span className="relative z-10">Features</span>
+              <div className="absolute inset-0 rounded-lg bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+            </Link>
+
+            <Link
               href="/pricing"
               className="relative px-4 py-2 text-sm font-medium text-white/90 hover:text-white transition-colors duration-200 group"
             >
@@ -81,6 +89,14 @@ const Navbar = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-white/10 bg-black/95 backdrop-blur-xl">
             <div className="py-4 space-y-2">
+              <Link
+                href="/features"
+                className="block px-4 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/5 rounded-lg transition-colors duration-200"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Features
+              </Link>
+
               <Link
                 href="/pricing"
                 className="block px-4 py-2 text-sm font-medium text-white/90 hover:text-white hover:bg-white/5 rounded-lg transition-colors duration-200"
