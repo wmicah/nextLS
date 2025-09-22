@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleLogout } from "@kinde-oss/kinde-auth-nextjs/server";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the logout handler from Kinde
-    const logoutHandler = await handleLogout();
+    // Create a response that redirects to home and clears all authentication data
+    const response = NextResponse.redirect(new URL("/", request.url));
 
-    // Create a response that clears all authentication data
-    const response = await logoutHandler(request);
-
-    // Add additional headers to clear any cached data
+    // Add headers to clear any cached data
     response.headers.set(
       "Cache-Control",
       "no-cache, no-store, must-revalidate"
@@ -17,11 +13,27 @@ export async function GET(request: NextRequest) {
     response.headers.set("Pragma", "no-cache");
     response.headers.set("Expires", "0");
 
-    // Clear any session-related cookies
-    response.cookies.delete("kinde_session");
-    response.cookies.delete("kinde_access_token");
-    response.cookies.delete("kinde_refresh_token");
-    response.cookies.delete("kinde_id_token");
+    // Clear all authentication-related cookies
+    const cookiesToDelete = [
+      "kinde_session",
+      "kinde_access_token",
+      "kinde_refresh_token",
+      "kinde_id_token",
+      "kinde_user",
+      "kinde_org",
+      "kinde_permissions",
+      "kinde_roles",
+    ];
+
+    cookiesToDelete.forEach(cookieName => {
+      response.cookies.delete(cookieName);
+      // Also try to delete with different path and domain combinations
+      response.cookies.set(cookieName, "", {
+        expires: new Date(0),
+        path: "/",
+        domain: request.nextUrl.hostname,
+      });
+    });
 
     return response;
   } catch (error) {
@@ -30,11 +42,21 @@ export async function GET(request: NextRequest) {
     // Fallback response that clears everything
     const response = NextResponse.redirect(new URL("/", request.url));
 
-    // Clear all authentication cookies
-    response.cookies.delete("kinde_session");
-    response.cookies.delete("kinde_access_token");
-    response.cookies.delete("kinde_refresh_token");
-    response.cookies.delete("kinde_id_token");
+    // Clear all authentication cookies as fallback
+    const cookiesToDelete = [
+      "kinde_session",
+      "kinde_access_token",
+      "kinde_refresh_token",
+      "kinde_id_token",
+      "kinde_user",
+      "kinde_org",
+      "kinde_permissions",
+      "kinde_roles",
+    ];
+
+    cookiesToDelete.forEach(cookieName => {
+      response.cookies.delete(cookieName);
+    });
 
     return response;
   }
