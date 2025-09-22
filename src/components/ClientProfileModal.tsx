@@ -330,7 +330,7 @@ ClientProfileModalProps) {
                   style={{ borderColor: "#4A5A70", borderTopColor: "#C3BCC2" }}
                 />
               </div>
-            ) : activeTab === "overview" ? (
+            ) : (
               <div className="space-y-6">
                 {/* Client Info Card */}
                 <div
@@ -1180,6 +1180,7 @@ ClientProfileModalProps) {
                   </div>
                 </div>
               </div>
+            )}
           </div>
         </ScrollArea>
       </div>

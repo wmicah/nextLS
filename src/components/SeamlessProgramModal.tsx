@@ -573,10 +573,10 @@ export default function SeamlessProgramModal({
                           organizing your training schedule
                         </p>
                         <Button
-                          onClick={addWeek}
+                          onClick={() => setCurrentStep("structure")}
                           className="bg-[#4A5A70] hover:bg-[#606364]"
                         >
-                          Add First Week
+                          Start Building
                         </Button>
                       </CardContent>
                     </Card>
