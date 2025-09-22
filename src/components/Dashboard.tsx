@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import Sidebar from "./Sidebar";
 import WeekAtAGlance from "@/components/WeekAtAGlance";
-import PushNotificationSetup from "@/components/PushNotificationSetup";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -102,10 +101,6 @@ export default function Dashboard() {
           <WeekAtAGlance />
         </div>
 
-        {/* Push Notification Setup */}
-        <div className="mb-6">
-          <PushNotificationSetup />
-        </div>
 
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-2 gap-6">
