@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { trpc } from "@/app/_trpc/client";
-// Removed complex SSE hooks - using simple polling instead
 import { useState, useRef, useEffect } from "react";
 import { useMobileDetection } from "@/lib/mobile-detection";
 import {
@@ -88,12 +89,15 @@ interface ClientSidebarProps {
 export default function ClientSidebar({ user, children }: ClientSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const { isMobile } = useMobileDetection();
   const { data: authData } = trpc.authCallback.useQuery();
   const [isOpen, setIsOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [rippleActive, setRippleActive] = useState(false);
+  const [mobileLogoutConfirm, setMobileLogoutConfirm] = useState(false);
   const [showRecentMessages, setShowRecentMessages] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -146,18 +150,70 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
           .toUpperCase()
       : (user?.email || authData?.user?.email)?.[0]?.toUpperCase() || "U";
 
+  // Keyboard shortcut for sidebar toggle (Cmd/Ctrl + B)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toLowerCase().includes("mac");
+      if ((isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleDesktopSidebar();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen]);
+
+  // Persist sidebar open/closed state
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nls_sidebar_open");
+      if (saved !== null) setIsOpen(saved === "1");
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("nls_sidebar_open", isOpen ? "1" : "0");
+      // Dispatch custom event for same-tab listeners
+      window.dispatchEvent(new CustomEvent("sidebarToggle"));
+    } catch {}
+  }, [isOpen]);
+
   const isActiveLink = (href: string) => pathname === href;
 
-  const toggleDesktopSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const toggleMobileSidebar = () => {
-    setIsMobileOpen(!isMobileOpen);
-  };
+  const toggleDesktopSidebar = () => setIsOpen(o => !o);
+  const toggleMobileSidebar = () => setIsMobileOpen(o => !o);
 
   const handleUserClick = () => {
-    setUserDropdownOpen(!userDropdownOpen);
+    // Trigger ripple effect
+    setRippleActive(true);
+    setTimeout(() => setRippleActive(false), 300);
+
+    if (userDropdownOpen) {
+      // If already showing logout, perform logout
+      handleLogout();
+    } else {
+      // Show logout button
+      setUserDropdownOpen(true);
+      // Auto-reset after 2 seconds if not clicked
+      setTimeout(() => {
+        setUserDropdownOpen(false);
+      }, 2000);
+    }
+  };
+
+  const handleMobileLogoutClick = () => {
+    if (mobileLogoutConfirm) {
+      // Second click - actually logout
+      handleLogout();
+    } else {
+      // First click - show confirmation
+      setMobileLogoutConfirm(true);
+      // Auto-reset after 3 seconds if not clicked again
+      setTimeout(() => {
+        setMobileLogoutConfirm(false);
+      }, 3000);
+    }
   };
 
   const handleMessageClick = (e: React.MouseEvent) => {
@@ -276,30 +332,104 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
 
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-      {/* Mobile hamburger button */}
+      {/* Mobile hamburger button - improved positioning and design */}
       <button
         onClick={toggleMobileSidebar}
-        className="fixed top-4 left-4 z-30 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-lg bg-sidebar text-sidebar-foreground border border-sidebar-border"
+        className="fixed top-4 left-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl bg-gradient-to-br from-[#4A5A70] to-[#353A3A] text-white border border-[#606364] backdrop-blur-sm"
         aria-label={isMobileOpen ? "Close sidebar" : "Open sidebar"}
+        style={{
+          boxShadow:
+            "0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+        }}
       >
-        {isMobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+        <div className="relative">
+          {isMobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+          {/* Pulse animation for unread notifications */}
+          {unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          )}
+        </div>
       </button>
 
-      {/* Mobile overlay */}
+      {/* Mobile logout button - only visible when sidebar is open */}
+      {isMobileOpen && (
+        <button
+          onClick={handleMobileLogoutClick}
+          disabled={isLoggingOut}
+          className={`fixed top-4 right-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl text-white border backdrop-blur-sm ${
+            mobileLogoutConfirm
+              ? "bg-gradient-to-br from-green-600 to-green-700 border-green-500"
+              : "bg-gradient-to-br from-red-600 to-red-700 border-red-500"
+          }`}
+          aria-label={mobileLogoutConfirm ? "Confirm logout" : "Logout"}
+          style={{
+            boxShadow: mobileLogoutConfirm
+              ? "0 8px 32px rgba(34, 197, 94, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)"
+              : "0 8px 32px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+            animation: "slideInRight 0.3s ease-out",
+          }}
+        >
+          {isLoggingOut ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+          ) : mobileLogoutConfirm ? (
+            <div className="relative">
+              <svg
+                className="w-5 h-5 text-white transition-all duration-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                style={{
+                  animation: "checkmark 0.5s ease-out",
+                }}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={3}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+          ) : (
+            <LogOut size={20} />
+          )}
+        </button>
+      )}
+
+      {/* Mobile overlay - improved with better blur and animation */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-60 z-10 md:hidden transition-opacity duration-300 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/70 z-40 md:hidden transition-all duration-300 backdrop-blur-md"
           onClick={() => setIsMobileOpen(false)}
+          onKeyDown={e => {
+            if (e.key === "Escape") {
+              setIsMobileOpen(false);
+            }
+          }}
+          tabIndex={-1}
+          role="button"
+          aria-label="Close mobile menu"
+          style={{
+            animation: "fadeIn 0.3s ease-out",
+          }}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - improved mobile animations */}
       <aside
-        className={`flex flex-col justify-between h-screen fixed left-0 top-0 z-20 transition-[width,transform] duration-500 ease-in-out backdrop-blur-sm bg-sidebar text-sidebar-foreground shadow-lg ${
+        className={`flex flex-col justify-between h-screen fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out backdrop-blur-sm bg-sidebar text-sidebar-foreground shadow-2xl ${
           isOpen ? "md:w-64" : "md:w-20"
         } ${
-          isMobileOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full"
-        } md:translate-x-0`}
+          isMobileOpen
+            ? "w-80 translate-x-0 opacity-100"
+            : "w-80 -translate-x-full opacity-0 md:opacity-100"
+        } md:translate-x-0 md:z-20`}
+        style={{
+          background: "linear-gradient(180deg, #1A1D1E 0%, #0F1112 100%)",
+          boxShadow: isMobileOpen
+            ? "0 0 0 1px rgba(255, 255, 255, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+            : "0 4px 20px rgba(0, 0, 0, 0.3)",
+        }}
       >
         <div>
           {/* Header */}
@@ -327,10 +457,13 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                   title="Double-click to collapse/expand"
                   style={{ backgroundColor: "#4A5A70" }}
                 >
-                  <img
+                  <Image
                     src="/logo image.png"
                     alt="Next Level Softball"
+                    width={40}
+                    height={40}
                     className="w-full h-full object-cover group-active:scale-95 transition-transform"
+                    priority
                   />
                 </div>
                 My Training Hub
@@ -349,10 +482,13 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                 title="Double-click to expand"
                 style={{ backgroundColor: "#4A5A70" }}
               >
-                <img
+                <Image
                   src="/logo image.png"
                   alt="Next Level Softball"
+                  width={32}
+                  height={32}
                   className="w-full h-full object-cover"
+                  priority
                 />
               </div>
             </span>
@@ -370,11 +506,16 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
               <Link
                 key={link.name}
                 href={link.href}
-                onClick={() => setIsMobileOpen(false)}
+                onClick={() => {
+                  setIsMobileOpen(false);
+                  startTransition(() => {
+                    // This will show loading state during navigation
+                  });
+                }}
                 className={`transition-all duration-300 ease-in-out transform hover:scale-105 group relative ${
                   isOpen
-                    ? "flex items-center gap-3 px-4 py-3 hover:shadow-lg overflow-hidden rounded-xl"
-                    : "flex items-center justify-center p-3 text-xl rounded-xl"
+                    ? "flex items-center gap-3 px-4 py-4 hover:shadow-lg overflow-hidden rounded-xl md:py-3"
+                    : "flex items-center justify-center p-4 text-xl rounded-xl md:p-3"
                 } ${
                   isActiveLink(link.href) ? "text-white" : "hover:text-white"
                 }`}
@@ -911,32 +1052,83 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
               <button
                 onClick={handleUserClick}
                 disabled={isLoggingOut}
-                className="rounded-full w-16 h-16 md:w-12 md:h-12 flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-110 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation"
+                className={`rounded-full w-12 h-12 md:w-10 md:h-10 flex items-center justify-center font-bold text-white transition-all duration-300 ease-out hover:scale-105 relative group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md touch-manipulation ${
+                  userDropdownOpen ? "ring-1 ring-red-400/30 animate-pulse" : ""
+                }`}
                 style={{
-                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
-                  // Add larger touch target for mobile
-                  minWidth: "64px",
-                  minHeight: "64px",
+                  boxShadow: userDropdownOpen
+                    ? "0 2px 8px rgba(239, 68, 68, 0.2)"
+                    : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                  minWidth: "48px",
+                  minHeight: "48px",
+                  backgroundColor: userDropdownOpen
+                    ? "rgba(239, 68, 68, 0.9)"
+                    : "transparent",
+                  backdropFilter: userDropdownOpen ? "blur(8px)" : "none",
+                }}
+                onMouseEnter={e => {
+                  if (!userDropdownOpen) {
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(0, 0, 0, 0.3)";
+                  } else {
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(239, 68, 68, 0.3)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!userDropdownOpen) {
+                    e.currentTarget.style.boxShadow =
+                      "0 2px 8px rgba(0, 0, 0, 0.2)";
+                  } else {
+                    e.currentTarget.style.boxShadow =
+                      "0 2px 8px rgba(239, 68, 68, 0.2)";
+                  }
                 }}
                 onTouchStart={e => {
-                  // Add visual feedback for touch
-                  e.currentTarget.style.transform = "scale(0.95)";
+                  e.currentTarget.style.transform = "scale(0.98)";
                 }}
                 onTouchEnd={e => {
-                  // Reset transform after touch
                   e.currentTarget.style.transform = "scale(1)";
                 }}
+                aria-label={userDropdownOpen ? "Logout" : "User profile"}
               >
                 {isLoggingOut ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
                 ) : (
-                  <ProfilePictureUploader
-                    currentAvatarUrl={userSettings?.avatarUrl}
-                    userName={user?.name || authData?.user?.name || "User"}
-                    onAvatarChange={() => {}} // No-op for sidebar
-                    size="sm"
-                    readOnly={true}
-                  />
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    {/* Profile Picture - rotates out and scales down */}
+                    <div
+                      className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out ${
+                        userDropdownOpen
+                          ? "rotate-180 scale-0 opacity-0"
+                          : "rotate-0 scale-100 opacity-100"
+                      }`}
+                    >
+                      <ProfilePictureUploader
+                        currentAvatarUrl={userSettings?.avatarUrl}
+                        userName={user?.name || authData?.user?.name || "User"}
+                        onAvatarChange={() => {}} // No-op for sidebar
+                        size="sm"
+                        readOnly={true}
+                      />
+                    </div>
+
+                    {/* Logout Icon - scales up from center */}
+                    <div
+                      className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out ${
+                        userDropdownOpen
+                          ? "scale-100 opacity-100 rotate-0"
+                          : "scale-0 opacity-0 rotate-180"
+                      }`}
+                    >
+                      <LogOut className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Ripple Effect */}
+                {rippleActive && (
+                  <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" />
                 )}
 
                 {/* User tooltip when collapsed and dropdown closed */}
@@ -1085,16 +1277,20 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
         </div>
       </aside>
 
-      {/* Main Content Area with proper margins */}
+      {/* Main Content Area - improved mobile responsiveness */}
       <div
         className={`flex-1 transition-all duration-500 ease-in-out ${
-          isOpen ? "md:ml-64" : "md:ml-20"
-        } ml-0 p-4 md:p-8 pt-20 md:pt-8`}
+          isOpen ? "ml-0 md:ml-20 lg:ml-64" : "ml-0 md:ml-20"
+        }`}
+        style={{
+          padding: "1rem",
+          paddingTop: "5rem", // Space for mobile hamburger button
+        }}
       >
-        <div className="pb-20">{children}</div>
+        <div className="max-w-full mx-auto pb-20">{children}</div>
       </div>
 
-      {/* Add custom keyframes for animations */}
+      {/* Add custom keyframes for animations - improved mobile animations */}
       <style jsx>{`
         @keyframes slideInUp {
           from {
@@ -1106,7 +1302,6 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
             transform: translateY(0) scale(1);
           }
         }
-
         @keyframes slideInLeft {
           from {
             opacity: 0;
@@ -1117,7 +1312,6 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
             transform: translateX(0);
           }
         }
-
         @keyframes fadeOut {
           from {
             opacity: 1;
@@ -1126,6 +1320,68 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
           to {
             opacity: 0;
             transform: scale(0.95);
+          }
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes slideInFromLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes slideOutToLeft {
+          from {
+            opacity: 1;
+            transform: translateX(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateX(-100%);
+          }
+        }
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes checkmark {
+          0% {
+            transform: scale(0);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        /* Mobile-specific improvements */
+        @media (max-width: 768px) {
+          .mobile-sidebar-enter {
+            animation: slideInFromLeft 0.3s ease-out;
+          }
+          .mobile-sidebar-exit {
+            animation: slideOutToLeft 0.3s ease-in;
           }
         }
       `}</style>
