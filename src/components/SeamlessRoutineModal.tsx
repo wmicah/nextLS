@@ -14,7 +14,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, ArrowRight, X } from "lucide-react";
+import { Plus, Trash2, ArrowRight, X, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { trpc } from "@/app/_trpc/client";
 import { useToast } from "@/lib/hooks/use-toast";
 
@@ -54,6 +71,213 @@ interface SeamlessRoutineModalProps {
   onVideoProcessed?: () => void;
 }
 
+// Sortable Exercise Item Component
+interface SortableExerciseItemProps {
+  exercise: RoutineExercise;
+  index: number;
+  onUpdate: (index: number, field: keyof RoutineExercise, value: any) => void;
+  onRemove: (index: number) => void;
+  getExerciseColor: (type: string) => string;
+}
+
+function SortableExerciseItem({
+  exercise,
+  index,
+  onUpdate,
+  onRemove,
+  getExerciseColor,
+}: SortableExerciseItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: exercise.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 p-3 bg-[#353A3A] rounded-lg border border-gray-600 hover:border-gray-500 transition-colors ${
+        isDragging ? "opacity-50" : ""
+      }`}
+    >
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-move text-gray-400 hover:text-gray-300 p-1"
+      >
+        <GripVertical className="h-3 w-3" />
+      </div>
+
+      {/* Exercise number */}
+      <div className="text-xs text-gray-500 font-mono w-6 text-center">
+        {index + 1}
+      </div>
+
+      {/* Exercise type badge */}
+      <Badge
+        variant="outline"
+        className={`${getExerciseColor(exercise.type)} text-xs px-2 py-1`}
+      >
+        <span className="capitalize">{exercise.type}</span>
+      </Badge>
+
+      {/* Exercise name - read-only display */}
+      <div className="bg-[#2A3133] border border-gray-600 text-white text-sm flex-1 h-8 px-3 py-2 rounded-md flex items-center">
+        <span className="truncate">
+          {exercise.title || "Untitled Exercise"}
+        </span>
+      </div>
+
+      {/* Quick stats display */}
+      <div className="flex flex-col items-center gap-1 text-xs text-gray-400 min-w-0">
+        <div className="flex items-center gap-1">
+          {exercise.sets && (
+            <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs">
+              {exercise.sets}s
+            </span>
+          )}
+          {exercise.reps && (
+            <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs">
+              {exercise.reps}r
+            </span>
+          )}
+        </div>
+        {exercise.tempo && (
+          <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs">
+            {exercise.tempo}
+          </span>
+        )}
+      </div>
+
+      {/* Action buttons - hide when edit form is expanded */}
+      <div
+        className="flex items-center gap-1"
+        id={`action-buttons-${exercise.id}`}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            // Toggle expanded state
+            const editForm = document.getElementById(
+              `edit-form-${exercise.id}`
+            );
+            const actionButtons = document.getElementById(
+              `action-buttons-${exercise.id}`
+            );
+            if (editForm && actionButtons) {
+              editForm.classList.toggle("hidden");
+
+              // ALWAYS show buttons when form is closed, hide when form is open
+              if (editForm.classList.contains("hidden")) {
+                // Form is CLOSED - SHOW buttons
+                actionButtons.style.display = "flex";
+              } else {
+                // Form is OPEN - HIDE buttons
+                actionButtons.style.display = "none";
+              }
+            }
+          }}
+          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 p-1 h-6 w-6"
+        >
+          <svg
+            className="h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+            />
+          </svg>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onRemove(index)}
+          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 h-6 w-6"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+
+      {/* Inline edit form - appears below the exercise */}
+      <div id={`edit-form-${exercise.id}`} className="hidden w-full">
+        <div className="mt-2 p-3 bg-[#2A3133] rounded border border-gray-600">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex-1">
+              <Label className="text-gray-400 text-xs block mb-1">Sets</Label>
+              <Input
+                value={exercise.sets || ""}
+                onChange={e =>
+                  onUpdate(
+                    index,
+                    "sets",
+                    e.target.value ? parseInt(e.target.value) : undefined
+                  )
+                }
+                placeholder="Sets"
+                type="number"
+                className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
+              />
+            </div>
+            <div className="flex-1">
+              <Label className="text-gray-400 text-xs block mb-1">Reps</Label>
+              <Input
+                value={exercise.reps || ""}
+                onChange={e =>
+                  onUpdate(
+                    index,
+                    "reps",
+                    e.target.value ? parseInt(e.target.value) : undefined
+                  )
+                }
+                placeholder="Reps"
+                type="number"
+                className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
+              />
+            </div>
+            <div className="flex-1">
+              <Label className="text-gray-400 text-xs block mb-1">Tempo</Label>
+              <Input
+                value={exercise.tempo || ""}
+                onChange={e => onUpdate(index, "tempo", e.target.value)}
+                placeholder="e.g., 2-0-2"
+                className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-gray-400 text-xs block mb-1">Notes</Label>
+            <Textarea
+              value={exercise.notes || ""}
+              onChange={e => onUpdate(index, "notes", e.target.value)}
+              placeholder="Add any notes or instructions..."
+              className="bg-[#353A3A] border-gray-500 text-white text-sm resize-none w-full"
+              rows={2}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SeamlessRoutineModal({
   isOpen,
   onClose,
@@ -72,6 +296,65 @@ export default function SeamlessRoutineModal({
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Set up drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setExercises(items => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over?.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  // Function to close all expanded edit forms
+  const closeAllEditForms = () => {
+    exercises.forEach(exercise => {
+      const editForm = document.getElementById(`edit-form-${exercise.id}`);
+      const actionButtons = document.getElementById(
+        `action-buttons-${exercise.id}`
+      );
+      if (editForm && !editForm.classList.contains("hidden")) {
+        editForm.classList.add("hidden");
+        // Show action buttons when form is closed
+        if (actionButtons) {
+          actionButtons.style.display = "flex";
+        }
+      }
+    });
+  };
+
+  // Handle click outside to close expanded forms
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        !target.closest('[id^="edit-form-"]') &&
+        !target.closest('button[onclick*="edit-form"]')
+      ) {
+        closeAllEditForms();
+      }
+    };
+
+    if (exercises.length > 0) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return undefined;
+  }, [exercises.length]);
 
   // Reset form when modal opens/closes or routine changes
   useEffect(() => {
@@ -255,7 +538,7 @@ export default function SeamlessRoutineModal({
         <div className="flex items-center justify-between p-6 border-b border-gray-600">
           <div>
             <DialogTitle className="text-white text-2xl font-bold">
-              {routine ? "Edit Routine" : "Create New Routine"}
+              {routine && routine.id ? "Edit Routine" : "Create New Routine"}
             </DialogTitle>
             <DialogDescription className="text-gray-400 mt-1">
               {routine
@@ -403,6 +686,16 @@ export default function SeamlessRoutineModal({
                   >
                     Add Custom Exercise
                   </Button>
+                  {exercises.length > 0 && (
+                    <Button
+                      type="button"
+                      onClick={closeAllEditForms}
+                      variant="outline"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-600 h-12 px-4"
+                    >
+                      Close All
+                    </Button>
+                  )}
                 </div>
 
                 {/* Exercises List */}
@@ -434,122 +727,29 @@ export default function SeamlessRoutineModal({
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="space-y-4">
-                    {exercises.map((exercise, index) => (
-                      <Card
-                        key={exercise.id}
-                        className="bg-[#353A3A] border-gray-600 hover:border-gray-500 transition-colors"
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-4">
-                            <div className="flex items-center gap-2 mt-1">
-                              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-gray-300 text-sm font-medium">
-                                {index + 1}
-                              </div>
-                              <Badge
-                                variant="outline"
-                                className={getExerciseColor(exercise.type)}
-                              >
-                                <span className="capitalize">
-                                  {exercise.type}
-                                </span>
-                              </Badge>
-                            </div>
-
-                            <div className="flex-1 space-y-3">
-                              <Input
-                                value={exercise.title}
-                                onChange={e =>
-                                  updateExercise(index, "title", e.target.value)
-                                }
-                                placeholder="Exercise name"
-                                className="bg-[#2A3133] border-gray-600 text-white text-lg font-medium"
-                              />
-
-                              <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                  <Label className="text-gray-400 text-xs">
-                                    Sets
-                                  </Label>
-                                  <Input
-                                    value={exercise.sets || ""}
-                                    onChange={e =>
-                                      updateExercise(
-                                        index,
-                                        "sets",
-                                        e.target.value
-                                          ? parseInt(e.target.value)
-                                          : undefined
-                                      )
-                                    }
-                                    placeholder="Sets"
-                                    type="number"
-                                    className="bg-[#2A3133] border-gray-600 text-white"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-gray-400 text-xs">
-                                    Reps
-                                  </Label>
-                                  <Input
-                                    value={exercise.reps || ""}
-                                    onChange={e =>
-                                      updateExercise(
-                                        index,
-                                        "reps",
-                                        e.target.value
-                                          ? parseInt(e.target.value)
-                                          : undefined
-                                      )
-                                    }
-                                    placeholder="Reps"
-                                    type="number"
-                                    className="bg-[#2A3133] border-gray-600 text-white"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-gray-400 text-xs">
-                                    Tempo
-                                  </Label>
-                                  <Input
-                                    value={exercise.tempo || ""}
-                                    onChange={e =>
-                                      updateExercise(
-                                        index,
-                                        "tempo",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="e.g., 2-0-2"
-                                    className="bg-[#2A3133] border-gray-600 text-white"
-                                  />
-                                </div>
-                              </div>
-
-                              <Textarea
-                                value={exercise.notes || ""}
-                                onChange={e =>
-                                  updateExercise(index, "notes", e.target.value)
-                                }
-                                placeholder="Notes (optional)"
-                                className="bg-[#2A3133] border-gray-600 text-white resize-none"
-                                rows={2}
-                              />
-                            </div>
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeExercise(index)}
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 mt-1"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={exercises.map(exercise => exercise.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-2">
+                        {exercises.map((exercise, index) => (
+                          <SortableExerciseItem
+                            key={exercise.id}
+                            exercise={exercise}
+                            index={index}
+                            onUpdate={updateExercise}
+                            onRemove={removeExercise}
+                            getExerciseColor={getExerciseColor}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
                 )}
               </div>
             </div>

@@ -15,6 +15,23 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2, Target, Video, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface RoutineExercise {
   id: string;
@@ -58,6 +75,175 @@ interface CreateRoutineModalProps {
   onVideoProcessed?: () => void;
 }
 
+// Sortable Exercise Item Component
+interface SortableExerciseItemProps {
+  exercise: RoutineExercise;
+  index: number;
+  onUpdate: (index: number, field: keyof RoutineExercise, value: any) => void;
+  onRemove: (index: number) => void;
+}
+
+function SortableExerciseItem({
+  exercise,
+  index,
+  onUpdate,
+  onRemove,
+}: SortableExerciseItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: exercise.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 p-2 bg-gray-800 rounded-md border border-gray-600 ${
+        isDragging ? "opacity-50" : ""
+      }`}
+    >
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-move text-gray-400 hover:text-gray-300 p-1"
+      >
+        <GripVertical className="h-3 w-3" />
+      </div>
+
+      {/* Exercise number */}
+      <div className="text-xs text-gray-500 font-mono w-6 text-center">
+        {index + 1}
+      </div>
+
+      {/* Exercise name - compact input */}
+      <Input
+        value={exercise.title}
+        onChange={e => onUpdate(index, "title", e.target.value)}
+        placeholder="Exercise name"
+        className="bg-gray-700 border-gray-600 text-white text-sm flex-1 h-8"
+      />
+
+      {/* Quick stats display */}
+      <div className="flex items-center gap-1 text-xs text-gray-400 min-w-0">
+        {exercise.sets && (
+          <span className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+            {exercise.sets}s
+          </span>
+        )}
+        {exercise.reps && (
+          <span className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+            {exercise.reps}r
+          </span>
+        )}
+        {exercise.tempo && (
+          <span className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+            {exercise.tempo}
+          </span>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            // Open a simple inline edit mode
+            const editForm = document.getElementById(
+              `edit-form-${exercise.id}`
+            );
+            if (editForm) {
+              editForm.classList.toggle("hidden");
+            }
+          }}
+          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 p-1 h-6 w-6"
+        >
+          <svg
+            className="h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+            />
+          </svg>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onRemove(index)}
+          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 h-6 w-6"
+          data-testid="delete-button"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+
+      {/* Inline edit form - appears below the exercise */}
+      <div id={`edit-form-${exercise.id}`} className="hidden w-full">
+        <div className="mt-2 p-2 bg-gray-700 rounded border border-gray-600 space-y-2">
+          <div className="grid grid-cols-3 gap-2">
+            <Input
+              value={exercise.sets || ""}
+              onChange={e =>
+                onUpdate(
+                  index,
+                  "sets",
+                  e.target.value ? parseInt(e.target.value) : undefined
+                )
+              }
+              placeholder="Sets"
+              type="number"
+              className="bg-gray-600 border-gray-500 text-white text-xs h-7"
+            />
+            <Input
+              value={exercise.reps || ""}
+              onChange={e =>
+                onUpdate(
+                  index,
+                  "reps",
+                  e.target.value ? parseInt(e.target.value) : undefined
+                )
+              }
+              placeholder="Reps"
+              type="number"
+              className="bg-gray-600 border-gray-500 text-white text-xs h-7"
+            />
+            <Input
+              value={exercise.tempo || ""}
+              onChange={e => onUpdate(index, "tempo", e.target.value)}
+              placeholder="Tempo"
+              className="bg-gray-600 border-gray-500 text-white text-xs h-7"
+            />
+          </div>
+          <Input
+            value={exercise.notes || ""}
+            onChange={e => onUpdate(index, "notes", e.target.value)}
+            placeholder="Notes (optional)"
+            className="bg-gray-600 border-gray-500 text-white text-xs h-7"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CreateRoutineModal({
   isOpen,
   onClose,
@@ -70,6 +256,14 @@ export default function CreateRoutineModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [exercises, setExercises] = useState<RoutineExercise[]>([]);
+
+  // Set up drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Reset form when modal opens/closes or routine changes
   useEffect(() => {
@@ -146,30 +340,16 @@ export default function CreateRoutineModal({
     setExercises(prev => prev.filter((_, i) => i !== index));
   };
 
-  const moveExercise = (fromIndex: number, toIndex: number) => {
-    setExercises(prev => {
-      const newExercises = [...prev];
-      const [movedExercise] = newExercises.splice(fromIndex, 1);
-      newExercises.splice(toIndex, 0, movedExercise);
-      return newExercises;
-    });
-  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData("text/plain", index.toString());
-    e.dataTransfer.effectAllowed = "move";
-  };
+    if (over && active.id !== over.id) {
+      setExercises(items => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    const dragIndex = parseInt(e.dataTransfer.getData("text/plain"));
-    if (dragIndex !== dropIndex) {
-      moveExercise(dragIndex, dropIndex);
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
   };
 
@@ -274,93 +454,28 @@ export default function CreateRoutineModal({
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {exercises.map((exercise, index) => (
-                          <div
-                            key={exercise.id}
-                            className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg border border-gray-600"
-                            draggable
-                            onDragStart={e => handleDragStart(e, index)}
-                            onDragOver={handleDragOver}
-                            onDrop={e => handleDrop(e, index)}
-                          >
-                            <div className="cursor-move text-gray-400 hover:text-gray-300">
-                              <GripVertical className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1">
-                              <Input
-                                value={exercise.title}
-                                onChange={e =>
-                                  updateExercise(index, "title", e.target.value)
-                                }
-                                placeholder="Exercise name"
-                                className="bg-gray-700 border-gray-600 text-white mb-2"
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext
+                          items={exercises.map(exercise => exercise.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-3">
+                            {exercises.map((exercise, index) => (
+                              <SortableExerciseItem
+                                key={exercise.id}
+                                exercise={exercise}
+                                index={index}
+                                onUpdate={updateExercise}
+                                onRemove={removeExercise}
                               />
-                              <div className="grid grid-cols-3 gap-2">
-                                <Input
-                                  value={exercise.sets || ""}
-                                  onChange={e =>
-                                    updateExercise(
-                                      index,
-                                      "sets",
-                                      e.target.value
-                                        ? parseInt(e.target.value)
-                                        : undefined
-                                    )
-                                  }
-                                  placeholder="Sets"
-                                  type="number"
-                                  className="bg-gray-700 border-gray-600 text-white text-sm"
-                                />
-                                <Input
-                                  value={exercise.reps || ""}
-                                  onChange={e =>
-                                    updateExercise(
-                                      index,
-                                      "reps",
-                                      e.target.value
-                                        ? parseInt(e.target.value)
-                                        : undefined
-                                    )
-                                  }
-                                  placeholder="Reps"
-                                  type="number"
-                                  className="bg-gray-700 border-gray-600 text-white text-sm"
-                                />
-                                <Input
-                                  value={exercise.tempo || ""}
-                                  onChange={e =>
-                                    updateExercise(
-                                      index,
-                                      "tempo",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Tempo"
-                                  className="bg-gray-700 border-gray-600 text-white text-sm"
-                                />
-                              </div>
-                              <Input
-                                value={exercise.notes || ""}
-                                onChange={e =>
-                                  updateExercise(index, "notes", e.target.value)
-                                }
-                                placeholder="Notes (optional)"
-                                className="bg-gray-700 border-gray-600 text-white text-sm mt-2"
-                              />
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeExercise(index)}
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </SortableContext>
+                      </DndContext>
                     )}
                   </CardContent>
                 </Card>

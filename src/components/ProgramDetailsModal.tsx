@@ -229,7 +229,7 @@ export default function ProgramDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] bg-[#2A3133] border-gray-600">
+      <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] bg-[#2A3133] border-gray-600 [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -281,14 +281,24 @@ export default function ProgramDetailsModal({
                   </Button>
                 </>
               ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsEditing(true)}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-600"
-                >
-                  <Edit3 className="h-4 w-4" />
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsEditing(true)}
+                    className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onClose}
+                    className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -296,7 +306,7 @@ export default function ProgramDetailsModal({
 
         <div className="mt-6">
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-[#3A4245] border-gray-600">
+            <TabsList className="grid w-full grid-cols-3 bg-[#3A4245] border-gray-600">
               <TabsTrigger
                 value="overview"
                 className="text-white data-[state=active]:bg-[#4A5A70]"
@@ -315,16 +325,10 @@ export default function ProgramDetailsModal({
               >
                 Assignments
               </TabsTrigger>
-              <TabsTrigger
-                value="analytics"
-                className="text-white data-[state=active]:bg-[#4A5A70]"
-              >
-                Analytics
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="bg-[#3A4245] border-gray-600">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-white text-lg flex items-center gap-2">
@@ -354,21 +358,6 @@ export default function ProgramDetailsModal({
                     <p className="text-gray-400 text-sm">Active Clients</p>
                   </CardContent>
                 </Card>
-
-                <Card className="bg-[#3A4245] border-gray-600">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-white text-lg flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Status
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-3xl font-bold text-white">
-                      {program.activeClientCount > 0 ? "Active" : "Draft"}
-                    </p>
-                    <p className="text-gray-400 text-sm">Program Status</p>
-                  </CardContent>
-                </Card>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -386,15 +375,6 @@ export default function ProgramDetailsModal({
                         className={getLevelColor(program.level)}
                       >
                         {program.level || "General"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Status:</span>
-                      <Badge
-                        variant="outline"
-                        className={getStatusColor(program.activeClientCount)}
-                      >
-                        {program.activeClientCount > 0 ? "Active" : "Draft"}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
@@ -701,44 +681,6 @@ export default function ProgramDetailsModal({
                   </ScrollArea>
                 )}
               </div>
-            </TabsContent>
-
-            <TabsContent value="analytics" className="space-y-6 mt-6">
-              <Card className="bg-[#3A4245] border-gray-600">
-                <CardHeader>
-                  <CardTitle className="text-white">
-                    Program Analytics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-400">
-                          Active Assignments:
-                        </span>
-                        <p className="text-white font-medium">
-                          {program.activeClientCount}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400">Total Weeks:</span>
-                        <p className="text-white font-medium">
-                          {program.totalWeeks}
-                        </p>
-                      </div>
-                    </div>
-                    <Separator className="bg-gray-600" />
-                    <div className="text-center py-4">
-                      <TrendingUp className="h-8 w-8 mx-auto mb-2 text-gray-500" />
-                      <p className="text-gray-400 text-sm">
-                        Detailed analytics will be available when program data
-                        is loaded.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         </div>

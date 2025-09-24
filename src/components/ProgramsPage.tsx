@@ -79,11 +79,15 @@ interface ProgramDrill {
   id: string;
   title: string;
   type: string | null;
+  description?: string | null;
   notes?: string | null;
   sets?: number | null;
   reps?: number | null;
   tempo?: string | null;
   duration?: string | null;
+  videoUrl?: string | null;
+  supersetId?: string | null;
+  supersetOrder?: number | null;
 }
 
 interface ProgramListItem {
@@ -977,13 +981,65 @@ function ProgramsPage() {
                         onDelete={() =>
                           handleDeleteProgram(program.id, program.title)
                         }
-                        onDuplicate={() => {
-                          // Handle duplicate
-                          toast({
-                            title: "Coming soon",
-                            description:
-                              "Duplicate functionality will be implemented soon.",
-                          });
+                        onDuplicate={async () => {
+                          // Create a duplicate program with a new name
+                          const duplicatedProgram = {
+                            title: `${program.title} (Copy)`,
+                            description: program.description || undefined,
+                            level: program.level as
+                              | "Drive"
+                              | "Whip"
+                              | "Separation"
+                              | "Stability"
+                              | "Extension",
+                            duration: program.duration,
+                            weeks: program.weeks.map(week => ({
+                              weekNumber: week.weekNumber,
+                              title: week.title,
+                              description: week.description || undefined,
+                              days: Object.entries(week.days).map(
+                                ([dayKey, dayData]) => ({
+                                  dayNumber: dayData.dayNumber,
+                                  title: dayData.title,
+                                  description: dayData.description || undefined,
+                                  drills: dayData.drills.map(
+                                    (drill, index) => ({
+                                      order: index + 1,
+                                      title: drill.title,
+                                      description:
+                                        drill.description || undefined,
+                                      duration: drill.duration || undefined,
+                                      videoUrl: drill.videoUrl || undefined,
+                                      notes: drill.notes || undefined,
+                                      sets: drill.sets || undefined,
+                                      reps: drill.reps || undefined,
+                                      tempo: drill.tempo || undefined,
+                                      supersetId: drill.supersetId || undefined,
+                                      supersetOrder:
+                                        drill.supersetOrder || undefined,
+                                    })
+                                  ),
+                                })
+                              ),
+                            })),
+                          };
+
+                          try {
+                            // Create the program directly without opening modal
+                            await createProgram.mutateAsync(duplicatedProgram);
+                            toast({
+                              title: "Program Duplicated",
+                              description: `"${duplicatedProgram.title}" has been created successfully.`,
+                            });
+                          } catch (error) {
+                            console.error("Error duplicating program:", error);
+                            toast({
+                              title: "Error",
+                              description:
+                                "Failed to duplicate program. Please try again.",
+                              variant: "destructive",
+                            });
+                          }
                         }}
                       />
                     ))}
@@ -1000,14 +1056,30 @@ function ProgramsPage() {
               onUpdateRoutine={handleUpdateRoutine}
               onDeleteRoutine={handleDeleteRoutine}
               onViewDetails={handleViewRoutineDetails}
-              onDuplicateRoutine={routine => {
+              onDuplicateRoutine={async routine => {
                 // Create a duplicate routine with a new name
                 const duplicatedRoutine = {
                   name: `${routine.name} (Copy)`,
                   description: routine.description,
                   exercises: routine.exercises,
                 };
-                handleCreateRoutine(duplicatedRoutine);
+
+                try {
+                  // Create the routine directly without opening modal
+                  await createRoutine.mutateAsync(duplicatedRoutine);
+                  toast({
+                    title: "Routine Duplicated",
+                    description: `"${duplicatedRoutine.name}" has been created successfully.`,
+                  });
+                } catch (error) {
+                  console.error("Error duplicating routine:", error);
+                  toast({
+                    title: "Error",
+                    description:
+                      "Failed to duplicate routine. Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
             />
           )}
