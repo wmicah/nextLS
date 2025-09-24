@@ -80,6 +80,7 @@ interface RoutinesTabProps {
     exercises: RoutineExercise[];
   }) => void;
   onDuplicateRoutine?: (routine: Routine) => void;
+  onAssignRoutine?: (routine: Routine) => void;
 }
 
 export default function RoutinesTab({
@@ -89,6 +90,7 @@ export default function RoutinesTab({
   onDeleteRoutine,
   onViewDetails,
   onDuplicateRoutine,
+  onAssignRoutine,
 }: RoutinesTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -370,6 +372,29 @@ export default function RoutinesTab({
                           title="Duplicate Routine"
                         >
                           <Copy className="h-4 w-4" />
+                        </button>
+                      )}
+
+                      {onAssignRoutine && (
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            onAssignRoutine(routine);
+                          }}
+                          className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                        style={{
+                          backgroundColor: "#10B981",
+                          color: "#f0fdf4",
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = "#059669";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = "#10B981";
+                        }}
+                          title="Assign Routine to Clients"
+                        >
+                          <Users className="h-4 w-4" />
                         </button>
                       )}
 
@@ -670,6 +695,29 @@ export default function RoutinesTab({
                         title="Duplicate Routine"
                       >
                         <Copy className="h-4 w-4" />
+                      </button>
+                    )}
+
+                    {onAssignRoutine && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          onAssignRoutine(routine);
+                        }}
+                        className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                        style={{
+                          backgroundColor: "#10B981",
+                          color: "#f0fdf4",
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = "#059669";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = "#10B981";
+                        }}
+                        title="Assign Routine to Clients"
+                      >
+                        <Users className="h-4 w-4" />
                       </button>
                     )}
 

@@ -6452,7 +6452,7 @@ export const appRouter = router({
           programId: z.string(),
           clientIds: z.array(z.string()),
           startDate: z.string(),
-          repetitions: z.number().min(1).max(12).default(1), // Allow 1-12 repetitions
+          repetitions: z.number().min(1).default(1), // Allow unlimited repetitions
         })
       )
       .mutation(async ({ input }) => {
@@ -6531,92 +6531,32 @@ export const appRouter = router({
           });
         }
 
-        // Check for conflicts and limits for each client
+        // Create program assignments for each client
         const assignments = [];
-        const errors = [];
 
         for (const client of clients) {
-          // Check if client already has 5 programs assigned
-          if (client.programAssignments.length >= 5) {
-            errors.push(
-              `${client.name} already has 5 programs assigned. Please unassign a program first.`
-            );
-            continue;
-          }
-
-          // Check if this specific program is already assigned to this client
-          // Allow multiple assignments if repetitions > 1, but check for conflicts
-          const existingAssignments = client.programAssignments.filter(
-            assignment => assignment.programId === input.programId
-          );
-          if (existingAssignments.length > 0 && input.repetitions === 1) {
-            errors.push(`${client.name} already has this program assigned.`);
-            continue;
-          }
-
-          // Check for time conflicts with existing programs
           // Parse the date string and create a date at midnight in local timezone
           const [year, month, day] = input.startDate.split("-").map(Number);
           const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
-          console.log("Assignment startDate input:", input.startDate);
-          console.log("Parsed startDate:", startDate);
-          console.log("startDate.toISOString():", startDate.toISOString());
-          const programEndDate = new Date(
-            startDate.getTime() +
-              program.duration * input.repetitions * 7 * 24 * 60 * 60 * 1000
-          );
-
-          for (const existingAssignment of client.programAssignments) {
-            const existingStartDate = existingAssignment.assignedAt;
-            const existingEndDate = new Date(
-              existingStartDate.getTime() +
-                existingAssignment.program.duration * 7 * 24 * 60 * 60 * 1000
+          // Create the assignments (one for each repetition)
+          for (let cycle = 1; cycle <= input.repetitions; cycle++) {
+            const cycleStartDate = new Date(
+              startDate.getTime() +
+                (cycle - 1) * program.duration * 7 * 24 * 60 * 60 * 1000
             );
 
-            // Check if date ranges overlap
-            if (
-              (startDate <= existingEndDate &&
-                programEndDate >= existingStartDate) ||
-              (existingStartDate <= programEndDate &&
-                existingEndDate >= startDate)
-            ) {
-              errors.push(
-                `${
-                  client.name
-                } has a conflicting program from ${existingStartDate.toLocaleDateString()} to ${existingEndDate.toLocaleDateString()}. Please choose a different start date.`
-              );
-              break;
-            }
+            const assignment = await db.programAssignment.create({
+              data: {
+                programId: input.programId,
+                clientId: client.id,
+                startDate: cycleStartDate,
+                repetitions: input.repetitions,
+                currentCycle: cycle,
+              },
+            });
+            assignments.push(assignment);
           }
-
-          // If no conflicts, create the assignments (one for each repetition)
-          if (!errors.some(error => error.includes(client.name))) {
-            for (let cycle = 1; cycle <= input.repetitions; cycle++) {
-              const cycleStartDate = new Date(
-                startDate.getTime() +
-                  (cycle - 1) * program.duration * 7 * 24 * 60 * 60 * 1000
-              );
-
-              const assignment = await db.programAssignment.create({
-                data: {
-                  programId: input.programId,
-                  clientId: client.id,
-                  startDate: cycleStartDate,
-                  repetitions: input.repetitions,
-                  currentCycle: cycle,
-                },
-              });
-              assignments.push(assignment);
-            }
-          }
-        }
-
-        if (errors.length > 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: errors.join(" "),
-          });
         }
 
         return assignments;
@@ -7181,6 +7121,340 @@ export const appRouter = router({
               : [],
           replacedDrills: programDrillsUsingRoutine.length,
         };
+      }),
+
+    // Assign routine to clients
+    assign: publicProcedure
+      .input(
+        z.object({
+          routineId: z.string(),
+          clientIds: z.array(z.string()),
+          startDate: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can assign routines",
+          });
+        }
+
+        // Verify the routine exists and belongs to the coach
+        const routine = await db.routine.findFirst({
+          where: {
+            id: input.routineId,
+            coachId: user.id,
+          },
+        });
+
+        if (!routine) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Routine not found",
+          });
+        }
+
+        // Verify all clients belong to the coach
+        const clients = await db.client.findMany({
+          where: {
+            id: { in: input.clientIds },
+            coachId: user.id,
+            archived: false,
+          },
+        });
+
+        if (clients.length !== input.clientIds.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "One or more clients not found or not accessible",
+          });
+        }
+
+        // Create routine assignments
+        console.log("Server: Received startDate:", input.startDate);
+
+        // Parse the date string correctly to avoid timezone issues
+        const [year, month, day] = input.startDate.split("-").map(Number);
+        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+
+        console.log("Server: Parsed startDate:", startDate);
+
+        const assignments = await Promise.all(
+          input.clientIds.map(clientId =>
+            db.routineAssignment.create({
+              data: {
+                routineId: input.routineId,
+                clientId,
+                assignedAt: new Date(),
+                startDate: startDate,
+              },
+            })
+          )
+        );
+
+        return {
+          success: true,
+          assignedCount: assignments.length,
+          assignments,
+        };
+      }),
+
+    // Unassign routine from clients
+    unassign: publicProcedure
+      .input(
+        z.object({
+          routineId: z.string(),
+          clientIds: z.array(z.string()),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can unassign routines",
+          });
+        }
+
+        // Verify the routine exists and belongs to the coach
+        const routine = await db.routine.findFirst({
+          where: {
+            id: input.routineId,
+            coachId: user.id,
+          },
+        });
+
+        if (!routine) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Routine not found",
+          });
+        }
+
+        // Delete routine assignments
+        const result = await db.routineAssignment.deleteMany({
+          where: {
+            routineId: input.routineId,
+            clientId: { in: input.clientIds },
+          },
+        });
+
+        return {
+          success: true,
+          unassignedCount: result.count,
+        };
+      }),
+
+    // Get routine assignments
+    getRoutineAssignments: publicProcedure
+      .input(z.object({ routineId: z.string() }))
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can view routine assignments",
+          });
+        }
+
+        // Verify the routine exists and belongs to the coach
+        const routine = await db.routine.findFirst({
+          where: {
+            id: input.routineId,
+            coachId: user.id,
+          },
+        });
+
+        if (!routine) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Routine not found",
+          });
+        }
+
+        // Get routine assignments
+        const assignments = await db.routineAssignment.findMany({
+          where: {
+            routineId: input.routineId,
+          },
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            assignedAt: "desc",
+          },
+        });
+
+        return assignments;
+      }),
+
+    // Get routine assignments for a specific client
+    getClientRoutineAssignments: publicProcedure
+      .input(z.object({ clientId: z.string() }))
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can view client routine assignments",
+          });
+        }
+
+        // Verify the client belongs to the coach
+        const client = await db.client.findFirst({
+          where: {
+            id: input.clientId,
+            coachId: user.id,
+            archived: false,
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found or not accessible",
+          });
+        }
+
+        // Get routine assignments for this client
+        const assignments = await db.routineAssignment.findMany({
+          where: {
+            clientId: input.clientId,
+          },
+          include: {
+            routine: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                exercises: {
+                  select: {
+                    id: true,
+                    title: true,
+                    order: true,
+                  },
+                  orderBy: {
+                    order: "asc",
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            assignedAt: "desc",
+          },
+        });
+
+        return assignments;
+      }),
+
+    // Get routine assignments for calendar view
+    getRoutineAssignmentsForCalendar: publicProcedure
+      .input(
+        z.object({
+          month: z.number(),
+          year: z.number(),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can view routine assignments",
+          });
+        }
+
+        // Get routine assignments for the specified month/year
+        const startDate = new Date(input.year, input.month, 1);
+        const endDate = new Date(input.year, input.month + 1, 0);
+
+        const assignments = await db.routineAssignment.findMany({
+          where: {
+            client: {
+              coachId: user.id,
+              archived: false,
+            },
+            assignedAt: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          include: {
+            routine: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+              },
+            },
+            client: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            assignedAt: "asc",
+          },
+        });
+
+        return assignments;
       }),
 
     downloadVideoFromMessage: publicProcedure

@@ -378,21 +378,14 @@ AssignProgramModalProps) {
                 <label className="text-white text-sm font-medium mb-3 block">
                   Repetitions <span className="text-red-400">*</span>
                 </label>
-                <select
+                <input
+                  type="number"
+                  min="1"
                   value={repetitions}
                   onChange={e => setRepetitions(Number(e.target.value))}
                   className="w-full p-4 rounded-xl border border-gray-600/50 text-white bg-[#2B3038] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
-                >
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
-                    <option key={num} value={num}>
-                      {num} {num === 1 ? "time" : "times"} (
-                      {num === 1
-                        ? "Run once"
-                        : `Repeat ${num} times in sequence`}
-                      )
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Enter number of repetitions"
+                />
                 <p className="text-gray-400 text-sm mt-2">
                   {selectedProgramData && repetitions > 1 && (
                     <>

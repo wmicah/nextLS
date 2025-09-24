@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import AssignProgramModal from "@/components/AssignProgramModal";
+import AssignRoutineModal from "@/components/AssignRoutineModal";
 import ScheduleLessonModal from "@/components/ScheduleLessonModal";
 import EditClientModal from "@/components/EditClientModal";
 import ClientProgressCard from "@/components/ProgressTracking/ClientProgressCard";
@@ -31,6 +32,7 @@ export default function ClientDetailsPage({
 }: ClientDetailsPageProps) {
   const router = useRouter();
   const [showAssignProgramModal, setShowAssignProgramModal] = useState(false);
+  const [showAssignRoutineModal, setShowAssignRoutineModal] = useState(false);
   const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false);
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "progress">(
@@ -58,6 +60,18 @@ export default function ClientDetailsPage({
     trpc.clients.getAssignedPrograms.useQuery({
       clientId: clientId,
     });
+  const {
+    data: assignedRoutines = [],
+    isLoading: isLoadingRoutines,
+    error: routinesError,
+  } = trpc.routines.getClientRoutineAssignments.useQuery({
+    clientId: clientId,
+  });
+
+  // Debug logging
+  console.log("Assigned routines:", assignedRoutines);
+  console.log("Routines loading:", isLoadingRoutines);
+  console.log("Routines error:", routinesError);
 
   if (isLoading) {
     return (
@@ -119,17 +133,30 @@ export default function ClientDetailsPage({
             </Link>
             <h1 className="text-2xl font-bold text-white">Client Details</h1>
           </div>
-          <button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-opacity-80 hover:scale-105 cursor-pointer"
-            style={{
-              backgroundColor: "#4A5A70",
-              color: "#FFFFFF",
-            }}
-            onClick={() => setShowEditClientModal(true)}
-          >
-            <Edit className="h-4 w-4" />
-            Edit Client
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-opacity-80 hover:scale-105 cursor-pointer"
+              style={{
+                backgroundColor: "#10B981",
+                color: "#FFFFFF",
+              }}
+              onClick={() => setShowAssignRoutineModal(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Assign Routine
+            </button>
+            <button
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:bg-opacity-80 hover:scale-105 cursor-pointer"
+              style={{
+                backgroundColor: "#4A5A70",
+                color: "#FFFFFF",
+              }}
+              onClick={() => setShowEditClientModal(true)}
+            >
+              <Edit className="h-4 w-4" />
+              Edit Client
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -210,7 +237,7 @@ export default function ClientDetailsPage({
                   </div>
 
                   {/* Stats Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div
                       className="text-center p-3 rounded-lg"
                       style={{ backgroundColor: "#2A2F2F" }}
@@ -245,6 +272,17 @@ export default function ClientDetailsPage({
                         }
                       </div>
                       <div className="text-xs text-gray-400">Completed</div>
+                    </div>
+                    <div
+                      className="text-center p-3 rounded-lg"
+                      style={{ backgroundColor: "#2A2F2F" }}
+                    >
+                      <div className="text-2xl font-bold text-white">
+                        {assignedRoutines.length}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Assigned Routines
+                      </div>
                     </div>
                     <div
                       className="text-center p-3 rounded-lg"
@@ -597,6 +635,139 @@ export default function ClientDetailsPage({
               </div>
             )}
 
+            {/* Assigned Routines */}
+            {(assignedRoutines.length > 0 || isLoadingRoutines) && (
+              <div
+                className="rounded-2xl shadow-xl border p-6"
+                style={{
+                  backgroundColor: "#353A3A",
+                  borderColor: "#606364",
+                }}
+              >
+                <h3 className="text-xl font-bold text-white mb-4">
+                  Assigned Routines
+                </h3>
+                {isLoadingRoutines ? (
+                  <div className="text-center py-4">
+                    <div
+                      className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2"
+                      style={{ borderColor: "#10B981" }}
+                    />
+                    <p className="text-gray-400">Loading routines...</p>
+                  </div>
+                ) : assignedRoutines.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div
+                      className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: "#10B981" }}
+                    >
+                      <span className="text-white text-xl">📋</span>
+                    </div>
+                    <p className="text-gray-400 mb-2">
+                      No routine assignments yet
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Assign routines to this client using the "Assign Routine"
+                      button above
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {assignedRoutines.map(
+                      (assignment: {
+                        id: string;
+                        routine: {
+                          name: string;
+                          description: string | null;
+                          exercises: {
+                            id: string;
+                            title: string;
+                            order: number;
+                          }[];
+                        };
+                        progress: number;
+                        assignedAt: string;
+                        startDate: string | null;
+                      }) => (
+                        <div
+                          key={assignment.id}
+                          className="p-4 rounded-lg border"
+                          style={{
+                            backgroundColor: "#2A2F2F",
+                            borderColor: "#10B981",
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-semibold text-white">
+                                  {assignment.routine.name}
+                                </h4>
+                                <span
+                                  className="px-2 py-1 rounded-full text-xs font-medium"
+                                  style={{
+                                    backgroundColor: "#10B981",
+                                    color: "#FFFFFF",
+                                  }}
+                                >
+                                  Routine
+                                </span>
+                              </div>
+                              {assignment.routine.description && (
+                                <p className="text-sm text-gray-300 mb-2">
+                                  {assignment.routine.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-4 text-xs text-gray-400">
+                                <span>
+                                  {assignment.routine.exercises.length}{" "}
+                                  exercises
+                                </span>
+                                <span>
+                                  Assigned{" "}
+                                  {format(
+                                    new Date(assignment.assignedAt),
+                                    "MMM dd, yyyy"
+                                  )}
+                                </span>
+                                {assignment.startDate && (
+                                  <span>
+                                    Starts{" "}
+                                    {format(
+                                      new Date(assignment.startDate),
+                                      "MMM dd, yyyy"
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-white">
+                                  {assignment.progress}%
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  Progress
+                                </div>
+                              </div>
+                              <div
+                                className="w-12 h-12 rounded-full flex items-center justify-center"
+                                style={{ backgroundColor: "#10B981" }}
+                              >
+                                <div className="text-white font-bold text-sm">
+                                  {assignment.progress}%
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quick Actions */}
             <div
               className="rounded-2xl shadow-xl border p-6"
@@ -667,6 +838,13 @@ export default function ClientDetailsPage({
       <AssignProgramModal
         isOpen={showAssignProgramModal}
         onClose={() => setShowAssignProgramModal(false)}
+        clientId={clientId}
+        clientName={client.name}
+      />
+
+      <AssignRoutineModal
+        isOpen={showAssignRoutineModal}
+        onClose={() => setShowAssignRoutineModal(false)}
         clientId={clientId}
         clientName={client.name}
       />

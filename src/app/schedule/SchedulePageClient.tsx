@@ -70,6 +70,13 @@ function SchedulePageClient() {
     archived: false,
   });
 
+  // Fetch routine assignments for the current month
+  const { data: routineAssignments = [] } =
+    trpc.routines.getRoutineAssignmentsForCalendar.useQuery({
+      month: currentMonth.getMonth(),
+      year: currentMonth.getFullYear(),
+    });
+
   // Fetch pending schedule requests
   const { data: pendingRequests = [] } =
     trpc.clientRouter.getPendingScheduleRequests.useQuery();
@@ -180,6 +187,30 @@ function SchedulePageClient() {
     });
 
     return lessons;
+  };
+
+  const getRoutineAssignmentsForDate = (date: Date) => {
+    const assignments = routineAssignments.filter(
+      (assignment: { assignedAt: string; startDate: string | null }) => {
+        const assignmentDate = new Date(
+          assignment.startDate || assignment.assignedAt
+        );
+        // Compare only the date part, not the time
+        const assignmentDateOnly = new Date(
+          assignmentDate.getFullYear(),
+          assignmentDate.getMonth(),
+          assignmentDate.getDate()
+        );
+        const targetDateOnly = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate()
+        );
+        return assignmentDateOnly.getTime() === targetDateOnly.getTime();
+      }
+    );
+
+    return assignments;
   };
 
   const getAllLessonsForDate = (date: Date) => {
@@ -844,6 +875,8 @@ function SchedulePageClient() {
                 const isCurrentMonth = isSameMonth(day, currentMonth);
                 const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
                 const lessonsForDay = getLessonsForDate(day);
+                const routineAssignmentsForDay =
+                  getRoutineAssignmentsForDate(day);
 
                 const pendingForDay = pendingRequests.filter(
                   (request: { date: string }) => {
@@ -853,6 +886,8 @@ function SchedulePageClient() {
                 );
                 const hasLessons = lessonsForDay.length > 0;
                 const hasPending = pendingForDay.length > 0;
+                const hasRoutineAssignments =
+                  routineAssignmentsForDay.length > 0;
 
                 // Check if this is a working day
                 const dayName = format(day, "EEEE");
@@ -1002,7 +1037,40 @@ function SchedulePageClient() {
                       </div>
                     )}
 
-                    {!hasLessons && !hasPending && (
+                    {/* Routine Assignments */}
+                    {hasRoutineAssignments && (
+                      <div className="space-y-0.5 md:space-y-1">
+                        {routineAssignmentsForDay
+                          .slice(0, 2)
+                          .map((assignment: any, index: number) => (
+                            <div
+                              key={`routine-${index}`}
+                              className="text-xs p-1.5 md:p-2 rounded bg-green-500/40 text-green-100 border-2 border-green-400 shadow-md relative group overflow-hidden"
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold text-xs leading-tight text-green-200">
+                                    {assignment.routine.name}
+                                  </div>
+                                  <div className="truncate text-green-300 font-medium text-xs leading-tight">
+                                    {assignment.client.name}
+                                  </div>
+                                  <div className="text-xs text-green-400">
+                                    Routine Assignment
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        {routineAssignmentsForDay.length > 2 && (
+                          <div className="text-xs text-green-400 text-center py-1">
+                            +{routineAssignmentsForDay.length - 2} more routines
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!hasLessons && !hasPending && !hasRoutineAssignments && (
                       <div className="text-xs text-gray-400 mt-2 font-medium">
                         {isCurrentMonth && !isPast ? "No lessons" : ""}
                       </div>

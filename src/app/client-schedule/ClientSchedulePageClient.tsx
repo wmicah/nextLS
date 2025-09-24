@@ -76,6 +76,12 @@ function ClientSchedulePageClient() {
   // Fetch coach's profile for working hours
   const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
 
+  // Fetch client's routine assignments for the current month
+  const { data: clientRoutineAssignments = [] } =
+    trpc.routines.getClientRoutineAssignments.useQuery({
+      clientId: currentClient?.id || "",
+    });
+
   const utils = trpc.useUtils();
 
   // Helper function to check if a lesson already has a pending swap request
@@ -224,6 +230,30 @@ function ClientSchedulePageClient() {
       (a: { date: string }, b: { date: string }) =>
         new Date(a.date).getTime() - new Date(b.date).getTime()
     );
+  };
+
+  const getClientRoutineAssignmentsForDate = (date: Date) => {
+    const assignments = clientRoutineAssignments.filter(
+      (assignment: { assignedAt: string; startDate: string | null }) => {
+        const assignmentDate = new Date(
+          assignment.startDate || assignment.assignedAt
+        );
+        // Compare only the date part, not the time
+        const assignmentDateOnly = new Date(
+          assignmentDate.getFullYear(),
+          assignmentDate.getMonth(),
+          assignmentDate.getDate()
+        );
+        const targetDateOnly = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate()
+        );
+        return assignmentDateOnly.getTime() === targetDateOnly.getTime();
+      }
+    );
+
+    return assignments;
   };
 
   const handleDateClick = (date: Date) => {
@@ -686,6 +716,8 @@ function ClientSchedulePageClient() {
                 const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
                 const coachLessonsForDay = getLessonsForDate(day);
                 const myLessonsForDay = getClientLessonsForDate(day);
+                const routineAssignmentsForDay =
+                  getClientRoutineAssignmentsForDate(day);
 
                 // Check if this day is a working day
                 const dayName = format(day, "EEEE");
@@ -825,15 +857,47 @@ function ClientSchedulePageClient() {
                       </div>
                     )}
 
-                    {!hasMyLessons && !hasCoachLessons && (
-                      <div className="text-xs text-gray-400 mt-2 font-medium">
-                        {isCurrentMonth && !isPast
-                          ? isWorkingDay
-                            ? "No lessons"
-                            : "Not available"
-                          : ""}
+                    {/* Routine Assignments */}
+                    {routineAssignmentsForDay.length > 0 && (
+                      <div className="space-y-0.5 md:space-y-1">
+                        {routineAssignmentsForDay
+                          .slice(0, 2)
+                          .map((assignment: any, index: number) => (
+                            <div
+                              key={`routine-${index}`}
+                              className="text-xs p-1.5 md:p-2 rounded bg-green-500/40 text-green-100 border-2 border-green-400 shadow-md relative group overflow-hidden"
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold text-xs leading-tight text-green-200">
+                                    {assignment.routine.name}
+                                  </div>
+                                  <div className="text-xs text-green-400">
+                                    Routine Assignment
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        {routineAssignmentsForDay.length > 2 && (
+                          <div className="text-xs text-green-400 text-center py-1">
+                            +{routineAssignmentsForDay.length - 2} more routines
+                          </div>
+                        )}
                       </div>
                     )}
+
+                    {!hasMyLessons &&
+                      !hasCoachLessons &&
+                      routineAssignmentsForDay.length === 0 && (
+                        <div className="text-xs text-gray-400 mt-2 font-medium">
+                          {isCurrentMonth && !isPast
+                            ? isWorkingDay
+                              ? "No lessons"
+                              : "Not available"
+                            : ""}
+                        </div>
+                      )}
 
                     {!hasMyLessons &&
                       !hasCoachLessons &&

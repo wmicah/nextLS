@@ -101,6 +101,7 @@ model Client {
   user                 User?     @relation("UserClient", fields: [userId], references: [id])
   programAssignments   ProgramAssignment[]
   programReplacements  ProgramDayReplacement[]
+  routineAssignments   RoutineAssignment[]
   events               Event[]
   videos               Video[]
   drillCompletions     DrillCompletion[]
@@ -600,6 +601,7 @@ model Routine {
   
   // Routine structure
   exercises   RoutineExercise[]
+  assignments RoutineAssignment[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -631,6 +633,24 @@ model RoutineExercise {
   updatedAt   DateTime @updatedAt
 
   @@map("routine_exercises")
+}
+
+model RoutineAssignment {
+  id          String   @id @default(cuid())
+  routineId   String
+  clientId    String
+  assignedAt  DateTime @default(now())
+  startDate   DateTime?
+  completedAt DateTime?
+  progress    Int      @default(0) // percentage
+  
+  routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("routine_assignments")
 }
 
 enum UserRole {

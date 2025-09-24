@@ -55,6 +55,7 @@ import ProgramDetailsModal from "./ProgramDetailsModal";
 import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
 import RoutinesTab from "@/components/RoutinesTab";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
+import AssignRoutineModal from "@/components/AssignRoutineModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileProgramsPage from "./MobileProgramsPage";
 
@@ -139,6 +140,8 @@ function ProgramsPage() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
   const [isRoutineDetailsOpen, setIsRoutineDetailsOpen] = useState(false);
+  const [isAssignRoutineModalOpen, setIsAssignRoutineModalOpen] =
+    useState(false);
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   const [isVideoLibraryOpen, setIsVideoLibraryOpen] = useState(false);
   const [selectedVideoFromLibrary, setSelectedVideoFromLibrary] = useState<{
@@ -1081,6 +1084,10 @@ function ProgramsPage() {
                   });
                 }
               }}
+              onAssignRoutine={routine => {
+                setSelectedRoutine(routine);
+                setIsAssignRoutineModalOpen(true);
+              }}
             />
           )}
 
@@ -1123,6 +1130,16 @@ function ProgramsPage() {
             onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
             selectedVideoFromLibrary={selectedVideoFromLibrary}
             onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
+          />
+
+          <AssignRoutineModal
+            isOpen={isAssignRoutineModalOpen}
+            onClose={() => {
+              setIsAssignRoutineModalOpen(false);
+              setSelectedRoutine(null);
+            }}
+            routineId={selectedRoutine?.id}
+            routineName={selectedRoutine?.name}
           />
 
           {/* Routine Details Modal */}

@@ -63,6 +63,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import AssignProgramModal from "@/components/AssignProgramModal";
+import AssignRoutineModal from "@/components/AssignRoutineModal";
 import AssignVideoModal from "@/components/AssignVideoModal";
 import ScheduleLessonModal from "@/components/ScheduleLessonModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
@@ -78,6 +79,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showAssignProgramModal, setShowAssignProgramModal] = useState(false);
+  const [showAssignRoutineModal, setShowAssignRoutineModal] = useState(false);
   const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
   const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false);
   const [showDayDetailsModal, setShowDayDetailsModal] = useState(false);
@@ -121,6 +123,27 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
     trpc.clients.getAssignedPrograms.useQuery({
       clientId,
     });
+
+  // Fetch client's routine assignments
+  const { data: assignedRoutines = [], isLoading: isLoadingRoutines } =
+    trpc.routines.getClientRoutineAssignments.useQuery({
+      clientId,
+    });
+
+  // Debug: Log routine assignments when they change
+  useEffect(() => {
+    if (assignedRoutines.length > 0) {
+      console.log(
+        "ClientDetailPage: Loaded routine assignments:",
+        assignedRoutines.map(a => ({
+          id: a.id,
+          startDate: a.startDate,
+          assignedAt: a.assignedAt,
+          routineName: a.routine.name,
+        }))
+      );
+    }
+  }, [assignedRoutines]);
 
   // Fetch client's video assignments
   const { data: videoAssignments = [] } =
@@ -312,6 +335,26 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
     }
   };
 
+  const getRoutineAssignmentsForDate = (date: Date) => {
+    return assignedRoutines.filter((assignment: any) => {
+      const assignmentDate = new Date(
+        assignment.startDate || assignment.assignedAt
+      );
+      const isMatch = isSameDay(assignmentDate, date);
+      if (isMatch) {
+        console.log("Calendar: Found routine assignment for date:", {
+          targetDate: date.toISOString().split("T")[0],
+          assignmentDate: assignmentDate.toISOString().split("T")[0],
+          startDate: assignment.startDate,
+          assignedAt: assignment.assignedAt,
+          targetDateLocal: date.toLocaleDateString(),
+          assignmentDateLocal: assignmentDate.toLocaleDateString(),
+        });
+      }
+      return isMatch;
+    });
+  };
+
   if (clientLoading) {
     return (
       <Sidebar>
@@ -418,65 +461,33 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowScheduleLessonModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/30"
+                style={{ color: "#F59E0B" }}
               >
                 <Calendar className="h-4 w-4" />
                 Schedule Lesson
               </button>
               <button
                 onClick={() => setShowAssignProgramModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{ backgroundColor: "#3B82F6", color: "#FFFFFF" }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/30"
+                style={{ color: "#3B82F6" }}
               >
                 <BookOpen className="h-4 w-4" />
                 Assign Program
+              </button>
+              <button
+                onClick={() => setShowAssignRoutineModal(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/30"
+                style={{ color: "#10B981" }}
+              >
+                <Target className="h-4 w-4" />
+                Assign Routine
               </button>
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div
-              className="rounded-2xl p-6 shadow-xl border"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    Upcoming Lessons
-                  </p>
-                  <p className="text-2xl font-bold text-white">
-                    {upcomingLessons.length}
-                  </p>
-                </div>
-                <Calendar className="h-8 w-8" style={{ color: "#3B82F6" }} />
-              </div>
-            </div>
-
-            <div
-              className="rounded-2xl p-6 shadow-xl border"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    Active Programs
-                  </p>
-                  <p className="text-2xl font-bold text-white">
-                    {assignedPrograms.length}
-                  </p>
-                </div>
-                <BookOpen className="h-8 w-8" style={{ color: "#10B981" }} />
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div
               className="rounded-2xl p-6 shadow-xl border"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
@@ -493,7 +504,10 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                     {complianceLoading ? (
                       <Loader2 className="h-6 w-6 animate-spin" />
                     ) : (
-                      `${complianceData?.completionRate || 0}%`
+                      `${Math.min(
+                        100,
+                        Math.max(0, complianceData?.completionRate || 0)
+                      )}%`
                     )}
                   </p>
                 </div>
@@ -528,11 +542,15 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                 <div
                   className="h-2 rounded-full transition-all duration-500"
                   style={{
-                    width: `${complianceData?.completionRate || 0}%`,
+                    width: `${Math.min(
+                      100,
+                      complianceData?.completionRate || 0
+                    )}%`,
                     backgroundColor:
-                      (complianceData?.completionRate || 0) >= 80
+                      Math.min(100, complianceData?.completionRate || 0) >= 80
                         ? "#10B981"
-                        : (complianceData?.completionRate || 0) >= 60
+                        : Math.min(100, complianceData?.completionRate || 0) >=
+                          60
                         ? "#F59E0B"
                         : "#EF4444",
                   }}
@@ -545,7 +563,13 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                   className="flex justify-between text-xs mt-2"
                   style={{ color: "#ABA4AA" }}
                 >
-                  <span>{complianceData.completed || 0} completed</span>
+                  <span>
+                    {Math.min(
+                      complianceData.completed || 0,
+                      complianceData.total || 0
+                    )}{" "}
+                    completed
+                  </span>
                   <span>{complianceData.total || 0} total</span>
                 </div>
               )}
@@ -662,9 +686,9 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                 <span className="text-white font-medium">Rest Days</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-purple-500 border-2 border-purple-400" />
+                <div className="w-4 h-4 rounded bg-green-500/20 border-2 border-green-500/40" />
                 <span className="text-white font-medium">
-                  Video Assignments
+                  Routine Assignments
                 </span>
               </div>
             </div>
@@ -687,6 +711,8 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                 const lessonsForDay = getLessonsForDate(day);
                 const programsForDay = getProgramsForDate(day);
                 const videosForDay = getVideosForDate(day);
+                const routineAssignmentsForDay =
+                  getRoutineAssignmentsForDate(day);
 
                 return (
                   <div
@@ -761,6 +787,25 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                         </div>
                       </div>
                     ))}
+
+                    {/* Routine Assignments */}
+                    {routineAssignmentsForDay.map(
+                      (assignment: any, index: number) => (
+                        <div
+                          key={`routine-${index}`}
+                          className="text-xs p-1.5 rounded-lg bg-green-500/5 text-green-100 border border-green-500/20 mb-1 transition-all duration-200 hover:bg-green-500/10"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <div className="p-0.5 rounded bg-green-500/10">
+                              <Target className="h-2.5 w-2.5 text-green-400" />
+                            </div>
+                            <span className="truncate font-medium">
+                              {assignment.routine.name}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )}
                   </div>
                 );
               })}
@@ -772,6 +817,20 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             <AssignProgramModal
               isOpen={showAssignProgramModal}
               onClose={() => setShowAssignProgramModal(false)}
+              clientId={clientId}
+              clientName={client.name}
+              startDate={
+                selectedDate
+                  ? selectedDate.toISOString().split("T")[0]
+                  : undefined
+              }
+            />
+          )}
+
+          {showAssignRoutineModal && (
+            <AssignRoutineModal
+              isOpen={showAssignRoutineModal}
+              onClose={() => setShowAssignRoutineModal(false)}
               clientId={clientId}
               clientName={client.name}
               startDate={
@@ -958,6 +1017,72 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                     )}
                   </div>
 
+                  {/* Routine Assignments */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-4">
+                      Routine Assignments
+                    </h3>
+                    {getRoutineAssignmentsForDate(selectedDate).length > 0 ? (
+                      <div className="space-y-3">
+                        {getRoutineAssignmentsForDate(selectedDate).map(
+                          (assignment: any, index: number) => (
+                            <div
+                              key={index}
+                              className="p-4 rounded-lg bg-green-500/5 text-green-100 border border-green-500/20 transition-all duration-200 hover:bg-green-500/10"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 rounded-lg bg-green-500/10">
+                                    <Target className="h-4 w-4 text-green-400" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-green-100">
+                                      {assignment.routine.name}
+                                    </div>
+                                    <div className="text-sm text-green-200/80">
+                                      {assignment.routine.description ||
+                                        "No description"}
+                                    </div>
+                                    <div className="text-xs text-green-200/60 mt-1">
+                                      Assigned{" "}
+                                      {format(
+                                        new Date(
+                                          assignment.startDate ||
+                                            assignment.assignedAt
+                                        ),
+                                        "MMM dd, yyyy"
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-green-100">
+                                    {assignment.progress}%
+                                  </div>
+                                  <div className="text-xs text-green-200/60">
+                                    Progress
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="p-4 rounded-full bg-green-500/5 w-16 h-16 mx-auto mb-4 flex items-center justify-center border border-green-500/10">
+                          <Target className="h-8 w-8 text-green-500/60" />
+                        </div>
+                        <p className="text-gray-400 mb-2">
+                          No routine assignments for this day
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Use the "Assign Routine" button below to add one
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Schedule Actions */}
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-4">
@@ -985,21 +1110,26 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                       }
 
                       return (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <button
                             onClick={() => {
                               setShowScheduleLessonModal(true);
                               setShowDayDetailsModal(false);
                             }}
-                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border-transparent hover:border-emerald-500/30"
-                            style={{ backgroundColor: "#10B981" }}
+                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/20 hover:border-yellow-500/30"
                           >
-                            <Calendar className="h-6 w-6 text-white" />
+                            <Calendar
+                              className="h-6 w-6"
+                              style={{ color: "#F59E0B" }}
+                            />
                             <div className="text-left">
-                              <div className="font-medium text-white">
+                              <div
+                                className="font-medium"
+                                style={{ color: "#F59E0B" }}
+                              >
                                 Schedule Lesson
                               </div>
-                              <div className="text-sm text-emerald-100">
+                              <div className="text-sm text-yellow-600/80">
                                 Book a lesson for this day
                               </div>
                             </div>
@@ -1010,16 +1140,45 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                               setShowAssignProgramModal(true);
                               setShowDayDetailsModal(false);
                             }}
-                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border-transparent hover:border-blue-500/30"
-                            style={{ backgroundColor: "#3B82F6" }}
+                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 hover:border-blue-500/30"
                           >
-                            <BookOpen className="h-6 w-6 text-white" />
+                            <BookOpen
+                              className="h-6 w-6"
+                              style={{ color: "#3B82F6" }}
+                            />
                             <div className="text-left">
-                              <div className="font-medium text-white">
+                              <div
+                                className="font-medium"
+                                style={{ color: "#3B82F6" }}
+                              >
                                 Assign Program
                               </div>
-                              <div className="text-sm text-blue-100">
+                              <div className="text-sm text-blue-600/80">
                                 Start a program on this day
+                              </div>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setShowAssignRoutineModal(true);
+                              setShowDayDetailsModal(false);
+                            }}
+                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-green-500/10 hover:bg-green-500/20 border-green-500/20 hover:border-green-500/30"
+                          >
+                            <Target
+                              className="h-6 w-6"
+                              style={{ color: "#10B981" }}
+                            />
+                            <div className="text-left">
+                              <div
+                                className="font-medium"
+                                style={{ color: "#10B981" }}
+                              >
+                                Assign Routine
+                              </div>
+                              <div className="text-sm text-green-600/80">
+                                Assign a routine for this day
                               </div>
                             </div>
                           </button>
