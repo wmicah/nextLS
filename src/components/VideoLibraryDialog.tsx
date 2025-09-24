@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, Video, X, Play, Clock } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface VideoLibraryDialogProps {
   isOpen: boolean;
@@ -41,6 +48,8 @@ export default function VideoLibraryDialog({
 }: VideoLibraryDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"master" | "local">("master");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Fetch master library resources
   const { data: masterLibraryItems = [], isLoading: masterLoading } =
@@ -65,9 +74,14 @@ export default function VideoLibraryDialog({
 
   // Filter items based on search term only (library type is already filtered by the queries)
   const filteredItems = libraryItems.filter((item: any) => {
-    const matchesSearch = item.title
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+    if (!searchTerm.trim()) {
+      return true; // Show all items when search is empty
+    }
+
+    const matchesSearch =
+      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.description &&
+        item.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return matchesSearch;
   });
@@ -90,42 +104,41 @@ export default function VideoLibraryDialog({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+
+    return undefined;
+  }, [isOpen, onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 10000,
-        backgroundColor: "rgba(0, 0, 0, 0.75)",
-        backdropFilter: "blur(4px)",
-      }}
-      // Removed click-outside-to-close behavior - only close via X button
-    >
-      <div
-        className="w-full max-w-4xl bg-[#2A3133] rounded-xl border border-gray-600 shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+    <Dialog open={isOpen} onOpenChange={() => {}}>
+      <DialogContent
+        className="bg-[#1A1F21] border-gray-600 max-w-4xl max-h-[90vh] z-[100] overflow-hidden flex flex-col shadow-2xl"
         style={{
-          pointerEvents: "auto",
-          backgroundColor: "#2A3133",
-          borderColor: "#606364",
+          zIndex: 100,
+          boxShadow:
+            "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 20px rgba(59, 130, 246, 0.3)",
         }}
-        onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-600">
-          <h2 className="text-xl font-semibold text-white">Add from Library</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        <DialogHeader>
+          <DialogTitle className="text-white">Add from Library</DialogTitle>
+          <DialogDescription className="text-gray-400">
+            Select a video from your library to add to your routine.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Tabs */}
         <div className="flex border-b border-gray-600">
@@ -160,13 +173,13 @@ export default function VideoLibraryDialog({
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Search videos..."
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-600 bg-[#353A3A] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-600 bg-[#353A3A] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4">
           {isLoading ? (
             <div className="flex items-center justify-center h-48">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -182,72 +195,70 @@ export default function VideoLibraryDialog({
               </p>
             </div>
           ) : (
-            <div className="h-full overflow-y-auto p-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredItems.map((item: any) => (
-                  <div
-                    key={item.id}
-                    className="bg-[#353A3A] rounded-lg border border-gray-600 overflow-hidden hover:border-blue-500 cursor-pointer group"
-                    onClick={() => onSelectVideo(item)}
-                  >
-                    {/* Thumbnail */}
-                    <div className="relative aspect-video bg-gray-700">
-                      {item.thumbnail ? (
-                        <img
-                          src={item.thumbnail}
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Video className="h-6 w-6 text-gray-500" />
-                        </div>
-                      )}
-
-                      {/* Play overlay */}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                          <Play className="h-4 w-4 text-white" />
-                        </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredItems.map((item: any) => (
+                <div
+                  key={item.id}
+                  className="bg-[#353A3A] rounded-lg border border-gray-600 overflow-hidden hover:border-blue-500 cursor-pointer group"
+                  onClick={() => onSelectVideo(item)}
+                >
+                  {/* Thumbnail */}
+                  <div className="relative aspect-video bg-gray-700">
+                    {item.thumbnail ? (
+                      <img
+                        src={item.thumbnail}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Video className="h-6 w-6 text-gray-500" />
                       </div>
+                    )}
 
-                      {/* Duration badge */}
-                      {item.duration && (
-                        <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {item.duration}
-                        </div>
-                      )}
+                    {/* Play overlay */}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                        <Play className="h-4 w-4 text-white" />
+                      </div>
                     </div>
 
-                    {/* Content */}
-                    <div className="p-3">
-                      <h3 className="font-medium text-white mb-1 line-clamp-2 text-sm">
-                        {item.title}
-                      </h3>
-
-                      {item.description && (
-                        <p className="text-gray-400 text-xs mb-2 line-clamp-2">
-                          {item.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-1">
-                        {item.category && (
-                          <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-1 rounded">
-                            {item.category}
-                          </span>
-                        )}
-                        {item.difficulty && (
-                          <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded">
-                            {item.difficulty}
-                          </span>
-                        )}
+                    {/* Duration badge */}
+                    {item.duration && (
+                      <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {item.duration}
                       </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-3">
+                    <h3 className="font-medium text-white mb-1 line-clamp-2 text-sm">
+                      {item.title}
+                    </h3>
+
+                    {item.description && (
+                      <p className="text-gray-400 text-xs mb-2 line-clamp-2">
+                        {item.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-1">
+                      {item.category && (
+                        <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-1 rounded">
+                          {item.category}
+                        </span>
+                      )}
+                      {item.difficulty && (
+                        <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded">
+                          {item.difficulty}
+                        </span>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -258,6 +269,11 @@ export default function VideoLibraryDialog({
             <div className="text-sm text-gray-400">
               {filteredItems.length} video
               {filteredItems.length !== 1 ? "s" : ""} found
+              {filteredItems.length > 8 && (
+                <span className="ml-2 text-xs text-blue-400">
+                  (Scroll to see more)
+                </span>
+              )}
             </div>
             <button
               onClick={onClose}
@@ -267,7 +283,7 @@ export default function VideoLibraryDialog({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
