@@ -12516,6 +12516,163 @@ export const appRouter = router({
           };
         }
       }),
+
+    getClientComplianceData: publicProcedure
+      .input(
+        z.object({
+          period: z.enum(["3", "6", "9", "12", "all"]),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // Get client record
+        const client = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client record not found",
+          });
+        }
+
+        // Calculate date range based on period
+        const now = new Date();
+        let startDate: Date;
+
+        switch (input.period) {
+          case "3":
+            startDate = new Date(now.getTime() - 3 * 30 * 24 * 60 * 60 * 1000);
+            break;
+          case "6":
+            startDate = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
+            break;
+          case "9":
+            startDate = new Date(now.getTime() - 9 * 30 * 24 * 60 * 60 * 1000);
+            break;
+          case "12":
+            startDate = new Date(now.getTime() - 12 * 30 * 24 * 60 * 60 * 1000);
+            break;
+          case "all":
+            startDate = new Date(0); // Beginning of time
+            break;
+        }
+
+        // Get all drill completions for this client in the time range
+        const completions = await db.drillCompletion.findMany({
+          where: {
+            clientId: client.id,
+            completedAt: {
+              gte: startDate,
+            },
+          },
+        });
+
+        // Get all assigned programs for this client
+        const programAssignments = await db.programAssignment.findMany({
+          where: {
+            clientId: client.id,
+            assignedAt: {
+              gte: startDate,
+            },
+          },
+          include: {
+            program: {
+              include: {
+                weeks: {
+                  include: {
+                    days: {
+                      include: {
+                        drills: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            replacements: {
+              orderBy: {
+                replacedDate: "asc",
+              },
+            },
+          },
+        });
+
+        // Calculate total drills assigned and completed
+        let totalDrills = 0;
+        let completedDrills = 0;
+
+        programAssignments.forEach(assignment => {
+          if (!assignment.startDate) return;
+
+          const assignmentStartDate = new Date(assignment.startDate);
+
+          assignment.program.weeks.forEach((week, weekIndex) => {
+            week.days.forEach((day, dayIndex) => {
+              // Calculate the actual date this day should be completed
+              const dayDate = new Date(assignmentStartDate);
+              dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex);
+
+              // Check if this day has been replaced with a lesson
+              const hasReplacement = assignment.replacements?.some(
+                (replacement: any) => {
+                  const replacementDate = new Date(replacement.replacedDate);
+                  const replacementDateOnly = new Date(
+                    replacementDate.getFullYear(),
+                    replacementDate.getMonth(),
+                    replacementDate.getDate()
+                  );
+                  const dayDateOnly = new Date(
+                    dayDate.getFullYear(),
+                    dayDate.getMonth(),
+                    dayDate.getDate()
+                  );
+                  return (
+                    replacementDateOnly.getTime() === dayDateOnly.getTime()
+                  );
+                }
+              );
+
+              // Only count drills from days that have already passed and haven't been replaced
+              if (dayDate <= now && !hasReplacement) {
+                totalDrills += day.drills.length;
+              }
+            });
+          });
+        });
+
+        // Count completed drills (this already filters by date range)
+        completedDrills = completions.length;
+
+        // Calculate completion rate
+        const completionRate =
+          totalDrills > 0
+            ? Math.round((completedDrills / totalDrills) * 100)
+            : 0;
+
+        return {
+          completionRate,
+          completed: completedDrills,
+          total: totalDrills,
+          period: input.period,
+        };
+      }),
   }),
 
   admin: adminRouter,

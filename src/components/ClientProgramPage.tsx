@@ -33,6 +33,7 @@ import {
   CalendarX,
   CalendarClock,
   Link,
+  FileText,
 } from "lucide-react";
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
 import { Button } from "@/components/ui/button";
@@ -143,9 +144,9 @@ function ClientProgramPage() {
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "calendar" | "progress"
-  >("overview");
+  const [activeTab, setActiveTab] = useState<"calendar" | "progress">(
+    "calendar"
+  );
   const [justCompletedDrills, setJustCompletedDrills] = useState<Set<string>>(
     new Set()
   );
@@ -181,6 +182,9 @@ function ClientProgramPage() {
 
   // Get next lesson
   const { data: nextLesson } = trpc.clientRouter.getNextLesson.useQuery();
+
+  // Get coach notes
+  const { data: coachNotes } = trpc.clientRouter.getCoachNotes.useQuery();
 
   // Get client's lessons
   const { data: clientLessons = [] } =
@@ -699,22 +703,9 @@ function ClientProgramPage() {
       <div className="min-h-screen" style={{ backgroundColor: "#2a3133" }}>
         {/* Header Section with Gradient Background */}
         <div className="mb-8 md:mb-12">
-          <div
-            className="rounded-2xl md:rounded-3xl p-4 md:p-8 mb-6 md:mb-8 relative overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-              border: "1px solid #606364",
-            }}
-          >
+          <div>
             {/* Decorative background elements */}
-            <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
-              <div
-                className="w-full h-full rounded-full"
-                style={{
-                  background: "linear-gradient(45deg, #4A5A70, #606364)",
-                }}
-              />
-            </div>
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-10"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 opacity-10">
               <div
                 className="w-full h-full rounded-full"
@@ -723,58 +714,106 @@ function ClientProgramPage() {
                 }}
               />
             </div>
+          </div>
 
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0">
-              <div className="flex-1">
-                <h1 className="text-3xl md:text-6xl font-bold mb-2 md:mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent leading-tight">
-                  My Training Program
-                </h1>
-                <div
-                  className="text-base md:text-xl flex items-center gap-3"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  <div
-                    className="p-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: "#4A5A70" }}
-                  >
-                    <Dumbbell
-                      className="h-4 w-4 md:h-5 md:w-5"
-                      style={{ color: "#C3BCC2" }}
-                    />
+          {/* Summary Box */}
+          <div className="mb-6 md:mb-8 px-4">
+            <div className="max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                {/* Upcoming Lesson */}
+                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20 hover:border-emerald-400/40">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 opacity-5">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-300 rounded-full blur-2xl"></div>
                   </div>
-                  <span className="text-sm md:text-xl">
-                    Track your progress and stay on schedule
-                  </span>
+
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
+                      <div className="p-2 md:p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+                        <CalendarCheck className="h-4 w-4 md:h-6 md:w-6 text-white" />
+                      </div>
+                      <h3 className="text-lg md:text-xl font-bold text-white">
+                        Next Lesson
+                      </h3>
+                    </div>
+
+                    {nextLesson ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                          <p className="text-sm md:text-lg font-semibold text-emerald-100">
+                            {new Date(nextLesson.date).toLocaleDateString(
+                              "en-US",
+                              {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              }
+                            )}
+                          </p>
+                        </div>
+                        <p className="text-xs md:text-sm text-emerald-200/80 font-medium">
+                          {new Date(nextLesson.date).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                        <p className="text-sm text-gray-400">
+                          No upcoming lesson
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="mt-4">
-                  <button
-                    onClick={() => setActiveTab("calendar")}
-                    className="px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2 touch-manipulation"
-                    style={{
-                      backgroundColor: "#10B981",
-                      color: "#C3BCC2",
-                    }}
-                  >
-                    <Calendar className="h-4 w-4" />
-                    View Full Program Calendar
-                  </button>
-                </div>
-              </div>
-              <div className="text-left md:text-right">
-                <div
-                  className="text-2xl md:text-4xl font-bold mb-2"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {new Date().toLocaleDateString()}
-                </div>
-                <div
-                  className="text-base md:text-lg px-3 md:px-4 py-1 md:py-2 rounded-full inline-block"
-                  style={{
-                    backgroundColor: "#4A5A70",
-                    color: "#C3BCC2",
-                  }}
-                >
-                  {new Date().toLocaleDateString("en-US", { weekday: "long" })}
+
+                {/* Coach Feedback */}
+                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl bg-gradient-to-br from-purple-500/10 via-purple-600/5 to-purple-700/10 border-purple-500/20 hover:border-purple-400/40">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 opacity-5">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-400 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-300 rounded-full blur-2xl"></div>
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
+                      <div className="p-2 md:p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+                        <FileText className="h-4 w-4 md:h-6 md:w-6 text-white" />
+                      </div>
+                      <h3 className="text-lg md:text-xl font-bold text-white">
+                        Coach Notes
+                      </h3>
+                    </div>
+
+                    {coachNotes?.notes ? (
+                      <div className="space-y-3">
+                        <div className="bg-purple-500/10 rounded-2xl p-3 md:p-4 border border-purple-400/20">
+                          <p className="text-xs md:text-sm text-purple-100 line-clamp-3 leading-relaxed">
+                            {coachNotes.notes}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                          <p className="text-xs text-purple-200/80 font-medium">
+                            Updated{" "}
+                            {new Date(
+                              coachNotes.updatedAt
+                            ).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                        <p className="text-sm text-gray-400">No feedback yet</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -791,11 +830,6 @@ function ClientProgramPage() {
             >
               {[
                 {
-                  id: "overview",
-                  label: "Overview",
-                  icon: <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />,
-                },
-                {
                   id: "calendar",
                   label: "Calendar",
                   icon: <Calendar className="h-3 w-3 md:h-4 md:w-4" />,
@@ -810,7 +844,7 @@ function ClientProgramPage() {
                 <button
                   key={tab.id}
                   onClick={() =>
-                    setActiveTab(tab.id as "overview" | "calendar" | "progress")
+                    setActiveTab(tab.id as "calendar" | "progress")
                   }
                   className={`flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-6 py-2 md:py-3 rounded-xl transition-all duration-300 touch-manipulation ${
                     activeTab === tab.id
@@ -836,1013 +870,6 @@ function ClientProgramPage() {
               ))}
             </div>
           </div>
-
-          {/* Main Content Based on Active Tab */}
-          {activeTab === "overview" && (
-            <div className="space-y-4 md:space-y-8">
-              {/* Program Overview Cards */}
-              {programInfo && (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
-                  <div
-                    className="rounded-2xl md:rounded-3xl p-4 md:p-8 transform hover:scale-105 transition-all duration-300 shadow-2xl border relative overflow-hidden group touch-manipulation"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                      borderColor: "#4A5A70",
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-6">
-                        <div
-                          className="p-3 rounded-2xl"
-                          style={{ backgroundColor: "#4A5A70" }}
-                        >
-                          <BookOpen
-                            className="h-8 w-8"
-                            style={{ color: "#C3BCC2" }}
-                          />
-                        </div>
-                        <span
-                          className="text-4xl font-bold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {programInfo.currentWeek}
-                        </span>
-                      </div>
-                      <h3
-                        className="text-xl font-bold mb-3"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Current Week
-                      </h3>
-                      <p className="text-base" style={{ color: "#ABA4AA" }}>
-                        of {programInfo.totalWeeks} weeks
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    className="rounded-3xl p-8 transform hover:scale-105 transition-all duration-300 shadow-2xl border relative overflow-hidden group"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                      borderColor: "#10B981",
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-6">
-                        <div
-                          className="p-3 rounded-2xl"
-                          style={{ backgroundColor: "#10B981" }}
-                        >
-                          <TrendingUp
-                            className="h-8 w-8"
-                            style={{ color: "#C3BCC2" }}
-                          />
-                        </div>
-                        <span
-                          className="text-4xl font-bold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {Math.round(programInfo.overallProgress)}%
-                        </span>
-                      </div>
-                      <h3
-                        className="text-xl font-bold mb-3"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Overall Progress
-                      </h3>
-                      <p className="text-base" style={{ color: "#ABA4AA" }}>
-                        Program completion
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    className="rounded-3xl p-8 transform hover:scale-105 transition-all duration-300 shadow-2xl border relative overflow-hidden group"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                      borderColor: "#F59E0B",
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-6">
-                        <div
-                          className="p-3 rounded-2xl"
-                          style={{ backgroundColor: "#F59E0B" }}
-                        >
-                          <User
-                            className="h-8 w-8"
-                            style={{ color: "#C3BCC2" }}
-                          />
-                        </div>
-                        <span
-                          className="text-2xl font-bold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {programInfo.coachName}
-                        </span>
-                      </div>
-                      <h3
-                        className="text-xl font-bold mb-3"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Your Coach
-                      </h3>
-                      <p className="text-base" style={{ color: "#ABA4AA" }}>
-                        Professional guidance
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    className="rounded-3xl p-8 transform hover:scale-105 transition-all duration-300 shadow-2xl border relative overflow-hidden group"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                      borderColor: "#8B5CF6",
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-6">
-                        <div
-                          className="p-3 rounded-2xl"
-                          style={{ backgroundColor: "#8B5CF6" }}
-                        >
-                          <Award
-                            className="h-8 w-8"
-                            style={{ color: "#C3BCC2" }}
-                          />
-                        </div>
-                        <span
-                          className="text-4xl font-bold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {programInfo.title}
-                        </span>
-                      </div>
-                      <h3
-                        className="text-xl font-bold mb-3"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Program Name
-                      </h3>
-                      <p className="text-base" style={{ color: "#ABA4AA" }}>
-                        Active training plan
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* All Assigned Programs Section */}
-              {programInfo && false && (
-                <div
-                  className="rounded-3xl p-8 shadow-2xl border relative overflow-hidden"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                    borderColor: "#4A5A70",
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="p-3 rounded-2xl"
-                        style={{ backgroundColor: "#4A5A70" }}
-                      >
-                        <BookOpen
-                          className="h-6 w-6"
-                          style={{ color: "#C3BCC2" }}
-                        />
-                      </div>
-                      <h2
-                        className="text-3xl font-bold"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        All Your Programs
-                      </h2>
-                    </div>
-                    <div
-                      className="px-4 py-2 rounded-full"
-                      style={{ backgroundColor: "#4A5A70" }}
-                    >
-                      <span
-                        className="text-lg font-semibold"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Multiple Active
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[].map(
-                      (
-                        program: {
-                          id: string;
-                          title: string;
-                          description: string | null;
-                          startDate: string;
-                          endDate: string;
-                          currentWeek: number;
-                          totalWeeks: number;
-                          overallProgress: number;
-                          coachName: string | null;
-                          assignmentId: string;
-                          assignedAt: string;
-                        },
-                        index: number
-                      ) => (
-                        <div
-                          key={program.id}
-                          className={`rounded-2xl p-6 transition-all duration-200 hover:scale-105 shadow-lg border ${
-                            index === 0 ? "ring-2 ring-blue-500" : ""
-                          }`}
-                          style={{
-                            backgroundColor: "#2B3038",
-                            borderColor: index === 0 ? "#3B82F6" : "#4A5A70",
-                            borderWidth: "1px",
-                          }}
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <h3
-                              className="text-lg font-bold"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              {program.title}
-                            </h3>
-                            {index === 0 && (
-                              <span
-                                className="px-2 py-1 rounded-full text-xs font-medium"
-                                style={{
-                                  backgroundColor: "#3B82F6",
-                                  color: "#ffffff",
-                                }}
-                              >
-                                Primary
-                              </span>
-                            )}
-                          </div>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span
-                                className="text-sm"
-                                style={{ color: "#ABA4AA" }}
-                              >
-                                Week:
-                              </span>
-                              <span
-                                className="text-sm font-medium"
-                                style={{ color: "#C3BCC2" }}
-                              >
-                                {program.currentWeek} of {program.totalWeeks}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span
-                                className="text-sm"
-                                style={{ color: "#ABA4AA" }}
-                              >
-                                Progress:
-                              </span>
-                              <span
-                                className="text-sm font-medium"
-                                style={{ color: "#C3BCC2" }}
-                              >
-                                {Math.round(program.overallProgress)}%
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span
-                                className="text-sm"
-                                style={{ color: "#ABA4AA" }}
-                              >
-                                Started:
-                              </span>
-                              <span
-                                className="text-sm font-medium"
-                                style={{ color: "#C3BCC2" }}
-                              >
-                                {new Date(
-                                  program.assignedAt
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                          {program.description && (
-                            <p
-                              className="text-sm mt-3"
-                              style={{ color: "#ABA4AA" }}
-                            >
-                              {program.description}
-                            </p>
-                          )}
-                        </div>
-                      )
-                    )}
-                  </div>
-                  <div
-                    className="mt-6 p-4 rounded-xl"
-                    style={{ backgroundColor: "#2B3038" }}
-                  >
-                    <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                      💡 <strong>Note:</strong> Your calendar shows workouts
-                      from all assigned programs. The primary program
-                      (highlighted) is your most recent assignment.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* This Week's Schedule */}
-              <div
-                className="rounded-3xl p-8 shadow-2xl border relative overflow-hidden mb-8"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                  borderColor: "#4A5A70",
-                }}
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="p-3 rounded-2xl"
-                      style={{ backgroundColor: "#4A5A70" }}
-                    >
-                      <Calendar
-                        className="h-6 w-6"
-                        style={{ color: "#C3BCC2" }}
-                      />
-                    </div>
-                    <h2
-                      className="text-3xl font-bold"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      This Week&apos;s Schedule
-                    </h2>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("calendar")}
-                    className="px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2"
-                    style={{
-                      backgroundColor: "#10B981",
-                      color: "#C3BCC2",
-                    }}
-                  >
-                    <Calendar className="h-4 w-4" />
-                    View Full Calendar
-                  </button>
-                </div>
-
-                {/* Weekly Schedule Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 md:gap-4">
-                  {Array.from({ length: 7 }, (_, i) => {
-                    const day = addDays(startOfWeek(new Date()), i);
-                    const dayData = getWeekDayData(day);
-                    const isTodayDay = isToday(day);
-                    const dayName = format(day, "EEE");
-                    const dayNumber = format(day, "d");
-
-                    // Debug for this specific day
-                    if (i === 0)
-                      console.log("First day data:", {
-                        day: day.toISOString(),
-                        dayData,
-                        weekCalendarData,
-                      });
-
-                    return (
-                      <div
-                        key={i}
-                        className={`rounded-xl md:rounded-2xl p-2 md:p-4 transition-all duration-200 hover:scale-105 cursor-pointer touch-manipulation ${
-                          isTodayDay ? "ring-2 ring-blue-500" : ""
-                        }`}
-                        style={{
-                          backgroundColor: "#2B3038",
-                          border: "1px solid #4A5A70",
-                        }}
-                        onClick={() => {
-                          if (
-                            dayData &&
-                            (dayData.drills.length > 0 || dayData.isRestDay)
-                          ) {
-                            setSelectedDay(dayData);
-                            setIsDaySheetOpen(true);
-                          }
-                        }}
-                      >
-                        <div className="text-center mb-3">
-                          <div
-                            className={`text-sm font-medium mb-1 ${
-                              isTodayDay ? "text-blue-400" : "text-gray-400"
-                            }`}
-                          >
-                            {dayName}
-                          </div>
-                          <div
-                            className={`text-2xl font-bold ${
-                              isTodayDay ? "text-blue-400" : "text-white"
-                            }`}
-                          >
-                            {dayNumber}
-                          </div>
-                        </div>
-
-                        {dayData ? (
-                          dayData.isRestDay ? (
-                            <div className="text-center">
-                              <div className="text-2xl mb-1">🛌</div>
-                              <div className="text-xs text-gray-400">Rest</div>
-                            </div>
-                          ) : dayData.drills.length > 0 ? (
-                            <div className="space-y-2">
-                              <div className="text-center">
-                                <div
-                                  className="text-xs font-medium"
-                                  style={{ color: "#10B981" }}
-                                >
-                                  {dayData.completedDrills}/
-                                  {dayData.totalDrills}
-                                </div>
-                              </div>
-                              {dayData.drills
-                                .slice(0, 2)
-                                .map((drill, index) => (
-                                  <div
-                                    key={index}
-                                    className={`text-xs p-2 rounded flex items-center justify-between transition-all duration-300 ${
-                                      justCompletedDrills.has(drill.id)
-                                        ? "scale-102"
-                                        : ""
-                                    }`}
-                                    style={{
-                                      backgroundColor: drill.completed
-                                        ? "#1F2A1F"
-                                        : "#1F2426",
-                                      border: drill.completed
-                                        ? "1px solid #10B981"
-                                        : "1px solid #2A3133",
-                                      boxShadow: justCompletedDrills.has(
-                                        drill.id
-                                      )
-                                        ? "0 0 8px rgba(16, 185, 129, 0.3)"
-                                        : "none",
-                                    }}
-                                  >
-                                    <div className="flex-1">
-                                      <div
-                                        className="font-medium truncate flex items-center gap-2"
-                                        style={{
-                                          color: drill.completed
-                                            ? "#10B981"
-                                            : "#C3BCC2",
-                                        }}
-                                      >
-                                        {drill.completed && (
-                                          <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
-                                        )}
-                                        {drill.supersetId && (
-                                          <div className="flex items-center gap-1 text-xs text-purple-300">
-                                            <Link className="h-3 w-3" />
-                                            <span className="font-medium">
-                                              SUPERSET
-                                            </span>
-                                          </div>
-                                        )}
-                                        {drill.title}
-                                      </div>
-                                      {drill.sets && drill.reps && (
-                                        <div
-                                          className="text-xs"
-                                          style={{ color: "#ABA4AA" }}
-                                        >
-                                          {drill.sets}×{drill.reps}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              {dayData.drills.length > 2 && (
-                                <div className="text-center">
-                                  <span
-                                    className="text-xs"
-                                    style={{ color: "#ABA4AA" }}
-                                  >
-                                    +{dayData.drills.length - 2} more
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="text-center">
-                              <div
-                                className="text-xs"
-                                style={{ color: "#606364" }}
-                              >
-                                No workouts
-                              </div>
-                            </div>
-                          )
-                        ) : (
-                          <div className="text-center">
-                            <div
-                              className="text-xs"
-                              style={{ color: "#606364" }}
-                            >
-                              No program
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Guidance Text */}
-                <div
-                  className="mt-6 p-4 rounded-xl"
-                  style={{ backgroundColor: "#2B3038" }}
-                >
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                    💡 <strong>Tip:</strong> Click on any day to see detailed
-                    workouts, or use the &quot;Calendar&quot; tab above to view
-                    your full program schedule for the entire month.
-                  </p>
-                </div>
-              </div>
-
-              {/* Today's Schedule */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Today's Workouts */}
-                <div
-                  className="rounded-3xl p-8 shadow-2xl border relative overflow-hidden"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                    borderColor: "#4A5A70",
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="p-3 rounded-2xl"
-                        style={{ backgroundColor: "#4A5A70" }}
-                      >
-                        <Target
-                          className="h-6 w-6"
-                          style={{ color: "#C3BCC2" }}
-                        />
-                      </div>
-                      <h2
-                        className="text-3xl font-bold"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Today&apos;s Plan
-                      </h2>
-                    </div>
-                    <div
-                      className="px-4 py-2 rounded-full"
-                      style={{ backgroundColor: "#4A5A70" }}
-                    >
-                      <span
-                        className="text-lg font-semibold"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        {new Date().toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const today = new Date();
-                    const todaysLessons = getLessonsForDate(today);
-                    const todayData = getWeekDayData(today);
-
-                    return (
-                      <div className="space-y-6">
-                        {/* Today's Lessons */}
-                        {todaysLessons.length > 0 && (
-                          <div className="space-y-4">
-                            <h3
-                              className="text-xl font-semibold"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              📅 Scheduled Lessons
-                            </h3>
-                            {todaysLessons.map((lesson: any, index: number) => (
-                              <div
-                                key={index}
-                                className="rounded-xl p-6 transition-all duration-200 hover:scale-102 shadow-lg border"
-                                style={{
-                                  backgroundColor: "#2B3038",
-                                  borderColor: "#10B981",
-                                  borderWidth: "1px",
-                                }}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                      <div
-                                        className="p-2 rounded-full"
-                                        style={{ backgroundColor: "#10B981" }}
-                                      >
-                                        <CalendarCheck
-                                          className="h-4 w-4"
-                                          style={{ color: "#C3BCC2" }}
-                                        />
-                                      </div>
-                                      <h4
-                                        className="text-lg font-semibold"
-                                        style={{ color: "#C3BCC2" }}
-                                      >
-                                        {format(
-                                          new Date(lesson.date),
-                                          "h:mm a"
-                                        )}
-                                      </h4>
-                                    </div>
-                                    <p
-                                      className="text-base mb-2"
-                                      style={{ color: "#ABA4AA" }}
-                                    >
-                                      {lesson.title || "Lesson with Coach"}
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                      <User
-                                        className="h-4 w-4"
-                                        style={{ color: "#ABA4AA" }}
-                                      />
-                                      <span
-                                        className="text-sm"
-                                        style={{ color: "#ABA4AA" }}
-                                      >
-                                        {lesson.coach?.name || "Coach"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <button
-                                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105"
-                                    style={{
-                                      backgroundColor: "#10B981",
-                                      color: "#C3BCC2",
-                                    }}
-                                  >
-                                    Join
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Today's Workouts */}
-                        {todayData && !todayData.isRestDay && (
-                          <div className="space-y-4">
-                            <h3
-                              className="text-xl font-semibold"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              💪 Today&apos;s Workouts
-                            </h3>
-                            {todayData.drills.map(drill => (
-                              <div
-                                key={drill.id}
-                                className={`rounded-xl p-6 transition-all duration-200 hover:scale-102 shadow-lg border ${
-                                  justCompletedDrills.has(drill.id)
-                                    ? "scale-102"
-                                    : ""
-                                }`}
-                                style={{
-                                  backgroundColor: drill.completed
-                                    ? "#1F2A1F"
-                                    : "#2B3038",
-                                  borderColor: drill.completed
-                                    ? "#10B981"
-                                    : "#606364",
-                                  borderWidth: drill.completed ? "2px" : "1px",
-                                  boxShadow: justCompletedDrills.has(drill.id)
-                                    ? "0 0 20px rgba(16, 185, 129, 0.5)"
-                                    : "none",
-                                }}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-3">
-                                      <div
-                                        className={`p-2 rounded-full ${
-                                          drill.completed
-                                            ? "bg-green-500"
-                                            : "bg-gray-600"
-                                        }`}
-                                      >
-                                        {drill.completed ? (
-                                          <CheckCircle2
-                                            className="h-4 w-4"
-                                            style={{ color: "#C3BCC2" }}
-                                          />
-                                        ) : (
-                                          <Dumbbell
-                                            className="h-4 w-4"
-                                            style={{ color: "#C3BCC2" }}
-                                          />
-                                        )}
-                                      </div>
-                                      <h4
-                                        className="text-lg font-semibold flex items-center gap-2"
-                                        style={{
-                                          color: drill.completed
-                                            ? "#10B981"
-                                            : "#C3BCC2",
-                                        }}
-                                      >
-                                        {drill.completed && (
-                                          <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                                        )}
-                                        {drill.supersetId && (
-                                          <div className="flex items-center gap-1 text-xs text-purple-300">
-                                            <Link className="h-3 w-3" />
-                                            <span className="font-medium">
-                                              SUPERSET
-                                            </span>
-                                          </div>
-                                        )}
-                                        {drill.title}
-                                      </h4>
-                                    </div>
-                                    <div
-                                      className="flex items-center gap-4 text-sm mb-3"
-                                      style={{ color: "#ABA4AA" }}
-                                    >
-                                      {drill.sets && (
-                                        <span>{drill.sets} sets</span>
-                                      )}
-                                      {drill.reps && (
-                                        <span>{drill.reps} reps</span>
-                                      )}
-                                      {drill.tempo && (
-                                        <span>Tempo: {drill.tempo}</span>
-                                      )}
-                                    </div>
-                                    {drill.tags && drill.tags.length > 0 && (
-                                      <div className="flex flex-wrap gap-2">
-                                        {drill.tags.map((tag, index) => (
-                                          <Badge
-                                            key={index}
-                                            variant="outline"
-                                            className="text-xs"
-                                            style={{
-                                              borderColor: "#606364",
-                                              color: "#ABA4AA",
-                                            }}
-                                          >
-                                            {tag}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2 ml-4">
-                                    <button
-                                      onClick={() =>
-                                        handleMarkDrillComplete(
-                                          drill.id,
-                                          !drill.completed
-                                        )
-                                      }
-                                      className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-110 ${
-                                        drill.completed
-                                          ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
-                                          : "bg-gray-600 text-gray-300 hover:bg-gray-500 hover:shadow-lg"
-                                      }`}
-                                    >
-                                      <Check className="h-4 w-4" />
-                                    </button>
-                                    {drill.videoUrl && (
-                                      <button className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200">
-                                        <Play className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() =>
-                                        handleSubmitVideo(drill.id, drill.title)
-                                      }
-                                      className="p-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-all duration-200"
-                                    >
-                                      <Upload className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Rest Day */}
-                        {todayData && todayData.isRestDay && (
-                          <div className="text-center py-12">
-                            <div className="text-6xl mb-4">🔋</div>
-                            <h3
-                              className="text-2xl font-bold mb-3"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              Recharge Day
-                            </h3>
-                            <p
-                              className="text-base mb-4"
-                              style={{ color: "#F59E0B" }}
-                            >
-                              Take it easy and recover. You&apos;ve earned it!
-                            </p>
-                            <button
-                              onClick={() => setActiveTab("calendar")}
-                              className="px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2 mx-auto"
-                              style={{
-                                backgroundColor: "#4A5A70",
-                                color: "#C3BCC2",
-                              }}
-                            >
-                              <Calendar className="h-4 w-4" />
-                              View Full Schedule
-                            </button>
-                          </div>
-                        )}
-
-                        {/* No Workouts Today */}
-                        {!todayData && todaysLessons.length === 0 && (
-                          <div className="text-center py-12">
-                            <Target
-                              className="w-16 h-16 mx-auto mb-6"
-                              style={{ color: "#606364" }}
-                            />
-                            <h3
-                              className="text-xl font-semibold mb-3"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              No workouts assigned for today
-                            </h3>
-                            <p
-                              className="text-base mb-4"
-                              style={{ color: "#ABA4AA" }}
-                            >
-                              Check your full program schedule to see upcoming
-                              workouts
-                            </p>
-                            <button
-                              onClick={() => setActiveTab("calendar")}
-                              className="px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2 mx-auto"
-                              style={{
-                                backgroundColor: "#10B981",
-                                color: "#C3BCC2",
-                              }}
-                            >
-                              <Calendar className="h-4 w-4" />
-                              View Full Program
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Upcoming Schedule */}
-                <div
-                  className="rounded-3xl p-8 shadow-2xl border relative overflow-hidden"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                    borderColor: "#4A5A70",
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="p-3 rounded-2xl"
-                        style={{ backgroundColor: "#4A5A70" }}
-                      >
-                        <Calendar
-                          className="h-6 w-6"
-                          style={{ color: "#C3BCC2" }}
-                        />
-                      </div>
-                      <h2
-                        className="text-3xl font-bold"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Upcoming Schedule
-                      </h2>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const now = new Date();
-                    const upcomingLessons = clientLessons
-                      .filter(
-                        (lesson: { date: string }) =>
-                          new Date(lesson.date) > now
-                      )
-                      .slice(0, 5);
-
-                    return (
-                      <div className="space-y-4">
-                        {upcomingLessons.length > 0 ? (
-                          upcomingLessons.map((lesson: any, index: number) => (
-                            <div
-                              key={index}
-                              className="rounded-xl p-6 transition-all duration-200 hover:scale-102 shadow-lg border"
-                              style={{
-                                backgroundColor: "#2B3038",
-                                borderColor: "#606364",
-                                borderWidth: "1px",
-                              }}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <div
-                                      className="p-2 rounded-full"
-                                      style={{ backgroundColor: "#4A5A70" }}
-                                    >
-                                      <CalendarClock
-                                        className="h-4 w-4"
-                                        style={{ color: "#C3BCC2" }}
-                                      />
-                                    </div>
-                                    <h4
-                                      className="text-lg font-semibold"
-                                      style={{ color: "#C3BCC2" }}
-                                    >
-                                      {format(
-                                        new Date(lesson.date),
-                                        "MMM d, h:mm a"
-                                      )}
-                                    </h4>
-                                  </div>
-                                  <p
-                                    className="text-base mb-2"
-                                    style={{ color: "#ABA4AA" }}
-                                  >
-                                    {lesson.title || "Lesson with Coach"}
-                                  </p>
-                                  <div className="flex items-center gap-2">
-                                    <User
-                                      className="h-4 w-4"
-                                      style={{ color: "#ABA4AA" }}
-                                    />
-                                    <span
-                                      className="text-sm"
-                                      style={{ color: "#ABA4AA" }}
-                                    >
-                                      {lesson.coach?.name || "Coach"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <button
-                                  className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105"
-                                  style={{
-                                    backgroundColor: "#4A5A70",
-                                    color: "#C3BCC2",
-                                  }}
-                                >
-                                  Details
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-12">
-                            <CalendarX
-                              className="w-16 h-16 mx-auto mb-6"
-                              style={{ color: "#606364" }}
-                            />
-                            <h3
-                              className="text-xl font-semibold mb-3"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              No upcoming lessons
-                            </h3>
-                            <p
-                              className="text-base"
-                              style={{ color: "#ABA4AA" }}
-                            >
-                              Your schedule is clear for now
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Calendar Tab */}
           {activeTab === "calendar" && (
@@ -1909,12 +936,12 @@ function ClientProgramPage() {
               </div>
 
               {/* Modern Calendar Grid */}
-              <div className="grid grid-cols-7 gap-2 md:gap-6">
+              <div className="grid grid-cols-7 gap-1 md:gap-2">
                 {/* Day headers */}
                 {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
                   <div
                     key={day}
-                    className="p-1 md:p-2 lg:p-8 text-center text-xs md:text-sm lg:text-2xl font-bold mb-1 md:mb-2 lg:mb-4"
+                    className="p-2 text-center text-sm font-semibold mb-2"
                     style={{ color: "#ABA4AA" }}
                   >
                     {day}
@@ -1948,12 +975,12 @@ function ClientProgramPage() {
                       <div
                         key={index}
                         className={cn(
-                          "min-h-[100px] md:min-h-[200px] lg:min-h-[320px] p-1 md:p-2 lg:p-6 rounded-lg md:rounded-xl lg:rounded-3xl transition-all duration-500 cursor-pointer hover:scale-105 hover:shadow-2xl border-2 touch-manipulation",
+                          "min-h-[80px] md:min-h-[100px] p-2 rounded-lg transition-all duration-200 cursor-pointer hover:bg-white/10 border touch-manipulation",
                           isCurrentMonth
-                            ? "bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20 hover:bg-white/10 hover:shadow-xl"
+                            ? "bg-white/5 border-white/10 hover:border-white/20"
                             : "bg-white/2 border-white/5",
                           isToday &&
-                            "ring-4 ring-blue-500/30 border-blue-400/50 shadow-2xl bg-blue-500/10"
+                            "ring-2 ring-blue-500/50 border-blue-400/50 bg-blue-500/10"
                         )}
                         onClick={() => {
                           if (
@@ -1966,27 +993,25 @@ function ClientProgramPage() {
                         }}
                       >
                         {/* Date Header */}
-                        <div className="flex items-center justify-between mb-2 md:mb-6">
+                        <div className="flex items-center justify-between mb-1">
                           <span
                             className={cn(
-                              "text-lg md:text-3xl font-bold",
+                              "text-sm font-bold",
                               isCurrentMonth ? "text-white" : "text-gray-500"
                             )}
                           >
                             {format(date, "d")}
                           </span>
                           {dayData && dayData.totalDrills > 0 && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs md:text-sm px-2 md:px-4 py-1 md:py-2 rounded-full font-bold shadow-lg"
+                            <span
+                              className="text-xs px-2 py-1 rounded-full font-medium"
                               style={{
-                                background:
-                                  "linear-gradient(135deg, #10B981, #059669)",
+                                backgroundColor: "#10B981",
                                 color: "#FFFFFF",
                               }}
                             >
                               {dayData.completedDrills}/{dayData.totalDrills}
-                            </Badge>
+                            </span>
                           )}
                         </div>
 
@@ -1994,66 +1019,31 @@ function ClientProgramPage() {
                         {dayData &&
                           dayData.drills &&
                           dayData.drills.length > 0 && (
-                            <div className="space-y-2 md:space-y-3">
+                            <div className="space-y-1">
                               {dayData.drills
-                                .slice(0, 3)
+                                .slice(0, 2)
                                 .map((drill, drillIndex) => (
                                   <div
                                     key={drillIndex}
-                                    className={`p-2 md:p-4 rounded-xl md:rounded-2xl cursor-pointer hover:bg-white/10 transition-all duration-300 hover:scale-102 backdrop-blur-sm ${
-                                      justCompletedDrills.has(drill.id)
-                                        ? "animate-pulse scale-105"
-                                        : ""
+                                    className={`p-1 rounded text-xs transition-all duration-200 ${
+                                      drill.completed
+                                        ? "bg-green-500/20 text-green-400"
+                                        : "bg-gray-600/20 text-gray-300"
                                     }`}
-                                    style={{
-                                      background: drill.completed
-                                        ? "linear-gradient(135deg, #1F2A1F, #2A3A2A)"
-                                        : "linear-gradient(135deg, #1F2426, #2A3133)",
-                                      border: drill.completed
-                                        ? "2px solid #10B981"
-                                        : "1px solid #353A3A",
-                                      boxShadow: justCompletedDrills.has(
-                                        drill.id
-                                      )
-                                        ? "0 0 20px rgba(16, 185, 129, 0.5)"
-                                        : "none",
-                                    }}
                                   >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex-1">
-                                        <div
-                                          className="font-semibold text-xs md:text-sm mb-1 md:mb-2 flex items-center gap-2"
-                                          style={{
-                                            color: drill.completed
-                                              ? "#10B981"
-                                              : "#FFFFFF",
-                                          }}
-                                        >
-                                          {drill.completed && (
-                                            <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-500 flex-shrink-0" />
-                                          )}
-                                          {drill.supersetId && (
-                                            <div className="flex items-center gap-1 text-xs text-purple-300">
-                                              <Link className="h-3 w-3" />
-                                              <span className="font-medium">
-                                                SUPERSET
-                                              </span>
-                                            </div>
-                                          )}
-                                          {drill.title}
-                                        </div>
-                                      </div>
+                                    <div className="flex items-center gap-1">
+                                      {drill.completed && (
+                                        <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                      )}
+                                      <span className="truncate">
+                                        {drill.title}
+                                      </span>
                                     </div>
                                   </div>
                                 ))}
-                              {dayData.drills.length > 3 && (
-                                <div className="text-center py-2 md:py-3">
-                                  <span
-                                    className="text-xs md:text-sm"
-                                    style={{ color: "#ABA4AA" }}
-                                  >
-                                    +{dayData.drills.length - 3} more exercises
-                                  </span>
+                              {dayData.drills.length > 2 && (
+                                <div className="text-xs text-gray-400 text-center">
+                                  +{dayData.drills.length - 2} more
                                 </div>
                               )}
                             </div>
@@ -2061,40 +1051,17 @@ function ClientProgramPage() {
 
                         {/* Rest Day Indicator */}
                         {dayData && dayData.isRestDay && (
-                          <div className="flex items-center justify-center h-20 md:h-32 mt-2 md:mt-4">
-                            <div
-                              className="text-center p-2 md:p-4 rounded-xl md:rounded-2xl transition-all duration-300 hover:scale-105"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg, #1F2426, #2A3133)",
-                                border: "2px solid #F59E0B",
-                                boxShadow:
-                                  "0 4px 16px rgba(245, 158, 11, 0.15)",
-                              }}
-                            >
-                              <div className="text-2xl md:text-3xl mb-1 md:mb-2">
-                                🔋
-                              </div>
-                              <div className="font-bold text-white text-sm md:text-base mb-1">
-                                Recharge Day
-                              </div>
-                              <div
-                                className="text-xs md:text-sm"
-                                style={{ color: "#F59E0B" }}
-                              >
-                                Recovery time
-                              </div>
+                          <div className="mt-2 text-center">
+                            <div className="text-xs bg-yellow-500/20 text-yellow-400 p-1 rounded">
+                              🔋 Rest Day
                             </div>
                           </div>
                         )}
 
                         {/* Lessons */}
                         {lessonsForDay.length > 0 && (
-                          <div className="mt-4 md:mt-6 space-y-2 md:space-y-3">
-                            <div className="text-xs md:text-sm font-semibold text-blue-400 mb-2 md:mb-3">
-                              📅 Lessons Today
-                            </div>
-                            {lessonsForDay.slice(0, 2).map(
+                          <div className="mt-2 space-y-1">
+                            {lessonsForDay.slice(0, 1).map(
                               (
                                 lesson: {
                                   id: string;
@@ -2106,27 +1073,20 @@ function ClientProgramPage() {
                               ) => (
                                 <div
                                   key={lessonIndex}
-                                  className="p-2 md:p-4 rounded-xl md:rounded-2xl"
-                                  style={{
-                                    background:
-                                      "linear-gradient(135deg, #10B981, #059669)",
-                                    border: "1px solid #059669",
-                                  }}
+                                  className="p-1 rounded text-xs bg-blue-500/20 text-blue-400"
                                 >
-                                  <div className="font-bold text-white text-xs md:text-sm">
+                                  <div className="font-medium">
                                     {format(new Date(lesson.date), "h:mm a")}
                                   </div>
-                                  <div className="text-xs text-green-100 truncate">
+                                  <div className="truncate">
                                     {lesson.title || "Lesson"}
                                   </div>
                                 </div>
                               )
                             )}
-                            {lessonsForDay.length > 2 && (
-                              <div className="text-center">
-                                <span className="text-xs md:text-sm text-gray-400">
-                                  +{lessonsForDay.length - 2} more lessons
-                                </span>
+                            {lessonsForDay.length > 1 && (
+                              <div className="text-xs text-gray-400 text-center">
+                                +{lessonsForDay.length - 1} more
                               </div>
                             )}
                           </div>
@@ -2134,11 +1094,9 @@ function ClientProgramPage() {
 
                         {/* Empty Day */}
                         {!dayData && isCurrentMonth && (
-                          <div className="flex items-center justify-center h-20 md:h-40">
-                            <div className="text-center">
-                              <div className="text-gray-500 text-xs md:text-sm">
-                                No program
-                              </div>
+                          <div className="text-center mt-2">
+                            <div className="text-xs text-gray-500">
+                              No program
                             </div>
                           </div>
                         )}
@@ -2195,7 +1153,7 @@ function ClientProgramPage() {
                       the Programs tab.
                     </p>
                     <button
-                      onClick={() => setActiveTab("overview")}
+                      onClick={() => setActiveTab("calendar")}
                       className="px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2"
                       style={{
                         backgroundColor: "#10B981",

@@ -35,6 +35,7 @@ import {
   TrendingUp,
   PlayCircle,
   Upload,
+  Calendar,
 } from "lucide-react";
 import MessagePopup from "./MessagePopup";
 import NotificationPopup from "./NotificationPopup";
@@ -45,25 +46,17 @@ const navLinks = [
     name: "Dashboard",
     icon: <FiHome />,
     href: "/client-dashboard",
-    description: "Overview & progress",
+    description: "Program & progress",
     badge: null,
     gradient: "from-blue-500 to-cyan-500",
   },
   {
-    name: "Program",
-    icon: <FiClipboard />,
-    href: "/client-program",
-    description: "Training program",
+    name: "Schedule",
+    icon: <Calendar />,
+    href: "/client-schedule",
+    description: "Training calendar",
     badge: null,
     gradient: "from-green-500 to-emerald-500",
-  },
-  {
-    name: "Schedule",
-    icon: <FiCalendar />,
-    href: "/client-schedule",
-    description: "Lesson schedule",
-    badge: null,
-    gradient: "from-purple-500 to-violet-500",
   },
   {
     name: "Messages",
