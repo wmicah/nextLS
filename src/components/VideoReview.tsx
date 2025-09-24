@@ -23,6 +23,8 @@ import {
   Settings,
   MessageSquare,
   Trash2,
+  Triangle,
+  Square,
 } from "lucide-react";
 import VideoAnnotation from "./VideoAnnotation";
 import AudioRecorder from "./AudioRecorder";
@@ -46,10 +48,18 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [showScreenRecording, setShowScreenRecording] = useState(false);
   const [isScreenRecordingActive, setIsScreenRecordingActive] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   // Annotation state
   const [currentTool, setCurrentTool] = useState<
-    "pen" | "highlight" | "arrow" | "circle" | "text" | "erase"
+    | "pen"
+    | "highlight"
+    | "arrow"
+    | "circle"
+    | "text"
+    | "erase"
+    | "angle"
+    | "right-angle"
   >("pen");
   const [currentColor, setCurrentColor] = useState("#ff0000");
   const [currentWidth, setCurrentWidth] = useState(2);
@@ -57,11 +67,27 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
   const [undoStack, setUndoStack] = useState<any[][]>([]);
   const [redoStack, setRedoStack] = useState<any[][]>([]);
 
+  // Angle measurement state
+  const [anglePoints, setAnglePoints] = useState<{ x: number; y: number }[]>(
+    []
+  );
+  const [isDrawingAngle, setIsDrawingAngle] = useState(false);
+
   // Event handlers for video events (performance optimization)
   const handleVideoError = (
     e: React.SyntheticEvent<HTMLVideoElement, Event>
   ) => {
     console.error("Video error:", e);
+    console.error("Video error details:", {
+      error: e.currentTarget.error,
+      networkState: e.currentTarget.networkState,
+      readyState: e.currentTarget.readyState,
+      src: e.currentTarget.src,
+      currentSrc: e.currentTarget.currentSrc,
+    });
+    setVideoError(
+      "Failed to load video. Please check the video URL and try again."
+    );
   };
 
   const handleVideoLoadStart = () => {
@@ -74,6 +100,7 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
 
   const handleVideoCanPlay = () => {
     console.log("Video can play");
+    setVideoError(null);
   };
 
   const handleTimeUpdate = () => {
@@ -448,6 +475,9 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
   }
 
   console.log("Current video data:", currentVideo);
+  console.log("Video URL:", currentVideo?.url);
+  console.log("Video URL type:", typeof currentVideo?.url);
+  console.log("Video URL starts with:", currentVideo?.url?.substring(0, 20));
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#1a1a1a" }}>
@@ -494,19 +524,45 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
           <div className="space-y-6">
             {/* Video Player */}
             <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
-              <video
-                ref={videoRef}
-                src={currentVideo.url}
-                className="w-full h-auto"
-                controls={false}
-                preload="metadata"
-                playsInline
-                onError={handleVideoError}
-                onLoadStart={handleVideoLoadStart}
-                onLoadedMetadata={handleVideoMetadataLoaded}
-                onCanPlay={handleVideoCanPlay}
-                onTimeUpdate={handleTimeUpdate}
-              />
+              {videoError ? (
+                <div className="flex items-center justify-center h-96 bg-gray-900">
+                  <div className="text-center p-8">
+                    <div className="text-red-500 text-6xl mb-4">⚠️</div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      Video Error
+                    </h3>
+                    <p className="text-gray-400 mb-4">{videoError}</p>
+                    <p className="text-sm text-gray-500">
+                      Video URL: {currentVideo.url}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setVideoError(null);
+                        if (videoRef.current) {
+                          videoRef.current.load();
+                        }
+                      }}
+                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={currentVideo.url}
+                  className="w-full h-auto"
+                  controls={false}
+                  preload="metadata"
+                  playsInline
+                  onError={handleVideoError}
+                  onLoadStart={handleVideoLoadStart}
+                  onLoadedMetadata={handleVideoMetadataLoaded}
+                  onCanPlay={handleVideoCanPlay}
+                  onTimeUpdate={handleTimeUpdate}
+                />
+              )}
 
               {/* Video Controls Overlay */}
               <div
@@ -645,6 +701,10 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                       currentWidth={currentWidth}
                       paths={paths}
                       setPaths={setPaths}
+                      anglePoints={anglePoints}
+                      setAnglePoints={setAnglePoints}
+                      isDrawingAngle={isDrawingAngle}
+                      setIsDrawingAngle={setIsDrawingAngle}
                     />
                   </ErrorBoundary>
                 </div>
@@ -736,6 +796,31 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                     title="Erase"
                   >
                     <Eraser className="w-5 h-5" style={{ color: "#ffffff" }} />
+                  </button>
+                  <button
+                    onClick={() => setCurrentTool("angle")}
+                    className={`p-3 rounded-xl transition-all duration-200 ${
+                      currentTool === "angle"
+                        ? "bg-blue-600 shadow-lg"
+                        : "hover:bg-white/10"
+                    }`}
+                    title="Angle Finder"
+                  >
+                    <Triangle
+                      className="w-5 h-5"
+                      style={{ color: "#ffffff" }}
+                    />
+                  </button>
+                  <button
+                    onClick={() => setCurrentTool("right-angle")}
+                    className={`p-3 rounded-xl transition-all duration-200 ${
+                      currentTool === "right-angle"
+                        ? "bg-blue-600 shadow-lg"
+                        : "hover:bg-white/10"
+                    }`}
+                    title="90° Angle"
+                  >
+                    <Square className="w-5 h-5" style={{ color: "#ffffff" }} />
                   </button>
 
                   <div
