@@ -9,7 +9,7 @@ import Link from "next/link";
 interface MessagePopupProps {
   isOpen: boolean;
   onClose: () => void;
-  buttonRef?: RefObject<HTMLButtonElement>;
+  buttonRef?: RefObject<HTMLButtonElement | null>;
 }
 
 export default function MessagePopup({

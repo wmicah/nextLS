@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import {
@@ -159,11 +159,9 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                     </div>
                     <span
                       className="text-white font-medium hidden xl:block max-w-32 truncate"
-                      title={
-                        authData?.user?.name || userSettings?.name || "Client"
-                      }
+                      title={authData?.user?.name || "Client"}
                     >
-                      {authData?.user?.name || userSettings?.name || "Client"}
+                      {authData?.user?.name || "Client"}
                     </span>
                   </button>
                 </div>
@@ -274,9 +272,9 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 </div>
                 <span
                   className="text-white font-medium truncate max-w-40"
-                  title={authData?.user?.name || userSettings?.name || "Client"}
+                  title={authData?.user?.name || "Client"}
                 >
-                  {authData?.user?.name || userSettings?.name || "Client"}
+                  {authData?.user?.name || "Client"}
                 </span>
               </div>
 
