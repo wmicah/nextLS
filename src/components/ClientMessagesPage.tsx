@@ -5,16 +5,14 @@ import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
-  Plus,
   MoreVertical,
   Send,
   Paperclip,
   File,
   CheckCheck,
-  X,
   ArrowLeft,
 } from "lucide-react";
-import ClientSidebar from "./ClientSidebar";
+import ClientTopNav from "./ClientTopNav";
 import { format } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import ProfilePictureUploader from "./ProfilePictureUploader";
@@ -40,8 +38,6 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   // const [isTyping, setIsTyping] = useState(false)
   // const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showFileUpload, setShowFileUpload] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [selectedFile, setSelectedFile] = useState<{
     file: File;
     uploadData: {
@@ -120,19 +116,6 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
     }
     return null;
   };
-
-  const createConversationMutation =
-    trpc.messaging.createConversationWithAnotherClient.useMutation({
-      onSuccess: conversation => {
-        setSelectedConversation(conversation.id);
-        refetchConversations();
-        setShowCreateModal(false);
-        setClientSearchTerm("");
-      },
-      onError: error => {
-        console.error("Failed to create conversation:", error);
-      },
-    });
 
   // Get current user for sidebar
   const { data: authData } = trpc.authCallback.useQuery();
@@ -265,14 +248,6 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
     setShowFileUpload(false);
   };
 
-  const handleCreateConversation = (otherClientId: string) => {
-    // Prevent creating client-to-client conversations for free messaging
-    // Only allow swap requests through the schedule page
-    alert(
-      "Client-to-client conversations are restricted to time swap requests only. Please use the schedule page to request lesson swaps."
-    );
-  };
-
   const filteredConversations = conversations.filter((conversation: any) => {
     if (!searchTerm) return true;
 
@@ -283,24 +258,12 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
     return otherUserName.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const filteredClients = otherClients.filter((client: any) => {
-    if (!clientSearchTerm) return true;
-    const searchLower = clientSearchTerm.toLowerCase();
-    return (
-      client.name?.toLowerCase().includes(searchLower) ||
-      client.email?.toLowerCase().includes(searchLower)
-    );
-  });
-
   return (
-    <ClientSidebar
-      user={
-        sidebarUser
-          ? { name: sidebarUser.name, email: sidebarUser.email }
-          : undefined
-      }
-    >
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <ClientTopNav>
+      <div
+        className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6"
+        style={{ backgroundColor: "#2A3133" }}
+      >
         {/* Hero Header */}
         <div className="mb-8">
           <div className="rounded-2xl border relative overflow-hidden group">
@@ -383,21 +346,6 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                 >
                   Conversations
                 </h2>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg"
-                  style={{ backgroundColor: "#E0E0E0", color: "#000000" }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#E0E0E1";
-                    e.currentTarget.style.transform = "scale(1.1)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#E0E0E0";
-                    e.currentTarget.style.transform = "scale(1)";
-                  }}
-                >
-                  <Plus className="h-5 w-5" />
-                </button>
               </div>
 
               {/* Search */}
@@ -957,96 +905,6 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
           </div>
         </div>
 
-        {/* Create Conversation Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div
-              className="bg-gray-800 border border-gray-700 rounded-2xl w-96 max-h-[80vh] overflow-y-auto"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div className="p-6 border-b" style={{ borderColor: "#606364" }}>
-                <div className="flex items-center justify-between">
-                  <h3
-                    className="text-xl font-semibold"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    Client-to-Client Messaging
-                  </h3>
-                  <button
-                    onClick={() => setShowCreateModal(false)}
-                    className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div
-                  className="mb-4 p-4 rounded-lg border"
-                  style={{ backgroundColor: "#2A3133", borderColor: "#4A5A70" }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <File className="h-4 w-4" style={{ color: "#ABA4AA" }} />
-                    <p
-                      className="text-sm font-medium"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Client-to-Client Messaging Restricted
-                    </p>
-                  </div>
-                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                    Direct messaging between clients is not allowed.
-                    Client-to-client communication is restricted to time swap
-                    requests only. Use the schedule page to request lesson
-                    swaps.
-                  </p>
-                </div>
-
-                <div className="mb-4">
-                  <div className="relative">
-                    <Search
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                      style={{ color: "#ABA4AA" }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search peers..."
-                      value={clientSearchTerm}
-                      onChange={e => setClientSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 transition-all duration-200"
-                      style={{
-                        backgroundColor: "#2A3133",
-                        color: "#C3BCC2",
-                        borderColor: "#606364",
-                      }}
-                      onFocus={e => {
-                        e.currentTarget.style.borderColor = "#4A5A70";
-                      }}
-                      onBlur={e => {
-                        e.currentTarget.style.borderColor = "#606364";
-                      }}
-                      disabled={true}
-                    />
-                  </div>
-                </div>
-
-                <div className="max-h-64 overflow-y-auto">
-                  <div className="text-center py-4">
-                    <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                      Client-to-client messaging is disabled
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: "#ABA4AA" }}>
-                      Use the schedule page to request lesson swaps
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* File Upload Modal */}
         {showFileUpload && (
           <MessageFileUpload
@@ -1055,7 +913,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
           />
         )}
       </div>
-    </ClientSidebar>
+    </ClientTopNav>
   );
 }
 

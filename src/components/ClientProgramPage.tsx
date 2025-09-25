@@ -66,7 +66,7 @@ import {
   // isPast,
   // isFuture,
 } from "date-fns";
-import ClientSidebar from "@/components/ClientSidebar";
+import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientProgramPage from "./MobileClientProgramPage";
 
@@ -126,6 +126,8 @@ function ClientProgramPage() {
     id: string;
     title: string;
   } | null>(null);
+  const [isCoachNotesExpanded, setIsCoachNotesExpanded] = useState(false);
+  const [isCoachNotesModalOpen, setIsCoachNotesModalOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<{
     id: string;
     title: string;
@@ -699,27 +701,22 @@ function ClientProgramPage() {
   // }
 
   return (
-    <ClientSidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2a3133" }}>
+    <ClientTopNav>
+      <div
+        className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6"
+        style={{ backgroundColor: "#2a3133" }}
+      >
         {/* Header Section with Gradient Background */}
         <div className="mb-8 md:mb-12">
           <div>
             {/* Decorative background elements */}
             <div className="absolute top-0 right-0 w-32 h-32 opacity-10"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 opacity-10">
-              <div
-                className="w-full h-full rounded-full"
-                style={{
-                  background: "linear-gradient(45deg, #4A5A70, #606364)",
-                }}
-              />
-            </div>
           </div>
 
           {/* Summary Box */}
           <div className="mb-6 md:mb-8 px-4">
             <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
                 {/* Upcoming Lesson */}
                 <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20 hover:border-emerald-400/40">
                   {/* Background Pattern */}
@@ -793,9 +790,19 @@ function ClientProgramPage() {
                     {coachNotes?.notes ? (
                       <div className="space-y-3">
                         <div className="bg-purple-500/10 rounded-2xl p-3 md:p-4 border border-purple-400/20">
-                          <p className="text-xs md:text-sm text-purple-100 line-clamp-3 leading-relaxed">
-                            {coachNotes.notes}
+                          <p className="text-xs md:text-sm text-purple-100 leading-relaxed">
+                            {coachNotes.notes.length > 20
+                              ? `${coachNotes.notes.substring(0, 20)}...`
+                              : coachNotes.notes}
                           </p>
+                          {coachNotes.notes.length > 20 && (
+                            <button
+                              onClick={() => setIsCoachNotesModalOpen(true)}
+                              className="mt-2 text-xs font-semibold text-purple-300 hover:text-purple-200 transition-colors duration-200"
+                            >
+                              Read Full Note
+                            </button>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
@@ -813,6 +820,39 @@ function ClientProgramPage() {
                         <p className="text-sm text-gray-400">No feedback yet</p>
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* View Full Schedule Button */}
+                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-blue-700/10 border-blue-500/20 hover:border-blue-400/40">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 opacity-5">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-300 rounded-full blur-2xl"></div>
+                  </div>
+
+                  <div className="relative z-10 flex flex-col items-center justify-center h-full min-h-[120px] text-center">
+                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
+                      <div className="p-2 md:p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                        <Calendar className="h-4 w-4 md:h-6 md:w-6 text-white" />
+                      </div>
+                      <h3 className="text-lg md:text-xl font-bold text-white">
+                        Schedule
+                      </h3>
+                    </div>
+
+                    <p className="text-xs md:text-sm text-blue-200/80 mb-4 leading-relaxed">
+                      View your complete training schedule and upcoming sessions
+                    </p>
+
+                    <button
+                      onClick={() =>
+                        (window.location.href = "/client-schedule")
+                      }
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      View Full Schedule
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1110,79 +1150,6 @@ function ClientProgramPage() {
           {/* Pitching Dashboard Tab */}
           {activeTab === "progress" && (
             <div className="space-y-8">
-              {/* Today's Plan */}
-              <div
-                className="rounded-3xl p-8 shadow-2xl border relative overflow-hidden"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                  borderColor: "#10B981",
-                }}
-              >
-                <div className="flex items-center gap-4 mb-6">
-                  <div
-                    className="p-3 rounded-2xl"
-                    style={{ backgroundColor: "#10B981" }}
-                  >
-                    <Calendar
-                      className="h-8 w-8"
-                      style={{ color: "#C3BCC2" }}
-                    />
-                  </div>
-                  <h2
-                    className="text-3xl font-bold"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    Today's Plan
-                  </h2>
-                </div>
-
-                {programInfo ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2
-                        className="h-6 w-6"
-                        style={{ color: "#10B981" }}
-                      />
-                      <p className="text-lg" style={{ color: "#C3BCC2" }}>
-                        You have a program scheduled!
-                      </p>
-                    </div>
-                    <p className="text-base" style={{ color: "#ABA4AA" }}>
-                      Complete your assigned workout and track your progress in
-                      the Programs tab.
-                    </p>
-                    <button
-                      onClick={() => setActiveTab("calendar")}
-                      className="px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2"
-                      style={{
-                        backgroundColor: "#10B981",
-                        color: "#C3BCC2",
-                      }}
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                      Go to Programs
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <CalendarClock
-                        className="h-6 w-6"
-                        style={{ color: "#F59E0B" }}
-                      />
-                      <p className="text-lg" style={{ color: "#C3BCC2" }}>
-                        No program scheduled today
-                      </p>
-                    </div>
-                    <p className="text-base" style={{ color: "#ABA4AA" }}>
-                      Take a rest day or work on your own pitching drills. Focus
-                      on form and technique.
-                    </p>
-                  </div>
-                )}
-              </div>
-
               {/* Pitching Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div
@@ -1319,83 +1286,6 @@ function ClientProgramPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Next Lesson */}
-              <div
-                className="rounded-3xl p-8 shadow-2xl border relative overflow-hidden"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                  borderColor: "#F59E0B",
-                }}
-              >
-                <div className="flex items-center gap-4 mb-6">
-                  <div
-                    className="p-3 rounded-2xl"
-                    style={{ backgroundColor: "#F59E0B" }}
-                  >
-                    <Calendar
-                      className="h-8 w-8"
-                      style={{ color: "#C3BCC2" }}
-                    />
-                  </div>
-                  <h2
-                    className="text-2xl font-bold"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    Next Lesson
-                  </h2>
-                </div>
-
-                {nextLesson ? (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg" style={{ color: "#ABA4AA" }}>
-                        Date & Time
-                      </span>
-                      <span
-                        className="text-lg font-bold"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        {new Date(nextLesson.date).toLocaleDateString()} at{" "}
-                        {new Date(nextLesson.date).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                    {nextLesson.title && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg" style={{ color: "#ABA4AA" }}>
-                          Focus
-                        </span>
-                        <span
-                          className="text-lg font-bold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {nextLesson.title}
-                        </span>
-                      </div>
-                    )}
-                    {nextLesson.description && (
-                      <div className="mt-4">
-                        <span className="text-sm" style={{ color: "#ABA4AA" }}>
-                          {nextLesson.description}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-lg mb-2" style={{ color: "#ABA4AA" }}>
-                      No upcoming lessons scheduled
-                    </div>
-                    <div className="text-sm" style={{ color: "#606364" }}>
-                      Contact your coach to schedule your next session
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Speed Progress Chart */}
@@ -2172,9 +2062,66 @@ function ClientProgramPage() {
             drillId={selectedDrillForVideo?.id}
             drillTitle={selectedDrillForVideo?.title}
           />
+
+          {/* Coach Notes Modal */}
+          {isCoachNotesModalOpen && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-8 max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gray-100">
+                      <FileText className="h-6 w-6 text-gray-700" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      Coach Notes
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setIsCoachNotesModalOpen(false)}
+                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+                  >
+                    <X className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                    <p className="text-base leading-7 text-gray-800 whitespace-pre-wrap">
+                      {coachNotes?.notes}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <p className="text-sm text-gray-600 font-medium">
+                      Updated{" "}
+                      {new Date(coachNotes?.updatedAt || "").toLocaleDateString(
+                        "en-US",
+                        {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end mt-8">
+                  <button
+                    onClick={() => setIsCoachNotesModalOpen(false)}
+                    className="px-8 py-3 bg-gray-900 text-white text-base font-semibold rounded-xl hover:bg-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </ClientSidebar>
+    </ClientTopNav>
   );
 }
 

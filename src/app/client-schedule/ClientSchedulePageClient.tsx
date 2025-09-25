@@ -28,7 +28,7 @@ import {
   endOfWeek,
   isSameMonth,
 } from "date-fns";
-import ClientSidebar from "@/components/ClientSidebar";
+import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientSchedulePage from "@/components/MobileClientSchedulePage";
 import TimeSwap from "@/components/TimeSwap";
@@ -471,8 +471,8 @@ function ClientSchedulePageClient() {
   };
 
   return (
-    <ClientSidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2a3133" }}>
+    <ClientTopNav>
+      <div className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6" style={{ backgroundColor: "#2a3133" }}>
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
@@ -1481,7 +1481,7 @@ function ClientSchedulePageClient() {
           )}
         </div>
       </div>
-    </ClientSidebar>
+    </ClientTopNav>
   );
 }
 

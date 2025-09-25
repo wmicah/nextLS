@@ -15,6 +15,103 @@ import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { adminRouter } from "./admin";
 // Removed circular dependency - notification will be handled differently
 
+// Helper function to send welcome message from coach to client
+async function sendWelcomeMessage(coachId: string, clientUserId: string) {
+  console.log(
+    `🎉 Sending welcome message from coach ${coachId} to client ${clientUserId}`
+  );
+  try {
+    // Check if conversation already exists
+    const existingConversation = await db.conversation.findFirst({
+      where: {
+        coachId,
+        clientId: clientUserId,
+      },
+    });
+
+    let conversationId: string;
+
+    if (existingConversation) {
+      conversationId = existingConversation.id;
+    } else {
+      // Create new conversation
+      const conversation = await db.conversation.create({
+        data: {
+          coachId,
+          clientId: clientUserId,
+        },
+      });
+      conversationId = conversation.id;
+    }
+
+    // Check if welcome message already exists
+    const existingWelcomeMessage = await db.message.findFirst({
+      where: {
+        conversationId,
+        content: {
+          contains: "Welcome to Next Level Softball!",
+        },
+      },
+    });
+
+    if (existingWelcomeMessage) {
+      return; // Don't send duplicate welcome message
+    }
+
+    // Get coach info for the message
+    const coach = await db.user.findUnique({
+      where: { id: coachId },
+      select: { name: true, email: true },
+    });
+
+    const coachName =
+      coach?.name || coach?.email?.split("@")[0] || "Your Coach";
+
+    // Create welcome message
+    const welcomeMessage = await db.message.create({
+      data: {
+        conversationId,
+        senderId: coachId,
+        content: `Welcome to Next Level Softball! Hi there, I'm ${coachName}, your softball coach. I'm excited to work with you and help you reach your goals. Feel free to message me anytime with questions, concerns, or just to chat about your progress.`,
+      },
+    });
+
+    console.log(
+      `✅ Welcome message sent successfully! Message ID: ${welcomeMessage.id}`
+    );
+
+    // Send real-time notification
+    try {
+      const { sendToUser } = await import("@/app/api/sse/messages/route");
+      sendToUser(clientUserId, {
+        type: "new_message",
+        data: {
+          message: welcomeMessage,
+          conversationId,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to send real-time notification:", error);
+    }
+
+    return welcomeMessage;
+  } catch (error) {
+    console.error("Failed to send welcome message:", error);
+    return null;
+  }
+}
+
+// Helper function to ensure user.id is not null (should always be true after auth)
+function ensureUserId(userId: string | null): string {
+  if (!userId) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "User ID is required",
+    });
+  }
+  return userId;
+}
+
 export const appRouter = router({
   authCallback: publicProcedure.query(
     async (): Promise<{
@@ -217,10 +314,27 @@ export const appRouter = router({
                 updatedUser.name || "A new client"
               } wants to join your coaching program.`,
               data: {
-                clientId: user.id,
+                clientId: ensureUserId(user.id),
                 clientName: updatedUser.name,
                 clientEmail: updatedUser.email,
               },
+            },
+          });
+
+          // Send welcome message from coach to client
+          await sendWelcomeMessage(input.coachId, user.id);
+        } else if (input.role === "CLIENT" && !input.coachId) {
+          // Client without coach - create a placeholder client record
+          await db.client.upsert({
+            where: { userId: user.id },
+            update: {
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+            },
+            create: {
+              userId: user.id,
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
             },
           });
         }
@@ -327,9 +441,12 @@ export const appRouter = router({
         db.message.count({
           where: {
             isRead: false,
-            senderId: { not: user.id },
+            senderId: { not: ensureUserId(user.id) },
             conversation: {
-              OR: [{ coachId: user.id }, { clientId: user.id }],
+              OR: [
+                { coachId: ensureUserId(user.id) },
+                { clientId: ensureUserId(user.id) },
+              ],
             },
           },
         }),
@@ -490,7 +607,7 @@ export const appRouter = router({
           });
         }
 
-        const whereClause: any = { coachId: user.id };
+        const whereClause: any = { coachId: ensureUserId(user.id) };
 
         // Filter by archived status if provided
         if (input?.archived !== undefined) {
@@ -585,7 +702,7 @@ export const appRouter = router({
       // Get all active clients
       const clients = await db.client.findMany({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           archived: false,
         },
         select: {
@@ -671,7 +788,7 @@ export const appRouter = router({
       // Get all active clients
       const clients = await db.client.findMany({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           archived: false,
         },
         select: {
@@ -804,7 +921,7 @@ export const appRouter = router({
           client = await db.client.update({
             where: { id: existingClient.id },
             data: {
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
               userId: userId, // Link to their user account
               // Update other fields if provided
               ...(input.name && { name: input.name }),
@@ -850,7 +967,7 @@ export const appRouter = router({
               email: input.email || null,
               phone: input.phone || null,
               notes: input.notes || null,
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
               userId: userId, // Link to user account if found
               nextLessonDate: input.nextLessonDate
                 ? new Date(input.nextLessonDate)
@@ -870,6 +987,11 @@ export const appRouter = router({
               curveSpinRate: input.curveSpinRate || null,
             },
           });
+        }
+
+        // Send welcome message if client has a user account
+        if (client.userId) {
+          await sendWelcomeMessage(user.id, client.userId);
         }
 
         return client;
@@ -963,7 +1085,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -1008,7 +1130,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -1057,7 +1179,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -1102,7 +1224,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             archived: false, // Only allow access to active clients
           },
           select: {
@@ -1199,7 +1321,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             archived: false, // Only allow access to active clients
           },
         });
@@ -1293,7 +1415,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             archived: false, // Only allow updating active clients
           },
         });
@@ -1461,7 +1583,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -1627,7 +1749,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -1642,7 +1764,7 @@ export const appRouter = router({
         console.log("🔍 Replace workout debug:", {
           programId: input.programId,
           clientId: input.clientId,
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           dayDate: input.dayDate,
         });
 
@@ -1669,7 +1791,7 @@ export const appRouter = router({
             programId: input.programId,
             clientId: input.clientId,
             client: {
-              coachId: user.id, // Ensure the client belongs to this coach
+              coachId: ensureUserId(user.id), // Ensure the client belongs to this coach
             },
           },
           include: {
@@ -1686,7 +1808,7 @@ export const appRouter = router({
             where: {
               clientId: input.clientId,
               client: {
-                coachId: user.id,
+                coachId: ensureUserId(user.id),
               },
             },
             include: {
@@ -1746,7 +1868,7 @@ export const appRouter = router({
             date: lessonDate,
             status: "CONFIRMED",
             clientId: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -1756,7 +1878,7 @@ export const appRouter = router({
             assignmentId: programAssignment.id,
             programId: input.programId,
             clientId: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             replacedDate: lessonDate,
             lessonId: lesson.id,
             replacementReason: `Replaced with lesson: ${input.lessonData.title}`,
@@ -1832,7 +1954,7 @@ export const appRouter = router({
               });
             }
 
-            where.coachId = client.coachId;
+            where.coachId = client.coachId || undefined;
           }
 
           if (input.search) {
@@ -1919,7 +2041,7 @@ export const appRouter = router({
 
       const videoCount = await db.libraryResource.count({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           OR: [{ type: "video" }, { isYoutube: true }],
         },
       });
@@ -1957,7 +2079,7 @@ export const appRouter = router({
         // Get client video submissions that reference this library item
         const comments = await db.clientVideoSubmission.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             drillId: input.videoId, // This links to the library item
             comment: { not: null }, // Only get submissions with comments
           },
@@ -1985,7 +2107,7 @@ export const appRouter = router({
         where: {
           assignments: {
             some: {
-              clientId: user.id,
+              clientId: ensureUserId(user.id),
             },
           },
           type: "video",
@@ -1993,7 +2115,7 @@ export const appRouter = router({
         include: {
           assignments: {
             where: {
-              clientId: user.id,
+              clientId: ensureUserId(user.id),
             },
           },
         },
@@ -2025,7 +2147,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -2093,7 +2215,7 @@ export const appRouter = router({
         const video = await db.libraryResource.findFirst({
           where: {
             id: input.videoId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -2108,7 +2230,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             userId: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -2160,7 +2282,7 @@ export const appRouter = router({
           where: {
             videoId_clientId: {
               videoId: input.videoId,
-              clientId: user.id,
+              clientId: ensureUserId(user.id),
             },
           },
           data: {
@@ -2201,7 +2323,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             userId: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -2296,7 +2418,7 @@ export const appRouter = router({
             url: input.url,
             duration: input.duration,
             thumbnail: input.thumbnail || "📚",
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             views: 0,
             rating: 0,
           },
@@ -2363,7 +2485,7 @@ export const appRouter = router({
             type,
             fileUrl: input.fileUrl,
             filename: input.filename,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           });
 
           // Use transaction to ensure data consistency
@@ -2377,7 +2499,7 @@ export const appRouter = router({
                 url: input.fileUrl,
                 filename: input.filename,
                 thumbnail: input.thumbnail || (type === "video" ? "🎥" : "📄"),
-                coachId: user.id,
+                coachId: ensureUserId(user.id),
                 views: 0,
                 rating: 0,
               },
@@ -2446,7 +2568,7 @@ export const appRouter = router({
         const resource = await db.libraryResource.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -2650,7 +2772,7 @@ export const appRouter = router({
                   youtubeInfo?.thumbnail || getYouTubeThumbnail(videoId),
                 duration: youtubeInfo?.duration,
                 isYoutube: true,
-                coachId: user.id,
+                coachId: ensureUserId(user.id),
                 views: 0,
                 rating: 0,
               },
@@ -2751,7 +2873,7 @@ export const appRouter = router({
                 thumbnail:
                   video.thumbnail || getYouTubeThumbnail(video.videoId),
                 isYoutube: true,
-                coachId: user.id,
+                coachId: ensureUserId(user.id),
                 views: 0,
                 rating: 0,
               },
@@ -2786,7 +2908,7 @@ export const appRouter = router({
       // Get client video submissions for this coach
       const submissions = await db.clientVideoSubmission.findMany({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           isPublic: true, // Only show public submissions in library
         },
         include: {
@@ -2910,10 +3032,10 @@ export const appRouter = router({
           senderId: { not: user.id },
           conversation: {
             OR: [
-              { coachId: user.id },
-              { clientId: user.id },
-              { client1Id: user.id },
-              { client2Id: user.id },
+              { coachId: ensureUserId(user.id) },
+              { clientId: ensureUserId(user.id) },
+              { client1Id: ensureUserId(user.id) },
+              { client2Id: ensureUserId(user.id) },
             ],
           },
         },
@@ -2943,10 +3065,10 @@ export const appRouter = router({
           where: {
             id: input.conversationId,
             OR: [
-              { coachId: user.id },
-              { clientId: user.id },
-              { client1Id: user.id },
-              { client2Id: user.id },
+              { coachId: ensureUserId(user.id) },
+              { clientId: ensureUserId(user.id) },
+              { client1Id: ensureUserId(user.id) },
+              { client2Id: ensureUserId(user.id) },
             ],
           },
         });
@@ -2964,7 +3086,7 @@ export const appRouter = router({
         await db.message.updateMany({
           where: {
             conversationId: input.conversationId,
-            senderId: { not: user.id },
+            senderId: { not: ensureUserId(user.id) },
             isRead: false,
           },
           data: { isRead: true },
@@ -3006,10 +3128,10 @@ export const appRouter = router({
           where: {
             id: input.conversationId,
             OR: [
-              { coachId: user.id },
-              { clientId: user.id },
-              { client1Id: user.id },
-              { client2Id: user.id },
+              { coachId: ensureUserId(user.id) },
+              { clientId: ensureUserId(user.id) },
+              { client1Id: ensureUserId(user.id) },
+              { client2Id: ensureUserId(user.id) },
             ],
           },
         });
@@ -3138,12 +3260,10 @@ export const appRouter = router({
           });
         }
 
-        const existingConversation = await db.conversation.findUnique({
+        const existingConversation = await db.conversation.findFirst({
           where: {
-            coachId_clientId: {
-              coachId,
-              clientId,
-            },
+            coachId,
+            clientId,
           },
         });
 
@@ -3207,7 +3327,7 @@ export const appRouter = router({
         }
 
         // Verify the client belongs to this coach
-        if (client.coachId !== user.id) {
+        if (client.coachId !== ensureUserId(user.id)) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Client not found",
@@ -3238,12 +3358,10 @@ export const appRouter = router({
         }
 
         // Check if conversation already exists
-        const existingConversation = await db.conversation.findUnique({
+        const existingConversation = await db.conversation.findFirst({
           where: {
-            coachId_clientId: {
-              coachId: user.id,
-              clientId: clientUserId,
-            },
+            coachId: ensureUserId(user.id),
+            clientId: clientUserId,
           },
         });
 
@@ -3254,7 +3372,7 @@ export const appRouter = router({
         // Create the conversation
         const conversation = await db.conversation.create({
           data: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             clientId: clientUserId,
           },
           include: {
@@ -3419,7 +3537,7 @@ export const appRouter = router({
         await db.message.updateMany({
           where: {
             conversationId: input.conversationId,
-            senderId: { not: user.id },
+            senderId: { not: ensureUserId(user.id) },
             isRead: false,
           },
           data: { isRead: true },
@@ -3445,7 +3563,7 @@ export const appRouter = router({
             const updatedUnreadCount = await db.message.count({
               where: {
                 isRead: false,
-                senderId: { not: user.id },
+                senderId: { not: ensureUserId(user.id) },
                 conversation: {
                   OR: [
                     { coachId: user.id },
@@ -3530,10 +3648,10 @@ export const appRouter = router({
           senderId: { not: user.id },
           conversation: {
             OR: [
-              { coachId: user.id },
-              { clientId: user.id },
-              { client1Id: user.id },
-              { client2Id: user.id },
+              { coachId: ensureUserId(user.id) },
+              { clientId: ensureUserId(user.id) },
+              { client1Id: ensureUserId(user.id) },
+              { client2Id: ensureUserId(user.id) },
             ],
           },
         },
@@ -3748,7 +3866,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -3880,7 +3998,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -4387,7 +4505,7 @@ export const appRouter = router({
         // For coaches, get all events they're coaching
         return await db.event.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             date: { gte: new Date() },
           },
           include: {
@@ -4405,7 +4523,7 @@ export const appRouter = router({
         // For clients, get their events
         return await db.event.findMany({
           where: {
-            clientId: user.id,
+            clientId: ensureUserId(user.id),
             date: { gte: new Date() },
           },
           include: {
@@ -4465,7 +4583,7 @@ export const appRouter = router({
             description: input.description || "",
             date: reminderDate,
             status: "PENDING",
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -4495,7 +4613,7 @@ export const appRouter = router({
         const event = await db.event.findFirst({
           where: {
             id: input.eventId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -4538,7 +4656,7 @@ export const appRouter = router({
         const lesson = await db.event.findFirst({
           where: {
             id: input.lessonId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             client: true,
@@ -4644,7 +4762,7 @@ export const appRouter = router({
           data: {
             ...input,
             exercises: input.exercises as any,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
       }),
@@ -4661,7 +4779,7 @@ export const appRouter = router({
         const originalTemplate = await db.workoutTemplate.findFirst({
           where: {
             id: input.templateId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -4680,7 +4798,7 @@ export const appRouter = router({
             duration: originalTemplate.duration,
             difficulty: originalTemplate.difficulty,
             category: originalTemplate.category,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
       }),
@@ -4718,7 +4836,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -4768,7 +4886,7 @@ export const appRouter = router({
             date: lessonDate,
             status: "CONFIRMED", // Coach-scheduled lessons are automatically confirmed
             clientId: input.clientId, // Use Client.id directly
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -4837,7 +4955,7 @@ export const appRouter = router({
         return await db.weeklySchedule.findFirst({
           where: {
             clientId: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             weekStart: input.weekStart,
             weekEnd: weekEnd,
           },
@@ -4914,14 +5032,14 @@ export const appRouter = router({
             where: {
               clientId_coachId_weekStart: {
                 clientId: input.clientId,
-                coachId: user.id,
+                coachId: ensureUserId(user.id),
                 weekStart: input.weekStart,
               },
             },
             update: {},
             create: {
               clientId: input.clientId,
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
               weekStart: input.weekStart,
               weekEnd: weekEnd,
             },
@@ -5008,7 +5126,7 @@ export const appRouter = router({
         const previousSchedule = await db.weeklySchedule.findFirst({
           where: {
             clientId: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             weekStart: previousWeekStart,
             weekEnd: previousWeekEnd,
           },
@@ -5036,7 +5154,7 @@ export const appRouter = router({
           const newSchedule = await tx.weeklySchedule.create({
             data: {
               clientId: input.clientId,
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
               weekStart: input.currentWeekStart,
               weekEnd: currentWeekEnd,
             },
@@ -5119,7 +5237,7 @@ export const appRouter = router({
         // Get all CONFIRMED events (lessons) for the coach in the specified month
         const events = await db.event.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             status: "CONFIRMED", // Only return confirmed lessons
             date: {
               gte: monthStart,
@@ -5173,7 +5291,7 @@ export const appRouter = router({
         const lesson = await db.event.findFirst({
           where: {
             id: input.lessonId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -5219,7 +5337,7 @@ export const appRouter = router({
       // Get upcoming lessons for this coach
       const upcomingLessons = await db.event.findMany({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           date: {
             gte: now.toISOString(),
           },
@@ -5384,7 +5502,7 @@ export const appRouter = router({
             sport: "General", // Default value since sport field is removed from UI
             level: input.level,
             duration: input.duration,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             weeks: {
               create: input.weeks.map(week => ({
                 weekNumber: week.weekNumber,
@@ -5462,7 +5580,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.id,
-            coachId: user.id, // Ensure coach owns this program
+            coachId: ensureUserId(user.id), // Ensure coach owns this program
           },
           include: {
             weeks: {
@@ -5568,7 +5686,7 @@ export const appRouter = router({
           const program = await tx.program.update({
             where: {
               id: input.id,
-              coachId: user.id, // Ensure coach owns this program
+              coachId: ensureUserId(user.id), // Ensure coach owns this program
             },
             data: {
               ...(input.title && { title: input.title }),
@@ -5677,7 +5795,7 @@ export const appRouter = router({
         const originalProgram = await db.program.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             weeks: {
@@ -5707,7 +5825,7 @@ export const appRouter = router({
             sport: originalProgram.sport,
             level: originalProgram.level,
             duration: originalProgram.duration,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -5778,7 +5896,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -5891,7 +6009,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -6024,7 +6142,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -6255,7 +6373,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -6346,7 +6464,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -6403,7 +6521,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -6477,7 +6595,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             weeks: {
@@ -6502,7 +6620,7 @@ export const appRouter = router({
         const clients = await db.client.findMany({
           where: {
             id: { in: input.clientIds },
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             programAssignments: {
@@ -6592,7 +6710,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -6645,7 +6763,7 @@ export const appRouter = router({
           where: {
             id: input.assignmentId,
             program: {
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
             },
           },
         });
@@ -6698,7 +6816,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -6765,7 +6883,7 @@ export const appRouter = router({
         const program = await db.program.findFirst({
           where: {
             id: input.programId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -6848,7 +6966,7 @@ export const appRouter = router({
         const routine = await db.routine.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             exercises: {
@@ -6914,7 +7032,7 @@ export const appRouter = router({
           data: {
             name: input.name,
             description: input.description,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             exercises: {
               create: input.exercises.map((exercise, index) => ({
                 order: index + 1,
@@ -6979,7 +7097,7 @@ export const appRouter = router({
         const existingRoutine = await db.routine.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -7038,7 +7156,7 @@ export const appRouter = router({
         const existingRoutine = await db.routine.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -7154,7 +7272,7 @@ export const appRouter = router({
         const routine = await db.routine.findFirst({
           where: {
             id: input.routineId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -7169,7 +7287,7 @@ export const appRouter = router({
         const clients = await db.client.findMany({
           where: {
             id: { in: input.clientIds },
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             archived: false,
           },
         });
@@ -7240,7 +7358,7 @@ export const appRouter = router({
         const routine = await db.routine.findFirst({
           where: {
             id: input.routineId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -7290,7 +7408,7 @@ export const appRouter = router({
         const routine = await db.routine.findFirst({
           where: {
             id: input.routineId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -7348,7 +7466,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             id: input.clientId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             archived: false,
           },
         });
@@ -7425,7 +7543,7 @@ export const appRouter = router({
         const assignments = await db.routineAssignment.findMany({
           where: {
             client: {
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
               archived: false,
             },
             assignedAt: {
@@ -7486,7 +7604,10 @@ export const appRouter = router({
           where: {
             id: input.messageId,
             conversation: {
-              OR: [{ coachId: user.id }, { clientId: user.id }],
+              OR: [
+                { coachId: ensureUserId(user.id) },
+                { clientId: ensureUserId(user.id) },
+              ],
             },
             attachmentType: "video",
             attachmentUrl: { not: null },
@@ -7655,7 +7776,7 @@ export const appRouter = router({
         const client = await db.client.findFirst({
           where: {
             userId: input.userId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
         });
 
@@ -7691,7 +7812,7 @@ export const appRouter = router({
       // Get all library resources for the coach
       const resources = await db.libraryResource.findMany({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
         },
         orderBy: {
           createdAt: "desc",
@@ -7711,7 +7832,7 @@ export const appRouter = router({
       const categories = await db.libraryResource.groupBy({
         by: ["category"],
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
         },
         _count: {
           category: true,
@@ -7774,7 +7895,7 @@ export const appRouter = router({
         // Get all active clients (not just those in programs)
         const allActiveClients = await db.client.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             archived: false,
           },
           include: {
@@ -7791,7 +7912,7 @@ export const appRouter = router({
         // Get previous period active clients for trend calculation
         const previousActiveClients = await db.client.count({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             archived: false,
             createdAt: {
               lt: currentPeriodStart,
@@ -7813,7 +7934,7 @@ export const appRouter = router({
               gte: currentPeriodStart,
             },
             client: {
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
             },
           },
         });
@@ -7827,7 +7948,7 @@ export const appRouter = router({
                   assignments: {
                     some: {
                       client: {
-                        coachId: user.id,
+                        coachId: ensureUserId(user.id),
                       },
                     },
                   },
@@ -7846,7 +7967,7 @@ export const appRouter = router({
         const programAssignments = await db.programAssignment.findMany({
           where: {
             program: {
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
             },
           },
           include: {
@@ -7881,7 +8002,7 @@ export const appRouter = router({
               gte: thirtyDaysAgo,
             },
             client: {
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
             },
           },
           select: {
@@ -7899,7 +8020,7 @@ export const appRouter = router({
         const previousPeriodAssignments = await db.programAssignment.findMany({
           where: {
             program: {
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
             },
             updatedAt: {
               gte: previousPeriodStart,
@@ -7916,7 +8037,7 @@ export const appRouter = router({
                 lt: currentPeriodStart,
               },
               client: {
-                coachId: user.id,
+                coachId: ensureUserId(user.id),
               },
             },
           });
@@ -7946,7 +8067,7 @@ export const appRouter = router({
                   assignments: {
                     some: {
                       client: {
-                        coachId: user.id,
+                        coachId: ensureUserId(user.id),
                       },
                     },
                   },
@@ -7987,7 +8108,7 @@ export const appRouter = router({
         // Calculate retention trend based on workout completion
         const previousRetentionWorkouts = await db.assignedWorkout.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             completed: true,
             completedAt: {
               gte: previousPeriodStart,
@@ -8045,7 +8166,7 @@ export const appRouter = router({
         const allDrillCompletionsForCoach = await db.drillCompletion.findMany({
           where: {
             client: {
-              coachId: user.id,
+              coachId: ensureUserId(user.id),
             },
           },
         });
@@ -8118,7 +8239,7 @@ export const appRouter = router({
         // Get all active clients with their program data
         const clients = await db.client.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             archived: false,
           },
           include: {
@@ -8134,7 +8255,7 @@ export const appRouter = router({
         const clientIds = clients.map(client => client.id);
         const assignedWorkouts = await db.assignedWorkout.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             clientId: {
               in: clientIds,
             },
@@ -8232,7 +8353,7 @@ export const appRouter = router({
         // Get programs with their assignments
         const programs = await db.program.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             assignments: true,
@@ -8315,7 +8436,7 @@ export const appRouter = router({
         // Get real workout completion data
         const assignedWorkouts = await db.assignedWorkout.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             scheduledDate: {
               gte: periodStart,
             },
@@ -8334,7 +8455,7 @@ export const appRouter = router({
         // Get video engagement from client video submissions
         const videoSubmissions = await db.clientVideoSubmission.findMany({
           where: {
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             createdAt: {
               gte: periodStart,
             },
@@ -9055,7 +9176,7 @@ export const appRouter = router({
         const annotation = await db.videoAnnotation.create({
           data: {
             ...input,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             coach: { select: { name: true } },
@@ -9138,7 +9259,7 @@ export const appRouter = router({
         const audioNote = await db.videoAudioNote.create({
           data: {
             ...input,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             coach: { select: { name: true } },
@@ -9181,7 +9302,7 @@ export const appRouter = router({
         const feedback = await db.videoFeedback.create({
           data: {
             ...input,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             coach: { select: { name: true } },
@@ -9341,7 +9462,7 @@ export const appRouter = router({
         const screenRecording = await db.screenRecording.create({
           data: {
             ...input,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             coach: { select: { name: true } },
@@ -9486,7 +9607,7 @@ export const appRouter = router({
           currentWeek,
           totalWeeks: program.duration,
           overallProgress,
-          coachName: client.coach.name,
+          coachName: client.coach?.name || "Unknown Coach",
           assignmentId: assignment.id,
         };
       });
@@ -9577,7 +9698,7 @@ export const appRouter = router({
         currentWeek,
         totalWeeks: program.duration,
         overallProgress,
-        coachName: client.coach.name,
+        coachName: client.coach?.name || "Unknown Coach",
         assignmentId: assignment.id,
         weeks: program.weeks,
       };
@@ -10456,8 +10577,8 @@ export const appRouter = router({
         // Create a message in the messaging system to send to the coach
         const conversation = await db.conversation.findFirst({
           where: {
-            coachId: client.coachId,
-            clientId: user.id,
+            coachId: client.coachId!,
+            clientId: ensureUserId(user.id),
           },
         });
 
@@ -10474,34 +10595,36 @@ export const appRouter = router({
             conversationId: conversation.id,
             senderId: user.id,
             content: input.drillTitle
-              ? `**${input.drillTitle}** - ${input.note}`
-              : input.note,
+              ? `**${input.drillTitle}** - ${input.note || ""}`
+              : input.note || "",
           },
         });
 
-        // Create a notification for the coach
-        await db.notification.create({
-          data: {
-            userId: client.coachId,
-            type: "MESSAGE",
-            title: `New message from ${client.name}`,
-            message: input.drillTitle
-              ? `Client feedback on "${
-                  input.drillTitle
-                }": ${input.note.substring(0, 100)}${
-                  input.note.length > 100 ? "..." : ""
-                }`
-              : `Client note: ${input.note.substring(0, 100)}${
-                  input.note.length > 100 ? "..." : ""
-                }`,
+        // Create a notification for the coach (only if coach exists)
+        if (client.coachId) {
+          await db.notification.create({
             data: {
-              messageId: message.id,
-              conversationId: conversation.id,
-              drillId: input.drillId || undefined,
-              drillTitle: input.drillTitle || undefined,
+              userId: client.coachId,
+              type: "MESSAGE",
+              title: `New message from ${client.name}`,
+              message: input.drillTitle
+                ? `Client feedback on "${input.drillTitle}": ${(
+                    input.note || ""
+                  ).substring(0, 100)}${
+                    (input.note || "").length > 100 ? "..." : ""
+                  }`
+                : `Client note: ${(input.note || "").substring(0, 100)}${
+                    (input.note || "").length > 100 ? "..." : ""
+                  }`,
+              data: {
+                messageId: message.id,
+                conversationId: conversation.id,
+                drillId: input.drillId || undefined,
+                drillTitle: input.drillTitle || undefined,
+              },
             },
-          },
-        });
+          });
+        }
 
         return { success: true, messageId: message.id };
       }),
@@ -10661,6 +10784,11 @@ export const appRouter = router({
           });
         }
 
+        // Only proceed if client has a coach
+        if (!client.coachId) {
+          return [];
+        }
+
         // Calculate month start and end dates
         const monthStart = new Date(input.year, input.month, 1);
         const monthEnd = new Date(input.year, input.month + 1, 0, 23, 59, 59);
@@ -10670,7 +10798,7 @@ export const appRouter = router({
         // Exclude reminders (events without clientId) - those are coach-only
         const events = await db.event.findMany({
           where: {
-            coachId: client.coachId,
+            coachId: client.coachId!,
             clientId: { not: null }, // Only show events with a client (not reminders)
             date: {
               gte: monthStart,
@@ -10732,7 +10860,7 @@ export const appRouter = router({
 
       // Get coach's profile including working hours
       const coach = await db.user.findFirst({
-        where: { id: client.coachId },
+        where: { id: client.coachId || undefined },
         select: {
           id: true,
           name: true,
@@ -10794,7 +10922,7 @@ export const appRouter = router({
       // Get all pending events for this coach (only client-requested lessons)
       const pendingRequests = await db.event.findMany({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           status: "PENDING",
           // Only include lessons that were requested by clients
           description: {
@@ -10839,7 +10967,7 @@ export const appRouter = router({
       // Update all pending lessons that were created by the coach to confirmed status
       const updatedLessons = await db.event.updateMany({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           status: "PENDING",
           description: "Scheduled lesson",
         },
@@ -10872,7 +11000,7 @@ export const appRouter = router({
       // Find all confirmed lessons that still have "Schedule Request" in title
       const lessonsToFix = await db.event.findMany({
         where: {
-          coachId: user.id,
+          coachId: ensureUserId(user.id),
           status: "CONFIRMED",
           title: {
             contains: "Schedule Request",
@@ -10933,7 +11061,7 @@ export const appRouter = router({
         const event = await db.event.findFirst({
           where: {
             id: input.eventId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             status: "PENDING",
           },
           include: {
@@ -10979,7 +11107,7 @@ export const appRouter = router({
               )} has been approved!`,
               data: {
                 eventId: event.id,
-                coachId: user.id,
+                coachId: ensureUserId(user.id),
                 coachName: coach.name,
               },
             },
@@ -11018,7 +11146,7 @@ export const appRouter = router({
         const event = await db.event.findFirst({
           where: {
             id: input.eventId,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
             status: "PENDING",
           },
           include: {
@@ -11060,7 +11188,7 @@ export const appRouter = router({
               }`,
               data: {
                 eventId: event.id,
-                coachId: user.id,
+                coachId: ensureUserId(user.id),
                 coachName: coach.name,
                 reason: input.reason,
               },
@@ -11157,7 +11285,7 @@ export const appRouter = router({
 
         // Check if the requested date is on a working day
         const coach = await db.user.findFirst({
-          where: { id: client.coachId },
+          where: { id: client.coachId || undefined },
         });
 
         if (coach?.workingDays) {
@@ -11173,7 +11301,7 @@ export const appRouter = router({
         // Check if the requested time slot is already booked
         const existingLesson = await db.event.findFirst({
           where: {
-            coachId: client.coachId,
+            coachId: client.coachId!,
             date: requestedDateTime,
           },
         });
@@ -11186,38 +11314,49 @@ export const appRouter = router({
         }
 
         // Create a schedule change request
+        // Only create schedule request if client has a coach
+        if (!client.coachId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Client must have an assigned coach to request schedule changes",
+          });
+        }
+
         const scheduleRequest = await db.event.create({
           data: {
             title: `Schedule Request - ${client.name}`,
             description: input.reason || "Client requested schedule change",
             date: requestedDateTime,
             clientId: client.id,
-            coachId: client.coachId,
+            coachId: client.coachId!,
             status: "PENDING", // New status field for pending requests
           },
         });
 
-        // Create notification for the coach
-        await db.notification.create({
-          data: {
-            userId: client.coachId,
-            type: "SCHEDULE_REQUEST",
-            title: "New Schedule Request",
-            message: `${
-              client.name
-            } has requested a schedule change for ${format(
-              requestedDateTime,
-              "MMM d, yyyy 'at' h:mm a"
-            )}`,
+        // Create notification for the coach (only if coach exists)
+        if (client.coachId) {
+          await db.notification.create({
             data: {
-              eventId: scheduleRequest.id,
-              clientId: client.id,
-              clientName: client.name,
-              requestedDate: requestedDateTime,
-              reason: input.reason,
+              userId: client.coachId,
+              type: "SCHEDULE_REQUEST",
+              title: "New Schedule Request",
+              message: `${
+                client.name
+              } has requested a schedule change for ${format(
+                requestedDateTime,
+                "MMM d, yyyy 'at' h:mm a"
+              )}`,
+              data: {
+                eventId: scheduleRequest.id,
+                clientId: client.id,
+                clientName: client.name,
+                requestedDate: requestedDateTime,
+                reason: input.reason,
+              },
             },
-          },
-        });
+          });
+        }
 
         return scheduleRequest;
       }),
@@ -11364,7 +11503,7 @@ export const appRouter = router({
         const submission = await db.clientVideoSubmission.findFirst({
           where: {
             id: input.id,
-            coachId: user.id,
+            coachId: ensureUserId(user.id),
           },
           include: {
             client: {
@@ -11432,11 +11571,18 @@ export const appRouter = router({
           });
         }
 
-        // Create video submission
+        // Create video submission (only if client has a coach)
+        if (!client.coachId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Client must have an assigned coach to submit videos",
+          });
+        }
+
         const videoSubmission = await db.clientVideoSubmission.create({
           data: {
             clientId: client.id,
-            coachId: client.coachId,
+            coachId: client.coachId!,
             title: input.title,
             description: input.description,
             comment: input.comment,
@@ -11450,16 +11596,16 @@ export const appRouter = router({
         // Create or find conversation between client and coach
         let conversation = await db.conversation.findFirst({
           where: {
-            coachId: client.coachId,
-            clientId: user.id,
+            coachId: client.coachId!,
+            clientId: ensureUserId(user.id),
           },
         });
 
         if (!conversation) {
           conversation = await db.conversation.create({
             data: {
-              coachId: client.coachId,
-              clientId: user.id,
+              coachId: client.coachId!,
+              clientId: ensureUserId(user.id),
               type: "COACH_CLIENT",
             },
           });
@@ -11488,20 +11634,22 @@ export const appRouter = router({
           data: { updatedAt: new Date() },
         });
 
-        // Create notification for the coach
-        await db.notification.create({
-          data: {
-            userId: client.coachId,
-            type: "MESSAGE",
-            title: `New video submission from ${client.name}`,
-            message: `Client submitted a video: "${input.title}"`,
+        // Create notification for the coach (only if coach exists)
+        if (client.coachId) {
+          await db.notification.create({
             data: {
-              videoSubmissionId: videoSubmission.id,
-              clientId: client.id,
-              clientName: client.name,
+              userId: client.coachId,
+              type: "MESSAGE",
+              title: `New video submission from ${client.name}`,
+              message: `Client submitted a video: "${input.title}"`,
+              data: {
+                videoSubmissionId: videoSubmission.id,
+                clientId: client.id,
+                clientName: client.name,
+              },
             },
-          },
-        });
+          });
+        }
 
         return { success: true, videoSubmission };
       }),
@@ -11566,16 +11714,16 @@ export const appRouter = router({
         // Create or find conversation between client and coach
         let conversation = await db.conversation.findFirst({
           where: {
-            coachId: client.coachId,
-            clientId: user.id,
+            coachId: client.coachId!,
+            clientId: ensureUserId(user.id),
           },
         });
 
         if (!conversation) {
           conversation = await db.conversation.create({
             data: {
-              coachId: client.coachId,
-              clientId: user.id,
+              coachId: client.coachId!,
+              clientId: ensureUserId(user.id),
               type: "COACH_CLIENT",
             },
           });
@@ -11601,23 +11749,25 @@ export const appRouter = router({
           data: { updatedAt: new Date() },
         });
 
-        // Create a notification for the coach
-        await db.notification.create({
-          data: {
-            userId: client.coachId,
-            type: "MESSAGE",
-            title: `New video comment from ${client.name}`,
-            message: `Client added a comment to their video submission: "${input.comment.substring(
-              0,
-              100
-            )}${input.comment.length > 100 ? "..." : ""}"`,
+        // Create a notification for the coach (only if coach exists)
+        if (client.coachId) {
+          await db.notification.create({
             data: {
-              videoSubmissionId: input.videoSubmissionId,
-              clientId: client.id,
-              clientName: client.name,
+              userId: client.coachId,
+              type: "MESSAGE",
+              title: `New video comment from ${client.name}`,
+              message: `Client added a comment to their video submission: "${input.comment.substring(
+                0,
+                100
+              )}${input.comment.length > 100 ? "..." : ""}"`,
+              data: {
+                videoSubmissionId: input.videoSubmissionId,
+                clientId: client.id,
+                clientName: client.name,
+              },
             },
-          },
-        });
+          });
+        }
 
         return { success: true, videoSubmission: updatedSubmission };
       }),
@@ -11669,16 +11819,16 @@ export const appRouter = router({
         // Create or find conversation between client and coach
         let conversation = await db.conversation.findFirst({
           where: {
-            coachId: client.coachId,
-            clientId: user.id,
+            coachId: client.coachId!,
+            clientId: ensureUserId(user.id),
           },
         });
 
         if (!conversation) {
           conversation = await db.conversation.create({
             data: {
-              coachId: client.coachId,
-              clientId: user.id,
+              coachId: client.coachId!,
+              clientId: ensureUserId(user.id),
               type: "COACH_CLIENT",
             },
           });
@@ -11711,23 +11861,25 @@ export const appRouter = router({
             data: { updatedAt: new Date() },
           });
 
-          // Create notification for coach
-          await db.notification.create({
-            data: {
-              userId: client.coachId,
-              type: "MESSAGE",
-              title: `New video comment from ${client.name}`,
-              message: `Client added a comment to their video submission: "${input.comment.substring(
-                0,
-                100
-              )}${input.comment.length > 100 ? "..." : ""}"`,
+          // Create notification for coach (only if coach exists)
+          if (client.coachId) {
+            await db.notification.create({
               data: {
-                videoSubmissionId: videoSubmission.id,
-                clientId: client.id,
-                clientName: client.name,
+                userId: client.coachId,
+                type: "MESSAGE",
+                title: `New video comment from ${client.name}`,
+                message: `Client added a comment to their video submission: "${input.comment.substring(
+                  0,
+                  100
+                )}${input.comment.length > 100 ? "..." : ""}"`,
+                data: {
+                  videoSubmissionId: videoSubmission.id,
+                  clientId: client.id,
+                  clientName: client.name,
+                },
               },
-            },
-          });
+            });
+          }
 
           return {
             success: true,
@@ -11739,7 +11891,7 @@ export const appRouter = router({
           const newVideoSubmission = await db.clientVideoSubmission.create({
             data: {
               clientId: client.id,
-              coachId: client.coachId,
+              coachId: client.coachId!,
               title: `Comment for Drill ${input.drillId}`,
               description: "Client feedback and comments",
               comment: input.comment,
@@ -11766,24 +11918,26 @@ export const appRouter = router({
             data: { updatedAt: new Date() },
           });
 
-          // Create notification for coach
-          await db.notification.create({
-            data: {
-              userId: client.coachId,
-              type: "MESSAGE",
-              title: `New client comment from ${client.name}`,
-              message: `Client added a comment for drill ${
-                input.drillId
-              }: "${input.comment.substring(0, 100)}${
-                input.comment.length > 100 ? "..." : ""
-              }"`,
+          // Create notification for coach (only if coach exists)
+          if (client.coachId) {
+            await db.notification.create({
               data: {
-                videoSubmissionId: newVideoSubmission.id,
-                clientId: client.id,
-                clientName: client.name,
+                userId: client.coachId,
+                type: "MESSAGE",
+                title: `New client comment from ${client.name}`,
+                message: `Client added a comment for drill ${
+                  input.drillId
+                }: "${input.comment.substring(0, 100)}${
+                  input.comment.length > 100 ? "..." : ""
+                }"`,
+                data: {
+                  videoSubmissionId: newVideoSubmission.id,
+                  clientId: client.id,
+                  clientName: client.name,
+                },
               },
-            },
-          });
+            });
+          }
 
           return {
             success: true,

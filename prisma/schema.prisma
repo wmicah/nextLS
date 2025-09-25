@@ -71,7 +71,7 @@ model Client {
   email                String?
   phone                String?
   notes                String?
-  coachId              String
+  coachId              String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   nextLessonDate       DateTime?
@@ -97,7 +97,7 @@ model Client {
   riseSpinRate         Int? // rpm
   curveSpinRate        Int? // rpm
   
-  coach                User      @relation("CoachClients", fields: [coachId], references: [id])
+  coach                User?     @relation("CoachClients", fields: [coachId], references: [id])
   user                 User?     @relation("UserClient", fields: [userId], references: [id])
   programAssignments   ProgramAssignment[]
   programReplacements  ProgramDayReplacement[]

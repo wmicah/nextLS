@@ -1,525 +1,333 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, RefObject } from "react";
 import { trpc } from "@/app/_trpc/client";
-import { MessageCircle, X, Send, User, Search } from "lucide-react";
-import ProfilePictureUploader from "./ProfilePictureUploader";
-import RichMessageInput from "./RichMessageInput";
-import FormattedMessage from "./FormattedMessage";
-import MessageAcknowledgment from "./MessageAcknowledgment";
-import { useMobileDetection } from "@/lib/mobile-detection";
-import MobileMessagePopup from "./MobileMessagePopup";
+import { MessageCircle, X } from "lucide-react";
+import { format } from "date-fns";
+import Link from "next/link";
 
 interface MessagePopupProps {
   isOpen: boolean;
   onClose: () => void;
+  buttonRef?: RefObject<HTMLButtonElement>;
 }
 
-export default function MessagePopup({ isOpen, onClose }: MessagePopupProps) {
-  const { isMobile } = useMobileDetection();
+export default function MessagePopup({
+  isOpen,
+  onClose,
+  buttonRef,
+}: MessagePopupProps) {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
 
-  // Render mobile version if on mobile
-  if (isMobile) {
-    return <MobileMessagePopup isOpen={isOpen} onClose={onClose} />;
-  }
-  const [selectedConversation, setSelectedConversation] = useState<
-    string | null
-  >(null);
-  const [messageText, setMessageText] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [pendingMessages, setPendingMessages] = useState<
-    Array<{
-      id: string;
-      content: string;
-      timestamp: Date;
-      status: "sending" | "sent" | "failed";
-    }>
-  >([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  const { data: conversations = [], refetch: refetchConversations } =
-    trpc.messaging.getConversations.useQuery(undefined, {
+  // Get conversations
+  const { data: conversations = [] } = trpc.messaging.getConversations.useQuery(
+    undefined,
+    {
       enabled: isOpen,
-      refetchInterval: 5000, // Refresh every 5 seconds
-    });
+      refetchInterval: 60000, // Poll every minute
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      staleTime: 30 * 1000, // Cache for 30 seconds
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    }
+  );
 
-  // Get unread counts for each conversation
-  const { data: unreadCounts = {} } =
+  // Get unread counts
+  const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      enabled: isOpen,
-      refetchInterval: 5000, // Refresh every 5 seconds
+      refetchInterval: 60000, // Poll every 60 seconds
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
     });
 
-  const { data: messages = [], refetch: refetchMessages } =
-    trpc.messaging.getMessages.useQuery(
-      { conversationId: selectedConversation! },
-      {
-        enabled: !!selectedConversation && isOpen,
-        refetchInterval: 3000,
-      }
-    );
+  // Get current user
+  const { data: authData } = trpc.authCallback.useQuery();
+  const currentUserId = authData?.user?.id;
 
-  const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
-
-  // Get current user data
-  const { data: currentUser } = trpc.user.getProfile.useQuery();
-
-  // Handle click outside to close
+  // Calculate button position for popup positioning
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popupRef.current &&
-        !popupRef.current.contains(event.target as Node)
-      ) {
+    if (buttonRef?.current && isOpen) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setButtonPosition({
+        top: rect.bottom + window.scrollY + 8, // 8px gap below button
+        left: rect.left + window.scrollX + rect.width / 2 - 192, // Center popup (384px / 2 = 192px)
+      });
+    }
+  }, [isOpen, buttonRef]);
+
+  // Animation handling
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setIsAnimating(true);
+      return undefined;
+    }
+  }, [isOpen]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Element;
+      if (isOpen && !target.closest("[data-message-popup]")) {
         onClose();
       }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
     }
 
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 150);
+
     return () => {
+      clearTimeout(timeoutId);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, onClose]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [pendingMessages]);
-
-  const handleSendMessage = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!messageText.trim() || !selectedConversation) return;
-
-    const tempId = `temp-${Date.now()}`;
-    const messageContent = messageText.trim();
-
-    // Create optimistic message
-    const optimisticMessage = {
-      id: tempId,
-      content: messageContent,
-      timestamp: new Date(),
-      status: "sending" as const,
-    };
-
-    // Add optimistic message and clear input
-    setPendingMessages(prev => [...prev, optimisticMessage]);
-    setMessageText("");
-
-    sendMessageMutation.mutate(
-      {
-        conversationId: selectedConversation,
-        content: messageContent,
-      },
-      {
-        onSuccess: () => {
-          // Mark as sent
-          setPendingMessages(prev =>
-            prev.map(msg =>
-              msg.id === tempId ? { ...msg, status: "sent" as const } : msg
-            )
-          );
-
-          // Refetch messages to get the real message
-          refetchMessages().then(() => {
-            setPendingMessages(prev => prev.filter(msg => msg.id !== tempId));
-          });
-          refetchConversations();
-        },
-        onError: () => {
-          // Mark message as failed
-          setPendingMessages(prev =>
-            prev.map(msg =>
-              msg.id === tempId ? { ...msg, status: "failed" as const } : msg
-            )
-          );
-
-          // Restore message text for retry
-          setMessageText(messageContent);
-        },
-      }
-    );
-  };
-
-  const formatTime = (date: string) => {
-    const messageDate = new Date(date);
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
-    const diffInHours =
-      (now.getTime() - messageDate.getTime()) / (1000 * 60 * 60);
-
-    if (diffInHours < 24) {
-      return messageDate.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else if (diffInHours < 48) {
-      return "Yesterday";
-    } else {
-      return messageDate.toLocaleDateString([], {
-        month: "short",
-        day: "numeric",
-      });
-    }
-  };
-
-  const filteredConversations = conversations.filter((conv: any) => {
-    if (!searchTerm) return true;
-    const otherUser =
-      conv.coach.id !== conv.messages[0]?.sender?.id ? conv.coach : conv.client;
-    return (
-      otherUser.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      otherUser.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
     );
-  });
+
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+    return format(date, "MMM d");
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <>
+      <style jsx>{`
+        @keyframes slideInDown {
+          from {
+            transform: translateY(-8px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+        }
+      `}</style>
       <div
-        ref={popupRef}
-        className="w-80 h-96 rounded-lg shadow-2xl border flex flex-col"
+        data-message-popup
+        className={`fixed w-96 h-96 rounded-lg shadow-lg border z-50 ${
+          isAnimating && !isOpen
+            ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
+            : isAnimating
+            ? "animate-[slideInDown_0.3s_ease-out_forwards]"
+            : "transform scale-100 opacity-100"
+        }`}
         style={{
-          backgroundColor: "#2D3142",
-          borderColor: "#4A5568",
+          top: buttonPosition.top,
+          left:
+            typeof window !== "undefined"
+              ? Math.max(
+                  8,
+                  Math.min(buttonPosition.left, window.innerWidth - 392)
+                )
+              : buttonPosition.left, // Keep within viewport
+          backgroundColor: "#353A3A",
+          borderColor: "#606364",
+          transformOrigin: "top center",
+          animation:
+            !isAnimating && isOpen ? "slideInDown 0.3s ease-out" : undefined,
+          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
         }}
       >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between p-3 border-b"
-          style={{ borderColor: "#4A5568" }}
-        >
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" style={{ color: "#E2E8F0" }} />
-            <h3 className="font-semibold" style={{ color: "#E2E8F0" }}>
-              {selectedConversation ? "Chat" : "Messages"}
-            </h3>
-          </div>
-          <div className="flex items-center gap-1">
-            {selectedConversation && (
-              <button
-                onClick={() => setSelectedConversation(null)}
-                className="p-1.5 rounded-md hover:bg-gray-600 transition-colors"
-              >
-                <User className="h-4 w-4" style={{ color: "#CBD5E0" }} />
-              </button>
-            )}
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div
+            className="flex items-center justify-between p-4 border-b"
+            style={{ borderColor: "#606364" }}
+          >
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" style={{ color: "#C3BCC2" }} />
+              <span className="font-medium" style={{ color: "#C3BCC2" }}>
+                Recent Messages
+              </span>
+            </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-md hover:bg-gray-600 transition-colors"
+              className="p-1 rounded-md transition-colors"
+              style={{ color: "#ABA4AA" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "#606364";
+                e.currentTarget.style.color = "#C3BCC2";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = "#ABA4AA";
+              }}
             >
-              <X className="h-4 w-4" style={{ color: "#CBD5E0" }} />
+              <X className="h-4 w-4" />
             </button>
           </div>
-        </div>
 
-        {!selectedConversation ? (
-          /* Conversations List */
-          <div className="flex-1 flex flex-col">
-            {/* Search */}
-            <div className="p-3 border-b" style={{ borderColor: "#4A5568" }}>
-              <div className="relative">
-                <Search
-                  className="absolute left-2.5 top-2.5 h-4 w-4"
-                  style={{ color: "#9CA3AF" }}
+          {/* Messages List */}
+          <div className="flex-1 overflow-y-auto">
+            {conversations.length === 0 ? (
+              <div className="p-4 text-center">
+                <MessageCircle
+                  className="h-8 w-8 mx-auto mb-2 opacity-50"
+                  style={{ color: "#ABA4AA" }}
                 />
-                <input
-                  type="text"
-                  placeholder="Search people"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-md border-0 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  style={{
-                    backgroundColor: "#374151",
-                    color: "#E2E8F0",
-                    // Remove: focusRingColor: "#60A5FA",
-                  }}
-                />
+                <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                  No messages yet
+                </p>
               </div>
-            </div>
+            ) : (
+              conversations.map((conversation: any, index: number) => {
+                // Determine the other user based on conversation type
+                let otherUser;
+                if (conversation.type === "COACH_CLIENT") {
+                  // Coach-client conversation
+                  otherUser =
+                    conversation.coach?.id !== currentUserId
+                      ? conversation.coach
+                      : conversation.client;
+                } else if (conversation.type === "CLIENT_CLIENT") {
+                  // Client-client conversation
+                  otherUser =
+                    conversation.client1?.id !== currentUserId
+                      ? conversation.client1
+                      : conversation.client2;
+                } else {
+                  // Fallback to old logic
+                  otherUser =
+                    conversation.coach?.id !== currentUserId
+                      ? conversation.coach
+                      : conversation.client;
+                }
 
-            {/* Conversations */}
-            <div className="flex-1 overflow-y-auto">
-              {filteredConversations.length === 0 ? (
-                <div className="p-4 text-center">
-                  <MessageCircle
-                    className="h-8 w-8 mx-auto mb-2 opacity-50"
-                    style={{ color: "#9CA3AF" }}
-                  />
-                  <p className="text-sm" style={{ color: "#9CA3AF" }}>
-                    {searchTerm ? "No conversations found" : "No messages yet"}
-                  </p>
-                </div>
-              ) : (
-                filteredConversations.map((conversation: any) => {
-                  // Determine the other user (not the current user)
-                  const otherUser =
-                    conversation.coach.id === currentUser?.id
-                      ? conversation.client
-                      : conversation.coach;
+                // Skip if otherUser is null/undefined
+                if (!otherUser) return null;
 
-                  // Debug: Check what avatar URL we're getting
-                  const avatarUrl =
-                    otherUser?.settings?.avatarUrl || otherUser?.avatar;
-                  console.log(`Avatar for ${otherUser?.name}:`, avatarUrl);
-                  const lastMessage = conversation.messages[0];
-                  // Get actual unread count from the unreadCounts data
-                  const unreadCount = unreadCounts[conversation.id] || 0;
-                  const hasUnread = unreadCount > 0;
-
-                  return (
-                    <div
-                      key={conversation.id}
-                      className={`flex items-center gap-3 p-3 hover:bg-gray-600 cursor-pointer border-b border-gray-600 transition-colors relative ${
-                        hasUnread
-                          ? "bg-gray-700/50 border-l-4 border-l-red-500"
-                          : ""
-                      }`}
-                      onClick={() => setSelectedConversation(conversation.id)}
-                    >
-                      <ProfilePictureUploader
-                        currentAvatarUrl={avatarUrl}
-                        userName={otherUser?.name || otherUser?.email || "User"}
-                        onAvatarChange={() => {}}
-                        size="md"
-                        readOnly={true}
-                        className="flex-shrink-0 border-2 border-red-500"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p
-                            className={`text-sm truncate ${
-                              hasUnread ? "font-semibold" : "font-medium"
-                            }`}
-                            style={{
-                              color: hasUnread ? "#FFFFFF" : "#E2E8F0",
-                            }}
-                          >
-                            {otherUser.name || otherUser.email.split("@")[0]}
-                          </p>
-                          {lastMessage && (
-                            <span
-                              className="text-xs flex-shrink-0 ml-2"
-                              style={{ color: "#9CA3AF" }}
-                            >
-                              {formatTime(lastMessage.createdAt)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          {lastMessage && (
-                            <p
-                              className={`text-xs truncate ${
-                                hasUnread ? "font-medium" : ""
-                              }`}
-                              style={{
-                                color: hasUnread ? "#E2E8F0" : "#9CA3AF",
-                              }}
-                            >
-                              {lastMessage.content}
-                            </p>
-                          )}
-                          {hasUnread && (
-                            <div className="flex items-center gap-2 ml-2">
-                              {/* Unread indicator dot */}
-                              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 animate-pulse"></div>
-                              {/* Unread count badge */}
-                              <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center font-medium">
-                                {unreadCount}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        ) : (
-          /* Chat View */
-          <div className="flex-1 flex flex-col">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {messages.map((message: any) => {
-                const isCurrentUser = message.sender.id === currentUser?.id;
+                const lastMessage = conversation.messages[0];
+                const unreadCount = unreadCountsObj[conversation.id] || 0;
 
                 return (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      isCurrentUser ? "justify-end" : "justify-start"
-                    }`}
+                  <Link
+                    key={conversation.id}
+                    href={`/client-messages`}
+                    onClick={onClose}
+                    className="flex items-center gap-3 p-3 border-b transition-all duration-200 hover:transform hover:translate-x-1"
+                    style={{
+                      borderColor: "#606364",
+                      color: "#C3BCC2",
+                      animationDelay: `${index * 50}ms`,
+                      animation:
+                        isOpen && !isAnimating
+                          ? `slideInLeft 0.3s ease-out ${index * 50}ms both`
+                          : undefined,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#2A3133";
+                      e.currentTarget.style.boxShadow =
+                        "0 2px 8px rgba(0, 0, 0, 0.2)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
                   >
                     <div
-                      className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
-                        isCurrentUser
-                          ? "bg-blue-500 text-white rounded-br-sm"
-                          : "bg-gray-600 text-gray-100 rounded-bl-sm"
-                      }`}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 transition-transform duration-200 hover:scale-110"
+                      style={{
+                        backgroundColor: "#4A5A70",
+                        color: "white",
+                      }}
                     >
-                      <FormattedMessage content={message.content} />
-
-                      {/* Video Attachment */}
-                      {message.attachmentType === "video" &&
-                        message.attachmentUrl && (
-                          <div className="mt-3 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 bg-gray-600 rounded-lg flex items-center justify-center">
-                                <svg
-                                  className="w-6 h-6 text-gray-300"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">
-                                  {message.attachmentName || "Video Attachment"}
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                  Video message
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  // Navigate to video annotation page
-                                  window.open(
-                                    `/videos/${message.id}`,
-                                    "_blank"
-                                  );
-                                }}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
-                              >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                  />
-                                </svg>
-                                Annotate
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Message Acknowledgment */}
-                      <MessageAcknowledgment
-                        messageId={message.id}
-                        requiresAcknowledgment={
-                          message.requiresAcknowledgment || false
-                        }
-                        isAcknowledged={message.isAcknowledged || false}
-                        acknowledgedAt={
-                          message.acknowledgedAt
-                            ? new Date(message.acknowledgedAt)
-                            : null
-                        }
-                        isOwnMessage={isCurrentUser}
-                      />
-
-                      <div className="flex items-center justify-end gap-1 mt-1">
+                      {(otherUser?.name || otherUser?.email)
+                        ?.charAt(0)
+                        ?.toUpperCase() || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
                         <p
-                          className={`text-xs ${
-                            isCurrentUser ? "text-blue-100" : "text-gray-400"
-                          }`}
+                          className="text-sm font-medium truncate"
+                          style={{ color: "#C3BCC2" }}
                         >
-                          {formatTime(message.createdAt)}
+                          {otherUser?.name ||
+                            otherUser?.email?.split("@")[0] ||
+                            "Unknown"}
                         </p>
-                        {isCurrentUser && (
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 bg-blue-200 rounded-full" />
-                          </div>
+                        {lastMessage && (
+                          <span
+                            className="text-xs flex-shrink-0 ml-2"
+                            style={{ color: "#ABA4AA" }}
+                          >
+                            {formatTime(lastMessage.createdAt)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        {lastMessage && (
+                          <p
+                            className="text-xs truncate"
+                            style={{ color: "#ABA4AA" }}
+                          >
+                            {lastMessage.content}
+                          </p>
+                        )}
+                        {unreadCount > 0 && (
+                          <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center ml-2 animate-pulse">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
-              })}
-
-              {/* Pending Messages */}
-              {pendingMessages.map(pendingMessage => (
-                <div key={pendingMessage.id} className="flex justify-end">
-                  <div
-                    className={`max-w-[70%] px-3 py-2 rounded-lg text-sm bg-blue-500 text-white rounded-br-sm ${
-                      pendingMessage.status === "failed" ? "opacity-60" : ""
-                    }`}
-                  >
-                    <FormattedMessage content={pendingMessage.content} />
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      <p className="text-xs text-blue-100">
-                        {formatTime(pendingMessage.timestamp.toISOString())}
-                      </p>
-                      <div className="flex items-center">
-                        {pendingMessage.status === "sending" && (
-                          <div className="flex items-center gap-1">
-                            <div className="w-1 h-1 bg-blue-200 rounded-full animate-pulse" />
-                            <div
-                              className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
-                              style={{ animationDelay: "0.2s" }}
-                            />
-                            <div
-                              className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
-                              style={{ animationDelay: "0.4s" }}
-                            />
-                          </div>
-                        )}
-                        {pendingMessage.status === "sent" && (
-                          <div className="w-2 h-2 bg-blue-200 rounded-full" />
-                        )}
-                        {pendingMessage.status === "failed" && (
-                          <div className="w-2 h-2 bg-red-400 rounded-full flex items-center justify-center">
-                            <span className="text-xs text-red-800">!</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Message Input */}
-            <div className="p-3 border-t" style={{ borderColor: "#4A5568" }}>
-              <RichMessageInput
-                value={messageText}
-                onChange={setMessageText}
-                onSend={() => handleSendMessage()}
-                placeholder="Type a message..."
-                disabled={false}
-                isPending={sendMessageMutation.isPending}
-              />
-            </div>
+              })
+            )}
           </div>
-        )}
+
+          {/* Footer */}
+          <div className="p-3 border-t" style={{ borderColor: "#606364" }}>
+            <Link
+              href="/client-messages"
+              onClick={onClose}
+              className="block w-full text-center py-2 px-4 rounded-md transition-all duration-200 hover:transform hover:scale-105"
+              style={{
+                backgroundColor: "#4A5A70",
+                color: "white",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "#5A6A80";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "#4A5A70";
+              }}
+            >
+              View All Messages
+            </Link>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

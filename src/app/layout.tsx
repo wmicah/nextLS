@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import Analytics from "@/components/Analytics";
+import CustomAnalytics from "@/components/Analytics";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import Toast from "@/components/common/Toast";
 import ChatbotWrapper from "@/components/Chatbot/ChatbotWrapper";
@@ -14,6 +14,7 @@ import MessagingServiceProvider from "@/components/MessagingServiceProvider";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import PWAProvider from "@/components/PWAProvider";
 import SessionManager from "@/components/SessionManager";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -214,7 +215,7 @@ export default function RootLayout({
                     {children}
                     <Toast />
                     <ChatbotWrapper />
-                    <Analytics />
+                    <CustomAnalytics />
                     <ServiceWorkerRegistration />
                   </PWAProvider>
                 </MessagingServiceProvider>
@@ -222,6 +223,7 @@ export default function RootLayout({
             </ThemeProvider>
           </Providers>
         </ErrorBoundary>
+        <Analytics />
       </body>
     </html>
   );

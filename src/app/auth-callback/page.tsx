@@ -66,7 +66,9 @@ export default function AuthCallback() {
           console.log("➡️ Going to COACH dashboard");
           router.push("/dashboard");
         } else if (userRole === "CLIENT") {
-          console.log("➡️ Going to CLIENT dashboard");
+          console.log("➡️ CLIENT role detected, checking coach assignment");
+          // For clients, we need to check if they have a coach assigned
+          // This will be handled by the client dashboard page itself
           router.push("/client-dashboard");
         } else {
           console.log("➡️ Unknown role, going to role selection");
