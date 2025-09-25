@@ -48,6 +48,18 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
       attachmentSize: number;
     };
   } | null>(null);
+
+  // Video creation mutation
+  const createVideoMutation = trpc.videos.create.useMutation({
+    onSuccess: videoData => {
+      // Navigate to video annotation page with the new video ID
+      window.open(`/videos/${videoData.id}`, "_blank");
+    },
+    onError: error => {
+      console.error("Failed to create video:", error);
+      alert("Failed to create video for annotation. Please try again.");
+    },
+  });
   const [pendingMessages, setPendingMessages] = useState<
     Array<{
       id: string;
@@ -678,11 +690,16 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                               {/* Annotation button */}
                               <button
                                 onClick={() => {
-                                  // Navigate to video annotation page
-                                  window.open(
-                                    `/videos/${message.id}`,
-                                    "_blank"
-                                  );
+                                  // Create video record from message attachment
+                                  createVideoMutation.mutate({
+                                    title:
+                                      message.attachmentName ||
+                                      "Video from Message",
+                                    description: `Video attachment from message`,
+                                    url: message.attachmentUrl,
+                                    duration: 0, // Will be updated when video loads
+                                    fileSize: message.attachmentSize || 0,
+                                  });
                                 }}
                                 className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                               >
@@ -727,7 +744,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                             isCurrentUser ? "text-blue-100" : "text-gray-400"
                           }`}
                         >
-                          {format(new Date(message.createdAt), "HH:mm")}
+                          {format(new Date(message.createdAt), "h:mm a")}
                         </span>
                         {isCurrentUser && (
                           <CheckCheck
@@ -785,7 +802,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                     )}
                     <div className="flex items-center justify-end gap-1 mt-2">
                       <span className="text-xs text-blue-100">
-                        {format(pendingMessage.timestamp, "HH:mm")}
+                        {format(pendingMessage.timestamp, "h:mm a")}
                       </span>
                       <div className="flex items-center">
                         {pendingMessage.status === "sending" && (

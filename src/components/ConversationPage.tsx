@@ -69,7 +69,8 @@ export default function ConversationPage({
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation({
-    onSuccess: () => {
+    onSuccess: data => {
+      console.log("Message sent successfully:", data);
       setMessageText("");
       setSelectedFile(null);
       refetchMessages();
@@ -126,6 +127,19 @@ export default function ConversationPage({
   const handleSendMessage = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!messageText.trim() && !selectedFile) return;
+
+    console.log("Sending message with data:", {
+      conversationId,
+      content: messageText.trim() || "",
+      selectedFile: selectedFile
+        ? {
+            attachmentUrl: selectedFile.uploadData.attachmentUrl,
+            attachmentType: selectedFile.uploadData.attachmentType,
+            attachmentName: selectedFile.uploadData.attachmentName,
+            attachmentSize: selectedFile.uploadData.attachmentSize,
+          }
+        : null,
+    });
 
     sendMessageMutation.mutate({
       conversationId,
@@ -306,15 +320,15 @@ export default function ConversationPage({
 
         {/* Chat Interface */}
         <div
-          className="flex flex-col h-[calc(100vh-200px)] rounded-3xl border overflow-hidden shadow-2xl"
+          className="flex flex-col h-[calc(100vh-200px)] rounded-2xl border overflow-hidden shadow-xl"
           style={{
             backgroundColor: "#1E1E1E",
-            borderColor: "#2a2a2a",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+            borderColor: "#374151",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
           }}
         >
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -350,14 +364,15 @@ export default function ConversationPage({
                     }`}
                   >
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        isCurrentUser ? "rounded-br-none" : "rounded-bl-none"
+                      className={`max-w-xs lg:max-w-lg xl:max-w-xl px-4 py-3 rounded-2xl ${
+                        isCurrentUser ? "rounded-br-sm" : "rounded-bl-sm"
                       }`}
                       style={{
-                        backgroundColor: isCurrentUser ? "#374151" : "#1f2937",
-                        color: "#f9fafb",
+                        backgroundColor: isCurrentUser ? "#3B82F6" : "#374151",
+                        color: "#ffffff",
                         border: "1px solid",
-                        borderColor: isCurrentUser ? "#6b7280" : "#374151",
+                        borderColor: isCurrentUser ? "#2563EB" : "#4B5563",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
                       }}
                     >
                       {message.content && (
@@ -368,25 +383,31 @@ export default function ConversationPage({
                       {message.attachmentUrl && (
                         <div className="mb-2">
                           {message.attachmentType?.startsWith("image/") ? (
-                            <img
-                              src={message.attachmentUrl}
-                              alt={message.attachmentName || "Image"}
-                              className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
-                              style={{ maxHeight: "300px" }}
-                              onClick={() =>
-                                message.attachmentUrl &&
-                                window.open(message.attachmentUrl, "_blank")
-                              }
-                            />
+                            <div className="relative group">
+                              <img
+                                src={message.attachmentUrl}
+                                alt={message.attachmentName || "Image"}
+                                className="max-w-full rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                                style={{ maxHeight: "300px" }}
+                                onClick={() =>
+                                  message.attachmentUrl &&
+                                  window.open(message.attachmentUrl, "_blank")
+                                }
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <span className="text-white text-sm font-medium">
+                                  Click to view
+                                </span>
+                              </div>
+                            </div>
                           ) : message.attachmentType?.startsWith("video/") ? (
-                            <div className="relative">
+                            <div className="relative group">
                               <video
                                 src={message.attachmentUrl}
                                 controls
-                                className="max-w-full rounded-lg"
+                                className="max-w-full rounded-xl"
                                 style={{ maxHeight: "300px" }}
                                 preload="metadata"
-                                poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23374151'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23f9fafb' font-size='12'%3ELoading...%3C/text%3E%3C/svg%3E"
                               >
                                 Your browser does not support the video tag.
                               </video>
@@ -408,21 +429,35 @@ export default function ConversationPage({
                               href={message.attachmentUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-2 p-2 rounded-lg transition-all duration-200 hover:scale-105"
+                              className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
                               style={{
-                                backgroundColor: "#2A3133",
-                                color: "#C3BCC2",
-                                border: "1px solid #606364",
+                                backgroundColor: isCurrentUser
+                                  ? "#1E40AF"
+                                  : "#2A3133",
+                                color: "#ffffff",
+                                border: "1px solid",
+                                borderColor: isCurrentUser
+                                  ? "#1D4ED8"
+                                  : "#606364",
                               }}
                             >
                               {message.attachmentType?.startsWith("audio/") ? (
-                                <File className="h-4 w-4" />
+                                <Music className="h-5 w-5" />
+                              ) : message.attachmentType?.startsWith(
+                                  "application/pdf"
+                                ) ? (
+                                <File className="h-5 w-5" />
                               ) : (
-                                <File className="h-4 w-4" />
+                                <File className="h-5 w-5" />
                               )}
-                              <span className="text-sm">
-                                {message.attachmentName}
-                              </span>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm font-medium block truncate">
+                                  {message.attachmentName}
+                                </span>
+                                <span className="text-xs opacity-75">
+                                  {message.attachmentType}
+                                </span>
+                              </div>
                             </a>
                           )}
                         </div>
@@ -430,7 +465,7 @@ export default function ConversationPage({
 
                       <div className="flex items-center justify-end gap-1 mt-1">
                         <span className="text-xs" style={{ color: "#ABA4AA" }}>
-                          {format(new Date(message.createdAt), "HH:mm")}
+                          {format(new Date(message.createdAt), "h:mm a")}
                         </span>
                         {isCurrentUser && (
                           <>
@@ -457,105 +492,122 @@ export default function ConversationPage({
           </div>
 
           {/* Message Input */}
-          <div className="p-4 border-t" style={{ borderColor: "#374151" }}>
+          <div
+            className="p-4 border-t bg-gray-50/5"
+            style={{ borderColor: "#374151" }}
+          >
             {/* Selected File Indicator */}
             {selectedFile && (
               <div
-                className="mb-3 p-3 rounded-lg flex items-center justify-between"
-                style={{ backgroundColor: "#1f2937" }}
+                className="mb-3 p-3 rounded-xl flex items-center justify-between border"
+                style={{
+                  backgroundColor: "#1f2937",
+                  borderColor: "#374151",
+                }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {selectedFile.file.type.startsWith("image/") ? (
                     <ImageIcon
-                      className="h-4 w-4"
-                      style={{ color: "#4A5A70" }}
+                      className="h-5 w-5"
+                      style={{ color: "#3B82F6" }}
                     />
                   ) : selectedFile.file.type.startsWith("video/") ? (
-                    <Video className="h-4 w-4" style={{ color: "#4A5A70" }} />
+                    <Video className="h-5 w-5" style={{ color: "#3B82F6" }} />
                   ) : (
-                    <File className="h-4 w-4" style={{ color: "#4A5A70" }} />
+                    <File className="h-5 w-5" style={{ color: "#3B82F6" }} />
                   )}
-                  <span className="text-sm" style={{ color: "#f9fafb" }}>
-                    {selectedFile.file.name}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className="text-sm font-medium block truncate"
+                      style={{ color: "#f9fafb" }}
+                    >
+                      {selectedFile.file.name}
+                    </span>
+                    <span
+                      className="text-xs opacity-75"
+                      style={{ color: "#9CA3AF" }}
+                    >
+                      Ready to send
+                    </span>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSelectedFile(null)}
-                  className="p-1 rounded transition-colors"
-                  style={{ color: "#ABA4AA" }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#3A4040";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
+                  className="p-2 rounded-lg transition-all duration-200 hover:bg-red-500/20"
+                  style={{ color: "#EF4444" }}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             )}
             <form
               onSubmit={handleSendMessage}
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
             >
               <button
                 type="button"
                 onClick={() => setShowFileUpload(true)}
-                className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
-                style={{ color: "#ABA4AA" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
+                className="p-3 rounded-xl transition-all duration-200 hover:scale-105 hover:bg-blue-500/10"
+                style={{ color: "#6B7280" }}
+                title="Attach file"
               >
-                <Paperclip className="h-4 w-4" />
+                <Paperclip className="h-5 w-5" />
               </button>
-              <input
-                type="text"
-                value={messageText}
-                onChange={e => setMessageText(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1 px-4 py-2 rounded-lg text-sm transition-all duration-200"
-                style={{
-                  backgroundColor: "#1f2937",
-                  borderColor: "#374151",
-                  color: "#f9fafb",
-                  border: "1px solid",
-                }}
-                onFocus={e => {
-                  e.currentTarget.style.borderColor = "#6b7280";
-                }}
-                onBlur={e => {
-                  e.currentTarget.style.borderColor = "#374151";
-                }}
-              />
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={messageText}
+                  onChange={e => setMessageText(e.target.value)}
+                  placeholder="Type a message..."
+                  className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  style={{
+                    backgroundColor: "#1f2937",
+                    borderColor: "#374151",
+                    color: "#f9fafb",
+                    border: "1px solid",
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#3B82F6";
+                    e.currentTarget.style.backgroundColor = "#111827";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = "#374151";
+                    e.currentTarget.style.backgroundColor = "#1f2937";
+                  }}
+                />
+                <div
+                  className="absolute bottom-1 right-2 text-xs opacity-50"
+                  style={{ color: "#9CA3AF" }}
+                >
+                  Shift+Enter for new line
+                </div>
+              </div>
               <button
                 type="submit"
                 disabled={
                   (!messageText.trim() && !selectedFile) ||
                   sendMessageMutation.isPending
                 }
-                className="p-2 rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-3 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   backgroundColor:
-                    messageText.trim() || selectedFile ? "#374151" : "#6b7280",
+                    messageText.trim() || selectedFile ? "#3B82F6" : "#6b7280",
                   color: "#ffffff",
                 }}
                 onMouseEnter={e => {
                   if (messageText.trim() || selectedFile) {
-                    e.currentTarget.style.backgroundColor = "#6b7280";
+                    e.currentTarget.style.backgroundColor = "#2563EB";
                   }
                 }}
                 onMouseLeave={e => {
                   if (messageText.trim() || selectedFile) {
-                    e.currentTarget.style.backgroundColor = "#374151";
+                    e.currentTarget.style.backgroundColor = "#3B82F6";
                   }
                 }}
+                title="Send message"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               </button>
             </form>
           </div>

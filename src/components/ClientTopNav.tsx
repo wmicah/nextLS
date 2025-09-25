@@ -93,7 +93,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <h1 className="text-xl font-bold text-white">
-                  Next Level Softball
+                  NextLevel Coaching
                 </h1>
               </div>
             </div>

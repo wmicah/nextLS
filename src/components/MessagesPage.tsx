@@ -50,6 +50,18 @@ function MessagesPage({}: MessagesPageProps) {
       attachmentSize: number;
     };
   } | null>(null);
+
+  // Video creation mutation
+  const createVideoMutation = trpc.videos.create.useMutation({
+    onSuccess: videoData => {
+      // Navigate to video annotation page with the new video ID
+      window.open(`/videos/${videoData.id}`, "_blank");
+    },
+    onError: error => {
+      console.error("Failed to create video:", error);
+      alert("Failed to create video for annotation. Please try again.");
+    },
+  });
   const [pendingMessages, setPendingMessages] = useState<
     Array<{
       id: string;
@@ -307,7 +319,7 @@ function MessagesPage({}: MessagesPageProps) {
     <Sidebar>
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
         {/* Hero Header */}
-        <div className="mb-8">
+        <div className="mb-2">
           <div className="rounded-2xl border relative overflow-hidden group">
             <div
               className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
@@ -316,7 +328,7 @@ function MessagesPage({}: MessagesPageProps) {
                   "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
               }}
             />
-            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
+            <div className="relative p-4 bg-gradient-to-r from-transparent via-black/20 to-black/40">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div>
@@ -367,20 +379,20 @@ function MessagesPage({}: MessagesPageProps) {
 
         {/* Messages Interface */}
         <div
-          className="flex h-[calc(100vh-200px)] rounded-3xl border overflow-hidden shadow-2xl"
+          className="flex h-[calc(100vh-40px)] rounded-2xl border overflow-hidden shadow-xl"
           style={{
             backgroundColor: "#1E1E1E",
-            borderColor: "#2a2a2a",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+            borderColor: "#374151",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
           }}
         >
           {/* Conversations Sidebar */}
           <div
             className="w-80 border-r flex flex-col"
-            style={{ borderColor: "#2a2a2a", backgroundColor: "#2a2a2a" }}
+            style={{ borderColor: "#374151", backgroundColor: "#1A1A1A" }}
           >
             {/* Header */}
-            <div className="p-6 border-b" style={{ borderColor: "#2a2a2a" }}>
+            <div className="p-6 border-b" style={{ borderColor: "#374151" }}>
               <div className="flex items-center justify-between mb-6">
                 <h2
                   className="text-2xl font-bold tracking-tight"
@@ -462,19 +474,11 @@ function MessagesPage({}: MessagesPageProps) {
                     <div
                       key={conversation.id}
                       onClick={() => handleConversationSelect(conversation.id)}
-                      className={`p-5 border-b cursor-pointer transition-all duration-300 hover:transform hover:translate-x-1 ${
+                      className={`p-4 cursor-pointer transition-all duration-200 border-b ${
                         selectedConversation === conversation.id
-                          ? "bg-gray-500/10 border-gray-500/20"
-                          : ""
+                          ? "bg-gray-800/50 border-gray-600"
+                          : "border-gray-700 hover:bg-gray-800/30"
                       }`}
-                      style={{
-                        borderColor: "#2a2a2a",
-                        color: "#f9fafb",
-                        backgroundColor:
-                          selectedConversation === conversation.id
-                            ? "#2E2E2E"
-                            : "transparent",
-                      }}
                       onMouseEnter={e => {
                         if (selectedConversation !== conversation.id) {
                           e.currentTarget.style.backgroundColor = "#2a2a2a";
@@ -697,7 +701,6 @@ function MessagesPage({}: MessagesPageProps) {
                                       className="max-w-full rounded-lg"
                                       style={{ maxHeight: "300px" }}
                                       preload="metadata"
-                                      poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23374151'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23f9fafb' font-size='12'%3ELoading...%3C/text%3E%3C/svg%3E"
                                     >
                                       Your browser does not support the video
                                       tag.
@@ -705,11 +708,17 @@ function MessagesPage({}: MessagesPageProps) {
                                     <div className="flex items-center gap-2">
                                       <button
                                         onClick={() => {
-                                          // Navigate to video annotation page
-                                          window.open(
-                                            `/videos/${message.id}`,
-                                            "_blank"
-                                          );
+                                          // Create video record from message attachment
+                                          createVideoMutation.mutate({
+                                            title:
+                                              message.attachmentName ||
+                                              "Video from Message",
+                                            description: `Video attachment from message`,
+                                            url: message.attachmentUrl,
+                                            duration: 0, // Will be updated when video loads
+                                            fileSize:
+                                              message.attachmentSize || 0,
+                                          });
                                         }}
                                         className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
                                       >
@@ -768,7 +777,7 @@ function MessagesPage({}: MessagesPageProps) {
                                 className="text-xs"
                                 style={{ color: "#ABA4AA" }}
                               >
-                                {format(new Date(message.createdAt), "HH:mm")}
+                                {format(new Date(message.createdAt), "h:mm a")}
                               </span>
                               {message.sender.id === currentUser?.id && (
                                 <CheckCheck
@@ -844,7 +853,7 @@ function MessagesPage({}: MessagesPageProps) {
                                 className="text-xs"
                                 style={{ color: "#ABA4AA" }}
                               >
-                                {format(pendingMessage.timestamp, "HH:mm")}
+                                {format(pendingMessage.timestamp, "h:mm a")}
                               </span>
                               <div className="flex items-center">
                                 {pendingMessage.status === "sending" && (

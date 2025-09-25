@@ -19,6 +19,16 @@ interface RichMessageInputProps {
   placeholder?: string;
   disabled?: boolean;
   isPending?: boolean;
+  selectedFile?: {
+    file: File;
+    uploadData: {
+      attachmentUrl: string;
+      attachmentType: string;
+      attachmentName: string;
+      attachmentSize: number;
+    };
+  } | null;
+  onRemoveFile?: () => void;
 }
 
 export default function RichMessageInput({
@@ -29,6 +39,8 @@ export default function RichMessageInput({
   placeholder = "Type a message...",
   disabled = false,
   isPending = false,
+  selectedFile,
+  onRemoveFile,
 }: RichMessageInputProps) {
   const [isFormatted, setIsFormatted] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -102,140 +114,194 @@ export default function RichMessageInput({
 
   return (
     <div className="relative">
-      {/* Formatting Toolbar */}
-      <div className="flex items-center gap-1 mb-2">
-        <button
-          type="button"
-          onClick={() => setShowFormatting(!showFormatting)}
-          className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-            showFormatting
-              ? "bg-blue-500/20 text-blue-400"
-              : "text-gray-400 hover:text-gray-300"
-          }`}
-          title="Text formatting"
+      {/* Selected File Preview */}
+      {selectedFile && (
+        <div
+          className="mb-3 p-3 rounded-lg border"
+          style={{
+            backgroundColor: "#1f2937",
+            borderColor: "#374151",
+          }}
         >
-          <Type className="h-4 w-4" />
-        </button>
-
-        {showFormatting && (
-          <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1 border border-gray-700">
-            <button
-              type="button"
-              onClick={() => formatText("bold")}
-              className="p-2 rounded hover:bg-gray-700 transition-colors"
-              title="Bold (Ctrl+B)"
-            >
-              <Bold className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => formatText("italic")}
-              className="p-2 rounded hover:bg-gray-700 transition-colors"
-              title="Italic (Ctrl+I)"
-            >
-              <Italic className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => formatText("underline")}
-              className="p-2 rounded hover:bg-gray-700 transition-colors"
-              title="Underline (Ctrl+U)"
-            >
-              <Underline className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => formatText("list")}
-              className="p-2 rounded hover:bg-gray-700 transition-colors"
-              title="Bullet list"
-            >
-              <List className="h-4 w-4" />
-            </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {selectedFile.uploadData.attachmentType.startsWith("image/") ? (
+                <img
+                  src={selectedFile.uploadData.attachmentUrl}
+                  alt="Preview"
+                  className="w-12 h-12 rounded-lg object-cover"
+                />
+              ) : selectedFile.uploadData.attachmentType.startsWith(
+                  "video/"
+                ) ? (
+                <video
+                  src={selectedFile.uploadData.attachmentUrl}
+                  className="w-12 h-12 rounded-lg object-cover"
+                  controls={false}
+                  muted
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-gray-600 flex items-center justify-center">
+                  <Paperclip className="h-6 w-6 text-gray-300" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-white truncate">
+                  {selectedFile.uploadData.attachmentName}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {selectedFile.uploadData.attachmentType} • Ready to send
+                </div>
+              </div>
+            </div>
+            {onRemoveFile && (
+              <button
+                type="button"
+                onClick={onRemoveFile}
+                className="p-1 rounded-lg transition-all duration-200 hover:bg-red-500/20 text-gray-400 hover:text-red-400"
+                title="Remove file"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Message Input Area */}
-      <div className="flex items-end gap-2">
+      <div className="flex items-center gap-3">
         {onFileUpload && (
           <button
             type="button"
             onClick={onFileUpload}
-            className="p-3 rounded-xl transition-all duration-200 hover:scale-105 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
+            className="p-2 rounded-lg transition-all duration-200 hover:scale-105 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
             title="Attach file"
           >
-            <Paperclip className="h-5 w-5" />
+            <Paperclip className="h-4 w-4" />
           </button>
         )}
 
         <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
+            rows={1}
             value={value}
             onChange={e => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled || isPending}
-            className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-300 font-medium resize-none overflow-hidden"
+            className="w-full rounded-lg text-sm font-medium resize-none overflow-hidden
+             transition-all duration-300 border border-gray-700 px-3 py-2
+             leading-[20px]" // exact 20px line-height to avoid fractional gaps
             style={{
+              boxSizing: "border-box",
               backgroundColor: "#2a2a2a",
-              borderColor: "#374151",
               color: "#f9fafb",
-              border: "1px solid",
-              minHeight: "48px",
+              height: "auto",
               maxHeight: "120px",
-            }}
-            onFocus={e => {
-              e.currentTarget.style.borderColor = "#6b7280";
-              e.currentTarget.style.boxShadow =
-                "0 0 0 3px rgba(107, 114, 128, 0.1)";
-            }}
-            onBlur={e => {
-              e.currentTarget.style.borderColor = "#374151";
-              e.currentTarget.style.boxShadow = "none";
+              // minHeight: "36px", // <- OPTIONAL: 20px line + 16px padding = 36px
             }}
           />
 
-          {/* Character count and formatting hint */}
-          <div className="absolute bottom-2 right-3 text-xs text-gray-500 pointer-events-none">
-            {value.length > 0 && <span className="mr-2">{value.length}</span>}
-            <span>Shift+Enter for new line</span>
-          </div>
+          {/* Formatting hint - only show when focused or has content */}
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowFormatting(!showFormatting)}
+          className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+            showFormatting
+              ? "bg-blue-500/20 text-blue-400"
+              : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
+          }`}
+          title="Text formatting"
+        >
+          <Type className="h-4 w-4" />
+        </button>
 
         <button
           type="button"
           onClick={onSend}
           disabled={!value.trim() || disabled || isPending}
-          className="p-3 rounded-xl transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center"
+          className="p-2 rounded-lg transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center"
           style={{
-            backgroundColor: value.trim() ? "#374151" : "#6b7280",
+            backgroundColor: value.trim() ? "#3B82F6" : "#6b7280",
             color: "#ffffff",
           }}
           onMouseEnter={e => {
             if (value.trim() && !disabled && !isPending) {
-              e.currentTarget.style.backgroundColor = "#4b5563";
+              e.currentTarget.style.backgroundColor = "#2563EB";
               e.currentTarget.style.transform = "scale(1.1)";
             }
           }}
           onMouseLeave={e => {
             if (value.trim() && !disabled && !isPending) {
-              e.currentTarget.style.backgroundColor = "#374151";
+              e.currentTarget.style.backgroundColor = "#3B82F6";
               e.currentTarget.style.transform = "scale(1)";
             }
           }}
         >
           {isPending ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
           ) : (
-            <Send className="h-5 w-5" />
+            <Send className="h-4 w-4" />
           )}
         </button>
       </div>
 
-      {/* Formatting Help */}
+      {/* Formatting Toolbar - only show when active */}
       {showFormatting && (
-        <div className="mt-2 text-xs text-gray-500 bg-gray-800/50 rounded-lg p-2 border border-gray-700">
+        <div className="mt-3 flex items-center gap-1 bg-gray-800/50 rounded-lg p-2 border border-gray-700">
+          <button
+            type="button"
+            onClick={() => formatText("bold")}
+            className="p-2 rounded hover:bg-gray-700 transition-colors"
+            title="Bold (Ctrl+B)"
+          >
+            <Bold className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => formatText("italic")}
+            className="p-2 rounded hover:bg-gray-700 transition-colors"
+            title="Italic (Ctrl+I)"
+          >
+            <Italic className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => formatText("underline")}
+            className="p-2 rounded hover:bg-gray-700 transition-colors"
+            title="Underline (Ctrl+U)"
+          >
+            <Underline className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => formatText("list")}
+            className="p-2 rounded hover:bg-gray-700 transition-colors"
+            title="Bullet list"
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Formatting Help - only show when formatting is active */}
+      {showFormatting && (
+        <div className="mt-2 text-xs text-gray-500 bg-gray-800/30 rounded-lg p-2 border border-gray-700">
           <p className="mb-1">
             <strong>Formatting shortcuts:</strong>
           </p>
@@ -250,9 +316,6 @@ export default function RichMessageInput({
           </p>
           <p>
             • <code>• item</code> for bullet lists
-          </p>
-          <p>
-            • <code>Shift+Enter</code> for new lines
           </p>
         </div>
       )}

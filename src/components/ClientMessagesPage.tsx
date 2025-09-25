@@ -11,6 +11,7 @@ import {
   File,
   CheckCheck,
   ArrowLeft,
+  Music,
 } from "lucide-react";
 import ClientTopNav from "./ClientTopNav";
 import { format } from "date-fns";
@@ -325,20 +326,20 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
 
         {/* Messages Interface */}
         <div
-          className="flex h-[calc(100vh-200px)] rounded-3xl border overflow-hidden shadow-2xl"
+          className="flex h-[calc(100vh-200px)] rounded-2xl border overflow-hidden shadow-xl"
           style={{
             backgroundColor: "#1E1E1E",
-            borderColor: "#2a2a2a",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+            borderColor: "#374151",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
           }}
         >
           {/* Conversations Sidebar */}
           <div
             className="w-80 border-r flex flex-col"
-            style={{ borderColor: "#2a2a2a", backgroundColor: "#2a2a2a" }}
+            style={{ borderColor: "#374151", backgroundColor: "#1A1A1A" }}
           >
             {/* Header */}
-            <div className="p-6 border-b" style={{ borderColor: "#2a2a2a" }}>
+            <div className="p-6 border-b" style={{ borderColor: "#374151" }}>
               <div className="flex items-center justify-between mb-6">
                 <h2
                   className="text-2xl font-bold tracking-tight"
@@ -406,8 +407,8 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                       key={conversation.id}
                       className={`p-4 cursor-pointer transition-all duration-200 border-b ${
                         selectedConversation === conversation.id
-                          ? "bg-blue-500/10 border-blue-500/20"
-                          : "border-gray-700 hover:bg-gray-800/50"
+                          ? "bg-gray-800/50 border-gray-600"
+                          : "border-gray-700 hover:bg-gray-800/30"
                       }`}
                       onClick={() => setSelectedConversation(conversation.id)}
                     >
@@ -509,15 +510,6 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setSelectedConversation(null)}
-                        className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
-                      >
-                        <ArrowLeft
-                          className="h-5 w-5"
-                          style={{ color: "#C3BCC2" }}
-                        />
-                      </button>
                       <ProfilePictureUploader
                         currentAvatarUrl={(() => {
                           const conversation = conversations.find(
@@ -591,19 +583,12 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button className="p-2 rounded-lg hover:bg-gray-800 transition-colors">
-                        <MoreVertical
-                          className="h-4 w-4"
-                          style={{ color: "#ABA4AA" }}
-                        />
-                      </button>
-                    </div>
+                    <div className="flex items-center gap-2"></div>
                   </div>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {messages.map((message: any) => {
                     const isCurrentUser = message.sender.id === currentUser?.id;
 
@@ -615,34 +600,42 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                         }`}
                       >
                         <div
-                          className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-                            isCurrentUser ? "text-white" : "text-gray-100"
+                          className={`${
+                            isCurrentUser
+                              ? "max-w-md lg:max-w-2xl xl:max-w-3xl"
+                              : "max-w-xs lg:max-w-lg xl:max-w-xl"
+                          } px-4 py-3 rounded-2xl ${
+                            isCurrentUser ? "rounded-br-sm" : "rounded-bl-sm"
                           }`}
                           style={{
                             backgroundColor: isCurrentUser
-                              ? "#2A3133"
-                              : "#353A3A",
-                            borderColor: isCurrentUser ? "#4A5A70" : "#606364",
+                              ? "#3B82F6"
+                              : "#374151",
+                            color: "#ffffff",
                             border: "1px solid",
+                            borderColor: isCurrentUser ? "#2563EB" : "#4B5563",
+                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
                           }}
                         >
-                          <div className="text-sm">
-                            {message.data &&
+                          {message.content && (
+                            <p className="text-sm mb-2">{message.content}</p>
+                          )}
+
+                          {message.data &&
                             (message.data.type === "SWAP_REQUEST" ||
                               message.data.type === "SWAP_CANCELLATION" ||
                               message.data.type === "SWAP_APPROVAL" ||
-                              message.data.type === "SWAP_DECLINE") ? (
-                              <SwapRequestMessage
-                                message={message}
-                                onResponse={() => {
-                                  // Refresh conversations after swap response
-                                  utils.messaging.getConversations.invalidate();
-                                }}
-                              />
-                            ) : (
-                              <FormattedMessage content={message.content} />
+                              message.data.type === "SWAP_DECLINE") && (
+                              <div className="text-sm">
+                                <SwapRequestMessage
+                                  message={message}
+                                  onResponse={() => {
+                                    // Refresh conversations after swap response
+                                    utils.messaging.getConversations.invalidate();
+                                  }}
+                                />
+                              </div>
                             )}
-                          </div>
 
                           {/* Message Acknowledgment - Skip for swap request messages */}
                           {!(
@@ -667,68 +660,80 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                             />
                           )}
 
+                          {/* File Attachment */}
                           {message.attachmentUrl && (
-                            <div className="mt-2">
+                            <div className="mb-2">
                               {message.attachmentType?.startsWith("image/") ? (
-                                <img
-                                  src={message.attachmentUrl}
-                                  alt="Attachment"
-                                  className="max-w-full rounded-lg"
-                                />
+                                <div className="relative group">
+                                  <img
+                                    src={message.attachmentUrl}
+                                    alt={message.attachmentName || "Image"}
+                                    className="max-w-full rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                                    style={{ maxHeight: "300px" }}
+                                    onClick={() =>
+                                      message.attachmentUrl &&
+                                      window.open(
+                                        message.attachmentUrl,
+                                        "_blank"
+                                      )
+                                    }
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <span className="text-white text-sm font-medium">
+                                      Click to view
+                                    </span>
+                                  </div>
+                                </div>
                               ) : message.attachmentType?.startsWith(
                                   "video/"
                                 ) ? (
-                                <div className="space-y-2">
+                                <div className="relative group">
                                   <video
                                     src={message.attachmentUrl}
                                     controls
-                                    className="max-w-full rounded-lg"
+                                    className="max-w-full rounded-xl"
                                     style={{ maxHeight: "300px" }}
                                     preload="metadata"
                                   >
                                     Your browser does not support the video tag.
                                   </video>
-                                  <button
-                                    onClick={() => {
-                                      // Navigate to video annotation page
-                                      window.open(
-                                        `/videos/${message.id}`,
-                                        "_blank"
-                                      );
-                                    }}
-                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
-                                  >
-                                    <svg
-                                      className="w-3 h-3"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                      />
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                      />
-                                    </svg>
-                                    Annotate Video
-                                  </button>
                                 </div>
                               ) : (
                                 <a
                                   href={message.attachmentUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="flex items-center gap-2 text-sm underline"
+                                  className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+                                  style={{
+                                    backgroundColor: isCurrentUser
+                                      ? "#1E40AF"
+                                      : "#2A3133",
+                                    color: "#ffffff",
+                                    border: "1px solid",
+                                    borderColor: isCurrentUser
+                                      ? "#1D4ED8"
+                                      : "#606364",
+                                  }}
                                 >
-                                  <File className="h-4 w-4" />
-                                  {message.attachmentName || "Attachment"}
+                                  {message.attachmentType?.startsWith(
+                                    "audio/"
+                                  ) ? (
+                                    <Music className="h-5 w-5" />
+                                  ) : message.attachmentType?.startsWith(
+                                      "application/pdf"
+                                    ) ? (
+                                    <File className="h-5 w-5" />
+                                  ) : (
+                                    <File className="h-5 w-5" />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-sm font-medium block truncate">
+                                      {message.attachmentName}
+                                    </span>
+                                    <span className="text-xs opacity-75">
+                                      {message.attachmentType}
+                                    </span>
+                                  </div>
                                 </a>
                               )}
                             </div>
@@ -794,7 +799,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                         )}
                         <div className="flex items-center justify-end gap-1 mt-2">
                           <span className="text-xs text-blue-100">
-                            {format(pendingMessage.timestamp, "HH:mm")}
+                            {format(pendingMessage.timestamp, "h:mm a")}
                           </span>
                           <div className="flex items-center">
                             {pendingMessage.status === "sending" && (
@@ -842,7 +847,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
 
                 {/* Message Input - Restricted for client-to-client conversations */}
                 <div
-                  className="p-6 border-t"
+                  className="p-4 border-t"
                   style={{ borderColor: "#2a2a2a" }}
                 >
                   {(() => {
@@ -878,6 +883,8 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                         placeholder="Type a message..."
                         disabled={false}
                         isPending={sendMessageMutation.isPending}
+                        selectedFile={selectedFile}
+                        onRemoveFile={() => setSelectedFile(null)}
                       />
                     );
                   })()}

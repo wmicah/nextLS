@@ -680,7 +680,7 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                             isCurrentUser ? "text-blue-100" : "text-gray-400"
                           }`}
                         >
-                          {format(new Date(message.createdAt), "HH:mm")}
+                          {format(new Date(message.createdAt), "h:mm a")}
                         </span>
                         {isCurrentUser && (
                           <CheckCheck
@@ -724,7 +724,7 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                     )}
                     <div className="flex items-center justify-end gap-1 mt-2">
                       <span className="text-xs text-blue-100">
-                        {format(pendingMessage.timestamp, "HH:mm")}
+                        {format(pendingMessage.timestamp, "h:mm a")}
                       </span>
                       <div className="flex items-center">
                         {pendingMessage.status === "sending" && (
