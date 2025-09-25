@@ -130,17 +130,17 @@ export const ourFileRouter = {
 
   // Message attachment uploader
   messageAttachmentUploader: f({
-    image: { maxFileSize: "10MB", maxFileCount: 1 },
-    video: { maxFileSize: "100MB", maxFileCount: 1 },
-    audio: { maxFileSize: "50MB", maxFileCount: 1 },
-    "application/pdf": { maxFileSize: "10MB", maxFileCount: 1 },
-    "application/msword": { maxFileSize: "10MB", maxFileCount: 1 },
+    image: { maxFileSize: "16MB", maxFileCount: 1 },
+    video: { maxFileSize: "128MB", maxFileCount: 1 },
+    audio: { maxFileSize: "64MB", maxFileCount: 1 },
+    "application/pdf": { maxFileSize: "16MB", maxFileCount: 1 },
+    "application/msword": { maxFileSize: "16MB", maxFileCount: 1 },
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
-      maxFileSize: "10MB",
+      maxFileSize: "16MB",
       maxFileCount: 1,
     },
-    "text/plain": { maxFileSize: "5MB", maxFileCount: 1 },
-    "text/markdown": { maxFileSize: "5MB", maxFileCount: 1 },
+    "text/plain": { maxFileSize: "8MB", maxFileCount: 1 },
+    "text/markdown": { maxFileSize: "8MB", maxFileCount: 1 },
   })
     .middleware(async ({ req }) => {
       // Authenticate user
