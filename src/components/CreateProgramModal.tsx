@@ -189,7 +189,7 @@ function CreateProgramModalContent({
           description: "",
           days: Array.from({ length: 7 }, (_, dayIndex) => ({
             dayNumber: dayIndex + 1,
-            title: `Day ${dayIndex + 1}`,
+            title: "",
             description: "",
             drills: [],
           })),
@@ -228,7 +228,7 @@ function CreateProgramModalContent({
       description: "",
       days: Array.from({ length: 7 }, (_, i) => ({
         dayNumber: i + 1,
-        title: `Day ${i + 1}`,
+        title: "",
         description: "",
         drills: [],
       })),
@@ -473,7 +473,7 @@ function CreateProgramModalContent({
           // Convert items to drills format
           return {
             dayNumber,
-            title: `Day ${dayNumber}`,
+            title: "",
             description: "",
             drills: items.map((item, itemIndex) => ({
               order: itemIndex + 1,

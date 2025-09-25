@@ -842,7 +842,7 @@ function ClientProgramPage() {
                     </div>
 
                     <p className="text-xs md:text-sm text-blue-200/80 mb-4 leading-relaxed">
-                      View your complete training schedule and upcoming sessions
+                      View your coach's schedule and request lessons
                     </p>
 
                     <button

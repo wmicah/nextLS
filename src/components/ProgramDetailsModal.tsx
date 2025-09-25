@@ -505,11 +505,6 @@ export default function ProgramDetailsModal({
                                               ) : (
                                                 <ChevronRight className="h-3 w-3 text-gray-400" />
                                               )}
-                                              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-                                                <span className="text-blue-400 text-xs font-medium">
-                                                  {day.dayNumber}
-                                                </span>
-                                              </div>
                                               <div>
                                                 <p className="text-white font-medium text-sm">
                                                   {day.title}

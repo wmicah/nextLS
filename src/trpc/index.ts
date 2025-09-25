@@ -3,7 +3,7 @@ import { publicProcedure, router } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, addDays, addMonths } from "date-fns";
 import {
   extractYouTubeVideoId,
   extractPlaylistId,
@@ -4923,6 +4923,179 @@ export const appRouter = router({
         return lesson;
       }),
 
+    // Schedule recurring lessons for a client
+    scheduleRecurringLessons: publicProcedure
+      .input(
+        z.object({
+          clientId: z.string(),
+          startDate: z.string(),
+          endDate: z.string(),
+          recurrencePattern: z.enum([
+            "weekly",
+            "biweekly",
+            "triweekly",
+            "monthly",
+          ]),
+          recurrenceInterval: z.number().min(1).max(6), // 1-6 weeks
+          sendEmail: z.boolean().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can schedule lessons",
+          });
+        }
+
+        // Verify the client belongs to this coach
+        const client = await db.client.findFirst({
+          where: {
+            id: input.clientId,
+            coachId: ensureUserId(user.id),
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found or not assigned to you",
+          });
+        }
+
+        const startDate = new Date(input.startDate);
+        const endDate = new Date(input.endDate);
+
+        // Validate dates
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid date format",
+          });
+        }
+
+        if (startDate >= endDate) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "End date must be after start date",
+          });
+        }
+
+        const now = new Date();
+        if (startDate <= now) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot schedule lessons in the past",
+          });
+        }
+
+        // Calculate lesson dates based on recurrence pattern
+        const lessonDates: Date[] = [];
+        let currentDate = new Date(startDate);
+
+        while (currentDate <= endDate) {
+          // Check if the date is on a working day
+          if (coach.workingDays) {
+            const dayName = format(currentDate, "EEEE");
+            if (coach.workingDays.includes(dayName)) {
+              lessonDates.push(new Date(currentDate));
+            }
+          } else {
+            lessonDates.push(new Date(currentDate));
+          }
+
+          // Calculate next lesson date based on recurrence pattern
+          switch (input.recurrencePattern) {
+            case "weekly":
+              currentDate = addDays(currentDate, 7 * input.recurrenceInterval);
+              break;
+            case "biweekly":
+              currentDate = addDays(currentDate, 14 * input.recurrenceInterval);
+              break;
+            case "triweekly":
+              currentDate = addDays(currentDate, 21 * input.recurrenceInterval);
+              break;
+            case "monthly":
+              currentDate = addMonths(currentDate, input.recurrenceInterval);
+              break;
+          }
+        }
+
+        if (lessonDates.length === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No valid lesson dates found within the specified range",
+          });
+        }
+
+        // Create all lessons in a transaction
+        const lessons = await db.$transaction(
+          lessonDates.map(lessonDate =>
+            db.event.create({
+              data: {
+                title: `Lesson with ${client.name || client.email || "Client"}`,
+                description: `Recurring lesson (${input.recurrencePattern})`,
+                date: lessonDate,
+                status: "CONFIRMED",
+                clientId: input.clientId,
+                coachId: ensureUserId(user.id),
+              },
+            })
+          )
+        );
+
+        // Update client's next lesson date to the first scheduled lesson
+        if (lessonDates.length > 0) {
+          await db.client.update({
+            where: { id: input.clientId },
+            data: { nextLessonDate: lessonDates[0] },
+          });
+        }
+
+        // Create notifications for the client
+        if (client.userId) {
+          await db.notification.create({
+            data: {
+              userId: client.userId,
+              type: "LESSON_SCHEDULED",
+              title: "Recurring Lessons Scheduled",
+              message: `Your coach has scheduled ${
+                lessonDates.length
+              } recurring lessons from ${format(
+                startDate,
+                "MMM d, yyyy"
+              )} to ${format(endDate, "MMM d, yyyy")}`,
+            },
+          });
+        }
+
+        // TODO: Send email notification if requested
+        if (input.sendEmail && client.email) {
+          console.log(
+            `Email notification would be sent to ${client.email} for ${lessonDates.length} recurring lessons`
+          );
+        }
+
+        return {
+          lessons,
+          totalLessons: lessonDates.length,
+          dateRange: {
+            start: startDate,
+            end: endDate,
+          },
+        };
+      }),
+
     // Get weekly schedule for a client
     getWeeklySchedule: publicProcedure
       .input(
@@ -6653,9 +6826,11 @@ export const appRouter = router({
         const assignments = [];
 
         for (const client of clients) {
-          // Parse the date string and create a date at midnight in local timezone
+          // Parse the date string and create a date at midnight in UTC to avoid timezone issues
           const [year, month, day] = input.startDate.split("-").map(Number);
-          const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+          const startDate = new Date(
+            Date.UTC(year, month - 1, day, 0, 0, 0, 0)
+          );
 
           // Create the assignments (one for each repetition)
           for (let cycle = 1; cycle <= input.repetitions; cycle++) {
@@ -7302,9 +7477,9 @@ export const appRouter = router({
         // Create routine assignments
         console.log("Server: Received startDate:", input.startDate);
 
-        // Parse the date string correctly to avoid timezone issues
+        // Parse the date string correctly to avoid timezone issues - use UTC
         const [year, month, day] = input.startDate.split("-").map(Number);
-        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+        const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
 
         console.log("Server: Parsed startDate:", startDate);
 

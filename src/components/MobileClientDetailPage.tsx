@@ -225,7 +225,9 @@ export default function MobileClientDetailPage({
               programsForDate.push({
                 id: `${assignment.id}-${weekNumber}-${dayNumber}`,
                 title: `${program.title} - ${
-                  programDay.title || `Day ${dayNumber}`
+                  programDay.title
+                    ? programDay.title.substring(0, 8)
+                    : "Workout"
                 }`,
                 description: `${programDay.drills.length} drills`,
                 type: "program",

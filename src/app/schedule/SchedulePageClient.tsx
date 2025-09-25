@@ -16,6 +16,7 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  Repeat,
 } from "lucide-react";
 import {
   format,
@@ -28,6 +29,7 @@ import {
   startOfWeek,
   endOfWeek,
   isSameMonth,
+  addWeeks,
 } from "date-fns";
 import Sidebar from "@/components/Sidebar";
 import { withMobileDetection } from "@/lib/mobile-detection";
@@ -45,6 +47,52 @@ function SchedulePageClient() {
   const [selectedRequestToReject, setSelectedRequestToReject] =
     useState<any>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Recurring lesson states for Day Overview Modal
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [endDate, setEndDate] = useState<string>("");
+  const [previewDates, setPreviewDates] = useState<Date[]>([]);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
+
+  // Fetch coach's profile for working hours
+  const { data: coachProfile } = trpc.user.getProfile.useQuery();
+
+  // Calculate preview dates for recurring lessons
+  useEffect(() => {
+    if (isRecurring && selectedDate && endDate) {
+      const start = new Date(selectedDate);
+      const end = new Date(endDate);
+      const dates: Date[] = [];
+      let currentDate = new Date(start);
+
+      while (currentDate <= end) {
+        // Check if the date is on a working day
+        if (coachProfile?.workingDays) {
+          const dayName = format(currentDate, "EEEE");
+          if (coachProfile.workingDays.includes(dayName)) {
+            dates.push(new Date(currentDate));
+          }
+        } else {
+          dates.push(new Date(currentDate));
+        }
+
+        // Calculate next lesson date - always weekly with interval
+        currentDate = addWeeks(currentDate, recurrenceInterval);
+      }
+
+      setPreviewDates(dates);
+    } else {
+      setPreviewDates([]);
+    }
+  }, [
+    isRecurring,
+    selectedDate,
+    endDate,
+    recurrenceInterval,
+    coachProfile?.workingDays,
+  ]);
+
   const [scheduleForm, setScheduleForm] = useState({
     clientId: "",
     time: "",
@@ -62,20 +110,10 @@ function SchedulePageClient() {
   const { data: upcomingLessons = [] } =
     trpc.scheduling.getCoachUpcomingLessons.useQuery();
 
-  // Fetch coach's profile for working hours
-  const { data: coachProfile } = trpc.user.getProfile.useQuery();
-
   // Fetch coach's active clients for scheduling (exclude archived)
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
   });
-
-  // Fetch routine assignments for the current month
-  const { data: routineAssignments = [] } =
-    trpc.routines.getRoutineAssignmentsForCalendar.useQuery({
-      month: currentMonth.getMonth(),
-      year: currentMonth.getFullYear(),
-    });
 
   // Fetch pending schedule requests
   const { data: pendingRequests = [] } =
@@ -95,6 +133,24 @@ function SchedulePageClient() {
       alert(`Error scheduling lesson: ${error.message}`);
     },
   });
+
+  const scheduleRecurringLessonsMutation =
+    trpc.scheduling.scheduleRecurringLessons.useMutation({
+      onSuccess: () => {
+        utils.scheduling.getCoachSchedule.invalidate();
+        utils.scheduling.getCoachUpcomingLessons.invalidate();
+        setShowDayOverviewModal(false);
+        setScheduleForm({ clientId: "", time: "", date: "" });
+        setSelectedDate(null);
+        setSelectedTimeSlot("");
+        setIsRecurring(false);
+        setEndDate("");
+        setPreviewDates([]);
+      },
+      onError: error => {
+        alert(`Error scheduling recurring lessons: ${error.message}`);
+      },
+    });
 
   const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
     onSuccess: () => {
@@ -187,30 +243,6 @@ function SchedulePageClient() {
     });
 
     return lessons;
-  };
-
-  const getRoutineAssignmentsForDate = (date: Date) => {
-    const assignments = routineAssignments.filter(
-      (assignment: { assignedAt: string; startDate: string | null }) => {
-        const assignmentDate = new Date(
-          assignment.startDate || assignment.assignedAt
-        );
-        // Compare only the date part, not the time
-        const assignmentDateOnly = new Date(
-          assignmentDate.getFullYear(),
-          assignmentDate.getMonth(),
-          assignmentDate.getDate()
-        );
-        const targetDateOnly = new Date(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate()
-        );
-        return assignmentDateOnly.getTime() === targetDateOnly.getTime();
-      }
-    );
-
-    return assignments;
   };
 
   const getAllLessonsForDate = (date: Date) => {
@@ -875,8 +907,6 @@ function SchedulePageClient() {
                 const isCurrentMonth = isSameMonth(day, currentMonth);
                 const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
                 const lessonsForDay = getLessonsForDate(day);
-                const routineAssignmentsForDay =
-                  getRoutineAssignmentsForDate(day);
 
                 const pendingForDay = pendingRequests.filter(
                   (request: { date: string }) => {
@@ -886,8 +916,6 @@ function SchedulePageClient() {
                 );
                 const hasLessons = lessonsForDay.length > 0;
                 const hasPending = pendingForDay.length > 0;
-                const hasRoutineAssignments =
-                  routineAssignmentsForDay.length > 0;
 
                 // Check if this is a working day
                 const dayName = format(day, "EEEE");
@@ -1037,40 +1065,7 @@ function SchedulePageClient() {
                       </div>
                     )}
 
-                    {/* Routine Assignments */}
-                    {hasRoutineAssignments && (
-                      <div className="space-y-0.5 md:space-y-1">
-                        {routineAssignmentsForDay
-                          .slice(0, 2)
-                          .map((assignment: any, index: number) => (
-                            <div
-                              key={`routine-${index}`}
-                              className="text-xs p-1.5 md:p-2 rounded bg-green-500/40 text-green-100 border-2 border-green-400 shadow-md relative group overflow-hidden"
-                            >
-                              <div className="flex items-start justify-between gap-1">
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-bold text-xs leading-tight text-green-200">
-                                    {assignment.routine.name}
-                                  </div>
-                                  <div className="truncate text-green-300 font-medium text-xs leading-tight">
-                                    {assignment.client.name}
-                                  </div>
-                                  <div className="text-xs text-green-400">
-                                    Routine Assignment
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        {routineAssignmentsForDay.length > 2 && (
-                          <div className="text-xs text-green-400 text-center py-1">
-                            +{routineAssignmentsForDay.length - 2} more routines
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {!hasLessons && !hasPending && !hasRoutineAssignments && (
+                    {!hasLessons && !hasPending && (
                       <div className="text-xs text-gray-400 mt-2 font-medium">
                         {isCurrentMonth && !isPast ? "No lessons" : ""}
                       </div>
@@ -1083,6 +1078,22 @@ function SchedulePageClient() {
                     {!hasLessons && isCurrentMonth && isPast && (
                       <div className="text-xs text-gray-500 mt-2 font-medium">
                         Past date
+                      </div>
+                    )}
+
+                    {/* Quick Action Buttons for Available Days */}
+                    {!isPast && isCurrentMonth && isWorkingDay && (
+                      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDateClick(day);
+                          }}
+                          className="p-1 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs"
+                          title="View Day Details"
+                        >
+                          <Calendar className="h-3 w-3" />
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1544,29 +1555,127 @@ function SchedulePageClient() {
                             </p>
                           </div>
                           {availableSlots.length > 0 ? (
-                            <div className="grid grid-cols-3 gap-2">
-                              {availableSlots.map((slot, index) => (
-                                <button
-                                  key={index}
-                                  onClick={() => {
-                                    setScheduleForm({
-                                      ...scheduleForm,
-                                      time: slot,
-                                    });
-                                    setShowDayOverviewModal(false);
-                                    setShowScheduleModal(true);
-                                  }}
-                                  className="p-3 rounded-lg border text-center transition-all duration-200 hover:bg-sky-500/10 hover:border-sky-500/30"
-                                  style={{
-                                    backgroundColor: "#2A2F2F",
-                                    borderColor: "#606364",
-                                    color: "#FFFFFF",
-                                  }}
+                            <>
+                              <div className="grid grid-cols-3 gap-2">
+                                {availableSlots.map((slot, index) => (
+                                  <button
+                                    key={index}
+                                    onClick={() => setSelectedTimeSlot(slot)}
+                                    className={`p-3 rounded-lg border text-center transition-all duration-200 ${
+                                      selectedTimeSlot === slot
+                                        ? "bg-sky-500 border-sky-400 text-white"
+                                        : "hover:bg-sky-500/10 hover:border-sky-500/30"
+                                    }`}
+                                    style={{
+                                      backgroundColor:
+                                        selectedTimeSlot === slot
+                                          ? "#0EA5E9"
+                                          : "#2A2F2F",
+                                      borderColor:
+                                        selectedTimeSlot === slot
+                                          ? "#0EA5E9"
+                                          : "#606364",
+                                      color: "#FFFFFF",
+                                    }}
+                                  >
+                                    {slot}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {selectedTimeSlot && (
+                                <div
+                                  className="mt-4 pt-4 border-t"
+                                  style={{ borderColor: "#606364" }}
                                 >
-                                  {slot}
-                                </button>
-                              ))}
-                            </div>
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-sm text-gray-400">
+                                        Selected time:{" "}
+                                        <span className="text-white font-medium">
+                                          {selectedTimeSlot}
+                                        </span>
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        Choose a client to schedule the lesson
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <select
+                                        value={scheduleForm.clientId}
+                                        onChange={e =>
+                                          setScheduleForm({
+                                            ...scheduleForm,
+                                            clientId: e.target.value,
+                                          })
+                                        }
+                                        className="p-2 rounded-md text-white text-sm"
+                                        style={{
+                                          backgroundColor: "#2A2F2F",
+                                          borderColor: "#606364",
+                                        }}
+                                      >
+                                        <option value="">
+                                          Select client...
+                                        </option>
+                                        {clients.map(client => (
+                                          <option
+                                            key={client.id}
+                                            value={client.id}
+                                          >
+                                            {client.name ||
+                                              client.email ||
+                                              "Unnamed Client"}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        onClick={() => {
+                                          if (
+                                            scheduleForm.clientId &&
+                                            selectedDate &&
+                                            selectedTimeSlot
+                                          ) {
+                                            // Construct the full date string
+                                            const dateStr = selectedDate
+                                              .toISOString()
+                                              .split("T")[0];
+                                            const [time, period] =
+                                              selectedTimeSlot.split(" ");
+                                            const [hour, minute] =
+                                              time.split(":");
+                                            const hour24 =
+                                              period === "PM" && hour !== "12"
+                                                ? parseInt(hour) + 12
+                                                : period === "AM" &&
+                                                  hour === "12"
+                                                ? 0
+                                                : parseInt(hour);
+
+                                            const fullDateStr = `${dateStr}T${hour24
+                                              .toString()
+                                              .padStart(2, "0")}:${minute}:00`;
+
+                                            // Schedule the lesson
+                                            scheduleLessonMutation.mutate({
+                                              clientId: scheduleForm.clientId,
+                                              lessonDate: fullDateStr,
+                                            });
+                                          }
+                                        }}
+                                        disabled={!scheduleForm.clientId}
+                                        className="px-4 py-2 hover:opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                                        style={{
+                                          backgroundColor: "#2A2F2F",
+                                        }}
+                                      >
+                                        Schedule Lesson
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <div className="text-center py-6">
                               <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
@@ -1584,29 +1693,121 @@ function SchedulePageClient() {
 
                     // Regular working day display
                     return availableSlots.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {availableSlots.map((slot, index) => (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              setScheduleForm({
-                                ...scheduleForm,
-                                time: slot,
-                              });
-                              setShowDayOverviewModal(false);
-                              setShowScheduleModal(true);
-                            }}
-                            className="p-3 rounded-lg border text-center transition-all duration-200 hover:bg-sky-500/10 hover:border-sky-500/30"
-                            style={{
-                              backgroundColor: "#2A2F2F",
-                              borderColor: "#606364",
-                              color: "#FFFFFF",
-                            }}
+                      <>
+                        <div className="grid grid-cols-3 gap-2">
+                          {availableSlots.map((slot, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedTimeSlot(slot)}
+                              className={`p-3 rounded-lg border text-center transition-all duration-200 ${
+                                selectedTimeSlot === slot
+                                  ? "bg-sky-500 border-sky-400 text-white"
+                                  : "hover:bg-sky-500/10 hover:border-sky-500/30"
+                              }`}
+                              style={{
+                                backgroundColor:
+                                  selectedTimeSlot === slot
+                                    ? "#0EA5E9"
+                                    : "#2A2F2F",
+                                borderColor:
+                                  selectedTimeSlot === slot
+                                    ? "#0EA5E9"
+                                    : "#606364",
+                                color: "#FFFFFF",
+                              }}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Schedule Lesson Button */}
+                        {selectedTimeSlot && (
+                          <div
+                            className="mt-4 pt-4 border-t"
+                            style={{ borderColor: "#606364" }}
                           >
-                            {slot}
-                          </button>
-                        ))}
-                      </div>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-gray-400">
+                                  Selected time:{" "}
+                                  <span className="text-white font-medium">
+                                    {selectedTimeSlot}
+                                  </span>
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Choose a client to schedule the lesson
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <select
+                                  value={scheduleForm.clientId}
+                                  onChange={e =>
+                                    setScheduleForm({
+                                      ...scheduleForm,
+                                      clientId: e.target.value,
+                                    })
+                                  }
+                                  className="p-2 rounded-md text-white text-sm"
+                                  style={{
+                                    backgroundColor: "#2A2F2F",
+                                    borderColor: "#606364",
+                                  }}
+                                >
+                                  <option value="">Select client...</option>
+                                  {clients.map(client => (
+                                    <option key={client.id} value={client.id}>
+                                      {client.name ||
+                                        client.email ||
+                                        "Unnamed Client"}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      scheduleForm.clientId &&
+                                      selectedDate &&
+                                      selectedTimeSlot
+                                    ) {
+                                      // Construct the full date string
+                                      const dateStr = selectedDate
+                                        .toISOString()
+                                        .split("T")[0];
+                                      const [time, period] =
+                                        selectedTimeSlot.split(" ");
+                                      const [hour, minute] = time.split(":");
+                                      const hour24 =
+                                        period === "PM" && hour !== "12"
+                                          ? parseInt(hour) + 12
+                                          : period === "AM" && hour === "12"
+                                          ? 0
+                                          : parseInt(hour);
+
+                                      const fullDateStr = `${dateStr}T${hour24
+                                        .toString()
+                                        .padStart(2, "0")}:${minute}:00`;
+
+                                      // Schedule the lesson
+                                      scheduleLessonMutation.mutate({
+                                        clientId: scheduleForm.clientId,
+                                        lessonDate: fullDateStr,
+                                      });
+                                    }
+                                  }}
+                                  disabled={!scheduleForm.clientId}
+                                  className="px-4 py-2 hover:opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                                  style={{
+                                    backgroundColor: "#2A2F2F",
+                                  }}
+                                >
+                                  Schedule Lesson
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="text-center py-6">
                         <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
@@ -1617,6 +1818,212 @@ function SchedulePageClient() {
                       </div>
                     );
                   })()}
+                </div>
+
+                {/* Recurring Lesson Options */}
+                <div
+                  className="mt-8 pt-6 border-t"
+                  style={{ borderColor: "#606364" }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <Repeat className="h-5 w-5 text-sky-400" />
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">
+                          Schedule Recurring Lessons
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          Create multiple lessons at once with automatic
+                          scheduling
+                        </p>
+                        {selectedTimeSlot && (
+                          <p className="text-xs text-sky-400 mt-1">
+                            Using selected time:{" "}
+                            <span className="font-medium">
+                              {selectedTimeSlot}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="recurring"
+                      checked={isRecurring}
+                      onChange={e => setIsRecurring(e.target.checked)}
+                      className="w-4 h-4 text-sky-600 bg-gray-700 border-gray-600 rounded focus:ring-sky-500 focus:ring-2"
+                    />
+                  </div>
+
+                  {isRecurring && (
+                    <div className="space-y-4">
+                      {/* Client Selection - Uses same client as single lesson */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Client
+                        </label>
+                        <div className="p-3 rounded-md text-white bg-gray-700/50 border border-gray-600">
+                          {scheduleForm.clientId ? (
+                            <span className="text-green-400">
+                              ✓{" "}
+                              {clients.find(c => c.id === scheduleForm.clientId)
+                                ?.name ||
+                                clients.find(
+                                  c => c.id === scheduleForm.clientId
+                                )?.email ||
+                                "Selected Client"}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">
+                              Please select a client above first
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Recurrence Settings */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Repeat Every
+                        </label>
+                        <select
+                          value={recurrenceInterval}
+                          onChange={e =>
+                            setRecurrenceInterval(parseInt(e.target.value))
+                          }
+                          className="w-full p-3 rounded-md text-white"
+                          style={{
+                            backgroundColor: "#2A2F2F",
+                            borderColor: "#606364",
+                          }}
+                        >
+                          {[1, 2, 3, 4, 5, 6].map(num => (
+                            <option key={num} value={num}>
+                              {num} week{num > 1 ? "s" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* End Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          End Date
+                        </label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={e => setEndDate(e.target.value)}
+                          min={
+                            selectedDate
+                              ? format(selectedDate, "yyyy-MM-dd")
+                              : format(new Date(), "yyyy-MM-dd")
+                          }
+                          className="w-full p-3 rounded-md text-white"
+                          style={{
+                            backgroundColor: "#2A2F2F",
+                            borderColor: "#606364",
+                          }}
+                        />
+                      </div>
+
+                      {/* Preview and Schedule Button */}
+                      {scheduleForm.clientId && endDate && (
+                        <div
+                          className="pt-4 border-t"
+                          style={{ borderColor: "#606364" }}
+                        >
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-sm text-gray-400 mb-2">
+                                {previewDates.length > 0
+                                  ? `${previewDates.length} lessons will be scheduled`
+                                  : "Calculating preview..."}
+                              </p>
+
+                              {/* Preview of scheduled dates */}
+                              {previewDates.length > 0 && (
+                                <div className="max-h-32 overflow-y-auto bg-gray-800/50 rounded-lg p-3">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {previewDates
+                                      .slice(0, 8)
+                                      .map((date, index) => (
+                                        <div
+                                          key={index}
+                                          className="text-sm text-gray-300 bg-gray-700/50 p-2 rounded"
+                                        >
+                                          {format(date, "MMM d, yyyy")} at{" "}
+                                          {selectedTimeSlot}
+                                        </div>
+                                      ))}
+                                    {previewDates.length > 8 && (
+                                      <div className="text-sm text-gray-400 col-span-full text-center py-2">
+                                        ... and {previewDates.length - 8} more
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs text-gray-500">
+                                Starting from{" "}
+                                {selectedDate
+                                  ? format(selectedDate, "MMM d, yyyy")
+                                  : "selected date"}{" "}
+                                at {selectedTimeSlot}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (
+                                    scheduleForm.clientId &&
+                                    selectedDate &&
+                                    selectedTimeSlot &&
+                                    endDate
+                                  ) {
+                                    // Construct the start date string
+                                    const dateStr = selectedDate
+                                      .toISOString()
+                                      .split("T")[0];
+                                    const [time, period] =
+                                      selectedTimeSlot.split(" ");
+                                    const [hour, minute] = time.split(":");
+                                    const hour24 =
+                                      period === "PM" && hour !== "12"
+                                        ? parseInt(hour) + 12
+                                        : period === "AM" && hour === "12"
+                                        ? 0
+                                        : parseInt(hour);
+
+                                    const startDateStr = `${dateStr}T${hour24
+                                      .toString()
+                                      .padStart(2, "0")}:${minute}:00`;
+
+                                    // Schedule recurring lessons
+                                    scheduleRecurringLessonsMutation.mutate({
+                                      clientId: scheduleForm.clientId,
+                                      startDate: startDateStr,
+                                      endDate: new Date(endDate).toISOString(),
+                                      recurrencePattern: "weekly",
+                                      recurrenceInterval,
+                                      sendEmail: true,
+                                    });
+                                  }
+                                }}
+                                className="px-4 py-2 hover:opacity-80 text-white rounded-lg transition-colors"
+                                style={{
+                                  backgroundColor: "#2A2F2F",
+                                }}
+                              >
+                                Schedule {previewDates.length} Lessons
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
