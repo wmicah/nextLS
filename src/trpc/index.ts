@@ -4899,7 +4899,7 @@ export const appRouter = router({
         // Update client's next lesson date
         await db.client.update({
           where: { id: input.clientId },
-          data: { nextLessonDate: lessonDate },
+          data: { nextLessonDate: utcLessonDate },
         });
 
         // Create notification for the client
@@ -4910,7 +4910,7 @@ export const appRouter = router({
               type: "LESSON_SCHEDULED",
               title: "New Lesson Scheduled",
               message: `Your coach has scheduled a lesson for ${format(
-                lessonDate,
+                utcLessonDate,
                 "MMM d, yyyy 'at' h:mm a"
               )}`,
             },
@@ -4922,7 +4922,7 @@ export const appRouter = router({
           // This would integrate with your email service
           // For now, we'll just log it
           console.log(
-            `Email notification would be sent to ${client.email} for lesson on ${lessonDate}`
+            `Email notification would be sent to ${client.email} for lesson on ${utcLessonDate}`
           );
         }
 
