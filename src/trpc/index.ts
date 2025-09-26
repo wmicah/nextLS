@@ -4852,7 +4852,7 @@ export const appRouter = router({
 
         // Convert to UTC for database storage
         const utcLessonDate = new Date(
-          localLessonDate.getTime() -
+          localLessonDate.getTime() +
             localLessonDate.getTimezoneOffset() * 60000
         );
 
@@ -11500,7 +11500,7 @@ export const appRouter = router({
 
         // Convert to UTC for database storage
         const utcDateTime = new Date(
-          localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000
+          localDateTime.getTime() + localDateTime.getTimezoneOffset() * 60000
         );
 
         // Validate the date
