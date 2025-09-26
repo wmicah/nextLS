@@ -4847,11 +4847,17 @@ export const appRouter = router({
           });
         }
 
-        // Convert string to Date object
-        const lessonDate = new Date(input.lessonDate);
+        // Convert string to Date object (this is local time from client)
+        const localLessonDate = new Date(input.lessonDate);
+
+        // Convert to UTC for database storage
+        const utcLessonDate = new Date(
+          localLessonDate.getTime() -
+            localLessonDate.getTimezoneOffset() * 60000
+        );
 
         // Validate the date
-        if (isNaN(lessonDate.getTime())) {
+        if (isNaN(localLessonDate.getTime())) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid date format",
@@ -4860,7 +4866,7 @@ export const appRouter = router({
 
         // Check if the lesson is in the past
         const now = new Date();
-        if (lessonDate <= now) {
+        if (localLessonDate <= now) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Cannot schedule lessons in the past",
@@ -4869,7 +4875,7 @@ export const appRouter = router({
 
         // Check if the requested date is on a working day
         if (coach.workingDays) {
-          const dayName = format(lessonDate, "EEEE");
+          const dayName = format(localLessonDate, "EEEE");
           if (!coach.workingDays.includes(dayName)) {
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -4883,7 +4889,7 @@ export const appRouter = router({
           data: {
             title: `Lesson with ${client.name || client.email || "Client"}`,
             description: "Scheduled lesson",
-            date: lessonDate,
+            date: utcLessonDate,
             status: "CONFIRMED", // Coach-scheduled lessons are automatically confirmed
             clientId: input.clientId, // Use Client.id directly
             coachId: ensureUserId(user.id),
@@ -11486,21 +11492,15 @@ export const appRouter = router({
           hour24 = 0;
         }
 
-        // Create the full date string in local time (not UTC)
+        // Create the full date string in local time
         const fullDateStr = `${dateStr}T${hour24
           .toString()
           .padStart(2, "0")}:${minute}:00`;
-        const requestedDateTime = new Date(fullDateStr);
+        const localDateTime = new Date(fullDateStr);
 
-        // Ensure the date is treated as local time, not UTC
-        // by creating a new Date object with local timezone
-        const localDateTime = new Date(
-          requestedDateTime.getFullYear(),
-          requestedDateTime.getMonth(),
-          requestedDateTime.getDate(),
-          requestedDateTime.getHours(),
-          requestedDateTime.getMinutes(),
-          requestedDateTime.getSeconds()
+        // Convert to UTC for database storage
+        const utcDateTime = new Date(
+          localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60000
         );
 
         // Validate the date
@@ -11539,7 +11539,7 @@ export const appRouter = router({
         const existingLesson = await db.event.findFirst({
           where: {
             coachId: client.coachId!,
-            date: localDateTime,
+            date: utcDateTime,
           },
         });
 
@@ -11564,7 +11564,7 @@ export const appRouter = router({
           data: {
             title: `Schedule Request - ${client.name}`,
             description: input.reason || "Client requested schedule change",
-            date: localDateTime,
+            date: utcDateTime,
             clientId: client.id,
             coachId: client.coachId!,
             status: "PENDING", // New status field for pending requests
@@ -11588,7 +11588,7 @@ export const appRouter = router({
                 eventId: scheduleRequest.id,
                 clientId: client.id,
                 clientName: client.name,
-                requestedDate: localDateTime,
+                requestedDate: utcDateTime,
                 reason: input.reason,
               },
             },
