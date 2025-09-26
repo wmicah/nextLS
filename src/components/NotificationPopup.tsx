@@ -73,7 +73,7 @@ export default function NotificationPopup({
     if (isOpen && buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setButtonPosition({
-        top: rect.bottom + window.scrollY,
+        top: rect.bottom, // Remove window.scrollY to keep it fixed to viewport
         left: rect.left + rect.width / 2,
       });
     }

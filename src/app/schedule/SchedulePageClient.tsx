@@ -337,9 +337,12 @@ function SchedulePageClient() {
       return;
     }
 
+    const timeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
     scheduleLessonMutation.mutate({
       clientId: scheduleForm.clientId,
       lessonDate: fullDateStr, // Send as string instead of Date object
+      timeZone,
     });
   };
 

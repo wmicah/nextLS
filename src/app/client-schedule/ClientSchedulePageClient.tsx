@@ -28,6 +28,7 @@ import {
   endOfWeek,
   isSameMonth,
 } from "date-fns";
+import { utcToZonedTime } from "date-fns-tz";
 import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientSchedulePage from "@/components/MobileClientSchedulePage";
@@ -61,19 +62,6 @@ function ClientSchedulePageClient() {
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
     });
-
-  // Debug: Log client lessons with time conversion details
-  console.log(
-    "Client lessons with time details:",
-    clientLessons.map(lesson => ({
-      title: lesson.title,
-      rawDate: lesson.date,
-      dateObject: new Date(lesson.date),
-      formatted: format(new Date(lesson.date), "h:mm a"),
-      localTime: new Date(lesson.date).toLocaleTimeString(),
-      timezoneOffset: new Date(lesson.date).getTimezoneOffset(),
-    }))
-  );
 
   // Fetch client's upcoming lessons across all months
   const { data: upcomingLessons = [] } =
@@ -214,6 +202,14 @@ function ClientSchedulePageClient() {
     return lessons;
   };
 
+  // Utility function to format time in user's timezone
+  const formatTimeInUserTimezone = (utcDateString: string) => {
+    const timeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+    const localDate = utcToZonedTime(utcDateString, timeZone);
+    return format(localDate, "h:mm a");
+  };
+
   const getClientLessonsForDate = (date: Date) => {
     const lessons = clientLessons.filter((lesson: { date: string }) => {
       const lessonDate = new Date(lesson.date);
@@ -255,10 +251,15 @@ function ClientSchedulePageClient() {
       return;
     }
 
+    // Capture user's timezone
+    const timeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+
     requestScheduleChangeMutation.mutate({
       requestedDate: requestForm.date,
       requestedTime: requestForm.time,
       reason: requestForm.reason,
+      timeZone: timeZone,
     });
   };
 
@@ -572,7 +573,7 @@ function ClientSchedulePageClient() {
                         >
                           <div className="flex-1">
                             <div className="font-medium">
-                              {format(new Date(lesson.date), "h:mm a")}
+                              {formatTimeInUserTimezone(lesson.date)}
                             </div>
                             <div className="text-sm opacity-80">
                               {lesson.title}
@@ -612,7 +613,14 @@ function ClientSchedulePageClient() {
                         >
                           <div className="flex-1">
                             <div className="font-medium text-sky-300">
-                              {format(new Date(lesson.date), "MMM d, h:mm a")}
+                              {format(
+                                utcToZonedTime(
+                                  lesson.date,
+                                  Intl.DateTimeFormat().resolvedOptions()
+                                    .timeZone || "America/New_York"
+                                ),
+                                "MMM d, h:mm a"
+                              )}
                             </div>
                             <div className="text-sm text-sky-200">
                               {lesson.client?.name ||
@@ -791,7 +799,7 @@ function ClientSchedulePageClient() {
                                 <div className="flex items-start justify-between gap-1">
                                   <div className="flex-1 min-w-0">
                                     <div className="font-bold text-xs leading-tight">
-                                      {format(new Date(lesson.date), "h:mm a")}
+                                      {formatTimeInUserTimezone(lesson.date)}
                                     </div>
                                     <div className="truncate opacity-80 font-medium text-xs leading-tight">
                                       {lesson.title}
@@ -831,7 +839,7 @@ function ClientSchedulePageClient() {
                               <div className="flex items-start justify-between gap-1">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-bold text-xs leading-tight">
-                                    {format(new Date(lesson.date), "h:mm a")}
+                                    {formatTimeInUserTimezone(lesson.date)}
                                   </div>
                                   <div className="truncate text-sky-200 font-medium text-xs leading-tight">
                                     {lesson.client?.name ||

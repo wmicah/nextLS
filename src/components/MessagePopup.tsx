@@ -52,8 +52,8 @@ export default function MessagePopup({
     if (buttonRef?.current && isOpen) {
       const rect = buttonRef.current.getBoundingClientRect();
       setButtonPosition({
-        top: rect.bottom + window.scrollY + 8, // 8px gap below button
-        left: rect.left + window.scrollX + rect.width / 2 - 192, // Center popup (384px / 2 = 192px)
+        top: rect.bottom + 8, // 8px gap below button, remove window.scrollY to keep it fixed to viewport
+        left: rect.left + rect.width / 2 - 192, // Center popup (384px / 2 = 192px), remove window.scrollX
       });
     }
   }, [isOpen, buttonRef]);

@@ -4812,6 +4812,7 @@ export const appRouter = router({
           clientId: z.string(), // This is Client.id
           lessonDate: z.string(), // Changed from z.date() to z.string()
           sendEmail: z.boolean().optional(),
+          timeZone: z.string().optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -4850,16 +4851,13 @@ export const appRouter = router({
         // Convert string to Date object (this is local time from client)
         const localLessonDate = new Date(input.lessonDate);
 
-        // Convert to UTC for database storage
-        // getTimezoneOffset() returns negative values for timezones ahead of UTC
-        // So we ADD the offset to convert local time to UTC
-        const utcLessonDate = new Date(
-          localLessonDate.getTime() +
-            localLessonDate.getTimezoneOffset() * 60000
-        );
+        // Convert local time to UTC using the user's timezone
+        const timeZone = input.timeZone || "America/New_York";
+        const { zonedTimeToUtc } = await import("date-fns-tz");
+        const utcLessonDate = zonedTimeToUtc(localLessonDate, timeZone);
 
         // Validate the date
-        if (isNaN(localLessonDate.getTime())) {
+        if (isNaN(utcLessonDate.getTime())) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid date format",
@@ -4868,7 +4866,7 @@ export const appRouter = router({
 
         // Check if the lesson is in the past
         const now = new Date();
-        if (localLessonDate <= now) {
+        if (utcLessonDate <= now) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Cannot schedule lessons in the past",
@@ -11440,6 +11438,7 @@ export const appRouter = router({
           requestedDate: z.string(),
           requestedTime: z.string(),
           reason: z.string().optional(),
+          timeZone: z.string().optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -11498,17 +11497,14 @@ export const appRouter = router({
         const fullDateStr = `${dateStr}T${hour24
           .toString()
           .padStart(2, "0")}:${minute}:00`;
-        const localDateTime = new Date(fullDateStr);
 
-        // Convert to UTC for database storage
-        // getTimezoneOffset() returns negative values for timezones ahead of UTC
-        // So we ADD the offset to convert local time to UTC
-        const utcDateTime = new Date(
-          localDateTime.getTime() + localDateTime.getTimezoneOffset() * 60000
-        );
+        // Convert local time to UTC using the user's timezone
+        const timeZone = input.timeZone || "America/New_York";
+        const { zonedTimeToUtc } = await import("date-fns-tz");
+        const utcDateTime = zonedTimeToUtc(fullDateStr, timeZone);
 
         // Validate the date
-        if (isNaN(localDateTime.getTime())) {
+        if (isNaN(utcDateTime.getTime())) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid date/time combination",
@@ -11517,7 +11513,7 @@ export const appRouter = router({
 
         // Check if the requested time is in the past
         const now = new Date();
-        if (localDateTime <= now) {
+        if (utcDateTime <= now) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Cannot request lessons in the past",

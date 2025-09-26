@@ -332,10 +332,13 @@ export default function ScheduleLessonModal({
       });
     } else {
       // Regular lesson scheduling
+      const timeZone =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
       scheduleLessonMutation.mutate({
         clientId,
         lessonDate: lessonDate.toISOString(),
         sendEmail,
+        timeZone,
       });
     }
   };
