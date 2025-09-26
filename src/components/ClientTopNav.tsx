@@ -32,6 +32,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
   const [showRecentMessages, setShowRecentMessages] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const messagesButtonRef = useRef<HTMLButtonElement>(null);
+  const notificationsButtonRef = useRef<HTMLButtonElement>(null);
 
   // Get user data
   const { data: authData } = trpc.authCallback.useQuery();
@@ -125,6 +126,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
 
                 {/* Notifications */}
                 <button
+                  ref={notificationsButtonRef}
                   onClick={handleNotifications}
                   className="relative p-2 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105"
                 >
@@ -311,6 +313,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
         <NotificationPopup
           isOpen={showNotifications}
           onClose={() => setShowNotifications(false)}
+          buttonRef={notificationsButtonRef}
         />
       )}
     </div>

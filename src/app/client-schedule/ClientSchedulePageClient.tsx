@@ -472,7 +472,10 @@ function ClientSchedulePageClient() {
 
   return (
     <ClientTopNav>
-      <div className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6" style={{ backgroundColor: "#2a3133" }}>
+      <div
+        className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6"
+        style={{ backgroundColor: "#2a3133" }}
+      >
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
@@ -503,9 +506,7 @@ function ClientSchedulePageClient() {
                 }}
               >
                 <Plus className="h-4 w-4" />
-                <span className="whitespace-nowrap">
-                  Request Schedule Change
-                </span>
+                <span className="whitespace-nowrap">Request A Lesson</span>
               </button>
               <button
                 onClick={() => setShowSwapRequests(true)}
@@ -926,7 +927,7 @@ function ClientSchedulePageClient() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-white">
-                    Request Schedule Change
+                    Lesson Request
                   </h2>
                   <button
                     onClick={() => {
@@ -1000,7 +1001,7 @@ function ClientSchedulePageClient() {
                           reason: e.target.value,
                         })
                       }
-                      placeholder="Why do you need this schedule change?"
+                      placeholder="Why did you request this lesson?"
                       rows={3}
                       className="w-full p-2 rounded-lg border text-white"
                       style={{
@@ -1043,7 +1044,7 @@ function ClientSchedulePageClient() {
                     ) : (
                       <>
                         <Calendar className="h-4 w-4" />
-                        Request Change
+                        Request
                       </>
                     )}
                   </button>
@@ -1241,12 +1242,18 @@ function ClientSchedulePageClient() {
                           <button
                             key={index}
                             onClick={() => {
+                              // Set the time first, then open modal after a brief delay to ensure state update
                               setRequestForm({
                                 ...requestForm,
                                 time: slot,
                               });
+
                               setShowDayOverviewModal(false);
-                              setShowRequestModal(true);
+
+                              // Small delay to ensure state update before opening modal
+                              setTimeout(() => {
+                                setShowRequestModal(true);
+                              }, 10);
                             }}
                             className="p-3 rounded-lg border text-center transition-all duration-200 hover:bg-sky-500/10 hover:border-sky-500/30"
                             style={{
