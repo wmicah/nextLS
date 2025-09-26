@@ -62,6 +62,19 @@ function ClientSchedulePageClient() {
       year: currentMonth.getFullYear(),
     });
 
+  // Debug: Log client lessons with time conversion details
+  console.log(
+    "Client lessons with time details:",
+    clientLessons.map(lesson => ({
+      title: lesson.title,
+      rawDate: lesson.date,
+      dateObject: new Date(lesson.date),
+      formatted: format(new Date(lesson.date), "h:mm a"),
+      localTime: new Date(lesson.date).toLocaleTimeString(),
+      timezoneOffset: new Date(lesson.date).getTimezoneOffset(),
+    }))
+  );
+
   // Fetch client's upcoming lessons across all months
   const { data: upcomingLessons = [] } =
     trpc.clientRouter.getClientUpcomingLessons.useQuery();
