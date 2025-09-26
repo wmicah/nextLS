@@ -7685,6 +7685,57 @@ export const appRouter = router({
         return assignments;
       }),
 
+    // Get routine assignments for the current client (CLIENT ONLY)
+    getMyRoutineAssignments: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const client = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can view their own routine assignments",
+        });
+      }
+
+      // Get the client record
+      const clientRecord = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!clientRecord) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // Get routine assignments for the client
+      const assignments = await db.routineAssignment.findMany({
+        where: {
+          clientId: clientRecord.id,
+        },
+        include: {
+          routine: {
+            include: {
+              exercises: true,
+            },
+          },
+        },
+        orderBy: {
+          assignedAt: "desc",
+        },
+      });
+
+      return assignments;
+    }),
+
     // Get routine assignments for calendar view
     getRoutineAssignmentsForCalendar: publicProcedure
       .input(
@@ -11435,14 +11486,25 @@ export const appRouter = router({
           hour24 = 0;
         }
 
-        // Create the full date string
+        // Create the full date string in local time (not UTC)
         const fullDateStr = `${dateStr}T${hour24
           .toString()
           .padStart(2, "0")}:${minute}:00`;
         const requestedDateTime = new Date(fullDateStr);
 
+        // Ensure the date is treated as local time, not UTC
+        // by creating a new Date object with local timezone
+        const localDateTime = new Date(
+          requestedDateTime.getFullYear(),
+          requestedDateTime.getMonth(),
+          requestedDateTime.getDate(),
+          requestedDateTime.getHours(),
+          requestedDateTime.getMinutes(),
+          requestedDateTime.getSeconds()
+        );
+
         // Validate the date
-        if (isNaN(requestedDateTime.getTime())) {
+        if (isNaN(localDateTime.getTime())) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid date/time combination",
@@ -11451,7 +11513,7 @@ export const appRouter = router({
 
         // Check if the requested time is in the past
         const now = new Date();
-        if (requestedDateTime <= now) {
+        if (localDateTime <= now) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Cannot request lessons in the past",
@@ -11464,7 +11526,7 @@ export const appRouter = router({
         });
 
         if (coach?.workingDays) {
-          const dayName = format(requestedDateTime, "EEEE");
+          const dayName = format(localDateTime, "EEEE");
           if (!coach.workingDays.includes(dayName)) {
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -11477,7 +11539,7 @@ export const appRouter = router({
         const existingLesson = await db.event.findFirst({
           where: {
             coachId: client.coachId!,
-            date: requestedDateTime,
+            date: localDateTime,
           },
         });
 
@@ -11502,7 +11564,7 @@ export const appRouter = router({
           data: {
             title: `Schedule Request - ${client.name}`,
             description: input.reason || "Client requested schedule change",
-            date: requestedDateTime,
+            date: localDateTime,
             clientId: client.id,
             coachId: client.coachId!,
             status: "PENDING", // New status field for pending requests
@@ -11519,14 +11581,14 @@ export const appRouter = router({
               message: `${
                 client.name
               } has requested a schedule change for ${format(
-                requestedDateTime,
+                localDateTime,
                 "MMM d, yyyy 'at' h:mm a"
               )}`,
               data: {
                 eventId: scheduleRequest.id,
                 clientId: client.id,
                 clientName: client.name,
-                requestedDate: requestedDateTime,
+                requestedDate: localDateTime,
                 reason: input.reason,
               },
             },
