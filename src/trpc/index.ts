@@ -7952,6 +7952,42 @@ export const appRouter = router({
       return { success: true };
     }),
 
+    deleteNotification: publicProcedure
+      .input(z.object({ notificationId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const notification = await db.notification.delete({
+          where: {
+            id: input.notificationId,
+            userId: user.id,
+          },
+        });
+
+        return { success: true, deletedId: notification.id };
+      }),
+
+    deleteMultipleNotifications: publicProcedure
+      .input(z.object({ notificationIds: z.array(z.string()) }))
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        await db.notification.deleteMany({
+          where: {
+            id: { in: input.notificationIds },
+            userId: user.id,
+          },
+        });
+
+        return { success: true, deletedCount: input.notificationIds.length };
+      }),
+
     createNotification: publicProcedure
       .input(
         z.object({
