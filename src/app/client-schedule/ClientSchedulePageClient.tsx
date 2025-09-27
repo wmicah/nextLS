@@ -609,7 +609,7 @@ function ClientSchedulePageClient() {
                           <div className="flex-1">
                             <div className="font-medium text-sky-300">
                               {format(
-                                utcToZonedTime(
+                                toZonedTime(
                                   lesson.date,
                                   Intl.DateTimeFormat().resolvedOptions()
                                     .timeZone || "America/New_York"
