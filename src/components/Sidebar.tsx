@@ -65,6 +65,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const messagePopupRef = useRef<HTMLDivElement>(null);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
 
   // Use SSE for real-time unread count updates
   const { unreadCount: sseUnreadCount, isConnected: sseConnected } =
@@ -756,6 +757,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
                 return (
                   <div key={link.name} className="relative">
                     <button
+                      ref={notificationButtonRef}
                       onClick={handleNotificationClick}
                       className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl ${
                         showNotifications ? "scale-110" : ""
@@ -824,6 +826,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
                           setIsAnimating(false);
                         }, 200);
                       }}
+                      buttonRef={notificationButtonRef}
                     />
                   </div>
                 );

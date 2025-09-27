@@ -73,7 +73,7 @@ export default function NotificationPopup({
     if (isOpen && buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setButtonPosition({
-        top: rect.bottom, // Remove window.scrollY to keep it fixed to viewport
+        top: rect.top - 8, // Position above the button with 8px gap
         left: rect.left + rect.width / 2,
       });
     }
@@ -186,9 +186,9 @@ export default function NotificationPopup({
   return (
     <>
       <style jsx>{`
-        @keyframes slideInDown {
+        @keyframes slideInUp {
           from {
-            transform: translateY(-8px);
+            transform: translateY(8px);
             opacity: 0;
           }
           to {
@@ -203,7 +203,7 @@ export default function NotificationPopup({
           }
           to {
             opacity: 0;
-            transform: translateY(-8px);
+            transform: translateY(8px);
           }
         }
       `}</style>
@@ -213,11 +213,11 @@ export default function NotificationPopup({
           isAnimating && !isOpen
             ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
             : isAnimating
-            ? "animate-[slideInDown_0.3s_ease-out_forwards]"
+            ? "animate-[slideInUp_0.3s_ease-out_forwards]"
             : "transform scale-100 opacity-100"
         }`}
         style={{
-          top: buttonPosition.top,
+          top: buttonPosition.top - 384, // Position above the button (384px is max height of popup)
           left:
             typeof window !== "undefined"
               ? Math.max(
@@ -227,9 +227,9 @@ export default function NotificationPopup({
               : buttonPosition.left - 160, // Keep within viewport
           backgroundColor: "#353A3A",
           borderColor: "#606364",
-          transformOrigin: "top center",
+          transformOrigin: "bottom center",
           animation:
-            !isAnimating && isOpen ? "slideInDown 0.3s ease-out" : undefined,
+            !isAnimating && isOpen ? "slideInUp 0.3s ease-out" : undefined,
           boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
         }}
       >
