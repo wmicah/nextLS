@@ -31,9 +31,11 @@ import {
   isSameMonth,
   addWeeks,
 } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import {
   formatTimeInUserTimezone,
   formatDateTimeInUserTimezone,
+  getUserTimezone,
 } from "@/lib/timezone-utils";
 import Sidebar from "@/components/Sidebar";
 import { withMobileDetection } from "@/lib/mobile-detection";
@@ -216,22 +218,29 @@ function SchedulePageClient() {
   });
 
   const navigateMonth = (direction: "prev" | "next") => {
-    setCurrentMonth(
+    const newMonth =
       direction === "prev"
         ? subMonths(currentMonth, 1)
-        : addMonths(currentMonth, 1)
-    );
+        : addMonths(currentMonth, 1);
+
+    setCurrentMonth(newMonth);
+
+    // Invalidate cache to ensure consistent data across month changes
+    utils.scheduling.getCoachSchedule.invalidate();
   };
 
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
     const lessons = coachSchedule.filter((lesson: { date: string }) => {
-      const lessonDate = new Date(lesson.date);
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const timeZone = getUserTimezone();
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
       // Compare only the date part, not the time
       const lessonDateOnly = new Date(
-        lessonDate.getFullYear(),
-        lessonDate.getMonth(),
-        lessonDate.getDate()
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
       );
       const targetDateOnly = new Date(
         date.getFullYear(),
@@ -241,7 +250,7 @@ function SchedulePageClient() {
       const isSame = lessonDateOnly.getTime() === targetDateOnly.getTime();
 
       // Only include lessons that are in the future (all coachSchedule lessons are already CONFIRMED)
-      const isFuture = lessonDate > now;
+      const isFuture = lessonDateInUserTz > now;
 
       return isSame && isFuture;
     });
@@ -251,12 +260,15 @@ function SchedulePageClient() {
 
   const getAllLessonsForDate = (date: Date) => {
     const lessons = coachSchedule.filter((lesson: { date: string }) => {
-      const lessonDate = new Date(lesson.date);
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const timeZone = getUserTimezone();
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
       // Compare only the date part, not the time
       const lessonDateOnly = new Date(
-        lessonDate.getFullYear(),
-        lessonDate.getMonth(),
-        lessonDate.getDate()
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
       );
       const targetDateOnly = new Date(
         date.getFullYear(),
@@ -424,7 +436,7 @@ function SchedulePageClient() {
   // Generate time slots based on coach's working hours and interval
   const generateTimeSlots = () => {
     const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
-    const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
+    const endTime = coachProfile?.workingHours?.endTime || "8:00 PM";
     const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
 
     const slots = [];

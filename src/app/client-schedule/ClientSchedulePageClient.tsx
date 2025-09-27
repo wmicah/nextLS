@@ -29,7 +29,10 @@ import {
   isSameMonth,
 } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
+import {
+  formatTimeInUserTimezone,
+  getUserTimezone,
+} from "@/lib/timezone-utils";
 import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientSchedulePage from "@/components/MobileClientSchedulePage";
@@ -170,22 +173,30 @@ function ClientSchedulePageClient() {
   });
 
   const navigateMonth = (direction: "prev" | "next") => {
-    setCurrentMonth(
+    const newMonth =
       direction === "prev"
         ? subMonths(currentMonth, 1)
-        : addMonths(currentMonth, 1)
-    );
+        : addMonths(currentMonth, 1);
+
+    setCurrentMonth(newMonth);
+
+    // Invalidate cache to ensure consistent data across month changes
+    utils.clientRouter.getCoachScheduleForClient.invalidate();
+    utils.clientRouter.getClientLessons.invalidate();
   };
 
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
     const lessons = coachSchedule.filter((lesson: { date: string }) => {
-      const lessonDate = new Date(lesson.date);
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const timeZone = getUserTimezone();
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
       // Compare only the date part, not the time
       const lessonDateOnly = new Date(
-        lessonDate.getFullYear(),
-        lessonDate.getMonth(),
-        lessonDate.getDate()
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
       );
       const targetDateOnly = new Date(
         date.getFullYear(),
@@ -195,7 +206,7 @@ function ClientSchedulePageClient() {
       const isSame = lessonDateOnly.getTime() === targetDateOnly.getTime();
 
       // Only include lessons that are in the future
-      const isFuture = lessonDate > now;
+      const isFuture = lessonDateInUserTz > now;
 
       return isSame && isFuture;
     });
@@ -207,12 +218,15 @@ function ClientSchedulePageClient() {
 
   const getClientLessonsForDate = (date: Date) => {
     const lessons = clientLessons.filter((lesson: { date: string }) => {
-      const lessonDate = new Date(lesson.date);
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const timeZone = getUserTimezone();
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
       // Compare only the date part, not the time
       const lessonDateOnly = new Date(
-        lessonDate.getFullYear(),
-        lessonDate.getMonth(),
-        lessonDate.getDate()
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
       );
       const targetDateOnly = new Date(
         date.getFullYear(),
@@ -261,7 +275,7 @@ function ClientSchedulePageClient() {
   // Generate time slots based on coach's working hours and interval
   const generateTimeSlots = () => {
     const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
-    const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
+    const endTime = coachProfile?.workingHours?.endTime || "8:00 PM";
     const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
     const workingDays = coachProfile?.workingHours?.workingDays || [
       "Monday",
@@ -290,7 +304,7 @@ function ClientSchedulePageClient() {
 
     if (!startMatch || !endMatch) {
       // Fallback to default hours with hourly slots
-      for (let hour = 9; hour < 18; hour++) {
+      for (let hour = 9; hour < 20; hour++) {
         const displayHour = hour > 12 ? hour - 12 : hour;
         const period = hour >= 12 ? "PM" : "AM";
         slots.push(`${displayHour}:00 ${period}`);
@@ -365,7 +379,7 @@ function ClientSchedulePageClient() {
 
     if (!startMatch || !endMatch) {
       // Fallback to default hours with hourly slots
-      for (let hour = 9; hour < 18; hour++) {
+      for (let hour = 9; hour < 20; hour++) {
         const displayHour = hour > 12 ? hour - 12 : hour;
         const period = hour >= 12 ? "PM" : "AM";
         slots.push(`${displayHour}:00 ${period}`);

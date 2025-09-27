@@ -25,7 +25,7 @@ export default function WorkingHoursModal({
 }: WorkingHoursModalProps) {
   const [workingHours, setWorkingHours] = useState({
     startTime: "9:00 AM",
-    endTime: "6:00 PM",
+    endTime: "8:00 PM",
     workingDays: [
       "Monday",
       "Tuesday",
