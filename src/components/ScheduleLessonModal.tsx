@@ -28,6 +28,7 @@ import {
   isSameMonth,
   addWeeks,
 } from "date-fns";
+import { getUserTimezone } from "@/lib/timezone-utils";
 
 interface ScheduleLessonModalProps {
   isOpen: boolean;
@@ -339,8 +340,7 @@ export default function ScheduleLessonModal({
       });
     } else {
       // Regular lesson scheduling
-      const timeZone =
-        Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+      const timeZone = getUserTimezone();
 
       // Format as local datetime string (consistent with other components)
       const fullDateStr = `${lessonDate.getFullYear()}-${(

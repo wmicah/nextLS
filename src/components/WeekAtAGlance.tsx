@@ -12,7 +12,10 @@ import {
   addWeeks,
   subWeeks,
 } from "date-fns";
-import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
+import {
+  formatTimeInUserTimezone,
+  getUserTimezone,
+} from "@/lib/timezone-utils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -340,8 +343,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
       return;
     }
 
-    const timeZone =
-      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+    const timeZone = getUserTimezone();
     scheduleLessonMutation.mutate({
       clientId: scheduleForm.clientId,
       lessonDate: fullDateStr, // Send as string instead of Date object

@@ -105,12 +105,39 @@ function SchedulePageClient() {
     date: "",
   });
 
-  // Fetch coach's schedule for the current month
+  // Fetch coach's schedule for the current month and adjacent months
   const { data: coachSchedule = [] } =
     trpc.scheduling.getCoachSchedule.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
     });
+
+  // Fetch coach's schedule for previous month (for cross-month days)
+  const { data: prevMonthSchedule = [] } =
+    trpc.scheduling.getCoachSchedule.useQuery({
+      month: currentMonth.getMonth() === 0 ? 11 : currentMonth.getMonth() - 1,
+      year:
+        currentMonth.getMonth() === 0
+          ? currentMonth.getFullYear() - 1
+          : currentMonth.getFullYear(),
+    });
+
+  // Fetch coach's schedule for next month (for cross-month days)
+  const { data: nextMonthSchedule = [] } =
+    trpc.scheduling.getCoachSchedule.useQuery({
+      month: currentMonth.getMonth() === 11 ? 0 : currentMonth.getMonth() + 1,
+      year:
+        currentMonth.getMonth() === 11
+          ? currentMonth.getFullYear() + 1
+          : currentMonth.getFullYear(),
+    });
+
+  // Combine all schedule data
+  const allCoachSchedule = [
+    ...coachSchedule,
+    ...prevMonthSchedule,
+    ...nextMonthSchedule,
+  ];
 
   // Fetch coach's upcoming lessons across all months
   const { data: upcomingLessons = [] } =
@@ -231,7 +258,7 @@ function SchedulePageClient() {
 
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
-    const lessons = coachSchedule.filter((lesson: { date: string }) => {
+    const lessons = allCoachSchedule.filter((lesson: { date: string }) => {
       // Convert UTC lesson date to user's timezone for proper date comparison
       const timeZone = getUserTimezone();
       const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
@@ -259,7 +286,7 @@ function SchedulePageClient() {
   };
 
   const getAllLessonsForDate = (date: Date) => {
-    const lessons = coachSchedule.filter((lesson: { date: string }) => {
+    const lessons = allCoachSchedule.filter((lesson: { date: string }) => {
       // Convert UTC lesson date to user's timezone for proper date comparison
       const timeZone = getUserTimezone();
       const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);

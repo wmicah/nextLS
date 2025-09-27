@@ -53,19 +53,73 @@ function ClientSchedulePageClient() {
     reason: "",
   });
 
-  // Fetch coach's schedule for the current month
+  // Fetch coach's schedule for the current month and adjacent months
   const { data: coachSchedule = [] } =
     trpc.clientRouter.getCoachScheduleForClient.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
     });
 
-  // Fetch client's confirmed lessons
+  // Fetch coach's schedule for previous month (for cross-month days)
+  const { data: prevMonthSchedule = [] } =
+    trpc.clientRouter.getCoachScheduleForClient.useQuery({
+      month: currentMonth.getMonth() === 0 ? 11 : currentMonth.getMonth() - 1,
+      year:
+        currentMonth.getMonth() === 0
+          ? currentMonth.getFullYear() - 1
+          : currentMonth.getFullYear(),
+    });
+
+  // Fetch coach's schedule for next month (for cross-month days)
+  const { data: nextMonthSchedule = [] } =
+    trpc.clientRouter.getCoachScheduleForClient.useQuery({
+      month: currentMonth.getMonth() === 11 ? 0 : currentMonth.getMonth() + 1,
+      year:
+        currentMonth.getMonth() === 11
+          ? currentMonth.getFullYear() + 1
+          : currentMonth.getFullYear(),
+    });
+
+  // Combine all schedule data
+  const allCoachSchedule = [
+    ...coachSchedule,
+    ...prevMonthSchedule,
+    ...nextMonthSchedule,
+  ];
+
+  // Fetch client's confirmed lessons for the current month and adjacent months
   const { data: clientLessons = [] } =
     trpc.clientRouter.getClientLessons.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
     });
+
+  // Fetch client's lessons for previous month (for cross-month days)
+  const { data: prevMonthClientLessons = [] } =
+    trpc.clientRouter.getClientLessons.useQuery({
+      month: currentMonth.getMonth() === 0 ? 11 : currentMonth.getMonth() - 1,
+      year:
+        currentMonth.getMonth() === 0
+          ? currentMonth.getFullYear() - 1
+          : currentMonth.getFullYear(),
+    });
+
+  // Fetch client's lessons for next month (for cross-month days)
+  const { data: nextMonthClientLessons = [] } =
+    trpc.clientRouter.getClientLessons.useQuery({
+      month: currentMonth.getMonth() === 11 ? 0 : currentMonth.getMonth() + 1,
+      year:
+        currentMonth.getMonth() === 11
+          ? currentMonth.getFullYear() + 1
+          : currentMonth.getFullYear(),
+    });
+
+  // Combine all client lessons data
+  const allClientLessons = [
+    ...clientLessons,
+    ...prevMonthClientLessons,
+    ...nextMonthClientLessons,
+  ];
 
   // Fetch client's upcoming lessons across all months
   const { data: upcomingLessons = [] } =
@@ -187,7 +241,7 @@ function ClientSchedulePageClient() {
 
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
-    const lessons = coachSchedule.filter((lesson: { date: string }) => {
+    const lessons = allCoachSchedule.filter((lesson: { date: string }) => {
       // Convert UTC lesson date to user's timezone for proper date comparison
       const timeZone = getUserTimezone();
       const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
@@ -217,7 +271,7 @@ function ClientSchedulePageClient() {
   // Note: formatTimeInUserTimezone is now imported from @/lib/timezone-utils
 
   const getClientLessonsForDate = (date: Date) => {
-    const lessons = clientLessons.filter((lesson: { date: string }) => {
+    const lessons = allClientLessons.filter((lesson: { date: string }) => {
       // Convert UTC lesson date to user's timezone for proper date comparison
       const timeZone = getUserTimezone();
       const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);

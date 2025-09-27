@@ -35,6 +35,7 @@ import {
 import {
   formatTimeInUserTimezone,
   formatDateTimeInUserTimezone,
+  getUserTimezone,
 } from "@/lib/timezone-utils";
 
 export default function MobileSchedulePage() {
@@ -234,8 +235,7 @@ export default function MobileSchedulePage() {
       return;
     }
 
-    const timeZone =
-      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+    const timeZone = getUserTimezone();
     scheduleLessonMutation.mutate({
       clientId: scheduleForm.clientId,
       lessonDate: fullDateStr,
