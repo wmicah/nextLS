@@ -310,10 +310,17 @@ export default function ScheduleLessonModal({
 
     if (isRecurring && endDate) {
       // Schedule recurring lessons
+      const startDateStr = `${lessonDate.getFullYear()}-${(
+        lessonDate.getMonth() + 1
+      )
+        .toString()
+        .padStart(2, "0")}-${lessonDate.getDate().toString().padStart(2, "0")}`;
+      const endDateStr = format(new Date(endDate), "yyyy-MM-dd");
+
       scheduleRecurringLessonsMutation.mutate({
         clientId,
-        startDate: lessonDate.toISOString(),
-        endDate: new Date(endDate).toISOString(),
+        startDate: startDateStr, // Use consistent local date format
+        endDate: endDateStr, // Use consistent local date format
         recurrencePattern,
         recurrenceInterval,
         sendEmail,
@@ -334,9 +341,26 @@ export default function ScheduleLessonModal({
       // Regular lesson scheduling
       const timeZone =
         Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+
+      // Format as local datetime string (consistent with other components)
+      const fullDateStr = `${lessonDate.getFullYear()}-${(
+        lessonDate.getMonth() + 1
+      )
+        .toString()
+        .padStart(2, "0")}-${lessonDate
+        .getDate()
+        .toString()
+        .padStart(2, "0")}T${lessonDate
+        .getHours()
+        .toString()
+        .padStart(2, "0")}:${lessonDate
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}:00`;
+
       scheduleLessonMutation.mutate({
         clientId,
-        lessonDate: lessonDate.toISOString(),
+        lessonDate: fullDateStr, // Use consistent local format instead of toISOString()
         sendEmail,
         timeZone,
       });

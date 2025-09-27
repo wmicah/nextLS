@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
 import { z } from "zod";
 import { format, addDays, addMonths } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
 import {
   extractYouTubeVideoId,
   extractPlaylistId,
@@ -4853,8 +4854,7 @@ export const appRouter = router({
 
         // Convert local time to UTC using the user's timezone
         const timeZone = input.timeZone || "America/New_York";
-        const { zonedTimeToUtc } = await import("date-fns-tz");
-        const utcLessonDate = zonedTimeToUtc(localLessonDate, timeZone);
+        const utcLessonDate = fromZonedTime(localLessonDate, timeZone);
 
         // Validate the date
         if (isNaN(utcLessonDate.getTime())) {
@@ -11500,8 +11500,7 @@ export const appRouter = router({
 
         // Convert local time to UTC using the user's timezone
         const timeZone = input.timeZone || "America/New_York";
-        const { zonedTimeToUtc } = await import("date-fns-tz");
-        const utcDateTime = zonedTimeToUtc(fullDateStr, timeZone);
+        const utcDateTime = fromZonedTime(fullDateStr, timeZone);
 
         // Validate the date
         if (isNaN(utcDateTime.getTime())) {
@@ -11526,7 +11525,7 @@ export const appRouter = router({
         });
 
         if (coach?.workingDays) {
-          const dayName = format(localDateTime, "EEEE");
+          const dayName = format(new Date(fullDateStr), "EEEE");
           if (!coach.workingDays.includes(dayName)) {
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -11581,7 +11580,7 @@ export const appRouter = router({
               message: `${
                 client.name
               } has requested a schedule change for ${format(
-                localDateTime,
+                new Date(fullDateStr),
                 "MMM d, yyyy 'at' h:mm a"
               )}`,
               data: {

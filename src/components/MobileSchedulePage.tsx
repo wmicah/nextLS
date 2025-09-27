@@ -32,6 +32,10 @@ import {
   endOfWeek,
   isSameMonth,
 } from "date-fns";
+import {
+  formatTimeInUserTimezone,
+  formatDateTimeInUserTimezone,
+} from "@/lib/timezone-utils";
 
 export default function MobileSchedulePage() {
   const isSidebarOpen = useSidebarState();
@@ -472,7 +476,7 @@ export default function MobileSchedulePage() {
                     >
                       <div className="flex-1">
                         <div className="font-medium text-emerald-300">
-                          {format(new Date(lesson.date), "h:mm a")}
+                          {formatTimeInUserTimezone(lesson.date)}
                         </div>
                         <div className="text-sm text-emerald-200">
                           {lesson.client?.name ||
@@ -523,7 +527,7 @@ export default function MobileSchedulePage() {
                     >
                       <div className="flex-1">
                         <div className="font-medium text-sky-300">
-                          {format(new Date(lesson.date), "MMM d, h:mm a")}
+                          {formatDateTimeInUserTimezone(lesson.date)}
                         </div>
                         <div className="text-sm text-sky-200">
                           {lesson.client?.name ||
@@ -869,7 +873,7 @@ export default function MobileSchedulePage() {
                           >
                             <div className="flex-1">
                               <div className="font-medium text-emerald-300">
-                                {format(new Date(lesson.date), "h:mm a")}
+                                {formatTimeInUserTimezone(lesson.date)}
                               </div>
                               <div className="text-sm text-emerald-200">
                                 {lesson.client?.name ||

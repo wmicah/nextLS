@@ -57,6 +57,10 @@ import {
   addWeeks,
   subWeeks,
 } from "date-fns";
+import {
+  formatTimeInUserTimezone,
+  formatDateTimeInUserTimezone,
+} from "@/lib/timezone-utils";
 import Sidebar from "./Sidebar";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import CustomSelect from "./ui/CustomSelect";
@@ -395,7 +399,7 @@ export default function MobileClientDetailPage({
                   >
                     <div className="flex-1">
                       <div className="font-medium text-emerald-300">
-                        {format(new Date(lesson.date), "MMM d, h:mm a")}
+                        {formatDateTimeInUserTimezone(lesson.date)}
                       </div>
                       <div className="text-sm text-emerald-200">
                         {lesson.title}
@@ -631,7 +635,7 @@ export default function MobileClientDetailPage({
                                   key={`week-lesson-${lesson.id || index}`}
                                   className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded"
                                 >
-                                  {format(new Date(lesson.date), "h:mm a")} -{" "}
+                                  {formatTimeInUserTimezone(lesson.date)} -{" "}
                                   {lesson.title}
                                 </div>
                               ))}
@@ -786,7 +790,7 @@ export default function MobileClientDetailPage({
                               >
                                 <div className="flex-1">
                                   <div className="font-medium text-emerald-300">
-                                    {format(new Date(lesson.date), "h:mm a")}
+                                    {formatTimeInUserTimezone(lesson.date)}
                                   </div>
                                   <div className="text-sm text-emerald-200">
                                     {lesson.title}

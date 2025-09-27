@@ -28,6 +28,10 @@ import {
   endOfWeek,
   isSameMonth,
 } from "date-fns";
+import {
+  formatTimeInUserTimezone,
+  formatDateTimeInUserTimezone,
+} from "@/lib/timezone-utils";
 
 export default function MobileClientSchedulePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -351,7 +355,7 @@ export default function MobileClientSchedulePage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-sm font-medium">
-                            {format(new Date(lesson.date), "h:mm a")}
+                            {formatTimeInUserTimezone(lesson.date)}
                           </div>
                           <div className="text-xs opacity-80">
                             {lesson.title}
@@ -391,7 +395,7 @@ export default function MobileClientSchedulePage() {
                     >
                       <div className="flex-1">
                         <div className="font-medium text-sky-300">
-                          {format(new Date(lesson.date), "MMM d, h:mm a")}
+                          {formatDateTimeInUserTimezone(lesson.date)}
                         </div>
                         <div className="text-sm text-sky-200">
                           {lesson.title}
@@ -807,7 +811,7 @@ export default function MobileClientSchedulePage() {
                             <div className="flex items-center justify-between">
                               <div>
                                 <div className="text-sm font-medium">
-                                  {format(new Date(lesson.date), "h:mm a")}
+                                  {formatTimeInUserTimezone(lesson.date)}
                                 </div>
                                 <div className="text-xs opacity-80">
                                   {lesson.title}
@@ -852,7 +856,7 @@ export default function MobileClientSchedulePage() {
                               className="bg-sky-500/10 rounded p-3 border border-sky-500/20"
                             >
                               <div className="text-sm font-medium text-sky-300">
-                                {format(new Date(lesson.date), "h:mm a")}
+                                {formatTimeInUserTimezone(lesson.date)}
                               </div>
                               <div className="text-xs text-sky-200">
                                 {lesson.client?.name ||

@@ -29,6 +29,7 @@ import {
   isSameMonth,
 } from "date-fns";
 import { utcToZonedTime } from "date-fns-tz";
+import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientSchedulePage from "@/components/MobileClientSchedulePage";
@@ -202,13 +203,7 @@ function ClientSchedulePageClient() {
     return lessons;
   };
 
-  // Utility function to format time in user's timezone
-  const formatTimeInUserTimezone = (utcDateString: string) => {
-    const timeZone =
-      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
-    const localDate = utcToZonedTime(utcDateString, timeZone);
-    return format(localDate, "h:mm a");
-  };
+  // Note: formatTimeInUserTimezone is now imported from @/lib/timezone-utils
 
   const getClientLessonsForDate = (date: Date) => {
     const lessons = clientLessons.filter((lesson: { date: string }) => {

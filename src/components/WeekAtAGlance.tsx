@@ -12,6 +12,7 @@ import {
   addWeeks,
   subWeeks,
 } from "date-fns";
+import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -914,7 +915,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                             <Clock className="h-4 w-4 text-blue-400" />
                             <div>
                               <p className="text-white font-medium">
-                                {format(new Date(lesson.date), "h:mm a")}
+                                {formatTimeInUserTimezone(lesson.date)}
                               </p>
                               <p className="text-gray-400 text-sm">
                                 {lesson.client?.name || "Unknown Client"}

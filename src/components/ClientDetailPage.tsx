@@ -60,6 +60,7 @@ import {
   parseISO,
   differenceInDays,
 } from "date-fns";
+import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import Sidebar from "@/components/Sidebar";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import AssignProgramModal from "@/components/AssignProgramModal";
@@ -750,7 +751,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                         <div className="flex items-center gap-1">
                           {getStatusIcon(lesson.status)}
                           <span className="truncate">
-                            {format(new Date(lesson.date), "h:mm a")}
+                            {formatTimeInUserTimezone(lesson.date)}
                           </span>
                         </div>
                       </div>
@@ -912,7 +913,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <div className="font-medium">
-                                    {format(new Date(lesson.date), "h:mm a")}
+                                    {formatTimeInUserTimezone(lesson.date)}
                                   </div>
                                   <div className="text-sm opacity-80">
                                     {lesson.title}

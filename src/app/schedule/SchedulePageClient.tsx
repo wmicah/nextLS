@@ -31,6 +31,10 @@ import {
   isSameMonth,
   addWeeks,
 } from "date-fns";
+import {
+  formatTimeInUserTimezone,
+  formatDateTimeInUserTimezone,
+} from "@/lib/timezone-utils";
 import Sidebar from "@/components/Sidebar";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileSchedulePage from "@/components/MobileSchedulePage";
@@ -755,7 +759,7 @@ function SchedulePageClient() {
                         >
                           <div className="flex-1">
                             <div className="font-medium text-emerald-300">
-                              {format(new Date(lesson.date), "h:mm a")}
+                              {formatTimeInUserTimezone(lesson.date)}
                             </div>
                             <div className="text-sm text-emerald-200">
                               {lesson.client?.name ||
@@ -807,7 +811,7 @@ function SchedulePageClient() {
                         >
                           <div className="flex-1">
                             <div className="font-medium text-sky-300">
-                              {format(new Date(lesson.date), "MMM d, h:mm a")}
+                              {formatDateTimeInUserTimezone(lesson.date)}
                             </div>
                             <div className="text-sm text-sky-200">
                               {lesson.client?.name ||
@@ -1039,7 +1043,7 @@ function SchedulePageClient() {
                               <div className="flex items-start justify-between gap-1">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-bold text-xs leading-tight">
-                                    {format(new Date(lesson.date), "h:mm a")}
+                                    {formatTimeInUserTimezone(lesson.date)}
                                   </div>
                                   <div className="truncate text-emerald-200 font-medium text-xs leading-tight">
                                     {lesson.client?.name ||
@@ -1999,15 +2003,18 @@ function SchedulePageClient() {
                                         ? 0
                                         : parseInt(hour);
 
-                                    const startDateStr = `${dateStr}T${hour24
-                                      .toString()
-                                      .padStart(2, "0")}:${minute}:00`;
+                                    // For recurring lessons, we only need the date part (not time)
+                                    // The time will be handled by individual lesson scheduling
+                                    const startDateStr = dateStr; // Just the date part YYYY-MM-DD
 
                                     // Schedule recurring lessons
                                     scheduleRecurringLessonsMutation.mutate({
                                       clientId: scheduleForm.clientId,
-                                      startDate: startDateStr,
-                                      endDate: new Date(endDate).toISOString(),
+                                      startDate: startDateStr, // Date only format
+                                      endDate: format(
+                                        new Date(endDate),
+                                        "yyyy-MM-dd"
+                                      ), // Date only format
                                       recurrencePattern: "weekly",
                                       recurrenceInterval,
                                       sendEmail: true,
@@ -2314,7 +2321,7 @@ function SchedulePageClient() {
                             >
                               <div className="flex-1">
                                 <div className="font-medium text-green-300">
-                                  {format(new Date(lesson.date), "h:mm a")}
+                                  {formatTimeInUserTimezone(lesson.date)}
                                 </div>
                                 <div className="text-sm text-green-200">
                                   {lesson.client?.name ||
@@ -2374,7 +2381,7 @@ function SchedulePageClient() {
                           >
                             <div className="flex-1">
                               <div className="font-medium text-sky-300">
-                                {format(new Date(lesson.date), "h:mm a")}
+                                {formatTimeInUserTimezone(lesson.date)}
                               </div>
                               <div className="text-sm text-sky-200">
                                 {lesson.client?.name ||

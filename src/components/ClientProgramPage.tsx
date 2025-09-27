@@ -66,6 +66,7 @@ import {
   // isPast,
   // isFuture,
 } from "date-fns";
+import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientProgramPage from "./MobileClientProgramPage";
@@ -1116,7 +1117,7 @@ function ClientProgramPage() {
                                   className="p-1 rounded text-xs bg-blue-500/20 text-blue-400"
                                 >
                                   <div className="font-medium">
-                                    {format(new Date(lesson.date), "h:mm a")}
+                                    {formatTimeInUserTimezone(lesson.date)}
                                   </div>
                                   <div className="truncate">
                                     {lesson.title || "Lesson"}
