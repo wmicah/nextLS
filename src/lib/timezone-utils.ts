@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { utcToZonedTime } from "date-fns-tz";
+import { toZonedTime } from "date-fns-tz";
 
 /**
  * Formats a UTC date string to display in the user's local timezone
@@ -13,7 +13,7 @@ export const formatTimeInUserTimezone = (
 ): string => {
   const timeZone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
-  const localDate = utcToZonedTime(utcDateString, timeZone);
+  const localDate = toZonedTime(utcDateString, timeZone);
   return format(localDate, formatString);
 };
 
@@ -29,7 +29,7 @@ export const formatDateTimeInUserTimezone = (
 ): string => {
   const timeZone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
-  const localDate = utcToZonedTime(utcDateString, timeZone);
+  const localDate = toZonedTime(utcDateString, timeZone);
   return format(localDate, formatString);
 };
 
@@ -45,7 +45,7 @@ export const formatDateInUserTimezone = (
 ): string => {
   const timeZone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
-  const localDate = utcToZonedTime(utcDateString, timeZone);
+  const localDate = toZonedTime(utcDateString, timeZone);
   return format(localDate, formatString);
 };
 

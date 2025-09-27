@@ -28,7 +28,7 @@ import {
   endOfWeek,
   isSameMonth,
 } from "date-fns";
-import { utcToZonedTime } from "date-fns-tz";
+import { toZonedTime } from "date-fns-tz";
 import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
