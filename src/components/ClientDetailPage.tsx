@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
+import { useUIStore } from "@/lib/stores/uiStore";
 import {
   Calendar,
   Clock,
@@ -63,10 +64,11 @@ import {
 import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import Sidebar from "@/components/Sidebar";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
-import AssignProgramModal from "@/components/AssignProgramModal";
+import SimpleAssignProgramModal from "@/components/SimpleAssignProgramModal";
 import AssignRoutineModal from "@/components/AssignRoutineModal";
 import AssignVideoModal from "@/components/AssignVideoModal";
 import ScheduleLessonModal from "@/components/ScheduleLessonModal";
+import DayDetailsModal from "@/components/DayDetailsModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientDetailPage from "@/components/MobileClientDetailPage";
 
@@ -76,6 +78,7 @@ interface ClientDetailPageProps {
 
 function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const router = useRouter();
+  const { addToast } = useUIStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -164,6 +167,42 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
 
   const utils = trpc.useUtils();
 
+  // Remove program mutation
+  const removeProgramMutation = trpc.programs.unassignFromClients.useMutation({
+    onSuccess: () => {
+      addToast({
+        type: "success",
+        title: "Program Removed!",
+        message: "Program has been removed from the client.",
+      });
+      refreshAllData();
+    },
+    onError: error => {
+      addToast({
+        type: "error",
+        title: "Removal Failed",
+        message: error.message || "Failed to remove program.",
+      });
+    },
+  });
+
+  // Function to refresh all data after any action
+  const refreshAllData = () => {
+    utils.clients.getById.invalidate({ id: clientId });
+    utils.scheduling.getCoachSchedule.invalidate({
+      month: currentMonth.getMonth(),
+      year: currentMonth.getFullYear(),
+    });
+    utils.scheduling.getCoachUpcomingLessons.invalidate();
+    utils.clients.getAssignedPrograms.invalidate({ clientId });
+    utils.routines.getClientRoutineAssignments.invalidate({ clientId });
+    utils.library.getClientAssignments.invalidate({ clientId });
+    utils.clients.getComplianceData.invalidate({
+      clientId,
+      period: compliancePeriod,
+    });
+  };
+
   // Generate calendar days based on view mode
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -187,21 +226,28 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   });
 
   const navigateMonth = (direction: "prev" | "next") => {
+    let newDate: Date;
     if (viewMode === "week") {
       // For week view, navigate by weeks
-      setCurrentMonth(
+      newDate =
         direction === "prev"
           ? subWeeks(currentMonth, 1)
-          : addWeeks(currentMonth, 1)
-      );
+          : addWeeks(currentMonth, 1);
     } else {
       // For month view, navigate by months
-      setCurrentMonth(
+      newDate =
         direction === "prev"
           ? subMonths(currentMonth, 1)
-          : addMonths(currentMonth, 1)
-      );
+          : addMonths(currentMonth, 1);
     }
+
+    setCurrentMonth(newDate);
+
+    // Refresh schedule data for the new month
+    utils.scheduling.getCoachSchedule.invalidate({
+      month: newDate.getMonth(),
+      year: newDate.getFullYear(),
+    });
   };
 
   const getLessonsForDate = (date: Date) => {
@@ -310,6 +356,19 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setShowDayDetailsModal(true);
+  };
+
+  const handleRemoveProgram = (programData: any) => {
+    if (
+      confirm(
+        `Are you sure you want to remove "${programData.programTitle}" from this client?`
+      )
+    ) {
+      removeProgramMutation.mutate({
+        programId: programData.programId,
+        clientIds: [clientId],
+      });
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -522,9 +581,14 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                 {["4", "6", "8", "all"].map(period => (
                   <button
                     key={period}
-                    onClick={() =>
-                      setCompliancePeriod(period as "4" | "6" | "8" | "all")
-                    }
+                    onClick={() => {
+                      setCompliancePeriod(period as "4" | "6" | "8" | "all");
+                      // Refresh compliance data for the new period
+                      utils.clients.getComplianceData.invalidate({
+                        clientId,
+                        period: period as "4" | "6" | "8" | "all",
+                      });
+                    }}
                     className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
                       compliancePeriod === period
                         ? "text-white"
@@ -817,9 +881,12 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
 
           {/* Modals */}
           {showAssignProgramModal && (
-            <AssignProgramModal
+            <SimpleAssignProgramModal
               isOpen={showAssignProgramModal}
-              onClose={() => setShowAssignProgramModal(false)}
+              onClose={() => {
+                setShowAssignProgramModal(false);
+                refreshAllData();
+              }}
               clientId={clientId}
               clientName={client.name}
               startDate={
@@ -833,7 +900,10 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
           {showAssignRoutineModal && (
             <AssignRoutineModal
               isOpen={showAssignRoutineModal}
-              onClose={() => setShowAssignRoutineModal(false)}
+              onClose={() => {
+                setShowAssignRoutineModal(false);
+                refreshAllData();
+              }}
               clientId={clientId}
               clientName={client.name}
               startDate={
@@ -847,7 +917,10 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
           {showAssignVideoModal && (
             <AssignVideoModal
               isOpen={showAssignVideoModal}
-              onClose={() => setShowAssignVideoModal(false)}
+              onClose={() => {
+                setShowAssignVideoModal(false);
+                refreshAllData();
+              }}
               clientId={clientId}
               clientName={client.name}
             />
@@ -859,6 +932,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               onClose={() => {
                 setShowScheduleLessonModal(false);
                 setReplacementData(null);
+                refreshAllData();
               }}
               clientId={clientId}
               clientName={client.name}
@@ -873,326 +947,36 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
           )}
 
           {/* Day Details Modal */}
-          {showDayDetailsModal && selectedDate && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div
-                className="rounded-2xl shadow-xl border p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
-                style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
-                }}
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-white">
-                    {format(selectedDate, "EEEE, MMMM d, yyyy")}
-                  </h2>
-                  <button
-                    onClick={() => setShowDayDetailsModal(false)}
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Lessons */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">
-                      Lessons
-                    </h3>
-                    {getLessonsForDate(selectedDate).length > 0 ? (
-                      <div className="space-y-3">
-                        {getLessonsForDate(selectedDate).map(
-                          (lesson: any, index: number) => (
-                            <div
-                              key={index}
-                              className={`p-4 rounded-lg border-2 ${getStatusColor(
-                                lesson.status
-                              )}`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="font-medium">
-                                    {formatTimeInUserTimezone(lesson.date)}
-                                  </div>
-                                  <div className="text-sm opacity-80">
-                                    {lesson.title}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {getStatusIcon(lesson.status)}
-                                  <div className="text-xs">{lesson.status}</div>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                        <p className="text-gray-400">
-                          No lessons scheduled for this day
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Programs */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">
-                      Programs
-                    </h3>
-                    {getProgramsForDate(selectedDate).length > 0 ? (
-                      <div className="space-y-3">
-                        {getProgramsForDate(selectedDate).map(
-                          (program: any, index: number) => (
-                            <div
-                              key={index}
-                              className="p-4 rounded-lg bg-blue-500/20 text-blue-100 border border-blue-400"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <BookOpen className="h-4 w-4" />
-                                  <div>
-                                    <div className="font-medium">
-                                      {program.title}
-                                    </div>
-                                    <div className="text-sm opacity-80">
-                                      {program.description}
-                                    </div>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    // Store the program info for replacement
-                                    console.log(
-                                      "🔍 Full program object:",
-                                      program
-                                    );
-                                    console.log(
-                                      "🔍 Assignment object:",
-                                      program.assignment
-                                    );
-                                    console.log(
-                                      "🔍 Program object:",
-                                      program.program
-                                    );
-                                    console.log("🔍 Replacement data:", {
-                                      programId: program.assignment.programId,
-                                      assignmentId: program.assignment.id,
-                                      programTitle: program.title,
-                                      dayDate:
-                                        selectedDate
-                                          ?.toISOString()
-                                          .split("T")[0] || "",
-                                    });
-
-                                    setReplacementData({
-                                      programId: program.assignment.programId,
-                                      programTitle: program.title,
-                                      dayDate:
-                                        selectedDate
-                                          ?.toISOString()
-                                          .split("T")[0] || "",
-                                    });
-                                    setShowScheduleLessonModal(true);
-                                    setShowDayDetailsModal(false);
-                                  }}
-                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:bg-opacity-80"
-                                  style={{ backgroundColor: "#10B981" }}
-                                  title="Replace workout with lesson"
-                                >
-                                  Replace with Lesson
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <BookOpen className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                        <p className="text-gray-400">
-                          No programs scheduled for this day
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Routine Assignments */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">
-                      Routine Assignments
-                    </h3>
-                    {getRoutineAssignmentsForDate(selectedDate).length > 0 ? (
-                      <div className="space-y-3">
-                        {getRoutineAssignmentsForDate(selectedDate).map(
-                          (assignment: any, index: number) => (
-                            <div
-                              key={index}
-                              className="p-4 rounded-lg bg-green-500/5 text-green-100 border border-green-500/20 transition-all duration-200 hover:bg-green-500/10"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 rounded-lg bg-green-500/10">
-                                    <Target className="h-4 w-4 text-green-400" />
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-green-100">
-                                      {assignment.routine.name}
-                                    </div>
-                                    <div className="text-sm text-green-200/80">
-                                      {assignment.routine.description ||
-                                        "No description"}
-                                    </div>
-                                    <div className="text-xs text-green-200/60 mt-1">
-                                      Assigned{" "}
-                                      {format(
-                                        new Date(
-                                          assignment.startDate ||
-                                            assignment.assignedAt
-                                        ),
-                                        "MMM dd, yyyy"
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-green-100">
-                                    {assignment.progress}%
-                                  </div>
-                                  <div className="text-xs text-green-200/60">
-                                    Progress
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <div className="p-4 rounded-full bg-green-500/5 w-16 h-16 mx-auto mb-4 flex items-center justify-center border border-green-500/10">
-                          <Target className="h-8 w-8 text-green-500/60" />
-                        </div>
-                        <p className="text-gray-400 mb-2">
-                          No routine assignments for this day
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Use the "Assign Routine" button below to add one
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Schedule Actions */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">
-                      Schedule for {format(selectedDate, "MMMM d, yyyy")}
-                    </h3>
-                    {(() => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0); // Reset time to start of day
-                      const selectedDay = new Date(selectedDate);
-                      selectedDay.setHours(0, 0, 0, 0);
-                      const isPastDate = selectedDay < today;
-
-                      if (isPastDate) {
-                        return (
-                          <div className="text-center py-8">
-                            <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                            <p className="text-gray-400">
-                              Cannot schedule for past dates
-                            </p>
-                            <p className="text-gray-500 text-sm mt-1">
-                              Only future dates can be scheduled
-                            </p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <button
-                            onClick={() => {
-                              setShowScheduleLessonModal(true);
-                              setShowDayDetailsModal(false);
-                            }}
-                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/20 hover:border-yellow-500/30"
-                          >
-                            <Calendar
-                              className="h-6 w-6"
-                              style={{ color: "#F59E0B" }}
-                            />
-                            <div className="text-left">
-                              <div
-                                className="font-medium"
-                                style={{ color: "#F59E0B" }}
-                              >
-                                Schedule Lesson
-                              </div>
-                              <div className="text-sm text-yellow-600/80">
-                                Book a lesson for this day
-                              </div>
-                            </div>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setShowAssignProgramModal(true);
-                              setShowDayDetailsModal(false);
-                            }}
-                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 hover:border-blue-500/30"
-                          >
-                            <BookOpen
-                              className="h-6 w-6"
-                              style={{ color: "#3B82F6" }}
-                            />
-                            <div className="text-left">
-                              <div
-                                className="font-medium"
-                                style={{ color: "#3B82F6" }}
-                              >
-                                Assign Program
-                              </div>
-                              <div className="text-sm text-blue-600/80">
-                                Start a program on this day
-                              </div>
-                            </div>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setShowAssignRoutineModal(true);
-                              setShowDayDetailsModal(false);
-                            }}
-                            className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-green-500/10 hover:bg-green-500/20 border-green-500/20 hover:border-green-500/30"
-                          >
-                            <Target
-                              className="h-6 w-6"
-                              style={{ color: "#10B981" }}
-                            />
-                            <div className="text-left">
-                              <div
-                                className="font-medium"
-                                style={{ color: "#10B981" }}
-                              >
-                                Assign Routine
-                              </div>
-                              <div className="text-sm text-green-600/80">
-                                Assign a routine for this day
-                              </div>
-                            </div>
-                          </button>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <DayDetailsModal
+            isOpen={showDayDetailsModal}
+            onClose={() => setShowDayDetailsModal(false)}
+            selectedDate={selectedDate}
+            lessons={selectedDate ? getLessonsForDate(selectedDate) : []}
+            programs={selectedDate ? getProgramsForDate(selectedDate) : []}
+            routineAssignments={
+              selectedDate ? getRoutineAssignmentsForDate(selectedDate) : []
+            }
+            onScheduleLesson={() => {
+              setShowScheduleLessonModal(true);
+              setShowDayDetailsModal(false);
+            }}
+            onAssignProgram={() => {
+              setShowAssignProgramModal(true);
+              setShowDayDetailsModal(false);
+            }}
+            onAssignRoutine={() => {
+              setShowAssignRoutineModal(true);
+              setShowDayDetailsModal(false);
+            }}
+            onReplaceWithLesson={replacementData => {
+              setReplacementData(replacementData);
+              setShowScheduleLessonModal(true);
+              setShowDayDetailsModal(false);
+            }}
+            onRemoveProgram={handleRemoveProgram}
+            getStatusIcon={getStatusIcon}
+            getStatusColor={getStatusColor}
+          />
         </div>
       </div>
     </Sidebar>

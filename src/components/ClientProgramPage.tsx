@@ -36,6 +36,7 @@ import {
   FileText,
 } from "lucide-react";
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
+import ClientProgramDayModal from "./ClientProgramDayModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -84,9 +85,21 @@ interface Drill {
   supersetOrder?: number;
 }
 
+interface ProgramData {
+  programId: string;
+  programTitle: string;
+  programDescription?: string;
+  drills: Drill[];
+  isRestDay: boolean;
+  expectedTime: number;
+  completedDrills: number;
+  totalDrills: number;
+}
+
 interface DayData {
   date: string;
-  drills: Drill[];
+  drills: Drill[]; // Keep for backward compatibility
+  programs?: ProgramData[]; // New: array of programs for this day
   isRestDay: boolean;
   expectedTime: number;
   completedDrills: number;
@@ -170,10 +183,32 @@ function ClientProgramPage() {
   // Get current week's calendar data (for "This Week's Schedule" section)
   const currentWeekStart = startOfWeek(new Date());
   const currentWeekEnd = endOfWeek(new Date());
+  const startDateString = `${currentWeekStart.getFullYear()}-${(
+    currentWeekStart.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${currentWeekStart
+    .getDate()
+    .toString()
+    .padStart(2, "0")}`;
+  const endDateString = `${currentWeekEnd.getFullYear()}-${(
+    currentWeekEnd.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${currentWeekEnd.getDate().toString().padStart(2, "0")}`;
+
+  // Debug logging
+  console.log("📅 Week Calendar Debug:", {
+    currentWeekStart: currentWeekStart.toLocaleDateString(),
+    currentWeekEnd: currentWeekEnd.toLocaleDateString(),
+    startDateString,
+    endDateString,
+  });
+
   const { data: weekCalendarData } =
     trpc.clientRouter.getProgramWeekCalendar.useQuery({
-      startDate: currentWeekStart.toISOString(),
-      endDate: currentWeekEnd.toISOString(),
+      startDate: startDateString,
+      endDate: endDateString,
     });
 
   // Get pitching data
@@ -188,6 +223,22 @@ function ClientProgramPage() {
 
   // Get coach notes
   const { data: coachNotes } = trpc.clientRouter.getCoachNotes.useQuery();
+
+  // Get routine assignments
+  const { data: routineAssignments = [] } =
+    trpc.clientRouter.getRoutineAssignments.useQuery();
+
+  // Debug logging for routine assignments
+  console.log("🔍 Routine Assignments Debug:", {
+    routineAssignments,
+    count: routineAssignments.length,
+    assignments: routineAssignments.map(assignment => ({
+      id: assignment.id,
+      routineName: assignment.routine.name,
+      assignedAt: assignment.assignedAt,
+      startDate: assignment.startDate,
+    })),
+  });
 
   // Get client's lessons
   const { data: clientLessons = [] } =
@@ -297,16 +348,52 @@ function ClientProgramPage() {
     return lessons;
   };
 
+  // Get routine assignments for a specific date
+  const getRoutinesForDate = (date: Date) => {
+    if (!routineAssignments || routineAssignments.length === 0) return [];
+
+    // Convert date to YYYY-MM-DD format for comparison
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+
+    // Filter routines that are scheduled for this specific date
+    return routineAssignments.filter((assignment: any) => {
+      if (!assignment.startDate) return false;
+
+      // Convert assignment start date to YYYY-MM-DD format
+      const assignmentDate = new Date(assignment.startDate);
+      const assignmentDateString = `${assignmentDate.getFullYear()}-${(
+        assignmentDate.getMonth() + 1
+      )
+        .toString()
+        .padStart(2, "0")}-${assignmentDate
+        .getDate()
+        .toString()
+        .padStart(2, "0")}`;
+
+      // For now, only show routines on their start date
+      // This could be enhanced to support recurring routines or date ranges
+      return assignmentDateString === dateString;
+    });
+  };
+
   // Get day data from calendar data
   const getDayData = (date: Date): DayData | null => {
     if (!calendarData) return null;
-    const dateString = date.toISOString().split("T")[0];
+    // Use local date format to avoid timezone conversion issues
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
     return calendarData[dateString] || null;
   };
 
   // Get day data from week calendar data (for current week)
   const getWeekDayData = (date: Date): DayData | null => {
-    const dateString = date.toISOString().split("T")[0];
+    // Use local date format to avoid timezone conversion issues
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
     // Prefer week data; fall back to month data if week missing
     return (
       (weekCalendarData && (weekCalendarData as any)[dateString]) ||
@@ -1024,10 +1111,7 @@ function ClientProgramPage() {
                             "ring-2 ring-blue-500/50 border-blue-400/50 bg-blue-500/10"
                         )}
                         onClick={() => {
-                          if (
-                            dayData &&
-                            (dayData.drills.length > 0 || dayData.isRestDay)
-                          ) {
+                          if (dayData || getRoutinesForDate(date).length > 0) {
                             setSelectedDay(dayData);
                             setIsDaySheetOpen(true);
                           }
@@ -1133,14 +1217,43 @@ function ClientProgramPage() {
                           </div>
                         )}
 
-                        {/* Empty Day */}
-                        {!dayData && isCurrentMonth && (
-                          <div className="text-center mt-2">
-                            <div className="text-xs text-gray-500">
-                              No program
-                            </div>
+                        {/* Routine Assignments */}
+                        {getRoutinesForDate(date).length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {getRoutinesForDate(date)
+                              .slice(0, 2)
+                              .map((routine: any, routineIndex: number) => (
+                                <div
+                                  key={routineIndex}
+                                  className="p-1 rounded text-xs bg-green-500/20 text-green-400"
+                                >
+                                  <div className="flex items-center gap-1">
+                                    <Target className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {routine.routine.name}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            {getRoutinesForDate(date).length > 2 && (
+                              <div className="text-xs text-gray-400 text-center">
+                                +{getRoutinesForDate(date).length - 2} more
+                                routines
+                              </div>
+                            )}
                           </div>
                         )}
+
+                        {/* Empty Day */}
+                        {!dayData &&
+                          getRoutinesForDate(date).length === 0 &&
+                          isCurrentMonth && (
+                            <div className="text-center mt-2">
+                              <div className="text-xs text-gray-500">
+                                No program
+                              </div>
+                            </div>
+                          )}
                       </div>
                     );
                   })}
@@ -1468,293 +1581,24 @@ function ClientProgramPage() {
             </div>
           )}
 
-          {/* Day Detail Modal */}
+          {/* New Enhanced Day Modal */}
           {isDaySheetOpen && selectedDay && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div
-                className="bg-gray-800 rounded-3xl border-2 border-gray-600 w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 ease-out"
-                style={{
-                  animation: "modalSlideIn 0.3s ease-out",
-                }}
-              >
-                {/* Modal Header */}
-                <div className="p-6 border-b border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white">
-                        {new Date(selectedDay.date).toLocaleDateString(
-                          "en-US",
-                          {
-                            weekday: "long",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
-                      </h2>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                        <span>Assigned by {programInfo?.coachName}</span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsDaySheetOpen(false)}
-                      className="text-gray-400 hover:text-white"
-                    >
-                      <X className="h-6 w-6" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Modal Content */}
-                <div className="p-6">
-                  {selectedDay.isRestDay ? (
-                    <div className="text-center py-12">
-                      <div className="text-6xl mb-4">🔋</div>
-                      <h3 className="text-2xl font-bold text-white mb-2">
-                        Recharge Day
-                      </h3>
-                      <p className="text-lg" style={{ color: "#F59E0B" }}>
-                        Take it easy and recover
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {/* Drills List */}
-                      <div className="space-y-4">
-                        {selectedDay.drills.map(drill => (
-                          <div
-                            key={drill.id}
-                            className={`rounded-2xl p-6 border ${
-                              drill.supersetId
-                                ? "bg-purple-600/30 border-purple-500/50"
-                                : "bg-gray-700 border-gray-600"
-                            }`}
-                          >
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h3 className="text-xl font-bold text-white">
-                                    {drill.title}
-                                  </h3>
-                                  {drill.supersetId && (
-                                    <div className="flex items-center gap-1 text-xs text-purple-300">
-                                      <Link className="h-4 w-4" />
-                                      <span className="font-medium">
-                                        SUPERSET
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Sets, Reps, Tempo */}
-                                <div className="flex items-center gap-6 mb-3">
-                                  {drill.sets && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm text-gray-400">
-                                        Sets:
-                                      </span>
-                                      <span className="text-white font-semibold">
-                                        {drill.sets}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {drill.reps && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm text-gray-400">
-                                        Reps:
-                                      </span>
-                                      <span className="text-white font-semibold">
-                                        {drill.reps}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {drill.tempo && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm text-gray-400">
-                                        Tempo:
-                                      </span>
-                                      <span className="text-white font-semibold">
-                                        {drill.tempo}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Tags */}
-                                {drill.tags && drill.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-2 mb-4">
-                                    {drill.tags.map((tag, index) => (
-                                      <Badge
-                                        key={index}
-                                        variant="outline"
-                                        className="text-xs border-blue-500 text-blue-400"
-                                      >
-                                        {tag}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Video URL if available */}
-                                {drill.videoUrl && (
-                                  <div className="mb-4">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        console.log(
-                                          "🔘 Watch Demo button clicked!"
-                                        );
-                                        console.log("🔍 Drill data:", drill);
-                                        console.log(
-                                          "🔍 Drill videoUrl:",
-                                          drill.videoUrl
-                                        );
-
-                                        if (drill.videoUrl) {
-                                          console.log(
-                                            "✅ Calling handleOpenVideo with:",
-                                            drill.videoUrl
-                                          );
-                                          handleOpenVideo(
-                                            drill.videoUrl,
-                                            drill
-                                          );
-                                        } else {
-                                          console.log(
-                                            "❌ No videoUrl found in drill"
-                                          );
-                                        }
-                                      }}
-                                      className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
-                                    >
-                                      <Play className="h-4 w-4 mr-2" />
-                                      Watch Demo
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Action Buttons */}
-                              <div className="flex items-center gap-2 ml-4">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    console.log(
-                                      "🔘 Checkmark button clicked for drill:",
-                                      drill.id,
-                                      "current status:",
-                                      drill.completed
-                                    );
-                                    handleMarkDrillComplete(
-                                      drill.id,
-                                      !drill.completed
-                                    );
-                                  }}
-                                  className={cn(
-                                    "h-10 w-10 p-0 rounded-xl transition-all duration-300 transform hover:scale-110",
-                                    drill.completed
-                                      ? "bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/25"
-                                      : "bg-gray-600 text-gray-300 hover:bg-gray-500 hover:shadow-lg"
-                                  )}
-                                >
-                                  <Check className="h-5 w-5" />
-                                </Button>
-                              </div>
-                            </div>
-
-                            {/* Comment Section */}
-                            <div className="border-t border-gray-600 pt-4">
-                              <div className="flex items-center gap-3 mb-3">
-                                <MessageSquare className="h-5 w-5 text-blue-400" />
-                                <h4 className="font-semibold text-white">
-                                  Add Comment
-                                </h4>
-                              </div>
-                              <div className="flex gap-3">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedDrillForVideo({
-                                      id: drill.id,
-                                      title: drill.title,
-                                    });
-                                    setIsVideoSubmissionModalOpen(true);
-                                  }}
-                                  className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
-                                >
-                                  <Video className="h-4 w-4 mr-2" />
-                                  Record Video
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenCommentModal(drill)}
-                                  className="border-gray-500 text-gray-400 hover:bg-gray-600"
-                                >
-                                  <MessageSquare className="h-4 w-4 mr-2" />
-                                  Add Note
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Mark All Complete Button */}
-                      <Button
-                        onClick={handleMarkAllComplete}
-                        className="w-full py-4 text-lg font-semibold rounded-2xl"
-                        disabled={
-                          selectedDay.completedDrills ===
-                          selectedDay.totalDrills
-                        }
-                        style={{
-                          backgroundColor:
-                            selectedDay.completedDrills ===
-                            selectedDay.totalDrills
-                              ? "#10B981"
-                              : "#4A5A70",
-                        }}
-                      >
-                        <Check className="h-5 w-5 mr-2" />
-                        {selectedDay.completedDrills === selectedDay.totalDrills
-                          ? "All Complete!"
-                          : "Mark All Complete"}
-                      </Button>
-
-                      {/* Note to Coach */}
-                      <div className="space-y-4">
-                        <h4 className="font-semibold text-white text-lg">
-                          Note to Coach
-                        </h4>
-                        <Textarea
-                          placeholder="Add a note about your workout..."
-                          value={noteToCoach}
-                          onChange={(
-                            e: React.ChangeEvent<HTMLTextAreaElement>
-                          ) => setNoteToCoach(e.target.value)}
-                          className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl"
-                          rows={4}
-                        />
-                        <Button
-                          onClick={handleSendNote}
-                          disabled={!noteToCoach.trim() || isSubmittingNote}
-                          className="w-full py-3 rounded-xl"
-                          style={{ backgroundColor: "#10B981" }}
-                        >
-                          <Send className="h-4 w-4 mr-2" />
-                          {isSubmittingNote ? "Sending..." : "Send Note"}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ClientProgramDayModal
+              isOpen={isDaySheetOpen}
+              onClose={() => setIsDaySheetOpen(false)}
+              selectedDay={selectedDay}
+              programs={selectedDay?.programs || []}
+              routineAssignments={routineAssignments as any}
+              onMarkDrillComplete={handleMarkDrillComplete}
+              onMarkAllComplete={handleMarkAllComplete}
+              onOpenVideo={handleOpenVideo}
+              onOpenCommentModal={handleOpenCommentModal}
+              onOpenVideoSubmissionModal={handleSubmitVideo}
+              onSendNote={handleSendNote}
+              noteToCoach={noteToCoach}
+              setNoteToCoach={setNoteToCoach}
+              isSubmittingNote={isSubmittingNote}
+            />
           )}
 
           {/* Video Submission Modal */}

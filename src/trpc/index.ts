@@ -6832,11 +6832,9 @@ export const appRouter = router({
         const assignments = [];
 
         for (const client of clients) {
-          // Parse the date string and create a date at midnight in UTC to avoid timezone issues
+          // Parse the date string and create a local date at midnight to avoid timezone issues
           const [year, month, day] = input.startDate.split("-").map(Number);
-          const startDate = new Date(
-            Date.UTC(year, month - 1, day, 0, 0, 0, 0)
-          );
+          const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
           // Create the assignments (one for each repetition)
           for (let cycle = 1; cycle <= input.repetitions; cycle++) {
@@ -7483,9 +7481,9 @@ export const appRouter = router({
         // Create routine assignments
         console.log("Server: Received startDate:", input.startDate);
 
-        // Parse the date string correctly to avoid timezone issues - use UTC
+        // Parse the date string correctly to avoid timezone issues - use local time
         const [year, month, day] = input.startDate.split("-").map(Number);
-        const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
         console.log("Server: Parsed startDate:", startDate);
 
@@ -10153,6 +10151,79 @@ export const appRouter = router({
       return { notes: client.notes || "", updatedAt: client.updatedAt };
     }),
 
+    getRoutineAssignments: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get client record
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // Get routine assignments for the client
+      // Note: We're not filtering by date here - routines are ongoing assignments
+      // unlike programs which are date-specific
+      const assignments = await db.routineAssignment.findMany({
+        where: {
+          clientId: client.id,
+        },
+        include: {
+          routine: {
+            include: {
+              exercises: {
+                orderBy: { order: "asc" },
+              },
+            },
+          },
+        },
+        orderBy: {
+          assignedAt: "desc",
+        },
+      });
+
+      // Debug logging
+      console.log("🔍 Backend Routine Assignments Debug:", {
+        clientId: client.id,
+        userId: user.id,
+        assignmentCount: assignments.length,
+        assignments: assignments.map(assignment => ({
+          id: assignment.id,
+          routineName: assignment.routine.name,
+          assignedAt: assignment.assignedAt,
+          startDate: assignment.startDate,
+        })),
+      });
+
+      // Additional debug: Check if there are ANY routine assignments for this client
+      const allAssignments = await db.routineAssignment.findMany({
+        where: { clientId: client.id },
+        select: { id: true, routineId: true, assignedAt: true },
+      });
+      console.log("🔍 All Routine Assignments for Client:", allAssignments);
+
+      return assignments;
+    }),
+
     getProgramCalendar: publicProcedure
       .input(
         z.object({
@@ -10223,19 +10294,68 @@ export const appRouter = router({
           // Process all assigned programs
           for (const assignment of client.programAssignments) {
             const program = assignment.program;
-            const startDate =
-              assignment.startDate || new Date(assignment.assignedAt);
+            // Parse startDate as a pure date (no time component)
+            let startDate: Date;
+            if (assignment.startDate) {
+              // Parse the date string directly as YYYY-MM-DD format
+              const dateStr = assignment.startDate.toString();
+              if (dateStr.includes("-") && dateStr.length === 10) {
+                // It's in YYYY-MM-DD format, parse it directly
+                const [year, month, day] = dateStr.split("-").map(Number);
+                startDate = new Date(year, month - 1, day);
+              } else {
+                // It's an ISO string or other format, extract just the date part
+                const tempDate = new Date(assignment.startDate);
+                startDate = new Date(
+                  tempDate.getFullYear(),
+                  tempDate.getMonth(),
+                  tempDate.getDate()
+                );
+              }
+            } else {
+              // Fallback to assignedAt date
+              const assignedDate = new Date(assignment.assignedAt);
+              startDate = new Date(
+                assignedDate.getFullYear(),
+                assignedDate.getMonth(),
+                assignedDate.getDate()
+              );
+            }
+
+            // Debug logging for start date
+            console.log(
+              `Program Assignment Debug - Client: ${client.id}, Assignment ID: ${assignment.id}:`,
+              {
+                originalStartDate: assignment.startDate,
+                startDateUsed: startDate,
+                startDateString: startDate.toLocaleDateString(),
+              }
+            );
 
             // Get all days in the program
             for (const week of program.weeks) {
               for (const day of week.days) {
                 // Calculate the day date by adding the appropriate number of days
-                const dayDate = new Date(startDate);
+                // Ensure we work with local dates to avoid timezone issues
+                const startDateLocal = new Date(
+                  startDate.getFullYear(),
+                  startDate.getMonth(),
+                  startDate.getDate()
+                );
                 const daysToAdd =
                   (week.weekNumber - 1) * 7 + (day.dayNumber - 1);
-                dayDate.setDate(startDate.getDate() + daysToAdd);
+                const dayDate = new Date(startDateLocal);
+                dayDate.setDate(startDateLocal.getDate() + daysToAdd);
 
-                const dateString = dayDate.toISOString().split("T")[0];
+                // Use local date format to avoid timezone conversion issues
+                const dateString = `${dayDate.getFullYear()}-${(
+                  dayDate.getMonth() + 1
+                )
+                  .toString()
+                  .padStart(2, "0")}-${dayDate
+                  .getDate()
+                  .toString()
+                  .padStart(2, "0")}`;
 
                 // Debug logging for first few days
                 if (week.weekNumber === 1 && day.dayNumber <= 3) {
@@ -10401,13 +10521,27 @@ export const appRouter = router({
                     (drill: any) => drill.completed
                   ).length;
 
+                  // Create program data for this day
+                  const programData = {
+                    programId: program.id,
+                    programTitle: program.title,
+                    programDescription: program.description,
+                    drills,
+                    isRestDay: day.isRestDay || drills.length === 0,
+                    expectedTime: drills.reduce(
+                      (total: number, drill: any) =>
+                        total + (drill.sets || 0) * 2,
+                      0
+                    ),
+                    completedDrills,
+                    totalDrills: drills.length,
+                  };
+
                   // Check if this day already has content from another program
                   if (calendarData[dateString]) {
-                    // Merge drills from multiple programs
-                    calendarData[dateString].drills = [
-                      ...calendarData[dateString].drills,
-                      ...drills,
-                    ];
+                    // Add this program to the existing day
+                    calendarData[dateString].programs.push(programData);
+                    // Update totals for the day
                     calendarData[dateString].completedDrills += completedDrills;
                     calendarData[dateString].totalDrills += drills.length;
                     calendarData[dateString].expectedTime += drills.reduce(
@@ -10422,7 +10556,7 @@ export const appRouter = router({
                     // Create entry for this program day
                     calendarData[dateString] = {
                       date: dateString,
-                      drills,
+                      programs: [programData],
                       isRestDay: day.isRestDay || drills.length === 0, // Mark as rest day if no drills or explicitly marked as rest
                       expectedTime: drills.reduce(
                         (total: number, drill: any) =>
@@ -10431,6 +10565,8 @@ export const appRouter = router({
                       ), // Rough estimate
                       completedDrills,
                       totalDrills: drills.length,
+                      // Keep drills array for backward compatibility
+                      drills: drills,
                     };
                   }
                 }
@@ -10530,9 +10666,32 @@ export const appRouter = router({
 
         // Process each program assignment
         for (const assignment of clientWithPrograms.programAssignments) {
-          const programStartDate = new Date(
-            assignment.startDate || assignment.assignedAt
-          );
+          // Parse startDate as a pure date (no time component)
+          let programStartDate: Date;
+          if (assignment.startDate) {
+            const dateStr = assignment.startDate.toString();
+            if (dateStr.includes("-") && dateStr.length === 10) {
+              // It's in YYYY-MM-DD format, parse it directly
+              const [year, month, day] = dateStr.split("-").map(Number);
+              programStartDate = new Date(year, month - 1, day);
+            } else {
+              // It's an ISO string or other format, extract just the date part
+              const tempDate = new Date(assignment.startDate);
+              programStartDate = new Date(
+                tempDate.getFullYear(),
+                tempDate.getMonth(),
+                tempDate.getDate()
+              );
+            }
+          } else {
+            // Fallback to assignedAt date
+            const assignedDate = new Date(assignment.assignedAt);
+            programStartDate = new Date(
+              assignedDate.getFullYear(),
+              assignedDate.getMonth(),
+              assignedDate.getDate()
+            );
+          }
           const program = assignment.program;
 
           // Process each week of the program
@@ -10540,16 +10699,30 @@ export const appRouter = router({
             // Process each day of the week
             for (const day of week.days) {
               // Calculate the actual date for this program day
-              const dayDate = new Date(programStartDate);
+              // Ensure we work with local dates to avoid timezone issues
+              const programStartDateLocal = new Date(
+                programStartDate.getFullYear(),
+                programStartDate.getMonth(),
+                programStartDate.getDate()
+              );
+              const dayDate = new Date(programStartDateLocal);
               dayDate.setDate(
-                dayDate.getDate() +
+                programStartDateLocal.getDate() +
                   (week.weekNumber - 1) * 7 +
                   (day.dayNumber - 1)
               );
 
               // Check if this day falls within our requested date range
               if (dayDate >= startDateTime && dayDate <= endDateTime) {
-                const dateString = dayDate.toISOString().split("T")[0];
+                // Use local date format to avoid timezone conversion issues
+                const dateString = `${dayDate.getFullYear()}-${(
+                  dayDate.getMonth() + 1
+                )
+                  .toString()
+                  .padStart(2, "0")}-${dayDate
+                  .getDate()
+                  .toString()
+                  .padStart(2, "0")}`;
 
                 // Process drills and expand routines
                 const expandedDrills = [];
