@@ -12169,7 +12169,7 @@ export const appRouter = router({
             senderId: user.id,
             content: messageContent,
             attachmentUrl: input.videoUrl,
-            attachmentType: "video",
+            attachmentType: "video/mp4", // Set proper MIME type for video
             attachmentName: input.title,
             attachmentSize: null, // We don't have size info from UploadThing
           },

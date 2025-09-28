@@ -437,74 +437,70 @@ export default function ClientProgramDayModal({
 
         {/* Actions Footer */}
         <div className="p-6 pb-8 border-t border-gray-700 bg-gray-900/50 flex-shrink-0">
-          {selectedDay.isRestDay ? (
-            <div className="text-center"></div>
-          ) : (
-            <div className="space-y-4">
-              {/* Mark All Complete Button */}
-              {totalDrills > 0 && (
-                <Button
-                  onClick={onMarkAllComplete}
-                  className="w-full py-4 text-lg font-semibold rounded-2xl"
-                  disabled={completedDrills === totalDrills}
-                  style={{
-                    backgroundColor:
-                      completedDrills === totalDrills ? "#10B981" : "#4A5A70",
-                  }}
-                >
-                  <Check className="h-5 w-5 mr-2" />
-                  {completedDrills === totalDrills
-                    ? "All Complete! 🎉"
-                    : `Mark All Complete (${completedDrills}/${totalDrills})`}
-                </Button>
-              )}
+          <div className="space-y-4">
+            {/* Mark All Complete Button */}
+            {totalDrills > 0 && (
+              <Button
+                onClick={onMarkAllComplete}
+                className="w-full py-4 text-lg font-semibold rounded-2xl"
+                disabled={completedDrills === totalDrills}
+                style={{
+                  backgroundColor:
+                    completedDrills === totalDrills ? "#10B981" : "#4A5A70",
+                }}
+              >
+                <Check className="h-5 w-5 mr-2" />
+                {completedDrills === totalDrills
+                  ? "All Complete! 🎉"
+                  : `Mark All Complete (${completedDrills}/${totalDrills})`}
+              </Button>
+            )}
 
-              {/* Note to Coach */}
-              <div className="space-y-3">
-                <h4 className="font-semibold text-white text-lg flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-blue-400" />
-                  Note to Coach
-                </h4>
-                <Textarea
-                  placeholder="Add a note about your workout..."
-                  value={noteToCoach}
-                  onChange={e => setNoteToCoach(e.target.value)}
-                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl"
-                  rows={3}
-                />
-                <Button
-                  onClick={() => onSendNote(noteToCoach)}
-                  disabled={!noteToCoach.trim() || isSubmittingNote}
-                  className="w-full py-3 rounded-xl"
-                  style={{ backgroundColor: "#10B981" }}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {isSubmittingNote ? "Sending..." : "Send Note"}
-                </Button>
-              </div>
-
-              {/* Progress Footer */}
-              {tabs.length > 1 && (
-                <div className="border-t border-gray-700 pt-4 mt-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-400">
-                      {viewedTabs.size} of {tabs.length} assignments viewed
-                    </div>
-                    {unviewedCount > 0 && (
-                      <button
-                        onClick={() => {
-                          setViewedTabs(new Set(tabs.map(tab => tab.id)));
-                        }}
-                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                      >
-                        Mark all as viewed
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
+            {/* Note to Coach */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-white text-lg flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-blue-400" />
+                Note to Coach
+              </h4>
+              <Textarea
+                placeholder="Add a note about your workout..."
+                value={noteToCoach}
+                onChange={e => setNoteToCoach(e.target.value)}
+                className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl"
+                rows={3}
+              />
+              <Button
+                onClick={() => onSendNote(noteToCoach)}
+                disabled={!noteToCoach.trim() || isSubmittingNote}
+                className="w-full py-3 rounded-xl"
+                style={{ backgroundColor: "#10B981" }}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isSubmittingNote ? "Sending..." : "Send Note"}
+              </Button>
             </div>
-          )}
+
+            {/* Progress Footer */}
+            {tabs.length > 1 && (
+              <div className="border-t border-gray-700 pt-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-400">
+                    {viewedTabs.size} of {tabs.length} assignments viewed
+                  </div>
+                  {unviewedCount > 0 && (
+                    <button
+                      onClick={() => {
+                        setViewedTabs(new Set(tabs.map(tab => tab.id)));
+                      }}
+                      className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      Mark all as viewed
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -568,10 +564,6 @@ function ProgramContent({
           <BookOpen className="h-6 w-6 text-blue-400" />
           Today's Workout
         </h3>
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <Clock className="h-4 w-4" />
-          <span>~{program.expectedTime} min</span>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
