@@ -10195,6 +10195,7 @@ export const appRouter = router({
               },
             },
           },
+          completions: true,
         },
         orderBy: {
           assignedAt: "desc",
@@ -10971,6 +10972,107 @@ export const appRouter = router({
             });
             console.log("✅ Drill completion removed successfully");
           }
+        }
+
+        return { success: true };
+      }),
+
+    markRoutineExerciseComplete: publicProcedure
+      .input(
+        z.object({
+          exerciseId: z.string(),
+          routineAssignmentId: z.string(),
+          completed: z.boolean(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const client = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        console.log(
+          "🎯 markRoutineExerciseComplete mutation called with:",
+          input
+        );
+
+        // Verify the routine assignment belongs to this client
+        const routineAssignment = await db.routineAssignment.findFirst({
+          where: {
+            id: input.routineAssignmentId,
+            clientId: client.id,
+          },
+          include: {
+            routine: {
+              include: {
+                exercises: true,
+              },
+            },
+          },
+        });
+
+        if (!routineAssignment) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Routine assignment not found or not assigned to client",
+          });
+        }
+
+        // Verify the exercise exists in this routine
+        const exercise = routineAssignment.routine.exercises.find(
+          ex => ex.id === input.exerciseId
+        );
+
+        if (!exercise) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Exercise not found in this routine",
+          });
+        }
+
+        if (input.completed) {
+          // Mark routine exercise as complete
+          console.log(
+            "✅ Creating routine exercise completion:",
+            input.exerciseId
+          );
+
+          await db.routineExerciseCompletion.create({
+            data: {
+              routineAssignmentId: input.routineAssignmentId,
+              exerciseId: input.exerciseId,
+              clientId: client.id,
+            },
+          });
+
+          console.log("✅ Routine exercise completion created successfully");
+        } else {
+          // Mark routine exercise as incomplete
+          console.log(
+            "❌ Removing routine exercise completion:",
+            input.exerciseId
+          );
+
+          await db.routineExerciseCompletion.deleteMany({
+            where: {
+              routineAssignmentId: input.routineAssignmentId,
+              exerciseId: input.exerciseId,
+              clientId: client.id,
+            },
+          });
+
+          console.log("✅ Routine exercise completion removed successfully");
         }
 
         return { success: true };

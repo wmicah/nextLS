@@ -112,6 +112,7 @@ interface ClientProgramDayModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDay: DayData | null;
+  selectedDate?: Date | null; // New prop for the actual clicked date
   programs?: ProgramData[]; // Changed from single programInfo to array of programs
   routineAssignments?: RoutineAssignment[];
   onMarkDrillComplete: (drillId: string, completed: boolean) => void;
@@ -123,6 +124,20 @@ interface ClientProgramDayModalProps {
   noteToCoach: string;
   setNoteToCoach: (note: string) => void;
   isSubmittingNote: boolean;
+  completedProgramDrills: Set<string>;
+  calculateDayCompletionCounts: (
+    dayData: DayData | null,
+    selectedDate: Date | null
+  ) => { totalDrills: number; completedDrills: number };
+  calculateDayAssignmentCounts: (
+    dayData: DayData | null,
+    selectedDate: Date | null
+  ) => { totalAssignments: number; completedAssignments: number };
+  onMarkRoutineExerciseComplete: (
+    exerciseId: string,
+    routineAssignmentId: string,
+    completed: boolean
+  ) => void;
 }
 
 interface Tab {
@@ -139,6 +154,7 @@ export default function ClientProgramDayModal({
   isOpen,
   onClose,
   selectedDay,
+  selectedDate,
   programs = [],
   routineAssignments = [],
   onMarkDrillComplete,
@@ -150,9 +166,23 @@ export default function ClientProgramDayModal({
   noteToCoach,
   setNoteToCoach,
   isSubmittingNote,
+  completedProgramDrills,
+  calculateDayCompletionCounts,
+  calculateDayAssignmentCounts,
+  onMarkRoutineExerciseComplete,
 }: ClientProgramDayModalProps) {
   const [activeTab, setActiveTab] = useState<string>("");
   const [viewedTabs, setViewedTabs] = useState<Set<string>>(new Set());
+
+  // Calculate total completion counts for the day
+  const { totalDrills, completedDrills } = calculateDayCompletionCounts(
+    selectedDay,
+    selectedDate || null
+  );
+
+  // Calculate assignment-level completion counts for the day header
+  const { totalAssignments, completedAssignments } =
+    calculateDayAssignmentCounts(selectedDay, selectedDate || null);
 
   // Generate tabs for the selected day
   const generateTabs = (): Tab[] => {
@@ -174,9 +204,8 @@ export default function ClientProgramDayModal({
     });
 
     // Add routine tabs for routines scheduled on the selected day
-    if (selectedDay && selectedDay.date) {
-      // Convert selected day date to YYYY-MM-DD format for comparison
-      const selectedDate = new Date(selectedDay.date);
+    if (selectedDate) {
+      // Convert selected date to YYYY-MM-DD format for comparison
       const dateString = `${selectedDate.getFullYear()}-${(
         selectedDate.getMonth() + 1
       )
@@ -205,10 +234,10 @@ export default function ClientProgramDayModal({
               id: `routine-${assignment.id}`,
               title: assignment.routine.name,
               type: "routine",
-              icon: <Target className="h-4 w-4" />,
-              color: "text-green-400",
-              bgColor: "bg-green-500/20",
-              borderColor: "border-green-400/30",
+              icon: <BookOpen className="h-4 w-4" />,
+              color: "text-blue-400",
+              bgColor: "bg-blue-500/20",
+              borderColor: "border-blue-400/30",
             });
           }
         }
@@ -284,17 +313,19 @@ export default function ClientProgramDayModal({
             <div>
               <h2 className="text-2xl font-bold text-white mb-1">
                 {(() => {
-                  // Parse the date string and format it properly
-                  const [year, month, day] = selectedDay.date
-                    .split("-")
-                    .map(Number);
-                  const dateObj = new Date(year, month - 1, day); // month is 0-indexed
-                  const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
+                  // Use selectedDate if available, otherwise fall back to selectedDay.date
+                  const dateToUse =
+                    selectedDate ||
+                    (selectedDay?.date
+                      ? new Date(selectedDay.date)
+                      : new Date());
+                  const formattedDate = format(dateToUse, "EEEE, MMMM d, yyyy");
 
                   // Debug logging
                   console.log("🗓️ Modal Date Debug:", {
-                    originalDateString: selectedDay.date,
-                    parsedDate: dateObj.toLocaleDateString(),
+                    selectedDate: selectedDate?.toLocaleDateString(),
+                    selectedDayDate: selectedDay?.date,
+                    dateToUse: dateToUse.toLocaleDateString(),
                     formattedDate,
                   });
 
@@ -303,10 +334,10 @@ export default function ClientProgramDayModal({
               </h2>
               <div className="flex items-center gap-4 text-sm text-gray-400">
                 <span>Multiple Programs Assigned</span>
-                {selectedDay.totalDrills > 0 && (
+                {totalAssignments > 0 && (
                   <span className="flex items-center gap-1">
                     <CheckCircle2 className="h-4 w-4 text-green-400" />
-                    {selectedDay.completedDrills}/{selectedDay.totalDrills}{" "}
+                    {completedAssignments}/{totalAssignments} assignments
                     completed
                   </span>
                 )}
@@ -330,12 +361,6 @@ export default function ClientProgramDayModal({
               <h3 className="text-sm font-medium text-gray-300">
                 Today's Assignments:
               </h3>
-              {unviewedCount > 0 && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/20 text-orange-300 text-xs font-medium">
-                  <AlertCircle className="h-3 w-3" />
-                  {unviewedCount} more to check
-                </div>
-              )}
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
               {tabs.map(tab => {
@@ -387,6 +412,7 @@ export default function ClientProgramDayModal({
                   onOpenVideo={onOpenVideo}
                   onOpenCommentModal={onOpenCommentModal}
                   onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
+                  completedProgramDrills={completedProgramDrills}
                 />
               );
             })()
@@ -395,6 +421,12 @@ export default function ClientProgramDayModal({
               routineAssignment={routineAssignments.find(
                 assignment => `routine-${assignment.id}` === currentTab.id
               )}
+              onMarkDrillComplete={onMarkDrillComplete}
+              onMarkRoutineExerciseComplete={onMarkRoutineExerciseComplete}
+              onOpenVideo={onOpenVideo}
+              onOpenCommentModal={onOpenCommentModal}
+              onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
+              completedProgramDrills={completedProgramDrills}
             />
           ) : (
             <div className="text-center py-8">
@@ -406,32 +438,24 @@ export default function ClientProgramDayModal({
         {/* Actions Footer */}
         <div className="p-6 pb-8 border-t border-gray-700 bg-gray-900/50 flex-shrink-0">
           {selectedDay.isRestDay ? (
-            <div className="text-center">
-              <p className="text-gray-400 text-sm">
-                Enjoy your well-deserved rest day! 💤
-              </p>
-            </div>
+            <div className="text-center"></div>
           ) : (
             <div className="space-y-4">
               {/* Mark All Complete Button */}
-              {selectedDay.totalDrills > 0 && (
+              {totalDrills > 0 && (
                 <Button
                   onClick={onMarkAllComplete}
                   className="w-full py-4 text-lg font-semibold rounded-2xl"
-                  disabled={
-                    selectedDay.completedDrills === selectedDay.totalDrills
-                  }
+                  disabled={completedDrills === totalDrills}
                   style={{
                     backgroundColor:
-                      selectedDay.completedDrills === selectedDay.totalDrills
-                        ? "#10B981"
-                        : "#4A5A70",
+                      completedDrills === totalDrills ? "#10B981" : "#4A5A70",
                   }}
                 >
                   <Check className="h-5 w-5 mr-2" />
-                  {selectedDay.completedDrills === selectedDay.totalDrills
+                  {completedDrills === totalDrills
                     ? "All Complete! 🎉"
-                    : `Mark All Complete (${selectedDay.completedDrills}/${selectedDay.totalDrills})`}
+                    : `Mark All Complete (${completedDrills}/${totalDrills})`}
                 </Button>
               )}
 
@@ -494,19 +518,13 @@ function RestDayContent({ programTitle }: { programTitle: string }) {
       <div className="relative mb-8">
         <div className="w-24 h-24 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <div className="w-12 h-12 bg-orange-400 rounded-full flex items-center justify-center">
-            <span className="text-2xl">😴</span>
+            <span className="text-2xl"></span>
           </div>
-        </div>
-        <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-          <Zap className="h-4 w-4 text-white" />
         </div>
       </div>
       <h3 className="text-3xl font-bold text-white mb-4">Rest Day</h3>
       <p className="text-lg text-orange-300 mb-2">Time to Recharge & Recover</p>
-      <p className="text-gray-400 max-w-md mx-auto">
-        Recovery is just as important as training. Take this time to rest,
-        hydrate, and prepare for your next workout session.
-      </p>
+      <p className="text-gray-400 max-w-md mx-auto">Enjoy your day off.</p>
     </div>
   );
 }
@@ -518,12 +536,14 @@ function ProgramContent({
   onOpenVideo,
   onOpenCommentModal,
   onOpenVideoSubmissionModal,
+  completedProgramDrills,
 }: {
   program: ProgramData;
   onMarkDrillComplete: (drillId: string, completed: boolean) => void;
   onOpenVideo: (videoUrl: string, drill: Drill) => void;
   onOpenCommentModal: (drill: Drill) => void;
   onOpenVideoSubmissionModal: (drillId: string, drillTitle: string) => void;
+  completedProgramDrills: Set<string>;
 }) {
   if (program.drills.length === 0) {
     return (
@@ -555,23 +575,31 @@ function ProgramContent({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {program.drills.map((drill, index) => (
-          <DrillCard
-            key={drill.id}
-            drill={drill}
-            index={index}
-            onMarkComplete={completed =>
-              onMarkDrillComplete(drill.id, completed)
-            }
-            onOpenVideo={() =>
-              drill.videoUrl && onOpenVideo(drill.videoUrl, drill)
-            }
-            onOpenComment={() => onOpenCommentModal(drill)}
-            onOpenVideoSubmission={() =>
-              onOpenVideoSubmissionModal(drill.id, drill.title)
-            }
-          />
-        ))}
+        {program.drills.map((drill, index) => {
+          // Create a drill object with the current completion state
+          const drillWithCompletion: Drill = {
+            ...drill,
+            completed: completedProgramDrills.has(drill.id),
+          };
+
+          return (
+            <DrillCard
+              key={drill.id}
+              drill={drillWithCompletion}
+              index={index}
+              onMarkComplete={completed =>
+                onMarkDrillComplete(drill.id, completed)
+              }
+              onOpenVideo={() =>
+                drill.videoUrl && onOpenVideo(drill.videoUrl, drill)
+              }
+              onOpenComment={() => onOpenCommentModal(drill)}
+              onOpenVideoSubmission={() =>
+                onOpenVideoSubmissionModal(drill.id, drill.title)
+              }
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -580,14 +608,30 @@ function ProgramContent({
 // Routine Content Component
 function RoutineContent({
   routineAssignment,
+  onMarkDrillComplete,
+  onMarkRoutineExerciseComplete,
+  onOpenVideo,
+  onOpenCommentModal,
+  onOpenVideoSubmissionModal,
+  completedProgramDrills,
 }: {
   routineAssignment?: RoutineAssignment;
+  onMarkDrillComplete: (drillId: string, completed: boolean) => void;
+  onMarkRoutineExerciseComplete: (
+    exerciseId: string,
+    routineAssignmentId: string,
+    completed: boolean
+  ) => void;
+  onOpenVideo: (videoUrl: string, drill: Drill) => void;
+  onOpenCommentModal: (drill: Drill) => void;
+  onOpenVideoSubmissionModal: (drillId: string, drillTitle: string) => void;
+  completedProgramDrills: Set<string>;
 }) {
   if (!routineAssignment) {
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Target className="h-8 w-8 text-green-400" />
+        <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <BookOpen className="h-8 w-8 text-blue-400" />
         </div>
         <h4 className="text-lg font-semibold text-white mb-2">Daily Routine</h4>
         <p className="text-gray-400">
@@ -603,8 +647,8 @@ function RoutineContent({
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Target className="h-8 w-8 text-green-400" />
+        <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <BookOpen className="h-8 w-8 text-blue-400" />
         </div>
         <h4 className="text-xl font-semibold text-white mb-2">
           {routine.name}
@@ -615,54 +659,49 @@ function RoutineContent({
       </div>
 
       {/* Routine Exercises */}
-      <div className="space-y-4">
-        {routine.exercises.map((exercise, index) => (
-          <div
-            key={exercise.id}
-            className="bg-gray-700/50 border border-gray-600 rounded-xl p-4"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h5 className="text-lg font-semibold text-white mb-2">
-                  {exercise.title}
-                </h5>
-                {exercise.description && (
-                  <p className="text-gray-400 text-sm mb-3">
-                    {exercise.description}
-                  </p>
-                )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+        {routine.exercises.map((exercise, index) => {
+          // Convert routine exercise to drill-like format for compatibility
+          // Use the key format for routine exercises: ${routineAssignmentId}-${exerciseId}
+          const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
 
-                {/* Sets, Reps, Tempo */}
-                <div className="flex items-center gap-4 text-sm">
-                  {exercise.sets && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-400">Sets:</span>
-                      <span className="text-white font-semibold">
-                        {exercise.sets}
-                      </span>
-                    </div>
-                  )}
-                  {exercise.reps && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-400">Reps:</span>
-                      <span className="text-white font-semibold">
-                        {exercise.reps}
-                      </span>
-                    </div>
-                  )}
-                  {exercise.tempo && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-400">Tempo:</span>
-                      <span className="text-white font-semibold">
-                        {exercise.tempo}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+          const drillLikeExercise: Drill = {
+            id: routineExerciseKey,
+            title: exercise.title,
+            description: exercise.description || undefined,
+            sets: exercise.sets || undefined,
+            reps: exercise.reps || undefined,
+            tempo: exercise.tempo || undefined,
+            tags: exercise.type ? [exercise.type] : undefined,
+            completed: completedProgramDrills.has(routineExerciseKey),
+            videoUrl: exercise.videoId
+              ? `https://utfs.io/f/${exercise.videoId}`
+              : undefined,
+          };
+
+          return (
+            <DrillCard
+              key={exercise.id}
+              drill={drillLikeExercise}
+              index={index}
+              onMarkComplete={completed =>
+                onMarkRoutineExerciseComplete(
+                  exercise.id,
+                  routineAssignment.id,
+                  completed
+                )
+              }
+              onOpenVideo={() =>
+                drillLikeExercise.videoUrl &&
+                onOpenVideo(drillLikeExercise.videoUrl, drillLikeExercise)
+              }
+              onOpenComment={() => onOpenCommentModal(drillLikeExercise)}
+              onOpenVideoSubmission={() =>
+                onOpenVideoSubmissionModal(exercise.id, exercise.title)
+              }
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -785,10 +824,10 @@ function DrillCard({
           size="sm"
           onClick={() => onMarkComplete(!drill.completed)}
           className={cn(
-            "h-12 w-12 p-0 rounded-lg transition-all duration-300 transform hover:scale-110",
+            "h-12 w-12 p-0 rounded-lg transition-all duration-200",
             drill.completed
-              ? "bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/25"
-              : "bg-gray-600 text-gray-300 hover:bg-gray-500 hover:shadow-lg"
+              ? "bg-green-500 text-white hover:bg-green-600"
+              : "bg-gray-600 text-gray-300 hover:bg-gray-500"
           )}
         >
           <Check className="h-5 w-5" />

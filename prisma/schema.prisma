@@ -105,6 +105,7 @@ model Client {
   events               Event[]
   videos               Video[]
   drillCompletions     DrillCompletion[]
+  routineExerciseCompletions RoutineExerciseCompletion[]
   videoSubmissions     ClientVideoSubmission[]
   analytics            ClientAnalytics?
   swapRequestsSent     TimeSwapRequest[] @relation("SwapRequester")
@@ -646,11 +647,29 @@ model RoutineAssignment {
   
   routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  completions RoutineExerciseCompletion[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("routine_assignments")
+}
+
+model RoutineExerciseCompletion {
+  id                    String           @id @default(cuid())
+  routineAssignmentId   String
+  exerciseId            String
+  clientId              String
+  completedAt           DateTime         @default(now())
+  
+  routineAssignment     RoutineAssignment @relation(fields: [routineAssignmentId], references: [id], onDelete: Cascade)
+  client                Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@unique([routineAssignmentId, exerciseId, clientId])
+  @@map("routine_exercise_completions")
 }
 
 enum UserRole {

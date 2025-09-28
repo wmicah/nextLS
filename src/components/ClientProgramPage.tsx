@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Calendar,
@@ -131,7 +131,46 @@ function ClientProgramPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
+  const [completedProgramDrills, setCompletedProgramDrills] = useState<
+    Set<string>
+  >(new Set());
+
+  // Initialize completion state from server data when selectedDay changes
+  React.useEffect(() => {
+    if (selectedDay?.programs) {
+      const serverCompletedDrills = new Set<string>();
+      selectedDay.programs.forEach(program => {
+        console.log(
+          "🔍 Processing program:",
+          program.programTitle,
+          "with drills:",
+          program.drills.length
+        );
+        program.drills.forEach(drill => {
+          console.log(
+            "🔍 Drill:",
+            drill.title,
+            "completed:",
+            drill.completed,
+            "id:",
+            drill.id
+          );
+          if (drill.completed) {
+            serverCompletedDrills.add(drill.id);
+          }
+        });
+      });
+      setCompletedProgramDrills(serverCompletedDrills);
+      console.log("📝 Initialized program drill completion from server:", {
+        totalDrills: serverCompletedDrills.size,
+        drillIds: Array.from(serverCompletedDrills),
+        selectedDayPrograms: selectedDay.programs.length,
+      });
+    }
+  }, [selectedDay]);
+
   const [noteToCoach, setNoteToCoach] = useState("");
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [isVideoSubmissionModalOpen, setIsVideoSubmissionModalOpen] =
@@ -240,6 +279,57 @@ function ClientProgramPage() {
     })),
   });
 
+  // Initialize routine exercise completion state from server data when selectedDate changes
+  React.useEffect(() => {
+    if (selectedDate && routineAssignments) {
+      const serverCompletedRoutineExercises = new Set<string>();
+
+      console.log("🔍 DEBUG: Starting routine exercise initialization");
+      console.log("🔍 DEBUG: selectedDate:", selectedDate.toLocaleDateString());
+      console.log("🔍 DEBUG: routineAssignments:", routineAssignments.length);
+
+      const routinesForDate = getRoutinesForDate(selectedDate);
+      console.log("🔍 DEBUG: routinesForDate:", routinesForDate.length);
+
+      // Load routine exercise completions from the routine assignments
+      routinesForDate.forEach(routineAssignment => {
+        if (routineAssignment.completions) {
+          routineAssignment.completions.forEach(completion => {
+            const routineExerciseKey = `${routineAssignment.id}-${completion.exerciseId}`;
+            serverCompletedRoutineExercises.add(routineExerciseKey);
+            console.log(
+              "✅ Added completed routine exercise from completions:",
+              {
+                routineExerciseKey,
+                completionId: completion.id,
+              }
+            );
+          });
+        }
+      });
+
+      // Only update if there are actually completions to add
+      if (serverCompletedRoutineExercises.size > 0) {
+        setCompletedProgramDrills(prev => {
+          const newSet = new Set(prev);
+          serverCompletedRoutineExercises.forEach(id => newSet.add(id));
+          // Only return new set if it's actually different
+          if (newSet.size !== prev.size) {
+            return newSet;
+          }
+          return prev; // Return same reference to prevent re-render
+        });
+      }
+
+      console.log("📝 Initialized routine exercise completion from server:", {
+        totalExercises: serverCompletedRoutineExercises.size,
+        exerciseIds: Array.from(serverCompletedRoutineExercises),
+      });
+    } else {
+      console.log("🔍 DEBUG: No selectedDate or routineAssignments found");
+    }
+  }, [selectedDate, routineAssignments]);
+
   // Get client's lessons
   const { data: clientLessons = [] } =
     trpc.clientRouter.getClientLessons.useQuery({
@@ -276,6 +366,13 @@ function ClientProgramPage() {
       // Remove aggressive invalidation - let optimistic updates handle UI
       onError: error => {
         alert(`Error updating drill: ${error.message}`);
+      },
+    });
+
+  const markRoutineExerciseCompleteMutation =
+    trpc.clientRouter.markRoutineExerciseComplete.useMutation({
+      onError: error => {
+        alert(`Error updating routine exercise: ${error.message}`);
       },
     });
 
@@ -402,6 +499,169 @@ function ClientProgramPage() {
     );
   };
 
+  // Calculate total completion counts for the selected day
+  const calculateDayCompletionCounts = (
+    dayData: DayData | null,
+    selectedDate: Date | null
+  ) => {
+    if (!dayData && !selectedDate)
+      return { totalDrills: 0, completedDrills: 0 };
+
+    let totalDrills = 0;
+    let completedDrills = 0;
+
+    // Count program drills (excluding rest days)
+    if (dayData?.programs) {
+      dayData.programs.forEach(program => {
+        if (!program.isRestDay) {
+          totalDrills += program.drills.length;
+          // Count completed program drills from our tracked state
+          program.drills.forEach(drill => {
+            if (completedProgramDrills.has(drill.id)) {
+              completedDrills++;
+            }
+          });
+        }
+      });
+    }
+
+    // Count routine exercises for the selected date
+    if (selectedDate) {
+      const routinesForDate = getRoutinesForDate(selectedDate);
+      routinesForDate.forEach(routineAssignment => {
+        if (routineAssignment.routine?.exercises) {
+          routineAssignment.routine.exercises.forEach(exercise => {
+            // Use the key format for routine exercises
+            const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
+            totalDrills++;
+            // Count completed routine exercises using the unified system
+            if (completedProgramDrills.has(routineExerciseKey)) {
+              completedDrills++;
+            }
+          });
+        }
+      });
+    }
+
+    return { totalDrills, completedDrills };
+  };
+
+  // Calculate assignment-level completion counts for the day header
+  const calculateDayAssignmentCounts = (
+    dayData: DayData | null,
+    selectedDate: Date | null
+  ) => {
+    if (!dayData && !selectedDate)
+      return { totalAssignments: 0, completedAssignments: 0 };
+
+    let totalAssignments = 0;
+    let completedAssignments = 0;
+
+    // Count program assignments (excluding rest days)
+    if (dayData?.programs) {
+      dayData.programs.forEach(program => {
+        if (!program.isRestDay) {
+          totalAssignments++;
+          // Check if all drills in this program are completed
+          const allDrillsCompleted = program.drills.every(drill =>
+            completedProgramDrills.has(drill.id)
+          );
+          if (allDrillsCompleted) {
+            completedAssignments++;
+          }
+        }
+      });
+    }
+
+    // Count routine assignments for the selected date
+    if (selectedDate) {
+      const routinesForDate = getRoutinesForDate(selectedDate);
+      routinesForDate.forEach(routineAssignment => {
+        if (routineAssignment.routine?.exercises) {
+          totalAssignments++;
+          // Check if all exercises in this routine are completed using unified system
+          const allExercisesCompleted =
+            routineAssignment.routine.exercises.every(exercise => {
+              const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
+              return completedProgramDrills.has(routineExerciseKey);
+            });
+          if (allExercisesCompleted) {
+            completedAssignments++;
+          }
+        }
+      });
+    }
+
+    return { totalAssignments, completedAssignments };
+  };
+
+  // Handle routine exercise completion - simplified approach
+  const handleMarkRoutineExerciseComplete = async (
+    exerciseId: string,
+    routineAssignmentId: string,
+    completed: boolean
+  ) => {
+    console.log("🎯 handleMarkRoutineExerciseComplete called with:", {
+      exerciseId,
+      routineAssignmentId,
+      completed,
+    });
+
+    // Use exercise ID directly for routine exercises
+    const routineExerciseKey = `${routineAssignmentId}-${exerciseId}`;
+
+    // Update the completion state immediately for real-time UI updates
+    setCompletedProgramDrills(prev => {
+      const newSet = new Set(prev);
+      if (completed) {
+        newSet.add(routineExerciseKey);
+      } else {
+        newSet.delete(routineExerciseKey);
+      }
+      console.log("📝 Updated routine exercise completion:", {
+        routineExerciseKey,
+        completed,
+        totalCompleted: newSet.size,
+      });
+      return newSet;
+    });
+
+    // Call the backend mutation for routine exercise completion
+    try {
+      console.log("🚀 Calling markRoutineExerciseCompleteMutation with:", {
+        exerciseId,
+        routineAssignmentId,
+        completed,
+      });
+
+      await markRoutineExerciseCompleteMutation.mutateAsync({
+        exerciseId,
+        routineAssignmentId,
+        completed,
+      });
+
+      console.log("✅ Routine exercise completion mutation succeeded");
+
+      // Refresh calendar data to sync with server
+      await refetchCalendar();
+      console.log(
+        "✅ Calendar data refreshed after routine exercise completion"
+      );
+    } catch (error) {
+      console.log("❌ Routine exercise completion mutation failed:", error);
+      // Revert optimistic update on error
+      setCompletedProgramDrills(prev => {
+        const newSet = new Set(prev);
+        if (completed) {
+          newSet.delete(routineExerciseKey); // Remove if we were trying to mark complete
+        } else {
+          newSet.add(routineExerciseKey); // Add if we were trying to mark incomplete
+        }
+        return newSet;
+      });
+    }
+  };
+
   // Handle drill completion
   const handleMarkDrillComplete = async (
     drillId: string,
@@ -412,28 +672,21 @@ function ClientProgramPage() {
       completed,
     });
 
-    // Optimistic update FIRST
-    if (selectedDay) {
-      console.log("📝 Updating selectedDay state optimistically");
-      const updatedDrills = selectedDay.drills.map(drill =>
-        drill.id === drillId ? { ...drill, completed } : drill
-      );
-      const completedDrills = updatedDrills.filter(
-        drill => drill.completed
-      ).length;
-
-      setSelectedDay({
-        ...selectedDay,
-        drills: updatedDrills,
-        completedDrills,
+    // Update the completion state immediately for real-time UI updates
+    setCompletedProgramDrills(prev => {
+      const newSet = new Set(prev);
+      if (completed) {
+        newSet.add(drillId);
+      } else {
+        newSet.delete(drillId);
+      }
+      console.log("📝 Updated program drill completion:", {
+        drillId,
+        completed,
+        totalCompleted: newSet.size,
       });
-      console.log(
-        "✅ Optimistic update applied - drill should now be",
-        completed ? "green" : "gray"
-      );
-    } else {
-      console.log("❌ No selectedDay found - cannot update state");
-    }
+      return newSet;
+    });
 
     // Add brief celebration effect for completed drills (reduced)
     if (completed) {
@@ -468,20 +721,15 @@ function ClientProgramPage() {
     } catch (error) {
       console.log("❌ markDrillCompleteMutation failed:", error);
       // Revert optimistic update on error
-      if (selectedDay) {
-        const revertedDrills = selectedDay.drills.map(drill =>
-          drill.id === drillId ? { ...drill, completed: !completed } : drill
-        );
-        const completedDrills = revertedDrills.filter(
-          drill => drill.completed
-        ).length;
-
-        setSelectedDay({
-          ...selectedDay,
-          drills: revertedDrills,
-          completedDrills,
-        });
-      }
+      setCompletedProgramDrills(prev => {
+        const newSet = new Set(prev);
+        if (completed) {
+          newSet.delete(drillId); // Remove if we were trying to mark complete
+        } else {
+          newSet.add(drillId); // Add if we were trying to mark incomplete
+        }
+        return newSet;
+      });
       console.error("Failed to update drill completion:", error);
     }
   };
@@ -571,7 +819,7 @@ function ClientProgramPage() {
         "⚠️ UploadThing URL detected, searching library for YouTube video:",
         drillData.title
       );
-      console.log("📚 Available library items:", libraryItems);
+      console.log("Available library items:", libraryItems);
 
       // Try multiple matching strategies
       let matchingVideo = libraryItems?.find(
@@ -676,7 +924,7 @@ function ClientProgramPage() {
       } else {
         console.log("❌ No matching YouTube video found in library");
         console.log(
-          "📚 All YouTube items in library:",
+          "All YouTube items in library:",
           libraryItems?.filter(item => item.isYoutube)
         );
         setVideoError(
@@ -1113,6 +1361,7 @@ function ClientProgramPage() {
                         onClick={() => {
                           if (dayData || getRoutinesForDate(date).length > 0) {
                             setSelectedDay(dayData);
+                            setSelectedDate(date);
                             setIsDaySheetOpen(true);
                           }
                         }}
@@ -1127,59 +1376,93 @@ function ClientProgramPage() {
                           >
                             {format(date, "d")}
                           </span>
-                          {dayData && dayData.totalDrills > 0 && (
-                            <span
-                              className="text-xs px-2 py-1 rounded-full font-medium"
-                              style={{
-                                backgroundColor: "#10B981",
-                                color: "#FFFFFF",
-                              }}
-                            >
-                              {dayData.completedDrills}/{dayData.totalDrills}
-                            </span>
-                          )}
+                          {dayData &&
+                            (dayData.totalDrills > 0 ||
+                              (dayData.programs &&
+                                dayData.programs.length > 0) ||
+                              getRoutinesForDate(date).length > 0) && (
+                              <span
+                                className="text-xs px-2 py-1 rounded-full font-medium"
+                                style={{
+                                  backgroundColor: "#10B981",
+                                  color: "#FFFFFF",
+                                }}
+                              >
+                                {dayData.completedDrills}/{dayData.totalDrills}
+                              </span>
+                            )}
                         </div>
 
-                        {/* Workout Details */}
-                        {dayData &&
-                          dayData.drills &&
-                          dayData.drills.length > 0 && (
-                            <div className="space-y-1">
-                              {dayData.drills
-                                .slice(0, 2)
-                                .map((drill, drillIndex) => (
-                                  <div
-                                    key={drillIndex}
-                                    className={`p-1 rounded text-xs transition-all duration-200 ${
-                                      drill.completed
-                                        ? "bg-green-500/20 text-green-400"
-                                        : "bg-gray-600/20 text-gray-300"
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-1">
-                                      {drill.completed && (
-                                        <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
-                                      )}
-                                      <span className="truncate">
-                                        {drill.title}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                              {dayData.drills.length > 2 && (
-                                <div className="text-xs text-gray-400 text-center">
-                                  +{dayData.drills.length - 2} more
-                                </div>
+                        {/* Workout Details - Show Programs and Routines */}
+                        {dayData && (
+                          <div className="space-y-1">
+                            {/* Show Programs */}
+                            {dayData.programs &&
+                              dayData.programs.length > 0 && (
+                                <>
+                                  {dayData.programs
+                                    .slice(0, 2)
+                                    .map((program, programIndex) => (
+                                      <div
+                                        key={`program-${programIndex}`}
+                                        className="p-1 rounded text-xs bg-blue-500/20 text-blue-300"
+                                      >
+                                        <div className="flex items-center gap-1">
+                                          <BookOpen className="h-3 w-3 text-blue-400 flex-shrink-0" />
+                                          <span className="truncate">
+                                            {program.programTitle}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                </>
                               )}
-                            </div>
-                          )}
 
-                        {/* Rest Day Indicator */}
-                        {dayData && dayData.isRestDay && (
-                          <div className="mt-2 text-center">
-                            <div className="text-xs bg-yellow-500/20 text-yellow-400 p-1 rounded">
-                              🔋 Rest Day
-                            </div>
+                            {/* Fallback to old drills format for backward compatibility */}
+                            {dayData.drills &&
+                              dayData.drills.length > 0 &&
+                              (!dayData.programs ||
+                                dayData.programs.length === 0) &&
+                              getRoutinesForDate(date).length === 0 && (
+                                <>
+                                  {dayData.drills
+                                    .slice(0, 2)
+                                    .map((drill, drillIndex) => (
+                                      <div
+                                        key={drillIndex}
+                                        className={`p-1 rounded text-xs transition-all duration-200 ${
+                                          drill.completed
+                                            ? "bg-green-500/20 text-green-400"
+                                            : "bg-gray-600/20 text-gray-300"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-1">
+                                          {drill.completed && (
+                                            <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                          )}
+                                          <span className="truncate">
+                                            {drill.title}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                </>
+                              )}
+
+                            {/* Show "more" indicator if there are more items */}
+                            {((dayData.programs &&
+                              dayData.programs.length > 2) ||
+                              (dayData.drills &&
+                                dayData.drills.length > 2)) && (
+                              <div className="text-xs text-gray-400 text-center">
+                                +
+                                {Math.max(
+                                  (dayData.programs?.length || 0) - 2,
+                                  (dayData.drills?.length || 0) - 2
+                                )}{" "}
+                                more
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -1587,6 +1870,7 @@ function ClientProgramPage() {
               isOpen={isDaySheetOpen}
               onClose={() => setIsDaySheetOpen(false)}
               selectedDay={selectedDay}
+              selectedDate={selectedDate}
               programs={selectedDay?.programs || []}
               routineAssignments={routineAssignments as any}
               onMarkDrillComplete={handleMarkDrillComplete}
@@ -1598,6 +1882,10 @@ function ClientProgramPage() {
               noteToCoach={noteToCoach}
               setNoteToCoach={setNoteToCoach}
               isSubmittingNote={isSubmittingNote}
+              completedProgramDrills={completedProgramDrills}
+              calculateDayCompletionCounts={calculateDayCompletionCounts}
+              calculateDayAssignmentCounts={calculateDayAssignmentCounts}
+              onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
             />
           )}
 
