@@ -25,6 +25,7 @@ interface DayDetailsModalProps {
   onAssignRoutine: () => void;
   onReplaceWithLesson: (replacementData: any) => void;
   onRemoveProgram?: (programData: any) => void;
+  onRemoveRoutine?: (routineData: any) => void;
   getStatusIcon: (status: string) => React.ReactNode;
   getStatusColor: (status: string) => string;
 }
@@ -41,6 +42,7 @@ export default function DayDetailsModal({
   onAssignRoutine,
   onReplaceWithLesson,
   onRemoveProgram,
+  onRemoveRoutine,
   getStatusIcon,
   getStatusColor,
 }: DayDetailsModalProps) {
@@ -55,8 +57,28 @@ export default function DayDetailsModal({
     onReplaceWithLesson(replacementData);
   };
 
+  // Check if a program has finished completely
+  const isProgramFinished = (programData: any) => {
+    if (
+      !programData.assignment ||
+      !programData.assignment.startDate ||
+      !programData.program?.duration
+    ) {
+      return false; // If we don't have the required data, assume it's not finished
+    }
+
+    const startDate = new Date(programData.assignment.startDate);
+    const programDurationDays = programData.program.duration * 7; // Convert weeks to days
+    const endDate = new Date(
+      startDate.getTime() + programDurationDays * 24 * 60 * 60 * 1000
+    );
+
+    // Program is finished if current date is past the end date
+    return new Date() > endDate;
+  };
+
   const handleRemoveProgram = (program: any) => {
-    if (onRemoveProgram) {
+    if (onRemoveProgram && !isProgramFinished(program)) {
       const programData = {
         assignmentId: program.assignment.id,
         programId: program.assignment.programId,
@@ -64,6 +86,45 @@ export default function DayDetailsModal({
         dayDate: selectedDate.toISOString().split("T")[0],
       };
       onRemoveProgram(programData);
+    }
+  };
+
+  // Check if a routine assignment has finished (date has passed)
+  const isRoutineFinished = (assignment: any) => {
+    if (!assignment.startDate && !assignment.assignedAt) {
+      return false; // If we don't have date data, assume it's not finished
+    }
+
+    const assignmentDate = new Date(
+      assignment.startDate || assignment.assignedAt
+    );
+    const today = new Date();
+
+    // Set both dates to start of day for accurate comparison
+    const assignmentDay = new Date(
+      assignmentDate.getFullYear(),
+      assignmentDate.getMonth(),
+      assignmentDate.getDate()
+    );
+    const todayDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    // Routine is finished if the assignment date is in the past
+    return assignmentDay < todayDay;
+  };
+
+  const handleRemoveRoutine = (assignment: any) => {
+    if (onRemoveRoutine && !isRoutineFinished(assignment)) {
+      const routineData = {
+        assignmentId: assignment.id,
+        routineId: assignment.routine.id,
+        routineName: assignment.routine.name,
+        dayDate: selectedDate.toISOString().split("T")[0],
+      };
+      onRemoveRoutine(routineData);
     }
   };
 
@@ -209,7 +270,7 @@ export default function DayDetailsModal({
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {onRemoveProgram && (
+                            {onRemoveProgram && !isProgramFinished(program) && (
                               <button
                                 onClick={() => handleRemoveProgram(program)}
                                 className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1"
@@ -223,10 +284,26 @@ export default function DayDetailsModal({
                                 Remove Program
                               </button>
                             )}
+                            {onRemoveProgram && isProgramFinished(program) && (
+                              <div
+                                className="px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1 opacity-60"
+                                style={{
+                                  backgroundColor: "#6B7280",
+                                  color: "#9CA3AF",
+                                }}
+                                title="Program has finished - cannot be removed"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                Program Finished
+                              </div>
+                            )}
                             <button
                               onClick={() => handleReplaceWithLesson(program)}
-                              className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:bg-opacity-80"
-                              style={{ backgroundColor: "#10B981" }}
+                              className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 hover:bg-opacity-80"
+                              style={{
+                                backgroundColor: "#10B981",
+                                color: "#000000",
+                              }}
                               title="Replace workout with lesson"
                             >
                               Replace with Lesson
@@ -277,13 +354,47 @@ export default function DayDetailsModal({
                                 </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-green-100">
-                                {assignment.progress}%
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-green-100">
+                                  {assignment.progress}%
+                                </div>
+                                <div className="text-xs text-green-200/60">
+                                  Progress
+                                </div>
                               </div>
-                              <div className="text-xs text-green-200/60">
-                                Progress
-                              </div>
+                              {onRemoveRoutine &&
+                                !isRoutineFinished(assignment) && (
+                                  <button
+                                    onClick={() =>
+                                      handleRemoveRoutine(assignment)
+                                    }
+                                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2"
+                                    style={{
+                                      backgroundColor: "#EF4444",
+                                      color: "#FFFFFF",
+                                    }}
+                                    title="Remove Routine"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Remove
+                                  </button>
+                                )}
+                              {onRemoveRoutine &&
+                                isRoutineFinished(assignment) && (
+                                  <div
+                                    className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 border opacity-60"
+                                    style={{
+                                      backgroundColor: "#6B7280",
+                                      color: "#9CA3AF",
+                                      borderColor: "#4B5563",
+                                    }}
+                                    title="Routine has finished - cannot be removed"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Routine Finished
+                                  </div>
+                                )}
                             </div>
                           </div>
                         </div>

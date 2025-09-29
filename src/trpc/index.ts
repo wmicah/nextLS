@@ -6836,6 +6836,16 @@ export const appRouter = router({
           const [year, month, day] = input.startDate.split("-").map(Number);
           const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
+          // Find the highest existing currentCycle for this program-client combination
+          const existingAssignments = client.programAssignments.filter(
+            assignment => assignment.programId === input.programId
+          );
+
+          const maxExistingCycle =
+            existingAssignments.length > 0
+              ? Math.max(...existingAssignments.map(a => a.currentCycle))
+              : 0;
+
           // Create the assignments (one for each repetition)
           for (let cycle = 1; cycle <= input.repetitions; cycle++) {
             const cycleStartDate = new Date(
@@ -6849,7 +6859,7 @@ export const appRouter = router({
                 clientId: client.id,
                 startDate: cycleStartDate,
                 repetitions: input.repetitions,
-                currentCycle: cycle,
+                currentCycle: maxExistingCycle + cycle,
               },
             });
             assignments.push(assignment);
@@ -6909,6 +6919,64 @@ export const appRouter = router({
         });
 
         return { deletedCount: result.count };
+      }),
+
+    // Remove specific program assignment by ID
+    removeAssignment: publicProcedure
+      .input(
+        z.object({
+          assignmentId: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can remove program assignments",
+          });
+        }
+
+        // Get the assignment to verify it belongs to this coach
+        const assignment = await db.programAssignment.findFirst({
+          where: { id: input.assignmentId },
+          include: {
+            program: {
+              select: { coachId: true },
+            },
+          },
+        });
+
+        if (!assignment) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Assignment not found",
+          });
+        }
+
+        // Verify the program belongs to this coach
+        if (assignment.program.coachId !== user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You can only remove your own program assignments",
+          });
+        }
+
+        // Delete the specific assignment
+        await db.programAssignment.delete({
+          where: { id: input.assignmentId },
+        });
+
+        return { success: true };
       }),
 
     // Update assignment progress

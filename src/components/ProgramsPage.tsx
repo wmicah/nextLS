@@ -50,7 +50,7 @@ import { Skeleton } from "./ui/skeleton";
 import { useToast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SeamlessProgramModal from "./SeamlessProgramModal";
-import AssignProgramModal from "./AssignProgramModal";
+import SimpleAssignProgramModal from "./SimpleAssignProgramModal";
 import ProgramDetailsModal from "./ProgramDetailsModal";
 import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
 import RoutinesTab from "@/components/RoutinesTab";
@@ -1106,11 +1106,12 @@ function ProgramsPage() {
             onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
           />
 
-          <AssignProgramModal
+          <SimpleAssignProgramModal
             isOpen={isAssignModalOpen}
             onClose={() => setIsAssignModalOpen(false)}
-            programId={selectedProgram?.id}
-            programTitle={selectedProgram?.title}
+            clientId={undefined} // No specific client pre-selected
+            clientName={undefined}
+            programId={selectedProgram?.id} // Pre-select the program being assigned
           />
 
           <ProgramDetailsModal

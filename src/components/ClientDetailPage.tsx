@@ -65,6 +65,7 @@ import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import Sidebar from "@/components/Sidebar";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import SimpleAssignProgramModal from "@/components/SimpleAssignProgramModal";
+import QuickAssignProgramModal from "@/components/QuickAssignProgramModal";
 import AssignRoutineModal from "@/components/AssignRoutineModal";
 import AssignVideoModal from "@/components/AssignVideoModal";
 import ScheduleLessonModal from "@/components/ScheduleLessonModal";
@@ -83,6 +84,8 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showAssignProgramModal, setShowAssignProgramModal] = useState(false);
+  const [showQuickAssignProgramModal, setShowQuickAssignProgramModal] =
+    useState(false);
   const [showAssignRoutineModal, setShowAssignRoutineModal] = useState(false);
   const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
   const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false);
@@ -168,7 +171,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const utils = trpc.useUtils();
 
   // Remove program mutation
-  const removeProgramMutation = trpc.programs.unassignFromClients.useMutation({
+  const removeProgramMutation = trpc.programs.removeAssignment.useMutation({
     onSuccess: () => {
       addToast({
         type: "success",
@@ -182,6 +185,25 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
         type: "error",
         title: "Removal Failed",
         message: error.message || "Failed to remove program.",
+      });
+    },
+  });
+
+  // Remove routine mutation
+  const unassignRoutineMutation = trpc.routines.unassign.useMutation({
+    onSuccess: () => {
+      addToast({
+        type: "success",
+        title: "Routine Removed!",
+        message: "Routine has been removed from the client.",
+      });
+      refreshAllData();
+    },
+    onError: error => {
+      addToast({
+        type: "error",
+        title: "Removal Failed",
+        message: error.message || "Failed to remove routine.",
       });
     },
   });
@@ -365,7 +387,19 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
       )
     ) {
       removeProgramMutation.mutate({
-        programId: programData.programId,
+        assignmentId: programData.assignmentId,
+      });
+    }
+  };
+
+  const handleRemoveRoutine = (routineData: any) => {
+    if (
+      confirm(
+        `Are you sure you want to remove "${routineData.routineName}" from this client?`
+      )
+    ) {
+      unassignRoutineMutation.mutate({
+        routineId: routineData.routineId,
         clientIds: [clientId],
       });
     }
@@ -897,6 +931,23 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             />
           )}
 
+          {showQuickAssignProgramModal && (
+            <QuickAssignProgramModal
+              isOpen={showQuickAssignProgramModal}
+              onClose={() => {
+                setShowQuickAssignProgramModal(false);
+                refreshAllData();
+              }}
+              clientId={clientId}
+              clientName={client.name}
+              startDate={
+                selectedDate
+                  ? selectedDate.toISOString().split("T")[0]
+                  : new Date().toISOString().split("T")[0]
+              }
+            />
+          )}
+
           {showAssignRoutineModal && (
             <AssignRoutineModal
               isOpen={showAssignRoutineModal}
@@ -961,7 +1012,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               setShowDayDetailsModal(false);
             }}
             onAssignProgram={() => {
-              setShowAssignProgramModal(true);
+              setShowQuickAssignProgramModal(true);
               setShowDayDetailsModal(false);
             }}
             onAssignRoutine={() => {
@@ -974,6 +1025,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               setShowDayDetailsModal(false);
             }}
             onRemoveProgram={handleRemoveProgram}
+            onRemoveRoutine={handleRemoveRoutine}
             getStatusIcon={getStatusIcon}
             getStatusColor={getStatusColor}
           />
