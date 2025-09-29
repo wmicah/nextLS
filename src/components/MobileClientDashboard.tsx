@@ -21,7 +21,7 @@ import {
   Award,
   Zap,
 } from "lucide-react";
-import ClientSidebar from "@/components/ClientSidebar";
+import ClientTopNav from "@/components/ClientTopNav";
 
 export default function MobileClientDashboard() {
   const {
@@ -155,12 +155,7 @@ export default function MobileClientDashboard() {
   const upcomingSessionsCount = upcomingEvents.length;
 
   return (
-    <ClientSidebar
-      user={{
-        name: userProfile?.name || "",
-        email: userProfile?.email || user?.email || "",
-      }}
-    >
+    <ClientTopNav>
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
         {/* Mobile Header */}
         <div className="mb-4">
@@ -783,6 +778,6 @@ export default function MobileClientDashboard() {
           )}
         </div>
       </div>
-    </ClientSidebar>
+    </ClientTopNav>
   );
 }

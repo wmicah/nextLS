@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss"
+import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: "class",
@@ -14,6 +14,18 @@ const config: Config = {
       screens: {
         "2xl": "1400px",
       },
+    },
+    screens: {
+      xs: "475px",
+      sm: "640px",
+      md: "768px",
+      lg: "1024px",
+      xl: "1280px",
+      "2xl": "1536px",
+      // iPad-specific breakpoints
+      ipad: "768px",
+      "ipad-lg": "1024px",
+      "ipad-pro": "1366px",
     },
     extend: {
       maxWidth: {
@@ -76,7 +88,7 @@ const config: Config = {
     },
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
-}
+};
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -127,6 +139,6 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
+};
 
-export default config
+export default config;

@@ -14,7 +14,7 @@ import {
   X,
   ArrowLeft,
 } from "lucide-react";
-import ClientSidebar from "./ClientSidebar";
+import ClientTopNav from "./ClientTopNav";
 import { format } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import ProfilePictureUploader from "./ProfilePictureUploader";
@@ -282,13 +282,7 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
   });
 
   return (
-    <ClientSidebar
-      user={
-        sidebarUser
-          ? { name: sidebarUser.name, email: sidebarUser.email }
-          : undefined
-      }
-    >
+    <ClientTopNav>
       <div
         className="min-h-screen flex flex-col overflow-x-hidden"
         style={{ backgroundColor: "#2A3133" }}
@@ -907,6 +901,6 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
           />
         )}
       </div>
-    </ClientSidebar>
+    </ClientTopNav>
   );
 }

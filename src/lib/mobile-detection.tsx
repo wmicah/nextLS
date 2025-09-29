@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 
 /**
  * Custom hook for mobile detection
- * Returns true if screen width is less than 768px
+ * Returns true if screen width is less than 1024px (includes iPad)
  */
 export function useMobileDetection() {
   const [isMobile, setIsMobile] = useState(false);
@@ -15,13 +15,24 @@ export function useMobileDetection() {
     setIsClient(true);
 
     const checkMobile = () => {
-      const isMobileWidth = window.innerWidth < 768;
+      const width = window.innerWidth;
       const userAgent = navigator.userAgent;
-      const isMobileDevice =
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          userAgent
-        );
-      const shouldBeMobile = isMobileWidth || isMobileDevice;
+
+      // iPad-specific detection
+      const isIPad =
+        /iPad/i.test(userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      // Mobile width: phones and small tablets
+      const isMobileWidth = width < 1024;
+
+      // Touch device detection
+      const isTouchDevice =
+        "ontouchstart" in window || navigator.maxTouchPoints > 0;
+
+      // Should use mobile layout: small screens OR iPad OR touch devices under 1024px
+      const shouldBeMobile =
+        isMobileWidth || isIPad || (isTouchDevice && width < 1024);
 
       setIsMobile(shouldBeMobile);
     };

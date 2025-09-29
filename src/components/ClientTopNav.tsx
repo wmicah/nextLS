@@ -99,13 +99,14 @@ function ClientTopNav({ children }: ClientTopNavProps) {
               </div>
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:block flex-1">
+            {/* Desktop Navigation - Hide on iPad, show on large screens */}
+            <div className="hidden lg:block flex-1">
               <div className="ml-10 flex items-center justify-end space-x-2">
                 {/* Dashboard */}
                 <button
                   onClick={handleDashboard}
-                  className="p-2 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105"
+                  className="p-3 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105 touch-manipulation"
+                  style={{ minWidth: "44px", minHeight: "44px" }}
                 >
                   <Home className="h-6 w-6 text-white group-hover:text-green-400" />
                 </button>
@@ -114,7 +115,8 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 <button
                   ref={messagesButtonRef}
                   onClick={handleMessages}
-                  className="relative p-2 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105"
+                  className="relative p-3 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105 touch-manipulation"
+                  style={{ minWidth: "44px", minHeight: "44px" }}
                 >
                   <MessageSquare className="h-6 w-6 text-white group-hover:text-blue-400" />
                   {unreadMessages > 0 && (
@@ -128,7 +130,8 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 <button
                   ref={notificationsButtonRef}
                   onClick={handleNotifications}
-                  className="relative p-2 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105"
+                  className="relative p-3 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105 touch-manipulation"
+                  style={{ minWidth: "44px", minHeight: "44px" }}
                 >
                   <Bell className="h-6 w-6 text-white group-hover:text-amber-400" />
                   {unreadNotifications > 0 && (
@@ -141,14 +144,18 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 {/* Settings */}
                 <button
                   onClick={handleSettings}
-                  className="p-2 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105"
+                  className="p-3 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105 touch-manipulation"
+                  style={{ minWidth: "44px", minHeight: "44px" }}
                 >
                   <Settings className="h-6 w-6 text-white group-hover:text-gray-400" />
                 </button>
 
                 {/* User Menu */}
                 <div className="relative">
-                  <button className="flex items-center space-x-2 p-2 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105">
+                  <button
+                    className="flex items-center space-x-2 p-3 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105 touch-manipulation"
+                    style={{ minWidth: "44px", minHeight: "44px" }}
+                  >
                     {/* Avatar */}
                     <div className="relative">
                       <ProfilePictureUploader
@@ -171,7 +178,8 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 {/* Logout */}
                 <button
                   onClick={handleLogout}
-                  className="p-2 rounded-xl transition-all duration-200 hover:bg-red-500/20 group"
+                  className="p-3 rounded-xl transition-all duration-200 hover:bg-red-500/20 group touch-manipulation"
+                  style={{ minWidth: "44px", minHeight: "44px" }}
                   title="Logout"
                 >
                   <LogOut className="h-6 w-6 text-white group-hover:text-red-400" />
@@ -179,8 +187,8 @@ function ClientTopNav({ children }: ClientTopNavProps) {
               </div>
             </div>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden">
+            {/* Mobile menu button - Show on iPad and smaller */}
+            <div className="lg:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2 rounded-xl transition-all duration-200 hover:bg-white/10"
@@ -195,9 +203,9 @@ function ClientTopNav({ children }: ClientTopNavProps) {
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
+        {/* Mobile Navigation Menu - Show on iPad and smaller */}
         {isMobileMenuOpen && (
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <div
               className="px-2 pt-2 pb-3 space-y-1 border-t"
               style={{ borderColor: "#606364" }}
@@ -208,7 +216,8 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   handleDashboard();
                   setIsMobileMenuOpen(false);
                 }}
-                className="flex items-center space-x-3 w-full px-3 py-2 rounded-xl transition-all duration-200 hover:bg-white/10"
+                className="flex items-center space-x-3 w-full px-3 py-3 rounded-xl transition-all duration-200 hover:bg-white/10 touch-manipulation"
+                style={{ minHeight: "44px" }}
               >
                 <Home className="h-5 w-5 text-white" />
                 <span className="text-white">Dashboard</span>
