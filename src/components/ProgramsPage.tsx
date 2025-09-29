@@ -55,9 +55,8 @@ import ProgramDetailsModal from "./ProgramDetailsModal";
 import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
 import RoutinesTab from "@/components/RoutinesTab";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
-import AssignRoutineModal from "@/components/AssignRoutineModal";
+import SimpleAssignRoutineModal from "@/components/SimpleAssignRoutineModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
-import MobileProgramsPage from "./MobileProgramsPage";
 
 interface ProgramWeek {
   id: string;
@@ -722,7 +721,15 @@ function ProgramsPage() {
             <div className="flex flex-wrap gap-4">
               {/* Create Program button removed - only available in preview tab */}
               <button
-                onClick={() => setIsAssignModalOpen(true)}
+                onClick={() => {
+                  if (activeTab === "programs") {
+                    setIsAssignModalOpen(true);
+                  } else if (activeTab === "routines") {
+                    // For routines, we need to show a routine selection or open the routine modal
+                    // Since we don't have a specific routine selected, we'll open the routine modal without pre-selection
+                    setIsAssignRoutineModalOpen(true);
+                  }
+                }}
                 className="flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
                 style={{
                   backgroundColor: "#353A3A",
@@ -1133,14 +1140,16 @@ function ProgramsPage() {
             onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
           />
 
-          <AssignRoutineModal
+          <SimpleAssignRoutineModal
             isOpen={isAssignRoutineModalOpen}
             onClose={() => {
               setIsAssignRoutineModalOpen(false);
               setSelectedRoutine(null);
             }}
             routineId={selectedRoutine?.id}
-            routineName={selectedRoutine?.name}
+            clientId={undefined} // No specific client pre-selected
+            clientName={undefined}
+            startDate={undefined}
           />
 
           {/* Routine Details Modal */}
@@ -1551,5 +1560,5 @@ function ProgramCard({
   );
 }
 
-// Export with mobile detection
-export default withMobileDetection(MobileProgramsPage, ProgramsPage);
+// Export the component
+export default ProgramsPage;

@@ -93,6 +93,7 @@ export default function SimpleAssignRoutineModal({
   const [isAssigning, setIsAssigning] = useState(false);
   const [viewMode, setViewMode] = useState<"assign" | "manage">("assign");
   const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [routineSearchTerm, setRoutineSearchTerm] = useState("");
 
   const { addToast } = useUIStore();
   const utils = trpc.useUtils();
@@ -248,6 +249,16 @@ export default function SimpleAssignRoutineModal({
     );
   };
 
+  // Filter routines based on search term
+  const filteredRoutines = routines.filter(
+    routine =>
+      routine.name.toLowerCase().includes(routineSearchTerm.toLowerCase()) ||
+      (routine.description &&
+        routine.description
+          .toLowerCase()
+          .includes(routineSearchTerm.toLowerCase()))
+  );
+
   // Filter clients based on search term
   const filteredClients = sortedClients.filter(
     client =>
@@ -323,23 +334,41 @@ export default function SimpleAssignRoutineModal({
                   Step 1: Choose a Routine
                 </h3>
 
-                {/* Routines List */}
+                {/* Routine Search */}
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search routines by title or description..."
+                      value={routineSearchTerm}
+                      onChange={e => setRoutineSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Routines Grid */}
                 <div
                   className="border border-gray-600/30 rounded-lg p-4 bg-gray-800/20 max-h-96 overflow-y-auto"
                   style={{ borderColor: "#606364" }}
                 >
-                  {routines.length === 0 ? (
+                  {filteredRoutines.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-lg font-semibold text-white mb-2">
-                        No Routines Available
+                        {routines.length === 0
+                          ? "No Routines Available"
+                          : "No Routines Found"}
                       </div>
                       <p className="text-gray-400">
-                        There are no routines available to assign.
+                        {routines.length === 0
+                          ? "There are no routines available to assign."
+                          : "Try adjusting your search terms."}
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {routines.map(routine => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredRoutines.map(routine => (
                         <div
                           key={routine.id}
                           onClick={() => setSelectedRoutine(routine.id)}
@@ -359,28 +388,22 @@ export default function SimpleAssignRoutineModal({
                                 : "#606364",
                           }}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 rounded-lg bg-green-500/10">
-                                <Target className="h-5 w-5 text-green-400" />
-                              </div>
-                              <div>
-                                <div className="font-medium text-white">
-                                  {routine.name}
-                                </div>
-                                <div className="text-sm text-gray-400">
-                                  {routine.exercises?.length || 0} exercises
-                                </div>
-                                {routine.description && (
-                                  <div className="text-sm text-gray-500 mt-1">
-                                    {routine.description}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold text-white text-sm">
+                              {routine.name}
+                            </h4>
                             {selectedRoutine === routine.id && (
-                              <CheckCircle className="h-5 w-5 text-green-400" />
+                              <CheckCircle className="h-4 w-4 text-green-400" />
                             )}
+                          </div>
+                          <p className="text-gray-400 text-xs mb-2 line-clamp-2">
+                            {routine.description}
+                          </p>
+                          <div className="flex items-center gap-1">
+                            <Target className="h-3 w-3 text-green-400" />
+                            <span className="text-xs text-gray-400">
+                              {routine.exercises?.length || 0} exercises
+                            </span>
                           </div>
                         </div>
                       ))}
