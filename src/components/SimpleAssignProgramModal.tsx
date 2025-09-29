@@ -229,8 +229,7 @@ export default function SimpleAssignProgramModal({
       confirm("Are you sure you want to remove this program from the client?")
     ) {
       unassignProgramMutation.mutate({
-        programId: selectedProgram,
-        clientIds: [clientId || ""],
+        assignmentId: assignmentId,
       });
     }
   };

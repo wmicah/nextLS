@@ -273,7 +273,7 @@ function ClientProgramPage() {
     count: routineAssignments.length,
     assignments: routineAssignments.map(assignment => ({
       id: assignment.id,
-      routineName: assignment.routine.name,
+      routineName: (assignment as any).routine?.name || "Unknown Routine",
       assignedAt: assignment.assignedAt,
       startDate: assignment.startDate,
     })),
@@ -293,8 +293,8 @@ function ClientProgramPage() {
 
       // Load routine exercise completions from the routine assignments
       routinesForDate.forEach(routineAssignment => {
-        if (routineAssignment.completions) {
-          routineAssignment.completions.forEach(completion => {
+        if ((routineAssignment as any).completions) {
+          (routineAssignment as any).completions.forEach((completion: any) => {
             const routineExerciseKey = `${routineAssignment.id}-${completion.exerciseId}`;
             serverCompletedRoutineExercises.add(routineExerciseKey);
             console.log(
@@ -529,16 +529,18 @@ function ClientProgramPage() {
     if (selectedDate) {
       const routinesForDate = getRoutinesForDate(selectedDate);
       routinesForDate.forEach(routineAssignment => {
-        if (routineAssignment.routine?.exercises) {
-          routineAssignment.routine.exercises.forEach(exercise => {
-            // Use the key format for routine exercises
-            const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
-            totalDrills++;
-            // Count completed routine exercises using the unified system
-            if (completedProgramDrills.has(routineExerciseKey)) {
-              completedDrills++;
+        if ((routineAssignment as any).routine?.exercises) {
+          (routineAssignment as any).routine.exercises.forEach(
+            (exercise: any) => {
+              // Use the key format for routine exercises
+              const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
+              totalDrills++;
+              // Count completed routine exercises using the unified system
+              if (completedProgramDrills.has(routineExerciseKey)) {
+                completedDrills++;
+              }
             }
-          });
+          );
         }
       });
     }
@@ -577,14 +579,15 @@ function ClientProgramPage() {
     if (selectedDate) {
       const routinesForDate = getRoutinesForDate(selectedDate);
       routinesForDate.forEach(routineAssignment => {
-        if (routineAssignment.routine?.exercises) {
+        if ((routineAssignment as any).routine?.exercises) {
           totalAssignments++;
           // Check if all exercises in this routine are completed using unified system
-          const allExercisesCompleted =
-            routineAssignment.routine.exercises.every(exercise => {
-              const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
-              return completedProgramDrills.has(routineExerciseKey);
-            });
+          const allExercisesCompleted = (
+            routineAssignment as any
+          ).routine.exercises.every((exercise: any) => {
+            const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
+            return completedProgramDrills.has(routineExerciseKey);
+          });
           if (allExercisesCompleted) {
             completedAssignments++;
           }
@@ -1513,7 +1516,8 @@ function ClientProgramPage() {
                                   <div className="flex items-center gap-1">
                                     <Target className="h-3 w-3 text-green-500 flex-shrink-0" />
                                     <span className="truncate">
-                                      {routine.routine.name}
+                                      {(routine as any).routine?.name ||
+                                        "Unknown Routine"}
                                     </span>
                                   </div>
                                 </div>
