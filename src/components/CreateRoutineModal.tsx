@@ -418,29 +418,7 @@ export default function CreateRoutineModal({
 
               {/* Exercises Section */}
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-white">Exercises</h3>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      onClick={() => onOpenVideoLibrary?.()}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <Video className="h-4 w-4 mr-2" />
-                      Add from Library
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={addEmptyExercise}
-                      size="sm"
-                      variant="outline"
-                      className="border-gray-600 text-gray-300 hover:bg-gray-600"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Exercise
-                    </Button>
-                  </div>
+                
                 </div>
 
                 <Card className="bg-gray-700/50 border-gray-600">

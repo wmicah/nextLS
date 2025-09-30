@@ -164,6 +164,13 @@ function ProgramBuilder({
       setWeeks(initialWeeks);
     }
   }, [initialWeeks]);
+
+  // Call onSave when weeks change to keep parent state in sync
+  useEffect(() => {
+    if (weeks.length > 0) {
+      onSave?.(weeks);
+    }
+  }, [weeks, onSave]);
   const [editingItem, setEditingItem] = useState<ProgramItem | null>(null);
   const [isVideoDetailsDialogOpen, setIsVideoDetailsDialogOpen] =
     useState(false);
@@ -268,10 +275,8 @@ function ProgramBuilder({
       if (weeks.length === 1) return; // Don't delete the last week
       const updatedWeeks = weeks.filter(week => week.id !== weekId);
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
-    [weeks, onSave]
+    [weeks]
   );
 
   const duplicateWeek = useCallback(
@@ -288,25 +293,18 @@ function ProgramBuilder({
       };
       const updatedWeeks = [...weeks, newWeek];
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
-    [weeks, onSave]
+    [weeks]
   );
 
-  const toggleCollapse = useCallback(
-    (weekId: string) => {
-      setWeeks(prev => {
-        const updatedWeeks = prev.map(week =>
-          week.id === weekId ? { ...week, collapsed: !week.collapsed } : week
-        );
-        // Call onSave to keep parent state in sync
-        onSave?.(updatedWeeks);
-        return updatedWeeks;
-      });
-    },
-    [onSave]
-  );
+  const toggleCollapse = useCallback((weekId: string) => {
+    setWeeks(prev => {
+      const updatedWeeks = prev.map(week =>
+        week.id === weekId ? { ...week, collapsed: !week.collapsed } : week
+      );
+      return updatedWeeks;
+    });
+  }, []);
 
   const toggleCollapseAll = useCallback(() => {
     const allCollapsed = weeks.every(week => week.collapsed);
@@ -315,11 +313,9 @@ function ProgramBuilder({
         ...week,
         collapsed: !allCollapsed,
       }));
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
       return updatedWeeks;
     });
-  }, [weeks, onSave]);
+  }, [weeks]);
 
   const addItem = useCallback(
     (weekId: string, dayKey: DayKey, item: Omit<ProgramItem, "id">) => {
@@ -341,10 +337,8 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
-    [weeks, onSave]
+    [weeks]
   );
 
   const editItem = useCallback(
@@ -369,10 +363,8 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
-    [weeks, onSave]
+    [weeks]
   );
 
   const deleteItem = useCallback(
@@ -390,10 +382,8 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
-    [weeks, onSave]
+    [weeks]
   );
 
   const reorderItems = useCallback(
@@ -411,10 +401,8 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
-    [weeks, onSave]
+    [weeks]
   );
 
   const handleSave = useCallback(() => {
@@ -646,8 +634,6 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
     [weeks, selectedWeekId, selectedDayKey, onSave]
   );
@@ -678,8 +664,6 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
     [weeks, selectedWeekId, selectedDayKey, onSave]
   );
@@ -729,10 +713,8 @@ function ProgramBuilder({
 
       const updatedWeeks = arrayMove(weeks, oldIndex, newIndex);
       setWeeks(updatedWeeks);
-      // Call onSave to keep parent state in sync
-      onSave?.(updatedWeeks);
     },
-    [weeks, onSave]
+    [weeks]
   );
 
   const sensors = useSensors(

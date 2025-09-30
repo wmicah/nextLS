@@ -709,21 +709,6 @@ export default function SeamlessRoutineModal({
                         Start building your routine by adding exercises from
                         your library or creating custom ones
                       </p>
-                      <div className="flex gap-3 justify-center">
-                        <Button
-                          onClick={() => onOpenVideoLibrary?.()}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          Add from Library
-                        </Button>
-                        <Button
-                          onClick={addEmptyExercise}
-                          variant="outline"
-                          className="border-gray-600 text-gray-300 hover:bg-gray-600"
-                        >
-                          Add Exercise
-                        </Button>
-                      </div>
                     </CardContent>
                   </Card>
                 ) : (
