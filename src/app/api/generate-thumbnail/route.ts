@@ -156,12 +156,15 @@ export async function POST(req: NextRequest) {
             // Clean up temporary video file if it was downloaded from UploadThing
             if (videoType === "local" && videoPath.includes("temp_")) {
               try {
+                await fs.access(videoPath);
                 await fs.unlink(videoPath);
               } catch (cleanupError) {
-                console.warn(
-                  "Failed to cleanup temp video file:",
-                  cleanupError
-                );
+                if (cleanupError.code !== "ENOENT") {
+                  console.warn(
+                    "Failed to cleanup temp video file:",
+                    cleanupError
+                  );
+                }
               }
             }
 
@@ -176,12 +179,15 @@ export async function POST(req: NextRequest) {
             // Clean up temporary video file on error
             if (videoType === "local" && videoPath.includes("temp_")) {
               try {
+                await fs.access(videoPath);
                 await fs.unlink(videoPath);
               } catch (cleanupError) {
-                console.warn(
-                  "Failed to cleanup temp video file on error:",
-                  cleanupError
-                );
+                if (cleanupError.code !== "ENOENT") {
+                  console.warn(
+                    "Failed to cleanup temp video file on error:",
+                    cleanupError
+                  );
+                }
               }
             }
 
@@ -198,12 +204,15 @@ export async function POST(req: NextRequest) {
           // Clean up temporary video file on FFmpeg error
           if (videoType === "local" && videoPath.includes("temp_")) {
             try {
+              await fs.access(videoPath);
               await fs.unlink(videoPath);
             } catch (cleanupError) {
-              console.warn(
-                "Failed to cleanup temp video file on FFmpeg error:",
-                cleanupError
-              );
+              if (cleanupError.code !== "ENOENT") {
+                console.warn(
+                  "Failed to cleanup temp video file on FFmpeg error:",
+                  cleanupError
+                );
+              }
             }
           }
 
@@ -222,12 +231,15 @@ export async function POST(req: NextRequest) {
         // Clean up temporary video file on FFmpeg error
         if (videoType === "local" && videoPath.includes("temp_")) {
           try {
+            await fs.access(videoPath);
             await fs.unlink(videoPath);
           } catch (cleanupError) {
-            console.warn(
-              "Failed to cleanup temp video file on FFmpeg error:",
-              cleanupError
-            );
+            if (cleanupError.code !== "ENOENT") {
+              console.warn(
+                "Failed to cleanup temp video file on FFmpeg error:",
+                cleanupError
+              );
+            }
           }
         }
 
@@ -248,12 +260,17 @@ export async function POST(req: NextRequest) {
         // Clean up temporary video file on timeout
         if (videoType === "local" && videoPath.includes("temp_")) {
           try {
+            // Check if file exists before trying to delete it
+            await fs.access(videoPath);
             await fs.unlink(videoPath);
           } catch (cleanupError) {
-            console.warn(
-              "Failed to cleanup temp video file on timeout:",
-              cleanupError
-            );
+            // Only log if it's not a "file not found" error
+            if (cleanupError.code !== "ENOENT") {
+              console.warn(
+                "Failed to cleanup temp video file on timeout:",
+                cleanupError
+              );
+            }
           }
         }
 

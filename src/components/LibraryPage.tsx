@@ -53,6 +53,7 @@ function LibraryPage() {
     youtubeId?: string;
   } | null>(null);
   const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false);
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
 
   // Debounce search term to avoid excessive API calls
   useEffect(() => {
@@ -70,8 +71,27 @@ function LibraryPage() {
     isYoutube?: boolean;
     youtubeId?: string;
   }) => {
+    const itemIndex = libraryItems.findIndex(libItem => libItem.id === item.id);
+    setCurrentItemIndex(itemIndex);
     setSelectedItem(item);
     setIsVideoViewerOpen(true);
+  };
+
+  // Navigation functions
+  const navigateToPrevious = () => {
+    if (libraryItems.length === 0) return;
+    const newIndex =
+      currentItemIndex > 0 ? currentItemIndex - 1 : libraryItems.length - 1;
+    setCurrentItemIndex(newIndex);
+    setSelectedItem(libraryItems[newIndex]);
+  };
+
+  const navigateToNext = () => {
+    if (libraryItems.length === 0) return;
+    const newIndex =
+      currentItemIndex < libraryItems.length - 1 ? currentItemIndex + 1 : 0;
+    setCurrentItemIndex(newIndex);
+    setSelectedItem(libraryItems[newIndex]);
   };
 
   // Use tRPC queries with refetch
@@ -1024,6 +1044,12 @@ function LibraryPage() {
         }}
         item={selectedItem}
         onDelete={handleDeleteSuccess}
+        // Navigation props
+        currentIndex={currentItemIndex}
+        totalItems={libraryItems.length}
+        onPrevious={navigateToPrevious}
+        onNext={navigateToNext}
+        libraryItems={libraryItems}
       />
     </Sidebar>
   );

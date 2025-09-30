@@ -2,7 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { X, Play, Pause, Trash2, Edit3, Shield } from "lucide-react";
+import {
+  X,
+  Play,
+  Pause,
+  Trash2,
+  Edit3,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Users,
+  Settings,
+} from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
 import EditVideoModal from "./EditVideoModal";
 
@@ -11,6 +23,12 @@ interface VideoViewerModalProps {
   onClose: () => void;
   item: any;
   onDelete?: () => void; // Add this callback
+  // Navigation props
+  currentIndex?: number;
+  totalItems?: number;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  libraryItems?: any[];
 }
 
 export default function VideoViewerModal({
@@ -18,12 +36,19 @@ export default function VideoViewerModal({
   onClose,
   item,
   onDelete,
+  currentIndex = 0,
+  totalItems = 0,
+  onPrevious,
+  onNext,
+  libraryItems = [],
 }: VideoViewerModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
+  const [videoKey, setVideoKey] = useState(0);
 
   // Get user admin status
   const { data: authData } = trpc.authCallback.useQuery();
@@ -70,6 +95,67 @@ export default function VideoViewerModal({
     };
   }, [isOpen, item?.id]); // Also clear errors when switching videos
 
+  // Handle video switching with loading state
+  useEffect(() => {
+    if (item) {
+      setIsVideoLoading(true);
+      setVideoError(null);
+      setVideoKey(prev => prev + 1); // Force video element recreation
+
+      // Reset loading state after a short delay to allow video to start loading
+      const timer = setTimeout(() => {
+        setIsVideoLoading(false);
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [item?.id]);
+
+  // Preload next video for smoother transitions
+  useEffect(() => {
+    if (libraryItems.length > 1 && currentIndex !== undefined) {
+      const nextIndex = (currentIndex + 1) % libraryItems.length;
+      const nextItem = libraryItems[nextIndex];
+
+      if (nextItem && !nextItem.isYoutube && nextItem.url) {
+        // Preload next video
+        const link = document.createElement("link");
+        link.rel = "prefetch";
+        link.href = nextItem.url;
+        document.head.appendChild(link);
+
+        return () => {
+          document.head.removeChild(link);
+        };
+      }
+    }
+    return undefined;
+  }, [currentIndex, libraryItems]);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      if (e.key === "Escape") {
+        onClose();
+      } else if (e.key === "ArrowLeft" && onPrevious) {
+        onPrevious();
+      } else if (e.key === "ArrowRight" && onNext) {
+        onNext();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose, onPrevious, onNext]);
+
   if (!isOpen || !item) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -87,7 +173,13 @@ export default function VideoViewerModal({
       // YouTube video
       return (
         <div className="w-full h-full flex items-center justify-center relative">
+          {isVideoLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+            </div>
+          )}
           <iframe
+            key={`youtube-${videoKey}`}
             width="100%"
             height="100%"
             src={`https://www.youtube.com/embed/${item.youtubeId}?rel=0&modestbranding=1&showinfo=0&controls=1&fs=1&cc_load_policy=0&iv_load_policy=3&autohide=0`}
@@ -95,16 +187,19 @@ export default function VideoViewerModal({
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             allowFullScreen
-            className="w-full h-full rounded-lg"
+            className="w-full h-full rounded-lg transition-opacity duration-300"
             style={{
               pointerEvents: "auto",
               backgroundColor: "#000",
+              opacity: isVideoLoading ? 0.5 : 1,
             }}
             onLoad={() => {
               console.log("YouTube iframe loaded successfully");
+              setIsVideoLoading(false);
             }}
             onError={() => {
               console.error("YouTube iframe failed to load");
+              setIsVideoLoading(false);
             }}
           />
           {/* Fallback link in case iframe fails */}
@@ -140,12 +235,21 @@ export default function VideoViewerModal({
 
         return (
           <div className="w-full h-full relative">
+            {isVideoLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+              </div>
+            )}
             <video
+              key={`master-${videoKey}`}
               controls
               controlsList="nodownload" // Only disable download button, keep fullscreen
               disablePictureInPicture // Disable picture-in-picture
-              className="w-full h-full object-contain"
-              style={{ backgroundColor: "#000" }}
+              className="w-full h-full object-contain transition-opacity duration-300"
+              style={{
+                backgroundColor: "#000",
+                opacity: isVideoLoading ? 0.5 : 1,
+              }}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onContextMenu={e => e.preventDefault()} // Disable right-click
@@ -156,6 +260,7 @@ export default function VideoViewerModal({
                 setVideoError(
                   "Failed to load video. The file may not exist on the server."
                 );
+                setIsVideoLoading(false);
               }}
               onLoadStart={() => {
                 console.log("Video loading started");
@@ -164,6 +269,10 @@ export default function VideoViewerModal({
               onLoadedData={() => {
                 console.log("Video data loaded successfully");
                 setVideoError(null);
+                setIsVideoLoading(false);
+              }}
+              onCanPlay={() => {
+                setIsVideoLoading(false);
               }}
             >
               <source src={streamUrl} type="video/mp4" />
@@ -176,24 +285,46 @@ export default function VideoViewerModal({
       } else {
         // Regular uploaded video with protection
         return (
-          <video
-            controls
-            controlsList="nodownload" // Only disable download button, keep fullscreen
-            disablePictureInPicture // Disable picture-in-picture
-            className="w-full h-full object-contain"
-            style={{ backgroundColor: "#000" }}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onContextMenu={e => e.preventDefault()} // Disable right-click
-            onError={e => {
-              // Video load error handled silently
-            }}
-          >
-            <source src={item.url} type="video/mp4" />
-            <source src={item.url} type="video/webm" />
-            <source src={item.url} type="video/ogg" />
-            Your browser does not support the video tag.
-          </video>
+          <div className="w-full h-full relative">
+            {isVideoLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+              </div>
+            )}
+            <video
+              key={`local-${videoKey}`}
+              controls
+              controlsList="nodownload" // Only disable download button, keep fullscreen
+              disablePictureInPicture // Disable picture-in-picture
+              className="w-full h-full object-contain transition-opacity duration-300"
+              style={{
+                backgroundColor: "#000",
+                opacity: isVideoLoading ? 0.5 : 1,
+              }}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onContextMenu={e => e.preventDefault()} // Disable right-click
+              onError={e => {
+                console.error("Video load error:", e);
+                setIsVideoLoading(false);
+              }}
+              onLoadStart={() => {
+                setVideoError(null);
+              }}
+              onLoadedData={() => {
+                setVideoError(null);
+                setIsVideoLoading(false);
+              }}
+              onCanPlay={() => {
+                setIsVideoLoading(false);
+              }}
+            >
+              <source src={item.url} type="video/mp4" />
+              <source src={item.url} type="video/webm" />
+              <source src={item.url} type="video/ogg" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
         );
       }
     } else if (item.type === "document") {
@@ -267,8 +398,45 @@ export default function VideoViewerModal({
       aria-modal="true"
       aria-labelledby="video-modal-title"
     >
+      {/* Navigation Arrows */}
+      {totalItems > 1 && (
+        <>
+          {/* Previous Button */}
+          <button
+            onClick={onPrevious}
+            className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
+            style={{ backgroundColor: "#4A5A70" }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = "#606364";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = "#4A5A70";
+            }}
+            aria-label="Previous video"
+          >
+            <ChevronLeft className="w-6 h-6 text-white" />
+          </button>
+
+          {/* Next Button */}
+          <button
+            onClick={onNext}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
+            style={{ backgroundColor: "#4A5A70" }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = "#606364";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = "#4A5A70";
+            }}
+            aria-label="Next video"
+          >
+            <ChevronRight className="w-6 h-6 text-white" />
+          </button>
+        </>
+      )}
+
       <div
-        className="rounded-lg w-full max-w-6xl max-h-[95vh] overflow-y-auto"
+        className="rounded-lg w-full max-w-7xl max-h-[95vh] overflow-y-auto mx-16"
         style={{ backgroundColor: "#353A3A" }}
       >
         {/* Header */}
@@ -298,6 +466,17 @@ export default function VideoViewerModal({
                 }}
               >
                 YouTube
+              </span>
+            )}
+            {totalItems > 1 && (
+              <span
+                className="px-3 py-1 text-sm font-medium rounded-full"
+                style={{
+                  backgroundColor: "#606364",
+                  color: "#FFFFFF",
+                }}
+              >
+                {currentIndex + 1} of {totalItems}
               </span>
             )}
           </div>
@@ -338,77 +517,131 @@ export default function VideoViewerModal({
           <div className="mb-6">
             {/* Video Player */}
             <div
-              className="w-full rounded-lg overflow-hidden"
+              className="w-full rounded-lg overflow-hidden transition-all duration-300"
               style={{ backgroundColor: "#606364", aspectRatio: "16/9" }}
             >
-              {renderVideoPlayer()}
+              <div className="relative w-full h-full">
+                {renderVideoPlayer()}
+              </div>
             </div>
           </div>
 
           {/* Content Info */}
           <div
-            className={`grid gap-6 ${
+            className={`grid gap-8 ${
               isAdmin ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1"
             }`}
           >
             {/* Main Content */}
             <div className={isAdmin ? "lg:col-span-2" : "w-full"}>
-              <h1
-                id="video-modal-title"
-                className="text-3xl font-bold mb-4"
-                style={{ color: "#C3BCC2" }}
-              >
-                {item.title}
-              </h1>
+              {/* Modern Title Section */}
+              <div className="mb-8">
+                <h1
+                  id="video-modal-title"
+                  className="text-4xl font-bold mb-3 leading-tight"
+                  style={{ color: "#C3BCC2" }}
+                >
+                  {item.title}
+                </h1>
+                <div className="flex items-center gap-4 text-sm">
+                  <span
+                    className="px-3 py-1 rounded-full font-medium"
+                    style={{
+                      backgroundColor: "#4A5A70",
+                      color: "#FFFFFF",
+                    }}
+                  >
+                    {item.category}
+                  </span>
+                  {item.duration && (
+                    <div className="flex items-center gap-2">
+                      <Play className="h-4 w-4" style={{ color: "#ABA4AA" }} />
+                      <span style={{ color: "#ABA4AA" }}>{item.duration}</span>
+                    </div>
+                  )}
+                  {item.isYoutube && (
+                    <span
+                      className="px-3 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        backgroundColor: "#DC2626",
+                        color: "#FFFFFF",
+                      }}
+                    >
+                      YouTube
+                    </span>
+                  )}
+                </div>
+              </div>
 
               {/* For Master Library Items - Show Limited Info for Non-Admins */}
               {isMasterLibraryItem && !isAdmin ? (
                 <div className="space-y-6 max-w-4xl">
-                  {/* Description Only */}
+                  {/* Modern Description Card */}
                   <div
-                    className="rounded-lg p-6 border"
+                    className="rounded-xl p-8 border-2 shadow-lg"
                     style={{
-                      backgroundColor: "#606364",
-                      borderColor: "#ABA4AA",
+                      backgroundColor: "#2A3133",
+                      borderColor: "#4A5A70",
                     }}
                   >
-                    <h3
-                      className="text-lg font-semibold mb-3"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Description
-                    </h3>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: "#4A5A70" }}
+                      >
+                        <FileText
+                          className="h-4 w-4"
+                          style={{ color: "#C3BCC2" }}
+                        />
+                      </div>
+                      <h3
+                        className="text-xl font-semibold"
+                        style={{ color: "#C3BCC2" }}
+                      >
+                        Description
+                      </h3>
+                    </div>
                     <p
                       style={{ color: "#D1D5DB" }}
-                      className="leading-relaxed whitespace-pre-wrap"
+                      className="leading-relaxed whitespace-pre-wrap text-base"
                     >
                       {item.description || "No description available."}
                     </p>
                   </div>
 
-                  {/* Master Library Notice */}
+                  {/* Modern Master Library Notice */}
                   <div
-                    className="rounded-lg p-6 border"
+                    className="rounded-xl p-8 border-2 shadow-lg"
                     style={{
                       backgroundColor: "#1E3A8A",
                       borderColor: "#3B82F6",
                     }}
                   >
-                    <div className="flex items-center gap-3 mb-3">
-                      <Shield
-                        className="h-6 w-6"
-                        style={{ color: "#60A5FA" }}
-                      />
-                      <h3
-                        className="text-lg font-semibold"
-                        style={{ color: "#DBEAFE" }}
+                    <div className="flex items-center gap-4 mb-4">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: "#3B82F6" }}
                       >
-                        Master Library Content
-                      </h3>
+                        <Shield
+                          className="h-6 w-6"
+                          style={{ color: "#FFFFFF" }}
+                        />
+                      </div>
+                      <div>
+                        <h3
+                          className="text-xl font-bold"
+                          style={{ color: "#DBEAFE" }}
+                        >
+                          Master Library Content
+                        </h3>
+                        <p style={{ color: "#93C5FD" }} className="text-sm">
+                          Premium training content
+                        </p>
+                      </div>
                     </div>
                     <p
                       style={{ color: "#BFDBFE" }}
-                      className="text-sm leading-relaxed"
+                      className="leading-relaxed text-base"
                     >
                       This is premium training content from the master library.
                       Only administrators can modify this content. Coaches can
@@ -419,93 +652,118 @@ export default function VideoViewerModal({
               ) : (
                 /* For Regular Library Items or Admin Users - Show Full Info */
                 <>
-                  {/* Duration Only */}
-                  {item.duration && (
-                    <div className="flex items-center gap-2 mb-6">
-                      <Play className="h-5 w-5" style={{ color: "#ABA4AA" }} />
-                      <span
-                        style={{ color: "#C3BCC2" }}
-                        className="text-lg font-semibold"
-                      >
-                        {item.duration}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Description */}
+                  {/* Modern Description Card */}
                   <div
-                    className={`rounded-lg p-6 border ${
+                    className={`rounded-xl p-8 border-2 shadow-lg ${
                       !isAdmin ? "max-w-4xl" : ""
                     }`}
                     style={{
-                      backgroundColor: "#606364",
-                      borderColor: "#ABA4AA",
+                      backgroundColor: "#2A3133",
+                      borderColor: "#4A5A70",
                     }}
                   >
-                    <h3
-                      className="text-lg font-semibold mb-3"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Description
-                    </h3>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: "#4A5A70" }}
+                      >
+                        <FileText
+                          className="h-4 w-4"
+                          style={{ color: "#C3BCC2" }}
+                        />
+                      </div>
+                      <h3
+                        className="text-xl font-semibold"
+                        style={{ color: "#C3BCC2" }}
+                      >
+                        Description
+                      </h3>
+                    </div>
                     <p
                       style={{ color: "#D1D5DB" }}
-                      className="leading-relaxed whitespace-pre-wrap"
+                      className="leading-relaxed whitespace-pre-wrap text-base"
                     >
                       {item.description || "No description available."}
                     </p>
                   </div>
 
-                  {/* Client Comments - Only for non-master library items */}
+                  {/* Modern Client Comments */}
                   {clientComments.length > 0 && (
                     <div
-                      className={`rounded-lg p-6 border mt-6 ${
+                      className={`rounded-xl p-8 border-2 shadow-lg mt-8 ${
                         !isAdmin ? "max-w-4xl" : ""
                       }`}
                       style={{
-                        backgroundColor: "#606364",
-                        borderColor: "#ABA4AA",
+                        backgroundColor: "#2A3133",
+                        borderColor: "#4A5A70",
                       }}
                     >
-                      <h3
-                        className="text-lg font-semibold mb-4"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Client Comments ({clientComments.length})
-                      </h3>
-                      <div className="space-y-4">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: "#4A5A70" }}
+                        >
+                          <Users
+                            className="h-4 w-4"
+                            style={{ color: "#C3BCC2" }}
+                          />
+                        </div>
+                        <h3
+                          className="text-xl font-semibold"
+                          style={{ color: "#C3BCC2" }}
+                        >
+                          Client Comments
+                        </h3>
+                        <span
+                          className="px-3 py-1 rounded-full text-sm font-medium"
+                          style={{
+                            backgroundColor: "#4A5A70",
+                            color: "#FFFFFF",
+                          }}
+                        >
+                          {clientComments.length}
+                        </span>
+                      </div>
+                      <div className="space-y-6">
                         {clientComments.map((comment: any) => (
                           <div
                             key={comment.id}
-                            className="p-4 rounded-lg border"
+                            className="p-6 rounded-xl border-2 shadow-md"
                             style={{
-                              backgroundColor: "#2A3133",
-                              borderColor: "#4A5A70",
+                              backgroundColor: "#353A3A",
+                              borderColor: "#606364",
                             }}
                           >
-                            <div className="flex items-center gap-3 mb-3">
+                            <div className="flex items-center gap-4 mb-4">
                               {comment.client?.avatar ? (
                                 <Image
                                   src={comment.client.avatar}
                                   alt={comment.client.name}
-                                  width={32}
-                                  height={32}
-                                  className="w-8 h-8 rounded-full object-cover"
+                                  width={40}
+                                  height={40}
+                                  className="w-10 h-10 rounded-full object-cover border-2"
+                                  style={{ borderColor: "#4A5A70" }}
                                 />
                               ) : (
-                                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-sm text-white font-bold">
+                                <div
+                                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm text-white font-bold border-2"
+                                  style={{
+                                    backgroundColor: "#4A5A70",
+                                    borderColor: "#606364",
+                                  }}
+                                >
                                   {comment.client?.name?.charAt(0) || "C"}
                                 </div>
                               )}
-                              <div>
+                              <div className="flex-1">
                                 <div
-                                  className="font-semibold"
+                                  className="font-semibold text-lg"
                                   style={{ color: "#C3BCC2" }}
                                 >
                                   {comment.client?.name || "Unknown Client"}
                                 </div>
                                 <div
-                                  className="text-xs"
+                                  className="text-sm"
                                   style={{ color: "#ABA4AA" }}
                                 >
                                   {new Date(
@@ -515,10 +773,10 @@ export default function VideoViewerModal({
                               </div>
                             </div>
                             <p
-                              style={{ color: "#ABA4AA" }}
-                              className="leading-relaxed"
+                              style={{ color: "#D1D5DB" }}
+                              className="leading-relaxed text-base"
                             >
-                              "{comment.comment}"
+                              {comment.comment}
                             </p>
                           </div>
                         ))}
@@ -529,26 +787,37 @@ export default function VideoViewerModal({
               )}
             </div>
 
-            {/* Sidebar - Only show for Admin users */}
+            {/* Modern Sidebar - Only show for Admin users */}
             {isAdmin && (
-              <div>
-                {/* Actions */}
+              <div className="space-y-8">
+                {/* Modern Actions Panel */}
                 <div
-                  className="rounded-lg p-6 mb-6 border"
-                  style={{ backgroundColor: "#606364", borderColor: "#ABA4AA" }}
+                  className="rounded-xl p-8 border-2 shadow-lg"
+                  style={{ backgroundColor: "#2A3133", borderColor: "#4A5A70" }}
                 >
-                  <h3
-                    className="text-lg font-semibold mb-4"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    Actions
-                  </h3>
-                  <div className="space-y-3">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: "#4A5A70" }}
+                    >
+                      <Settings
+                        className="h-4 w-4"
+                        style={{ color: "#C3BCC2" }}
+                      />
+                    </div>
+                    <h3
+                      className="text-xl font-semibold"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      Actions
+                    </h3>
+                  </div>
+                  <div className="space-y-4">
                     {item.isYoutube ? (
                       <button
                         onClick={() => window.open(item.url, "_blank")}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium"
-                        style={{ backgroundColor: "#DC2626", color: "#C3BCC2" }}
+                        className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                        style={{ backgroundColor: "#DC2626", color: "#FFFFFF" }}
                         onMouseEnter={e => {
                           e.currentTarget.style.backgroundColor = "#B91C1C";
                         }}
@@ -559,10 +828,64 @@ export default function VideoViewerModal({
                         <Play className="h-5 w-5" />
                         Watch on YouTube
                       </button>
+                    ) : isMasterLibraryItem ? (
+                      <div
+                        className="text-center py-6 px-4 rounded-xl border-2"
+                        style={{
+                          backgroundColor: "#353A3A",
+                          borderColor: "#606364",
+                        }}
+                      >
+                        <div
+                          className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: "#4A5A70" }}
+                        >
+                          <Shield
+                            className="h-6 w-6"
+                            style={{ color: "#C3BCC2" }}
+                          />
+                        </div>
+                        <p
+                          style={{ color: "#D1D5DB" }}
+                          className="text-base font-medium"
+                        >
+                          Protected Content
+                        </p>
+                        <p
+                          style={{ color: "#ABA4AA" }}
+                          className="text-sm mt-1"
+                        >
+                          This video can only be viewed here
+                        </p>
+                      </div>
                     ) : (
-                      <div className="text-center py-4">
-                        <p style={{ color: "#D1D5DB" }} className="text-sm">
-                          🔒 This video is protected and can only be viewed here
+                      <div
+                        className="text-center py-6 px-4 rounded-xl border-2"
+                        style={{
+                          backgroundColor: "#2A3133",
+                          borderColor: "#4A5A70",
+                        }}
+                      >
+                        <div
+                          className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: "#4A5A70" }}
+                        >
+                          <Play
+                            className="h-6 w-6"
+                            style={{ color: "#C3BCC2" }}
+                          />
+                        </div>
+                        <p
+                          style={{ color: "#D1D5DB" }}
+                          className="text-base font-medium"
+                        >
+                          Regular Library Content
+                        </p>
+                        <p
+                          style={{ color: "#ABA4AA" }}
+                          className="text-sm mt-1"
+                        >
+                          This video can be viewed and downloaded
                         </p>
                       </div>
                     )}
@@ -573,19 +896,19 @@ export default function VideoViewerModal({
                       <>
                         <button
                           onClick={() => setIsEditModalOpen(true)}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 font-medium border mb-3 transform hover:scale-[1.02]"
+                          className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02] border-2"
                           style={{
                             backgroundColor: "#4A5A70",
-                            borderColor: "#4A5A70",
-                            color: "#C3BCC2",
+                            borderColor: "#606364",
+                            color: "#FFFFFF",
                           }}
                           onMouseEnter={e => {
                             e.currentTarget.style.backgroundColor = "#606364";
-                            e.currentTarget.style.borderColor = "#606364";
+                            e.currentTarget.style.borderColor = "#4A5A70";
                           }}
                           onMouseLeave={e => {
                             e.currentTarget.style.backgroundColor = "#4A5A70";
-                            e.currentTarget.style.borderColor = "#4A5A70";
+                            e.currentTarget.style.borderColor = "#606364";
                           }}
                         >
                           <Edit3 className="h-5 w-5" />
@@ -594,7 +917,7 @@ export default function VideoViewerModal({
 
                         <button
                           onClick={() => setShowDeleteConfirm(true)}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium border"
+                          className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base border-2 hover:shadow-lg transform hover:scale-[1.02]"
                           style={{
                             backgroundColor: "transparent",
                             borderColor: "#DC2626",
@@ -602,7 +925,7 @@ export default function VideoViewerModal({
                           }}
                           onMouseEnter={e => {
                             e.currentTarget.style.backgroundColor = "#DC2626";
-                            e.currentTarget.style.color = "#C3BCC2";
+                            e.currentTarget.style.color = "#FFFFFF";
                           }}
                           onMouseLeave={e => {
                             e.currentTarget.style.backgroundColor =
@@ -619,19 +942,19 @@ export default function VideoViewerModal({
                       <>
                         <button
                           onClick={() => setIsEditModalOpen(true)}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 font-medium border mb-3 transform hover:scale-[1.02]"
+                          className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02] border-2"
                           style={{
                             backgroundColor: "#4A5A70",
-                            borderColor: "#4A5A70",
-                            color: "#C3BCC2",
+                            borderColor: "#606364",
+                            color: "#FFFFFF",
                           }}
                           onMouseEnter={e => {
                             e.currentTarget.style.backgroundColor = "#606364";
-                            e.currentTarget.style.borderColor = "#606364";
+                            e.currentTarget.style.borderColor = "#4A5A70";
                           }}
                           onMouseLeave={e => {
                             e.currentTarget.style.backgroundColor = "#4A5A70";
-                            e.currentTarget.style.borderColor = "#4A5A70";
+                            e.currentTarget.style.borderColor = "#606364";
                           }}
                         >
                           <Edit3 className="h-5 w-5" />
@@ -640,7 +963,7 @@ export default function VideoViewerModal({
 
                         <button
                           onClick={() => setShowDeleteConfirm(true)}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium border"
+                          className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base border-2 hover:shadow-lg transform hover:scale-[1.02]"
                           style={{
                             backgroundColor: "transparent",
                             borderColor: "#DC2626",
@@ -648,7 +971,7 @@ export default function VideoViewerModal({
                           }}
                           onMouseEnter={e => {
                             e.currentTarget.style.backgroundColor = "#DC2626";
-                            e.currentTarget.style.color = "#C3BCC2";
+                            e.currentTarget.style.color = "#FFFFFF";
                           }}
                           onMouseLeave={e => {
                             e.currentTarget.style.backgroundColor =
@@ -664,54 +987,116 @@ export default function VideoViewerModal({
                   </div>
                 </div>
 
-                {/* Details */}
+                {/* Modern Details Panel */}
                 <div
-                  className="rounded-lg p-6 border"
-                  style={{ backgroundColor: "#606364", borderColor: "#ABA4AA" }}
+                  className="rounded-xl p-8 border-2 shadow-lg"
+                  style={{ backgroundColor: "#2A3133", borderColor: "#4A5A70" }}
                 >
-                  <h3
-                    className="text-lg font-semibold mb-4"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    Details
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span style={{ color: "#9CA3AF" }}>Type:</span>
-                      <span style={{ color: "#FFFFFF" }} className="capitalize">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: "#4A5A70" }}
+                    >
+                      <FileText
+                        className="h-4 w-4"
+                        style={{ color: "#C3BCC2" }}
+                      />
+                    </div>
+                    <h3
+                      className="text-xl font-semibold"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      Details
+                    </h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div
+                      className="flex justify-between items-center py-2 border-b"
+                      style={{ borderColor: "#606364" }}
+                    >
+                      <span
+                        style={{ color: "#ABA4AA" }}
+                        className="font-medium"
+                      >
+                        Type:
+                      </span>
+                      <span
+                        style={{ color: "#C3BCC2" }}
+                        className="capitalize font-semibold"
+                      >
                         {item.isYoutube ? "YouTube Video" : item.type}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: "#9CA3AF" }}>Category:</span>
-                      <span style={{ color: "#FFFFFF" }}>{item.category}</span>
+                    <div
+                      className="flex justify-between items-center py-2 border-b"
+                      style={{ borderColor: "#606364" }}
+                    >
+                      <span
+                        style={{ color: "#ABA4AA" }}
+                        className="font-medium"
+                      >
+                        Category:
+                      </span>
+                      <span
+                        style={{ color: "#C3BCC2" }}
+                        className="font-semibold"
+                      >
+                        {item.category}
+                      </span>
                     </div>
 
                     {/* Show additional details only to admins or for non-master library items */}
                     {(isAdmin || !isMasterLibraryItem) && (
                       <>
                         {item.duration && (
-                          <div className="flex justify-between">
-                            <span style={{ color: "#9CA3AF" }}>Duration:</span>
-                            <span style={{ color: "#FFFFFF" }}>
+                          <div
+                            className="flex justify-between items-center py-2 border-b"
+                            style={{ borderColor: "#606364" }}
+                          >
+                            <span
+                              style={{ color: "#ABA4AA" }}
+                              className="font-medium"
+                            >
+                              Duration:
+                            </span>
+                            <span
+                              style={{ color: "#C3BCC2" }}
+                              className="font-semibold"
+                            >
                               {item.duration}
                             </span>
                           </div>
                         )}
                         {item.filename && (
-                          <div className="flex justify-between">
-                            <span style={{ color: "#9CA3AF" }}>File:</span>
+                          <div
+                            className="flex justify-between items-center py-2 border-b"
+                            style={{ borderColor: "#606364" }}
+                          >
                             <span
-                              style={{ color: "#FFFFFF" }}
-                              className="text-sm truncate"
+                              style={{ color: "#ABA4AA" }}
+                              className="font-medium"
+                            >
+                              File:
+                            </span>
+                            <span
+                              style={{ color: "#C3BCC2" }}
+                              className="text-sm truncate font-semibold"
                             >
                               {item.filename}
                             </span>
                           </div>
                         )}
-                        <div className="flex justify-between">
-                          <span style={{ color: "#9CA3AF" }}>Added:</span>
-                          <span style={{ color: "#FFFFFF" }}>
+                        <div className="flex justify-between items-center py-2">
+                          <span
+                            style={{ color: "#ABA4AA" }}
+                            className="font-medium"
+                          >
+                            Added:
+                          </span>
+                          <span
+                            style={{ color: "#C3BCC2" }}
+                            className="font-semibold"
+                          >
                             {item.createdAt
                               ? new Date(item.createdAt).toLocaleDateString()
                               : "Unknown"}
@@ -722,10 +1107,16 @@ export default function VideoViewerModal({
 
                     {/* For Master Library Items - Show Special Notice */}
                     {isMasterLibraryItem && !isAdmin && (
-                      <div className="mt-4 p-3 rounded-lg border border-blue-500 bg-blue-900/20">
+                      <div
+                        className="mt-6 p-4 rounded-xl border-2"
+                        style={{
+                          borderColor: "#3B82F6",
+                          backgroundColor: "#1E3A8A",
+                        }}
+                      >
                         <p
                           style={{ color: "#BFDBFE" }}
-                          className="text-xs text-center"
+                          className="text-sm text-center font-medium"
                         >
                           🔒 Additional details are restricted to administrators
                         </p>
