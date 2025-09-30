@@ -417,47 +417,44 @@ export default function CreateRoutineModal({
               </div>
 
               {/* Exercises Section */}
-              <div>
-                
-                </div>
+              <div></div>
 
-                <Card className="bg-gray-700/50 border-gray-600">
-                  <CardContent className="p-4">
-                    {exercises.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400">
-                        <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>
-                          No exercises added yet. Click "Add Exercise" to get
-                          started.
-                        </p>
-                      </div>
-                    ) : (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
+              <Card className="bg-gray-700/50 border-gray-600">
+                <CardContent className="p-4">
+                  {exercises.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>
+                        No exercises added yet. Click "Add Exercise" to get
+                        started.
+                      </p>
+                    </div>
+                  ) : (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={exercises.map(exercise => exercise.id)}
+                        strategy={verticalListSortingStrategy}
                       >
-                        <SortableContext
-                          items={exercises.map(exercise => exercise.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div className="space-y-3">
-                            {exercises.map((exercise, index) => (
-                              <SortableExerciseItem
-                                key={exercise.id}
-                                exercise={exercise}
-                                index={index}
-                                onUpdate={updateExercise}
-                                onRemove={removeExercise}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                        <div className="space-y-3">
+                          {exercises.map((exercise, index) => (
+                            <SortableExerciseItem
+                              key={exercise.id}
+                              exercise={exercise}
+                              index={index}
+                              onUpdate={updateExercise}
+                              onRemove={removeExercise}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
             <DialogFooter className="flex-shrink-0 mt-4">
