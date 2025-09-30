@@ -21,6 +21,8 @@ import {
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import PerformanceDashboard from "@/components/PerformanceDashboard";
 import AdminSecurityDashboard from "@/components/AdminSecurityDashboard";
+import { UploadButton } from "@uploadthing/react";
+import type { OurFileRouter } from "@/app/api/uploadthing/core";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -40,6 +42,7 @@ export default function AdminDashboard() {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Check if user is admin
   const { data: authData } = trpc.authCallback.useQuery();
@@ -49,24 +52,31 @@ export default function AdminDashboard() {
 
   const addResourceMutation = trpc.admin.addToMasterLibrary.useMutation({
     onSuccess: () => {
-      refetchMasterLibrary();
-      setIsAddResourceModalOpen(false);
-      setNewResource({
-        title: "",
-        description: "",
-        category: "",
-        type: "Video",
-        filename: "",
-        contentType: "",
-        size: 0,
-        thumbnail: "",
-      });
-      setSelectedFile(null);
-      setUploadProgress(0);
+      setUploadProgress(100);
+      setTimeout(() => {
+        refetchMasterLibrary();
+        setIsAddResourceModalOpen(false);
+        setIsUploading(false);
+        setUploadProgress(0);
+        // Reset form
+        setNewResource({
+          title: "",
+          description: "",
+          category: "",
+          type: "Video",
+          filename: "",
+          contentType: "",
+          size: 0,
+          thumbnail: "",
+        });
+        setSelectedFile(null);
+      }, 1000);
     },
     onError: error => {
       console.error("Failed to add resource:", error);
       alert(`Failed to add resource: ${error.message}`);
+      setIsUploading(false);
+      setUploadProgress(0);
     },
   });
 
@@ -358,13 +368,40 @@ export default function AdminDashboard() {
                   Manage the central video library available to all coaches
                 </p>
               </div>
-              <button
-                onClick={() => setIsAddResourceModalOpen(true)}
-                className="px-4 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Resource
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(
+                        "/api/admin/fix-master-library-types",
+                        {
+                          method: "POST",
+                        }
+                      );
+                      const result = await response.json();
+                      if (response.ok) {
+                        alert(`Fixed ${result.updatedCount} resources!`);
+                        refetchMasterLibrary();
+                      } else {
+                        alert(`Error: ${result.error}`);
+                      }
+                    } catch (error) {
+                      alert(`Error: ${error}`);
+                    }
+                  }}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Fix Types
+                </button>
+                <button
+                  onClick={() => setIsAddResourceModalOpen(true)}
+                  className="px-4 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Resource
+                </button>
+              </div>
             </div>
 
             {/* Master Library Grid */}
@@ -505,41 +542,50 @@ export default function AdminDashboard() {
                     return;
                   }
 
+                  setIsUploading(true);
+                  setUploadProgress(0);
+
                   try {
-                    // First upload the file
-                    const formData = new FormData();
-                    formData.append("file", selectedFile);
+                    // File is already uploaded via UploadThing, get the URL from the stored file
+                    const fileUrl = (selectedFile as any).url;
 
-                    const uploadResponse = await fetch(
-                      "/api/upload-master-video",
-                      {
-                        method: "POST",
-                        body: formData,
-                      }
-                    );
-
-                    if (!uploadResponse.ok) {
-                      const errorData = await uploadResponse.json();
-                      throw new Error(errorData.error || "Upload failed");
+                    if (!fileUrl) {
+                      throw new Error(
+                        "No file URL found. Please re-upload the file."
+                      );
                     }
 
-                    const uploadData = await uploadResponse.json();
+                    setIsUploading(true);
+                    setUploadProgress(50);
 
-                    // Create a proper HTTP URL for the file (this replaces the old secure://master-library/ protocol)
-                    const secureUrl = `/api/master-video/${encodeURIComponent(
-                      uploadData.filename
-                    )}`;
+                    // Determine the correct type based on content type
+                    const resourceType = newResource.contentType.startsWith(
+                      "video/"
+                    )
+                      ? "video"
+                      : "document";
 
-                    // Now save the metadata to the database
+                    console.log("Submitting to admin mutation:", {
+                      title: newResource.title,
+                      description: newResource.description,
+                      category: newResource.category,
+                      type: resourceType,
+                      url: fileUrl,
+                      filename: newResource.filename,
+                      contentType: newResource.contentType,
+                      size: newResource.size,
+                    });
+
+                    // Now save the metadata to the database using the admin mutation
                     addResourceMutation.mutate({
                       title: newResource.title,
                       description: newResource.description,
                       category: newResource.category,
-                      type: newResource.type,
-                      url: secureUrl,
-                      filename: uploadData.filename,
-                      contentType: uploadData.contentType,
-                      size: uploadData.size,
+                      type: resourceType,
+                      url: fileUrl,
+                      filename: newResource.filename,
+                      contentType: newResource.contentType,
+                      size: newResource.size,
                       thumbnail: "",
                       isYoutube: false,
                     });
@@ -553,7 +599,7 @@ export default function AdminDashboard() {
                             "Content-Type": "application/json",
                           },
                           body: JSON.stringify({
-                            filename: uploadData.filename,
+                            filename: newResource.filename,
                             videoType: "master",
                           }),
                         });
@@ -566,6 +612,8 @@ export default function AdminDashboard() {
                     const errorMessage =
                       error instanceof Error ? error.message : "Upload failed";
                     alert(`Upload failed: ${errorMessage}`);
+                    setIsUploading(false);
+                    setUploadProgress(0);
                   }
                 }}
                 className="space-y-4"
@@ -637,52 +685,104 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Training Video File *
                   </label>
-                  <div className="border-2 border-dashed border-[#4A5A70] rounded-lg p-6 text-center hover:border-[#606364] transition-colors">
-                    <input
-                      type="file"
-                      accept="video/*,.mp4,.mov,.avi,.mkv"
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setSelectedFile(file);
-                          setNewResource({
-                            ...newResource,
-                            filename: file.name,
-                            contentType: file.type,
-                            size: file.size,
-                          });
-                        }
-                      }}
-                      className="hidden"
-                      id="video-upload"
-                    />
-                    <label
-                      htmlFor="video-upload"
-                      className="cursor-pointer flex flex-col items-center gap-2"
-                    >
-                      {selectedFile ? (
-                        <>
-                          <div className="text-4xl">🎥</div>
-                          <div className="text-white font-medium">
-                            {selectedFile.name}
+                  {!selectedFile ? (
+                    <div className="border-2 border-dashed border-[#4A5A70] rounded-lg p-6 text-center hover:border-[#606364] transition-colors">
+                      <UploadButton<OurFileRouter, "videoUploader">
+                        endpoint="videoUploader"
+                        onClientUploadComplete={res => {
+                          const file = res[0];
+                          if (file) {
+                            console.log("UploadThing file data:", {
+                              name: file.name,
+                              type: file.type,
+                              size: file.size,
+                              url: file.url,
+                            });
+
+                            // Create a proper File object with correct size
+                            const mockFile = new File(
+                              [new ArrayBuffer(file.size)],
+                              file.name,
+                              {
+                                type: file.type,
+                              }
+                            );
+                            // Override the size property to match the actual file size
+                            Object.defineProperty(mockFile, "size", {
+                              value: file.size,
+                              writable: false,
+                            });
+                            setSelectedFile(mockFile);
+                            setNewResource(prev => ({
+                              ...prev,
+                              filename: file.name,
+                              contentType: file.type,
+                              size: file.size,
+                            }));
+                            // Store the actual file data for later use
+                            (mockFile as any).url = file.url;
+                          }
+                        }}
+                        onUploadError={(error: Error) => {
+                          console.error("Upload error:", error);
+                          alert(`Upload failed: ${error.message}`);
+                        }}
+                        appearance={{
+                          button: {
+                            background: "#4A5A70",
+                            color: "#C3BCC2",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "12px 24px",
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                          },
+                          container: {
+                            width: "100%",
+                          },
+                          allowedContent: {
+                            color: "#ABA4AA",
+                            fontSize: "12px",
+                            marginTop: "8px",
+                          },
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="border border-[#4A5A70] rounded-lg p-4 bg-[#2A3133]">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                          <div>
+                            <p className="text-white font-medium">
+                              {selectedFile.name}
+                            </p>
+                            <p className="text-gray-400 text-sm">
+                              {(selectedFile.size / (1024 * 1024)).toFixed(2)}{" "}
+                              MB
+                            </p>
                           </div>
-                          <div className="text-gray-400 text-sm">
-                            {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-4xl">📁</div>
-                          <div className="text-white font-medium">
-                            Click to select video file
-                          </div>
-                          <div className="text-gray-400 text-sm">
-                            Supports MP4, MOV, AVI, MKV (Max 500MB)
-                          </div>
-                        </>
-                      )}
-                    </label>
-                  </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFile(null);
+                            setNewResource(prev => ({
+                              ...prev,
+                              filename: "",
+                              contentType: "",
+                              size: 0,
+                            }));
+                          }}
+                          className="p-2 rounded-lg text-gray-400 hover:bg-[#4A5A70] hover:text-white transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-[#1A1D1E] border border-[#4A5A70] rounded-lg p-4">
@@ -699,20 +799,42 @@ export default function AdminDashboard() {
                   </p>
                 </div>
 
+                {/* Upload Progress Bar */}
+                {isUploading && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-gray-400">
+                      <span>Uploading...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-[#2A3133] rounded-full h-2">
+                      <div
+                        className="bg-[#4A5A70] h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
                     onClick={() => setIsAddResourceModalOpen(false)}
-                    className="px-4 py-2 text-gray-400 border border-[#4A5A70] rounded-lg hover:bg-[#2A3133] transition-colors"
+                    disabled={isUploading}
+                    className="px-4 py-2 text-gray-400 border border-[#4A5A70] rounded-lg hover:bg-[#2A3133] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={addResourceMutation.isPending}
+                    disabled={addResourceMutation.isPending || isUploading}
                     className="px-4 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    {addResourceMutation.isPending ? (
+                    {isUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Uploading...
+                      </>
+                    ) : addResourceMutation.isPending ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         Adding...

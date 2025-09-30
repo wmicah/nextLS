@@ -218,6 +218,7 @@ export const adminRouter = {
         title: z.string().optional(),
         description: z.string().optional(),
         category: z.string().optional(),
+        type: z.string().optional(),
         isActive: z.boolean().optional(),
         isFeatured: z.boolean().optional(),
       })
