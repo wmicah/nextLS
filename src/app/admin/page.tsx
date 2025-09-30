@@ -43,6 +43,12 @@ export default function AdminDashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [editResource, setEditResource] = useState({
+    title: "",
+    description: "",
+    category: "",
+    type: "video",
+  });
 
   // Check if user is admin
   const { data: authData } = trpc.authCallback.useQuery();
@@ -80,12 +86,37 @@ export default function AdminDashboard() {
     },
   });
 
+  const updateResourceMutation = trpc.admin.updateMasterResource.useMutation({
+    onSuccess: () => {
+      refetchMasterLibrary();
+      setIsEditModalOpen(false);
+      setSelectedResource(null);
+      alert("Resource updated successfully!");
+    },
+    onError: error => {
+      console.error("Failed to update resource:", error);
+      alert(`Failed to update resource: ${error.message}`);
+    },
+  });
+
   // Redirect if not admin
   useEffect(() => {
     if (authData?.user && !authData.user.isAdmin) {
       router.push("/dashboard");
     }
   }, [authData, router]);
+
+  // Populate edit form when resource is selected
+  useEffect(() => {
+    if (selectedResource && isEditModalOpen) {
+      setEditResource({
+        title: selectedResource.title || "",
+        description: selectedResource.description || "",
+        category: selectedResource.category || "",
+        type: selectedResource.type || "video",
+      });
+    }
+  }, [selectedResource, isEditModalOpen]);
 
   if (!authData?.user || !authData.user.isAdmin) {
     return (
@@ -843,6 +874,158 @@ export default function AdminDashboard() {
                       <>
                         <Plus className="w-4 h-4" />
                         Add Resource
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Resource Modal */}
+        {isEditModalOpen && selectedResource && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#2A3133] rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">
+                  Edit Resource
+                </h3>
+                <button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setSelectedResource(null);
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  if (!selectedResource?.id) return;
+
+                  updateResourceMutation.mutate({
+                    id: selectedResource.id,
+                    title: editResource.title,
+                    description: editResource.description,
+                    category: editResource.category,
+                    type: editResource.type,
+                  });
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editResource.title}
+                    onChange={e =>
+                      setEditResource(prev => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={editResource.description}
+                    onChange={e =>
+                      setEditResource(prev => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    rows={3}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Category *
+                  </label>
+                  <select
+                    value={editResource.category}
+                    onChange={e =>
+                      setEditResource(prev => ({
+                        ...prev,
+                        category: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Hitting">Hitting</option>
+                    <option value="Pitching">Pitching</option>
+                    <option value="Fielding">Fielding</option>
+                    <option value="Base Running">Base Running</option>
+                    <option value="Mental Game">Mental Game</option>
+                    <option value="Strength & Conditioning">
+                      Strength & Conditioning
+                    </option>
+                    <option value="Strategy">Strategy</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Type *
+                  </label>
+                  <select
+                    value={editResource.type}
+                    onChange={e =>
+                      setEditResource(prev => ({
+                        ...prev,
+                        type: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                    required
+                  >
+                    <option value="video">Video</option>
+                    <option value="document">Document</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditModalOpen(false);
+                      setSelectedResource(null);
+                    }}
+                    className="px-4 py-2 text-gray-400 border border-[#4A5A70] rounded-lg hover:bg-[#2A3133] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updateResourceMutation.isPending}
+                    className="px-4 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {updateResourceMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 className="w-4 h-4" />
+                        Update Resource
                       </>
                     )}
                   </button>
