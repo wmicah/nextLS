@@ -171,7 +171,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const utils = trpc.useUtils();
 
   // Remove program mutation
-  const removeProgramMutation = trpc.programs.removeAssignment.useMutation({
+  const removeProgramMutation = trpc.programs.unassignFromClients.useMutation({
     onSuccess: () => {
       addToast({
         type: "success",
@@ -387,7 +387,8 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
       )
     ) {
       removeProgramMutation.mutate({
-        assignmentId: programData.assignmentId,
+        programId: programData.id,
+        clientIds: [clientId],
       });
     }
   };
