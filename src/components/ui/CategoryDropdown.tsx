@@ -100,7 +100,7 @@ export default function CategoryDropdown({
     setHoveredGroup(null);
   };
 
-  const displayValue = value === "All" ? "All Categories" : value;
+  const displayValue = value === "All Categories" ? "All Categories" : value;
 
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
@@ -146,20 +146,21 @@ export default function CategoryDropdown({
           {/* All Categories Option */}
           <button
             type="button"
-            onClick={() => handleSelect("All")}
+            onClick={() => handleSelect("All Categories")}
             className="w-full px-4 py-3 text-left transition-all duration-200 border-b"
             style={{
-              backgroundColor: value === "All" ? "#4A5A70" : "transparent",
+              backgroundColor:
+                value === "All Categories" ? "#4A5A70" : "transparent",
               borderColor: "#606364",
-              color: value === "All" ? "#FFFFFF" : "#C3BCC2",
+              color: value === "All Categories" ? "#FFFFFF" : "#C3BCC2",
             }}
             onMouseEnter={e => {
-              if (value !== "All") {
+              if (value !== "All Categories") {
                 e.currentTarget.style.backgroundColor = "#2A3133";
               }
             }}
             onMouseLeave={e => {
-              if (value !== "All") {
+              if (value !== "All Categories") {
                 e.currentTarget.style.backgroundColor = "transparent";
               }
             }}

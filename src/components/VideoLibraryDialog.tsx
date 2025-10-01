@@ -40,6 +40,16 @@ interface VideoLibraryDialogProps {
   } | null;
 }
 
+// Default categories
+const DEFAULT_CATEGORIES = [
+  "Conditioning",
+  "Drive",
+  "Whip",
+  "Separation",
+  "Stability",
+  "Extension",
+];
+
 export default function VideoLibraryDialog({
   isOpen,
   onClose,
@@ -48,6 +58,7 @@ export default function VideoLibraryDialog({
 }: VideoLibraryDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"master" | "local">("master");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -72,18 +83,18 @@ export default function VideoLibraryDialog({
     activeTab === "master" ? masterLibraryItems : localLibraryItems;
   const isLoading = activeTab === "master" ? masterLoading : localLoading;
 
-  // Filter items based on search term only (library type is already filtered by the queries)
+  // Filter items based on search term and category
   const filteredItems = libraryItems.filter((item: any) => {
-    if (!searchTerm.trim()) {
-      return true; // Show all items when search is empty
-    }
-
     const matchesSearch =
+      !searchTerm.trim() ||
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.description &&
         item.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    return matchesSearch;
+    const matchesCategory =
+      selectedCategory === "all" || item.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
   });
 
   // Handle body overflow when dialog is open
@@ -164,8 +175,9 @@ export default function VideoLibraryDialog({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="p-4 border-b border-gray-600">
+        {/* Search and Filter */}
+        <div className="p-4 border-b border-gray-600 space-y-3">
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -175,6 +187,55 @@ export default function VideoLibraryDialog({
               placeholder="Search videos..."
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-600 bg-[#353A3A] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <select
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-[#353A3A] text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Categories</option>
+
+              <optgroup
+                label="Standard Categories"
+                style={{ backgroundColor: "#2A3133", color: "#C3BCC2" }}
+              >
+                {DEFAULT_CATEGORIES.map(cat => (
+                  <option
+                    key={cat}
+                    value={cat}
+                    style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                  >
+                    {cat}
+                  </option>
+                ))}
+              </optgroup>
+
+              {categories.filter(
+                (cat: any) => !DEFAULT_CATEGORIES.includes(cat.name)
+              ).length > 0 && (
+                <optgroup
+                  label="Your Categories"
+                  style={{ backgroundColor: "#2A3133", color: "#C3BCC2" }}
+                >
+                  {categories
+                    .filter(
+                      (cat: any) => !DEFAULT_CATEGORIES.includes(cat.name)
+                    )
+                    .map((cat: any) => (
+                      <option
+                        key={cat.name}
+                        value={cat.name}
+                        style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                      >
+                        {cat.name} ({cat.count})
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+            </select>
           </div>
         </div>
 

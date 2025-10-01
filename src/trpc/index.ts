@@ -5649,6 +5649,36 @@ export const appRouter = router({
   }),
 
   programs: router({
+    // Get program categories with counts
+    getCategories: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Get all programs for this coach and group by level (category)
+      const programs = await db.program.findMany({
+        where: { coachId: user.id },
+        select: { level: true },
+      });
+
+      // Count occurrences of each category
+      const categoryCounts = programs.reduce(
+        (acc: { [key: string]: number }, program) => {
+          const category = program.level;
+          acc[category] = (acc[category] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
+
+      // Convert to array format with name and count
+      return Object.entries(categoryCounts).map(([name, count]) => ({
+        name,
+        count,
+      }));
+    }),
+
     // Get all programs for the coach
     list: publicProcedure.query(async () => {
       const { getUser } = getKindeServerSession();

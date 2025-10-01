@@ -24,16 +24,26 @@ import {
 } from "./ui/select";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Plus, Trash2, ArrowRight, X } from "lucide-react";
+import { Plus, Trash2, ArrowRight, X, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProgramBuilder from "./ProgramBuilder";
 import VideoLibraryDialog from "./VideoLibraryDialog";
 import { useToast } from "@/lib/hooks/use-toast";
+import { trpc } from "@/app/_trpc/client";
+
+// Default program categories
+const DEFAULT_PROGRAM_CATEGORIES = [
+  "Drive",
+  "Whip",
+  "Separation",
+  "Stability",
+  "Extension",
+];
 
 const programSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  level: z.enum(["Drive", "Whip", "Separation", "Stability", "Extension"]),
+  level: z.string().min(1, "Focus area is required"),
   duration: z.number().min(1, "Duration must be at least 1 week"),
   weeks: z.array(
     z.object({
@@ -123,6 +133,8 @@ export default function SeamlessProgramModal({
   >("details");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const initializedRef = useRef(false);
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState("");
 
   // ProgramBuilder state
   const [programBuilderWeeks, setProgramBuilderWeeks] = useState<
@@ -130,6 +142,10 @@ export default function SeamlessProgramModal({
   >([]);
 
   const { toast } = useToast();
+
+  // Fetch program categories (for custom ones)
+  const { data: programCategoriesData = [] } =
+    trpc.programs.getCategories.useQuery();
 
   const {
     register,
@@ -490,21 +506,149 @@ export default function SeamlessProgramModal({
                       >
                         Focus Area *
                       </Label>
-                      <Select
-                        value={watchedValues.level}
-                        onValueChange={value => setValue("level", value as any)}
-                      >
-                        <SelectTrigger className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12">
-                          <SelectValue placeholder="Select focus area" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#353A3A] border-gray-600">
-                          <SelectItem value="Drive">Drive</SelectItem>
-                          <SelectItem value="Whip">Whip</SelectItem>
-                          <SelectItem value="Separation">Separation</SelectItem>
-                          <SelectItem value="Stability">Stability</SelectItem>
-                          <SelectItem value="Extension">Extension</SelectItem>
-                        </SelectContent>
-                      </Select>
+
+                      {!showCustomCategory ? (
+                        <div className="space-y-2 mt-2">
+                          <select
+                            value={watchedValues.level}
+                            onChange={e => setValue("level", e.target.value)}
+                            className="w-full px-3 py-3 rounded-lg border bg-[#353A3A] border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-12"
+                          >
+                            <option value="">Select focus area...</option>
+
+                            <optgroup
+                              label="Standard Categories"
+                              style={{
+                                backgroundColor: "#2A3133",
+                                color: "#C3BCC2",
+                              }}
+                            >
+                              {DEFAULT_PROGRAM_CATEGORIES.map(cat => (
+                                <option
+                                  key={cat}
+                                  value={cat}
+                                  style={{
+                                    backgroundColor: "#353A3A",
+                                    color: "#C3BCC2",
+                                  }}
+                                >
+                                  {cat}
+                                </option>
+                              ))}
+                            </optgroup>
+
+                            {programCategoriesData.filter(
+                              (cat: any) =>
+                                !DEFAULT_PROGRAM_CATEGORIES.includes(cat.name)
+                            ).length > 0 && (
+                              <optgroup
+                                label="Your Categories"
+                                style={{
+                                  backgroundColor: "#2A3133",
+                                  color: "#C3BCC2",
+                                }}
+                              >
+                                {programCategoriesData
+                                  .filter(
+                                    (cat: any) =>
+                                      !DEFAULT_PROGRAM_CATEGORIES.includes(
+                                        cat.name
+                                      )
+                                  )
+                                  .map((cat: any) => (
+                                    <option
+                                      key={cat.name}
+                                      value={cat.name}
+                                      style={{
+                                        backgroundColor: "#353A3A",
+                                        color: "#C3BCC2",
+                                      }}
+                                    >
+                                      {cat.name} ({cat.count})
+                                    </option>
+                                  ))}
+                              </optgroup>
+                            )}
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowCustomCategory(true)}
+                            className="w-full p-3 rounded-lg border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-2 font-medium text-sm"
+                            style={{
+                              borderColor: "#606364",
+                              color: "#ABA4AA",
+                              backgroundColor: "transparent",
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.borderColor = "#C3BCC2";
+                              e.currentTarget.style.color = "#C3BCC2";
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.borderColor = "#606364";
+                              e.currentTarget.style.color = "#ABA4AA";
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Or create a new category
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3 mt-2">
+                          <input
+                            type="text"
+                            value={customCategory}
+                            onChange={e => {
+                              setCustomCategory(e.target.value);
+                              setValue("level", e.target.value);
+                            }}
+                            placeholder="Enter new category name (e.g., Velocity)"
+                            maxLength={50}
+                            className="w-full p-3 rounded-lg border-2 focus:outline-none transition-all duration-200 h-12"
+                            style={{
+                              backgroundColor: "#2A3133",
+                              borderColor: "#C3BCC2",
+                              color: "#C3BCC2",
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor = "#3B82F6";
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor = "#C3BCC2";
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCustomCategory(false);
+                              setCustomCategory("");
+                              if (
+                                !DEFAULT_PROGRAM_CATEGORIES.includes(
+                                  watchedValues.level
+                                )
+                              ) {
+                                setValue("level", "");
+                              }
+                            }}
+                            className="text-sm px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                            style={{
+                              color: "#ABA4AA",
+                              backgroundColor: "#2A3133",
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.color = "#C3BCC2";
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.color = "#ABA4AA";
+                            }}
+                          >
+                            <ChevronLeft className="h-3 w-3" />
+                            Back to categories
+                          </button>
+                        </div>
+                      )}
+
                       {errors.level && (
                         <p className="text-red-400 text-sm mt-1">
                           {errors.level.message}

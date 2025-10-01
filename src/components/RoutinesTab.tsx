@@ -93,14 +93,37 @@ export default function RoutinesTab({
   onAssignRoutine,
 }: RoutinesTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("updated");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // Filter routines based on search term
-  const filteredRoutines = routines.filter(
-    routine =>
-      routine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      routine.description.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filter and sort routines
+  const filteredRoutines = routines
+    .filter(
+      routine =>
+        routine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        routine.description.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "exercises") {
+        return b.exercises.length - a.exercises.length;
+      } else if (sortBy === "newest") {
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      }
+      // Default: updated (most recently updated first)
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+
+  // Calculate stats
+  const totalExercises = routines.reduce(
+    (acc, routine) => acc + routine.exercises.length,
+    0
   );
+  const avgExercisesPerRoutine =
+    routines.length > 0 ? Math.round(totalExercises / routines.length) : 0;
 
   const getExerciseIcon = (type: string) => {
     switch (type) {
@@ -142,58 +165,83 @@ export default function RoutinesTab({
 
   return (
     <div className="space-y-6">
-      {/* Search and View Controls */}
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
-          <div className="relative flex-1 max-w-md">
+      {/* Enhanced Search and Filters - Matching Programs Tab */}
+      <div
+        className="rounded-xl p-4 mb-8 shadow-xl border relative"
+        style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+      >
+        <div className="flex gap-3 items-center">
+          {/* Search */}
+          <div className="relative flex-1">
             <Search
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
-              style={{ color: "#606364" }}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+              style={{ color: "#ABA4AA" }}
             />
             <input
               type="text"
               placeholder="Search routines..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-300"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm"
               style={{
-                backgroundColor: "#353A3A",
-                borderColor: "#606364",
+                backgroundColor: "#606364",
+                borderColor: "#ABA4AA",
                 color: "#C3BCC2",
               }}
             />
           </div>
 
-          <div
-            className="flex rounded-xl border overflow-hidden"
-            style={{ borderColor: "#606364" }}
-          >
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`px-4 py-3 transition-all duration-300 flex items-center justify-center gap-2 ${
-                viewMode === "grid" ? "font-medium" : ""
-              }`}
+          {/* Filters - Right Side */}
+          <div className="flex gap-2 items-center flex-shrink-0">
+            {/* Sort Dropdown */}
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              className="px-3 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm whitespace-nowrap"
               style={{
-                backgroundColor: viewMode === "grid" ? "#4A5A70" : "#353A3A",
+                backgroundColor: "#606364",
+                borderColor: "#ABA4AA",
                 color: "#C3BCC2",
               }}
             >
-              <Grid3X3 className="h-4 w-4" />
-              Grid
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`px-4 py-3 transition-all duration-300 flex items-center justify-center gap-2 ${
-                viewMode === "list" ? "font-medium" : ""
-              }`}
-              style={{
-                backgroundColor: viewMode === "list" ? "#4A5A70" : "#353A3A",
-                color: "#C3BCC2",
-              }}
+              <option value="updated">Recently Updated</option>
+              <option value="name">Name (A-Z)</option>
+              <option value="exercises">Most Exercises</option>
+              <option value="newest">Newest First</option>
+            </select>
+
+            {/* View Mode Toggle */}
+            <div
+              className="flex rounded-lg border overflow-hidden"
+              style={{ borderColor: "#ABA4AA" }}
             >
-              <List className="h-4 w-4" />
-              List
-            </button>
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 transition-all duration-200 ${
+                  viewMode === "grid" ? "" : ""
+                }`}
+                style={{
+                  backgroundColor: viewMode === "grid" ? "#4A5A70" : "#606364",
+                  color: "#C3BCC2",
+                }}
+                title="Grid View"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 transition-all duration-200 ${
+                  viewMode === "list" ? "" : ""
+                }`}
+                style={{
+                  backgroundColor: viewMode === "list" ? "#4A5A70" : "#606364",
+                  color: "#C3BCC2",
+                }}
+                title="List View"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -205,12 +253,19 @@ export default function RoutinesTab({
             <h2 className="text-xl font-semibold" style={{ color: "#C3BCC2" }}>
               Your Routines
             </h2>
+            <Badge
+              variant="secondary"
+              className="text-sm px-3 py-1"
+              style={{
+                backgroundColor: "#606364",
+                color: "#C3BCC2",
+              }}
+            >
+              {filteredRoutines.length}{" "}
+              {filteredRoutines.length === 1 ? "routine" : "routines"}
+            </Badge>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-sm" style={{ color: "#ABA4AA" }}>
-              {filteredRoutines.length}{" "}
-              {filteredRoutines.length === 1 ? "routine" : "routines"} found
-            </div>
             <button
               onClick={() =>
                 onCreateRoutine({
@@ -235,46 +290,98 @@ export default function RoutinesTab({
         </div>
 
         {filteredRoutines.length === 0 ? (
-          <div className="text-center py-16">
+          <div
+            className="flex flex-col items-center justify-center h-96 rounded-2xl shadow-xl border relative overflow-hidden"
+            style={{
+              backgroundColor: "#353A3A",
+              borderColor: "#606364",
+            }}
+          >
             <div
-              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ backgroundColor: "#353A3A" }}
-            >
-              <Target className="h-10 w-10" style={{ color: "#606364" }} />
-            </div>
-            <h3
-              className="text-xl font-semibold mb-3"
-              style={{ color: "#f0fdf4" }}
-            >
-              {searchTerm ? "No routines found" : "No routines created yet"}
-            </h3>
-            <p className="mb-6" style={{ color: "#ABA4AA" }}>
-              {searchTerm
-                ? "Try adjusting your search terms"
-                : "Create your first routine to get started"}
-            </p>
-            {!searchTerm && (
-              <button
-                onClick={() =>
-                  onCreateRoutine({
-                    name: "",
-                    description: "",
-                    exercises: [],
-                  })
-                }
-                className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium mx-auto"
-                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#606364";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
-                }}
+              className="absolute inset-0 opacity-5"
+              style={{
+                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+              }}
+            />
+            <div className="relative text-center px-4">
+              <div className="mb-6 relative">
+                <div className="absolute inset-0 animate-ping opacity-20">
+                  <Target
+                    className="h-20 w-20 mx-auto"
+                    style={{ color: "#4A5A70" }}
+                  />
+                </div>
+                <div
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto relative"
+                  style={{ backgroundColor: "#4A5A70" }}
+                >
+                  <Target className="h-10 w-10" style={{ color: "#C3BCC2" }} />
+                </div>
+              </div>
+              <h3
+                className="text-2xl font-bold mb-3"
+                style={{ color: "#C3BCC2" }}
               >
-                <Plus className="h-4 w-4" />
-                Create Your First Routine
-              </button>
-            )}
+                {searchTerm
+                  ? "No routines match your search"
+                  : "No routines yet"}
+              </h3>
+              <p
+                className="text-center mb-8 max-w-md mx-auto"
+                style={{ color: "#ABA4AA" }}
+              >
+                {searchTerm ? (
+                  <>
+                    Try adjusting your search or{" "}
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="underline hover:text-blue-400 transition-colors"
+                    >
+                      clear search
+                    </button>
+                  </>
+                ) : (
+                  "Create reusable exercise routines that can be quickly added to programs"
+                )}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {searchTerm && routines.length > 0 ? (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+                    style={{
+                      backgroundColor: "#606364",
+                      color: "#C3BCC2",
+                    }}
+                  >
+                    Clear Search
+                  </button>
+                ) : null}
+                <button
+                  onClick={() =>
+                    onCreateRoutine({
+                      name: "",
+                      description: "",
+                      exercises: [],
+                    })
+                  }
+                  className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+                  style={{
+                    backgroundColor: "#4A5A70",
+                    color: "#C3BCC2",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#606364";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#4A5A70";
+                  }}
+                >
+                  <Plus className="h-5 w-5 inline-block mr-2" />
+                  Create Routine
+                </button>
+              </div>
+            </div>
           </div>
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -382,16 +489,16 @@ export default function RoutinesTab({
                             onAssignRoutine(routine);
                           }}
                           className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
-                        style={{
-                          backgroundColor: "#10B981",
-                          color: "#f0fdf4",
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#059669";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = "#10B981";
-                        }}
+                          style={{
+                            backgroundColor: "#10B981",
+                            color: "#f0fdf4",
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = "#059669";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = "#10B981";
+                          }}
                           title="Assign Routine to Clients"
                         >
                           <Users className="h-4 w-4" />

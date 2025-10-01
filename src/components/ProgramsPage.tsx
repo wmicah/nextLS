@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Sparkles,
   Video,
+  Activity,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
 import { Button } from "./ui/button";
@@ -57,6 +58,7 @@ import RoutinesTab from "@/components/RoutinesTab";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
 import SimpleAssignRoutineModal from "@/components/SimpleAssignRoutineModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
+import CategoryDropdown from "./ui/CategoryDropdown";
 
 interface ProgramWeek {
   id: string;
@@ -129,8 +131,19 @@ interface Routine {
   updatedAt: string;
 }
 
+// Default program categories
+const DEFAULT_PROGRAM_CATEGORIES = [
+  "Drive",
+  "Whip",
+  "Separation",
+  "Stability",
+  "Extension",
+];
+
 function ProgramsPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [sortBy, setSortBy] = useState("updated");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedProgram, setSelectedProgram] =
     useState<ProgramListItem | null>(null);
@@ -167,6 +180,10 @@ function ProgramsPage() {
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
   });
+
+  // Fetch program categories
+  const { data: programCategoriesData = [] } =
+    trpc.programs.getCategories.useQuery();
 
   // Fetch routines from database
   const { data: routinesData = [] } = trpc.routines.list.useQuery();
@@ -406,16 +423,42 @@ function ProgramsPage() {
     }
   };
 
-  const filteredPrograms = (programs || []).filter(
-    (program: ProgramListItem) => {
+  const filteredPrograms = (programs || [])
+    .filter((program: ProgramListItem) => {
       const matchesSearch =
         program.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (program.description &&
           program.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      return matchesSearch;
-    }
+      const matchesCategory =
+        selectedCategory === "All Categories" ||
+        program.level === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return a.title.localeCompare(b.title);
+      } else if (sortBy === "assigned") {
+        return b.activeClientCount - a.activeClientCount;
+      } else if (sortBy === "newest") {
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      }
+      // Default: updated (most recently updated first)
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+
+  // Calculate stats
+  const totalAssignments = programs.reduce(
+    (acc, program) => acc + program.activeClientCount,
+    0
   );
+  const activePrograms = programs.filter(p => p.activeClientCount > 0).length;
+  const unassignedPrograms = programs.filter(
+    p => p.activeClientCount === 0
+  ).length;
 
   if (isLoading) {
     return (
@@ -498,8 +541,127 @@ function ProgramsPage() {
             </div>
           </div>
 
-          {/* Enhanced Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Compact Summary Bar - Conditional based on active tab */}
+          <div
+            className="rounded-xl p-4 mb-6 shadow-lg border"
+            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+          >
+            {activeTab === "programs" ? (
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-6 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" style={{ color: "#DC2626" }} />
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      {totalAssignments} active{" "}
+                      {totalAssignments === 1 ? "assignment" : "assignments"}
+                    </span>
+                  </div>
+                  <div
+                    className="h-4 w-px"
+                    style={{ backgroundColor: "#606364" }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4" style={{ color: "#10B981" }} />
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      {activePrograms}{" "}
+                      {activePrograms === 1 ? "program" : "programs"} in use
+                    </span>
+                  </div>
+                  {unassignedPrograms > 0 && (
+                    <>
+                      <div
+                        className="h-4 w-px"
+                        style={{ backgroundColor: "#606364" }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <AlertCircle
+                          className="h-4 w-4"
+                          style={{ color: "#F59E0B" }}
+                        />
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: "#C3BCC2" }}
+                        >
+                          {unassignedPrograms} unassigned
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="text-xs" style={{ color: "#ABA4AA" }}>
+                  Last updated: {new Date().toLocaleDateString()}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-6 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4" style={{ color: "#10B981" }} />
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      {routines.reduce((acc, r) => acc + r.exercises.length, 0)}{" "}
+                      total exercises
+                    </span>
+                  </div>
+                  <div
+                    className="h-4 w-px"
+                    style={{ backgroundColor: "#606364" }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Activity
+                      className="h-4 w-4"
+                      style={{ color: "#3B82F6" }}
+                    />
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      {routines.length > 0
+                        ? Math.round(
+                            routines.reduce(
+                              (acc, r) => acc + r.exercises.length,
+                              0
+                            ) / routines.length
+                          )
+                        : 0}{" "}
+                      avg per routine
+                    </span>
+                  </div>
+                  <div
+                    className="h-4 w-px"
+                    style={{ backgroundColor: "#606364" }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Sparkles
+                      className="h-4 w-4"
+                      style={{ color: "#F59E0B" }}
+                    />
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      {routines.length} total{" "}
+                      {routines.length === 1 ? "routine" : "routines"}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-xs" style={{ color: "#ABA4AA" }}>
+                  Last updated: {new Date().toLocaleDateString()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Old Stats Cards - REMOVED */}
+          <div className="hidden">
             <div
               className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
@@ -811,60 +973,100 @@ function ProgramsPage() {
           {/* Tab Content */}
           {activeTab === "programs" && (
             <>
-              {/* Search and Filters */}
-              <div className="mb-8">
-                <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
-                  <div className="relative flex-1 max-w-md">
+              {/* Enhanced Search and Filters - Matching LibraryPage */}
+              <div
+                className="rounded-xl p-4 mb-8 shadow-xl border relative"
+                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+              >
+                <div className="flex gap-3 items-center">
+                  {/* Search */}
+                  <div className="relative flex-1">
                     <Search
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
-                      style={{ color: "#606364" }}
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                      style={{ color: "#ABA4AA" }}
                     />
                     <input
                       type="text"
                       placeholder="Search programs..."
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-300"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm"
                       style={{
-                        backgroundColor: "#353A3A",
-                        borderColor: "#606364",
+                        backgroundColor: "#606364",
+                        borderColor: "#ABA4AA",
                         color: "#C3BCC2",
                       }}
                     />
                   </div>
 
-                  <div
-                    className="flex rounded-xl border overflow-hidden"
-                    style={{ borderColor: "#606364" }}
-                  >
-                    <button
-                      onClick={() => setViewMode("grid")}
-                      className={`px-4 py-3 transition-all duration-300 flex items-center justify-center gap-2 ${
-                        viewMode === "grid" ? "font-medium" : ""
-                      }`}
+                  {/* Filters - Right Side */}
+                  <div className="flex gap-2 items-center flex-shrink-0">
+                    <CategoryDropdown
+                      value={selectedCategory}
+                      onChange={setSelectedCategory}
+                      standardCategories={DEFAULT_PROGRAM_CATEGORIES}
+                      customCategories={programCategoriesData.filter(
+                        (cat: any) =>
+                          !DEFAULT_PROGRAM_CATEGORIES.includes(cat.name)
+                      )}
                       style={{
-                        backgroundColor:
-                          viewMode === "grid" ? "#4A5A70" : "#353A3A",
+                        backgroundColor: "#606364",
+                        borderColor: "#ABA4AA",
+                        color: "#C3BCC2",
+                      }}
+                    />
+
+                    {/* Sort Dropdown */}
+                    <select
+                      value={sortBy}
+                      onChange={e => setSortBy(e.target.value)}
+                      className="px-3 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm whitespace-nowrap"
+                      style={{
+                        backgroundColor: "#606364",
+                        borderColor: "#ABA4AA",
                         color: "#C3BCC2",
                       }}
                     >
-                      <Grid3X3 className="h-4 w-4" />
-                      Grid
-                    </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`px-4 py-3 transition-all duration-300 flex items-center justify-center gap-2 ${
-                        viewMode === "list" ? "font-medium" : ""
-                      }`}
-                      style={{
-                        backgroundColor:
-                          viewMode === "list" ? "#4A5A70" : "#353A3A",
-                        color: "#C3BCC2",
-                      }}
+                      <option value="updated">Recently Updated</option>
+                      <option value="name">Name (A-Z)</option>
+                      <option value="assigned">Most Assigned</option>
+                      <option value="newest">Newest First</option>
+                    </select>
+
+                    {/* View Mode Toggle */}
+                    <div
+                      className="flex rounded-lg border overflow-hidden"
+                      style={{ borderColor: "#ABA4AA" }}
                     >
-                      <List className="h-4 w-4" />
-                      List
-                    </button>
+                      <button
+                        onClick={() => setViewMode("grid")}
+                        className={`p-2 transition-all duration-200 ${
+                          viewMode === "grid" ? "" : ""
+                        }`}
+                        style={{
+                          backgroundColor:
+                            viewMode === "grid" ? "#4A5A70" : "#606364",
+                          color: "#C3BCC2",
+                        }}
+                        title="Grid View"
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode("list")}
+                        className={`p-2 transition-all duration-200 ${
+                          viewMode === "list" ? "" : ""
+                        }`}
+                        style={{
+                          backgroundColor:
+                            viewMode === "list" ? "#4A5A70" : "#606364",
+                          color: "#C3BCC2",
+                        }}
+                        title="List View"
+                      >
+                        <List className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -879,13 +1081,19 @@ function ProgramsPage() {
                     >
                       Your Programs
                     </h2>
+                    <Badge
+                      variant="secondary"
+                      className="text-sm px-3 py-1"
+                      style={{
+                        backgroundColor: "#606364",
+                        color: "#C3BCC2",
+                      }}
+                    >
+                      {filteredPrograms.length}{" "}
+                      {filteredPrograms.length === 1 ? "program" : "programs"}
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="text-sm" style={{ color: "#ABA4AA" }}>
-                      {filteredPrograms.length}{" "}
-                      {filteredPrograms.length === 1 ? "program" : "programs"}{" "}
-                      found
-                    </div>
                     <button
                       onClick={() => setIsCreateModalOpen(true)}
                       className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
@@ -918,31 +1126,72 @@ function ProgramsPage() {
                           "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
                       }}
                     />
-                    <div className="relative text-center">
-                      <div
-                        className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-                        style={{ backgroundColor: "#4A5A70" }}
-                      >
-                        <BookOpen
-                          className="h-10 w-10"
-                          style={{ color: "#C3BCC2" }}
-                        />
+                    <div className="relative text-center px-4">
+                      <div className="mb-6 relative">
+                        <div className="absolute inset-0 animate-ping opacity-20">
+                          <Target
+                            className="h-20 w-20 mx-auto"
+                            style={{ color: "#4A5A70" }}
+                          />
+                        </div>
+                        <div
+                          className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto relative"
+                          style={{ backgroundColor: "#4A5A70" }}
+                        >
+                          <BookOpen
+                            className="h-10 w-10"
+                            style={{ color: "#C3BCC2" }}
+                          />
+                        </div>
                       </div>
                       <h3
                         className="text-2xl font-bold mb-3"
                         style={{ color: "#C3BCC2" }}
                       >
-                        No programs found
+                        {searchTerm || selectedCategory !== "All Categories"
+                          ? "No programs match your filters"
+                          : "No programs yet"}
                       </h3>
                       <p
-                        className="text-center mb-8 max-w-md"
+                        className="text-center mb-8 max-w-md mx-auto"
                         style={{ color: "#ABA4AA" }}
                       >
-                        {searchTerm
-                          ? "Try adjusting your search terms"
-                          : "Start building your programs by creating your first training program"}
+                        {searchTerm || selectedCategory !== "All Categories" ? (
+                          <>
+                            Try adjusting your filters or{" "}
+                            <button
+                              onClick={() => {
+                                setSearchTerm("");
+                                setSelectedCategory("All Categories");
+                              }}
+                              className="underline hover:text-blue-400 transition-colors"
+                            >
+                              clear all filters
+                            </button>
+                          </>
+                        ) : (
+                          "Start building comprehensive training programs for your athletes"
+                        )}
                       </p>
-                      <div className="flex justify-center">
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        {(searchTerm ||
+                          selectedCategory !== "All Categories") &&
+                        programs.length > 0 ? (
+                          <button
+                            onClick={() => {
+                              setSearchTerm("");
+                              setSelectedCategory("All Categories");
+                            }}
+                            className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+                            style={{
+                              backgroundColor: "#606364",
+                              color: "#C3BCC2",
+                            }}
+                          >
+                            <Filter className="h-5 w-5 inline-block mr-2" />
+                            Clear Filters
+                          </button>
+                        ) : null}
                         <button
                           onClick={() => setIsCreateModalOpen(true)}
                           className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
@@ -957,7 +1206,8 @@ function ProgramsPage() {
                             e.currentTarget.style.backgroundColor = "#4A5A70";
                           }}
                         >
-                          Create First Program
+                          <Plus className="h-5 w-5 inline-block mr-2" />
+                          Create Program
                         </button>
                       </div>
                     </div>
@@ -1331,7 +1581,16 @@ function ProgramCard({
                 {program.description}
               </p>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div
+                  className="px-2 py-1 rounded text-xs font-medium"
+                  style={{
+                    backgroundColor: "#4A5A70",
+                    color: "#C3BCC2",
+                  }}
+                >
+                  {program.level}
+                </div>
                 <div className="flex items-center gap-1">
                   <Users className="h-3 w-3" style={{ color: "#ABA4AA" }} />
                   <span style={{ color: "#ABA4AA" }} className="text-xs">
@@ -1446,7 +1705,16 @@ function ProgramCard({
               >
                 {program.title}
               </h3>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <div
+                  className="px-2 py-1 rounded text-xs font-medium"
+                  style={{
+                    backgroundColor: "#4A5A70",
+                    color: "#C3BCC2",
+                  }}
+                >
+                  {program.level}
+                </div>
                 <div className="flex items-center gap-1">
                   <Users className="h-3 w-3" style={{ color: "#ABA4AA" }} />
                   <span style={{ color: "#ABA4AA" }} className="text-xs">
