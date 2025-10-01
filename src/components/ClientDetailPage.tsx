@@ -234,12 +234,12 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
 
   if (viewMode === "week") {
     // For week view, show the week containing the current date
-    calendarStart = startOfWeek(currentMonth, { weekStartsOn: 1 });
-    calendarEnd = endOfWeek(currentMonth, { weekStartsOn: 1 });
+    calendarStart = startOfWeek(currentMonth, { weekStartsOn: 0 });
+    calendarEnd = endOfWeek(currentMonth, { weekStartsOn: 0 });
   } else {
     // For month view, show the full month with surrounding days
-    calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+    calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   }
 
   const calendarDays = eachDayOfInterval({
@@ -797,7 +797,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
 
             {/* Calendar Grid */}
             <div className="grid grid-cols-7 gap-1">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                 <div
                   key={day}
                   className="text-center text-sm font-bold py-3 border-b-2"

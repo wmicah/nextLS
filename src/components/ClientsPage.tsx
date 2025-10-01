@@ -25,6 +25,9 @@ import {
   Mail,
   Phone,
   MessageCircle,
+  Grid3X3,
+  List,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import AddClientModal from "./AddClientModal";
@@ -319,6 +322,13 @@ function ClientsPage() {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     return createdAt > thirtyDaysAgo;
   }).length;
+  const upcomingLessons = clients.filter((c: Client) => {
+    if (!c.nextLessonDate) return false;
+    const lessonDate = new Date(c.nextLessonDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return lessonDate > today;
+  }).length;
 
   if (isLoading) {
     return (
@@ -413,8 +423,8 @@ function ClientsPage() {
           </div>
         </div>
 
-        {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Stats cards removed for cleaner, people-focused design */}
+        <div className="hidden">
           <div
             className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
             style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
@@ -655,161 +665,78 @@ function ClientsPage() {
           </div>
         </div>
 
-        {/* Search and Filters */}
+        {/* Enhanced Search and Filters - Matching Programs/Library */}
         <div
-          className="rounded-2xl shadow-xl border mb-8 relative overflow-hidden group"
+          className="rounded-xl p-4 mb-8 shadow-xl border relative"
           style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
         >
-          <div
-            className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-            style={{
-              background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-            }}
-          />
-          <div className="relative p-6">
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-              <div className="flex-1 max-w-md">
-                <div className="relative">
-                  <Search
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                    style={{ color: "#ABA4AA" }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Search athletes..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-300"
-                    style={{
-                      backgroundColor: "#2A3133",
-                      borderColor: "#606364",
-                      color: "#C3BCC2",
-                    }}
-                  />
-                </div>
-              </div>
+          <div className="flex gap-3 items-center">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                style={{ color: "#ABA4AA" }}
+              />
+              <input
+                type="text"
+                placeholder="Search athletes..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm"
+                style={{
+                  backgroundColor: "#606364",
+                  borderColor: "#ABA4AA",
+                  color: "#C3BCC2",
+                }}
+              />
+            </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" style={{ color: "#ABA4AA" }} />
-                  <select
-                    value={sortBy}
-                    onChange={e => setSortBy(e.target.value)}
-                    className="px-3 py-2 rounded-lg border appearance-none cursor-pointer"
-                    style={{
-                      backgroundColor: "#2A3133",
-                      borderColor: "#606364",
-                      color: "#C3BCC2",
-                    }}
-                  >
-                    <option value="name">Sort by Name</option>
-                    <option value="createdAt">Sort by Date Added</option>
-                    <option value="nextLesson">Sort by Next Lesson</option>
-                  </select>
-                  <button
-                    onClick={() =>
-                      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                    }
-                    className="p-2 rounded-lg transition-all duration-300"
-                    style={{ color: "#ABA4AA" }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = "#C3BCC2";
-                      e.currentTarget.style.backgroundColor = "#3A4040";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = "#ABA4AA";
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    {sortOrder === "asc" ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+            {/* Filters - Right Side */}
+            <div className="flex gap-2 items-center flex-shrink-0">
+              {/* Sort Dropdown */}
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value)}
+                className="px-3 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm whitespace-nowrap"
+                style={{
+                  backgroundColor: "#606364",
+                  borderColor: "#ABA4AA",
+                  color: "#C3BCC2",
+                }}
+              >
+                <option value="name">Name (A-Z)</option>
+                <option value="createdAt">Recently Added</option>
+                <option value="nextLesson">Next Lesson</option>
+              </select>
 
-                <div
-                  className="flex items-center gap-2 border rounded-xl"
-                  style={{ borderColor: "#606364" }}
-                >
-                  <button
-                    onClick={() => setViewMode("grid")}
-                    className={`p-2 rounded-l-xl transition-all duration-300 ${
-                      viewMode === "grid" ? "bg-blue-600 text-white" : ""
-                    }`}
-                    style={{
-                      color: viewMode === "grid" ? "#FFFFFF" : "#ABA4AA",
-                      backgroundColor:
-                        viewMode === "grid" ? "#2563EB" : "transparent",
-                    }}
-                  >
-                    <div className="w-4 h-4 grid grid-cols-2 gap-0.5">
-                      <div
-                        className="w-1.5 h-1.5 rounded-sm"
-                        style={{ backgroundColor: "currentColor" }}
-                      />
-                      <div
-                        className="w-1.5 h-1.5 rounded-sm"
-                        style={{ backgroundColor: "currentColor" }}
-                      />
-                      <div
-                        className="w-1.5 h-1.5 rounded-sm"
-                        style={{ backgroundColor: "currentColor" }}
-                      />
-                      <div
-                        className="w-1.5 h-1.5 rounded-sm"
-                        style={{ backgroundColor: "currentColor" }}
-                      />
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`p-2 rounded-r-xl transition-all duration-300 ${
-                      viewMode === "list" ? "bg-blue-600 text-white" : ""
-                    }`}
-                    style={{
-                      color: viewMode === "list" ? "#FFFFFF" : "#ABA4AA",
-                      backgroundColor:
-                        viewMode === "list" ? "#2563EB" : "transparent",
-                    }}
-                  >
-                    <div className="w-4 h-4 flex flex-col gap-0.5">
-                      <div
-                        className="w-full h-1 rounded-sm"
-                        style={{ backgroundColor: "currentColor" }}
-                      />
-                      <div
-                        className="w-full h-1 rounded-sm"
-                        style={{ backgroundColor: "currentColor" }}
-                      />
-                      <div
-                        className="w-full h-1 rounded-sm"
-                        style={{ backgroundColor: "currentColor" }}
-                      />
-                    </div>
-                  </button>
-                </div>
-
+              {/* View Mode Toggle */}
+              <div
+                className="flex rounded-lg border overflow-hidden"
+                style={{ borderColor: "#ABA4AA" }}
+              >
                 <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium border"
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 transition-all duration-200`}
                   style={{
-                    backgroundColor: "#4A5A70",
+                    backgroundColor:
+                      viewMode === "grid" ? "#4A5A70" : "#606364",
                     color: "#C3BCC2",
-                    borderColor: "#606364",
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#606364";
-                    e.currentTarget.style.borderColor = "#ABA4AA";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#4A5A70";
-                    e.currentTarget.style.borderColor = "#606364";
-                  }}
+                  title="Grid View"
                 >
-                  <Plus className="h-5 w-5" />
-                  Add Athlete
+                  <Grid3X3 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 transition-all duration-200`}
+                  style={{
+                    backgroundColor:
+                      viewMode === "list" ? "#4A5A70" : "#606364",
+                    color: "#C3BCC2",
+                  }}
+                  title="List View"
+                >
+                  <List className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -1272,89 +1199,90 @@ function ClientsPage() {
             </div>
           </>
         )}
-      </div>
 
-      <AddClientModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddClient={() => {
-          console.log("Client added successfully!");
-        }}
-      />
-
-      {selectedClientForProfile && (
-        <ClientProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => {
-            setIsProfileModalOpen(false);
-            setSelectedClientForProfile(null);
+        {/* Modals */}
+        <AddClientModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAddClient={() => {
+            console.log("Client added successfully!");
           }}
-          clientId={selectedClientForProfile.id}
-          clientName={selectedClientForProfile.name}
-          clientEmail={selectedClientForProfile.email}
-          clientPhone={selectedClientForProfile.phone}
-          clientNotes={selectedClientForProfile.notes}
-          clientAvatar={selectedClientForProfile.avatar}
         />
-      )}
 
-      {/* Feedback Modal */}
-      {isFeedbackOpen && feedbackClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/60"
-            onClick={() => setIsFeedbackOpen(false)}
+        {selectedClientForProfile && (
+          <ClientProfileModal
+            isOpen={isProfileModalOpen}
+            onClose={() => {
+              setIsProfileModalOpen(false);
+              setSelectedClientForProfile(null);
+            }}
+            clientId={selectedClientForProfile.id}
+            clientName={selectedClientForProfile.name}
+            clientEmail={selectedClientForProfile.email}
+            clientPhone={selectedClientForProfile.phone}
+            clientNotes={selectedClientForProfile.notes}
+            clientAvatar={selectedClientForProfile.avatar}
           />
-          <div
-            className="relative w-full max-w-lg rounded-xl md:rounded-2xl shadow-2xl border p-4 md:p-6 max-h-[90vh] overflow-y-auto"
-            style={{ backgroundColor: "#2B3038", borderColor: "#606364" }}
-          >
-            <h3
-              className="text-lg md:text-xl font-bold mb-3 md:mb-4"
-              style={{ color: "#C3BCC2" }}
-            >
-              Leave feedback for {feedbackClient.name}
-            </h3>
-            <textarea
-              value={feedbackText}
-              onChange={e => setFeedbackText(e.target.value)}
-              className="w-full rounded-lg md:rounded-xl p-3 border mb-4 text-sm md:text-base resize-none"
-              style={{
-                backgroundColor: "#2A3133",
-                borderColor: "#606364",
-                color: "#C3BCC2",
-              }}
-              rows={6}
-              placeholder="Type feedback/notes here..."
+        )}
+
+        {/* Feedback Modal */}
+        {isFeedbackOpen && feedbackClient && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/60"
+              onClick={() => setIsFeedbackOpen(false)}
             />
-            <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-2">
-              <button
-                onClick={() => setIsFeedbackOpen(false)}
-                className="w-full sm:w-auto px-4 py-2 rounded-lg md:rounded-xl border touch-manipulation"
-                style={{
-                  backgroundColor: "transparent",
-                  borderColor: "#606364",
-                  color: "#ABA4AA",
-                }}
+            <div
+              className="relative w-full max-w-lg rounded-xl md:rounded-2xl shadow-2xl border p-4 md:p-6 max-h-[90vh] overflow-y-auto"
+              style={{ backgroundColor: "#2B3038", borderColor: "#606364" }}
+            >
+              <h3
+                className="text-lg md:text-xl font-bold mb-3 md:mb-4"
+                style={{ color: "#C3BCC2" }}
               >
-                Cancel
-              </button>
-              <button
-                onClick={submitFeedback}
-                disabled={updateNotes.isPending}
-                className="w-full sm:w-auto px-4 py-2 rounded-lg md:rounded-xl shadow-lg border disabled:opacity-50 touch-manipulation"
+                Leave feedback for {feedbackClient.name}
+              </h3>
+              <textarea
+                value={feedbackText}
+                onChange={e => setFeedbackText(e.target.value)}
+                className="w-full rounded-lg md:rounded-xl p-3 border mb-4 text-sm md:text-base resize-none"
                 style={{
-                  backgroundColor: "#4A5A70",
+                  backgroundColor: "#2A3133",
                   borderColor: "#606364",
                   color: "#C3BCC2",
                 }}
-              >
-                {updateNotes.isPending ? "Saving..." : "Save"}
-              </button>
+                rows={6}
+                placeholder="Type feedback/notes here..."
+              />
+              <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-2">
+                <button
+                  onClick={() => setIsFeedbackOpen(false)}
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg md:rounded-xl border touch-manipulation"
+                  style={{
+                    backgroundColor: "transparent",
+                    borderColor: "#606364",
+                    color: "#ABA4AA",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitFeedback}
+                  disabled={updateNotes.isPending}
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg md:rounded-xl shadow-lg border disabled:opacity-50 touch-manipulation"
+                  style={{
+                    backgroundColor: "#4A5A70",
+                    borderColor: "#606364",
+                    color: "#C3BCC2",
+                  }}
+                >
+                  {updateNotes.isPending ? "Saving..." : "Save"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </Sidebar>
   );
 }
