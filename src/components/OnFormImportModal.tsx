@@ -362,8 +362,8 @@ export default function OnFormImportModal({
                 </>
               ) : (
                 <>
-                  <Upload className="h-4 w-4" />
-                  Import from OnForm
+                  <Upload className="h-4 w-4 text-black" />
+                  <span className="text-black">Import from OnForm</span>
                 </>
               )}
             </button>

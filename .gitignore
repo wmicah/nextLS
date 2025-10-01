@@ -46,3 +46,8 @@ next-env.d.ts
 AI_ASSISTANT_README.md
 
 .git_backup
+
+/uploads/temp-videos
+/uploads/library-thumbnails
+/uploads/master-library-videos
+/uploads/master-library-thumbnails

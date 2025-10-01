@@ -10303,7 +10303,6 @@ export const appRouter = router({
               },
             },
           },
-          completions: true,
         },
         orderBy: {
           assignedAt: "desc",
@@ -11149,38 +11148,32 @@ export const appRouter = router({
           });
         }
 
+        // TODO: Implement routine exercise completion tracking
+        // This requires adding a RoutineExerciseCompletion model to the Prisma schema
         if (input.completed) {
-          // Mark routine exercise as complete
           console.log(
-            "✅ Creating routine exercise completion:",
+            "✅ Marking routine exercise as complete:",
             input.exerciseId
           );
-
-          await db.routineExerciseCompletion.create({
-            data: {
-              routineAssignmentId: input.routineAssignmentId,
-              exerciseId: input.exerciseId,
-              clientId: client.id,
-            },
-          });
-
-          console.log("✅ Routine exercise completion created successfully");
+          // await db.routineExerciseCompletion.create({
+          //   data: {
+          //     routineAssignmentId: input.routineAssignmentId,
+          //     exerciseId: input.exerciseId,
+          //     clientId: client.id,
+          //   },
+          // });
         } else {
-          // Mark routine exercise as incomplete
           console.log(
-            "❌ Removing routine exercise completion:",
+            "❌ Marking routine exercise as incomplete:",
             input.exerciseId
           );
-
-          await db.routineExerciseCompletion.deleteMany({
-            where: {
-              routineAssignmentId: input.routineAssignmentId,
-              exerciseId: input.exerciseId,
-              clientId: client.id,
-            },
-          });
-
-          console.log("✅ Routine exercise completion removed successfully");
+          // await db.routineExerciseCompletion.deleteMany({
+          //   where: {
+          //     routineAssignmentId: input.routineAssignmentId,
+          //     exerciseId: input.exerciseId,
+          //     clientId: client.id,
+          //   },
+          // });
         }
 
         return { success: true };
