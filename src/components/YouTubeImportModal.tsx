@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
-import { X, Upload, Youtube, Video } from "lucide-react";
+import { X, Upload, Youtube, Video, Plus, ChevronLeft } from "lucide-react";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -184,17 +184,10 @@ export default function YouTubeImportModal({
             </label>
 
             {!showCustomInput ? (
-              <>
+              <div className="space-y-2">
                 <select
                   value={category}
-                  onChange={e => {
-                    if (e.target.value === "__custom__") {
-                      setShowCustomInput(true);
-                      setCategory("");
-                    } else {
-                      setCategory(e.target.value);
-                    }
-                  }}
+                  onChange={e => setCategory(e.target.value)}
                   required={!showCustomInput}
                   className="w-full px-3 py-2 rounded-lg border"
                   style={{
@@ -277,34 +270,54 @@ export default function YouTubeImportModal({
                         ))}
                     </optgroup>
                   )}
-
-                  {/* Create Custom Option */}
-                  <option
-                    value="__custom__"
-                    style={{
-                      backgroundColor: "#DC2626",
-                      color: "#FFFFFF",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    ➕ Create New Category
-                  </option>
                 </select>
-              </>
+
+                {/* Or Create New Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomInput(true);
+                    setCategory("");
+                  }}
+                  className="w-full p-3 rounded-lg border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-2 font-medium text-sm"
+                  style={{
+                    borderColor: "#606364",
+                    color: "#ABA4AA",
+                    backgroundColor: "transparent",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = "#C3BCC2";
+                    e.currentTarget.style.color = "#C3BCC2";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = "#606364";
+                    e.currentTarget.style.color = "#ABA4AA";
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Or create a new category
+                </button>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <input
                   type="text"
                   value={customCategory}
                   onChange={e => setCustomCategory(e.target.value)}
-                  placeholder="Enter new category name"
+                  placeholder="Enter new category name (e.g., Pitching Mechanics)"
                   required
                   maxLength={50}
-                  className="w-full px-3 py-2 rounded-lg border"
+                  className="w-full p-3 rounded-lg border-2 focus:outline-none transition-all duration-200"
                   style={{
-                    backgroundColor: "#606364",
-                    borderColor: "#ABA4AA",
+                    backgroundColor: "#2A3133",
+                    borderColor: "#C3BCC2",
                     color: "#C3BCC2",
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#DC2626";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = "#C3BCC2";
                   }}
                   autoFocus
                 />
@@ -314,13 +327,20 @@ export default function YouTubeImportModal({
                     setShowCustomInput(false);
                     setCustomCategory("");
                   }}
-                  className="text-sm px-3 py-1 rounded transition-all"
+                  className="text-sm px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
                   style={{
                     color: "#ABA4AA",
-                    textDecoration: "underline",
+                    backgroundColor: "#2A3133",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = "#C3BCC2";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = "#ABA4AA";
                   }}
                 >
-                  ← Back to categories
+                  <ChevronLeft className="h-3 w-3" />
+                  Back to categories
                 </button>
               </div>
             )}

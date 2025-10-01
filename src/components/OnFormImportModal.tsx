@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
-import { X, Upload, Video, HelpCircle, ExternalLink } from "lucide-react";
+import {
+  X,
+  Upload,
+  Video,
+  HelpCircle,
+  ExternalLink,
+  Plus,
+  ChevronLeft,
+} from "lucide-react";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -32,6 +40,14 @@ export default function OnFormImportModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [showHelp, setShowHelp] = useState(false);
+  const [importMode, setImportMode] = useState<"single" | "batch">("single");
+  const [batchUrls, setBatchUrls] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({
+    current: 0,
+    total: 0,
+  });
+  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   const utils = trpc.useUtils();
 
@@ -57,7 +73,7 @@ export default function OnFormImportModal({
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Use custom category if provided, otherwise use selected category
@@ -68,12 +84,85 @@ export default function OnFormImportModal({
       return;
     }
 
-    importOnFormVideo.mutate({
-      url,
-      category: finalCategory,
-      customTitle: title || undefined,
-      customDescription: description || undefined,
-    });
+    if (importMode === "single") {
+      // Single video import
+      importOnFormVideo.mutate({
+        url,
+        category: finalCategory,
+        customTitle: title || undefined,
+        customDescription: description || undefined,
+      });
+    } else {
+      // Batch import
+      await handleBatchImport(finalCategory);
+    }
+  };
+
+  const handleBatchImport = async (finalCategory: string) => {
+    // Parse URLs from textarea (one per line)
+    const urls = batchUrls
+      .split("\n")
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (urls.length === 0) {
+      alert("Please enter at least one OnForm video URL");
+      return;
+    }
+
+    setIsImporting(true);
+    setImportProgress({ current: 0, total: urls.length });
+    setImportErrors([]);
+
+    const errors: string[] = [];
+
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        setImportProgress({ current: i + 1, total: urls.length });
+
+        await new Promise<void>((resolve, reject) => {
+          importOnFormVideo.mutate(
+            {
+              url: urls[i],
+              category: finalCategory,
+            },
+            {
+              onSuccess: () => resolve(),
+              onError: error => {
+                errors.push(`${urls[i]}: ${error.message}`);
+                resolve(); // Continue even if one fails
+              },
+            }
+          );
+        });
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error: any) {
+        errors.push(`${urls[i]}: ${error.message}`);
+      }
+    }
+
+    setIsImporting(false);
+    setImportErrors(errors);
+
+    // Invalidate cache
+    utils.library.list.invalidate();
+    utils.library.getStats.invalidate();
+
+    if (errors.length === 0) {
+      alert(`Successfully imported ${urls.length} videos!`);
+      onSuccess();
+      onClose();
+      setBatchUrls("");
+      setCategory("");
+    } else {
+      alert(
+        `Imported ${urls.length - errors.length} videos successfully.\n${
+          errors.length
+        } failed (see details below).`
+      );
+    }
   };
 
   if (!isOpen) return null;
@@ -102,27 +191,100 @@ export default function OnFormImportModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* URL Input */}
+          {/* Import Mode Toggle */}
+          <div>
+            <label
+              className="block text-sm font-medium mb-2"
+              style={{ color: "#C3BCC2" }}
+            >
+              Import Type
+            </label>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  value="single"
+                  checked={importMode === "single"}
+                  onChange={e =>
+                    setImportMode(e.target.value as "single" | "batch")
+                  }
+                  className="text-orange-500"
+                  disabled={isImporting}
+                />
+                <span style={{ color: "#C3BCC2" }}>Single Video</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  value="batch"
+                  checked={importMode === "batch"}
+                  onChange={e =>
+                    setImportMode(e.target.value as "single" | "batch")
+                  }
+                  className="text-orange-500"
+                  disabled={isImporting}
+                />
+                <span style={{ color: "#C3BCC2" }}>
+                  Batch Import (Multiple Videos)
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* URL Input - Single or Batch */}
           <div>
             <label
               className="block text-sm font-medium mb-2"
               style={{ color: "#ABA4AA" }}
             >
-              OnForm Video URL *
+              {importMode === "single"
+                ? "OnForm Video URL *"
+                : "OnForm Video URLs *"}
             </label>
-            <input
-              type="url"
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="https://onform.net/video/12345 or https://onform.net/embed/12345"
-              required
-              className="w-full px-3 py-2 rounded-lg border"
-              style={{
-                backgroundColor: "#606364",
-                borderColor: "#ABA4AA",
-                color: "#C3BCC2",
-              }}
-            />
+
+            {importMode === "single" ? (
+              <input
+                type="url"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                placeholder="https://onform.net/video/12345 or https://onform.net/embed/12345"
+                required
+                disabled={isImporting}
+                className="w-full px-3 py-2 rounded-lg border"
+                style={{
+                  backgroundColor: "#606364",
+                  borderColor: "#ABA4AA",
+                  color: "#C3BCC2",
+                }}
+              />
+            ) : (
+              <>
+                <textarea
+                  value={batchUrls}
+                  onChange={e => setBatchUrls(e.target.value)}
+                  placeholder={[
+                    "Paste OnForm video URLs here (one per line)",
+                    "https://onform.net/video/12345",
+                    "https://onform.net/video/67890",
+                    "https://onform.net/video/11111",
+                    "...and so on",
+                  ].join("\n")}
+                  required
+                  disabled={isImporting}
+                  rows={8}
+                  className="w-full px-3 py-2 rounded-lg border resize-none font-mono text-xs"
+                  style={{
+                    backgroundColor: "#606364",
+                    borderColor: "#ABA4AA",
+                    color: "#C3BCC2",
+                  }}
+                />
+                <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
+                  {batchUrls.split("\n").filter(line => line.trim()).length}{" "}
+                  URLs entered
+                </p>
+              </>
+            )}
 
             {/* Need Help Button with Hover Popup */}
             <div className="relative mt-2">
@@ -236,18 +398,12 @@ export default function OnFormImportModal({
               Category *
             </label>
             {!showCustomInput ? (
-              <>
+              <div className="space-y-2">
                 <select
                   value={category}
-                  onChange={e => {
-                    if (e.target.value === "__custom__") {
-                      setShowCustomInput(true);
-                      setCategory("");
-                    } else {
-                      setCategory(e.target.value);
-                    }
-                  }}
+                  onChange={e => setCategory(e.target.value)}
                   required={!showCustomInput}
+                  disabled={isImporting}
                   className="w-full px-3 py-2 rounded-lg border"
                   style={{
                     backgroundColor: "#606364",
@@ -329,34 +485,58 @@ export default function OnFormImportModal({
                         ))}
                     </optgroup>
                   )}
-
-                  {/* Create Custom Option */}
-                  <option
-                    value="__custom__"
-                    style={{
-                      backgroundColor: "#3B82F6",
-                      color: "#FFFFFF",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    ➕ Create New Category
-                  </option>
                 </select>
-              </>
+
+                {/* Or Create New Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomInput(true);
+                    setCategory("");
+                  }}
+                  disabled={isImporting}
+                  className="w-full p-3 rounded-lg border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-2 font-medium text-sm disabled:opacity-50"
+                  style={{
+                    borderColor: "#606364",
+                    color: "#ABA4AA",
+                    backgroundColor: "transparent",
+                  }}
+                  onMouseEnter={e => {
+                    if (!isImporting) {
+                      e.currentTarget.style.borderColor = "#C3BCC2";
+                      e.currentTarget.style.color = "#C3BCC2";
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = "#606364";
+                    e.currentTarget.style.color = "#ABA4AA";
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Or create a new category
+                </button>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <input
                   type="text"
                   value={customCategory}
                   onChange={e => setCustomCategory(e.target.value)}
-                  placeholder="Enter new category name"
+                  placeholder="Enter new category name (e.g., Pitching Mechanics)"
                   required
                   maxLength={50}
-                  className="w-full px-3 py-2 rounded-lg border"
+                  disabled={isImporting}
+                  className="w-full p-3 rounded-lg border-2 focus:outline-none transition-all duration-200"
                   style={{
-                    backgroundColor: "#606364",
-                    borderColor: "#ABA4AA",
+                    backgroundColor: "#2A3133",
+                    borderColor: "#C3BCC2",
                     color: "#C3BCC2",
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#F59E0B";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = "#C3BCC2";
                   }}
                   autoFocus
                 />
@@ -366,104 +546,190 @@ export default function OnFormImportModal({
                     setShowCustomInput(false);
                     setCustomCategory("");
                   }}
-                  className="text-sm px-3 py-1 rounded transition-all"
+                  disabled={isImporting}
+                  className="text-sm px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
                   style={{
                     color: "#ABA4AA",
-                    textDecoration: "underline",
+                    backgroundColor: "#2A3133",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = "#C3BCC2";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = "#ABA4AA";
                   }}
                 >
-                  ← Back to categories
+                  <ChevronLeft className="h-3 w-3" />
+                  Back to categories
                 </button>
               </div>
             )}
           </div>
 
-          {/* Optional: Custom Title */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: "#ABA4AA" }}
-            >
-              Custom Title (Optional)
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Leave empty to use default title"
-              className="w-full px-3 py-2 rounded-lg border"
-              style={{
-                backgroundColor: "#606364",
-                borderColor: "#ABA4AA",
-                color: "#C3BCC2",
-              }}
-            />
-          </div>
+          {/* Optional: Custom Title (Only for single import) */}
+          {importMode === "single" && (
+            <>
+              <div>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "#ABA4AA" }}
+                >
+                  Custom Title (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Leave empty to use default title"
+                  disabled={isImporting}
+                  className="w-full px-3 py-2 rounded-lg border"
+                  style={{
+                    backgroundColor: "#606364",
+                    borderColor: "#ABA4AA",
+                    color: "#C3BCC2",
+                  }}
+                />
+              </div>
 
-          {/* Optional: Custom Description */}
-          <div>
-            <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: "#ABA4AA" }}
-            >
-              Custom Description (Optional)
-            </label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Add notes or training instructions"
-              rows={3}
-              className="w-full px-3 py-2 rounded-lg border resize-none"
+              <div>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "#ABA4AA" }}
+                >
+                  Custom Description (Optional)
+                </label>
+                <textarea
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Add notes or training instructions"
+                  rows={3}
+                  disabled={isImporting}
+                  className="w-full px-3 py-2 rounded-lg border resize-none"
+                  style={{
+                    backgroundColor: "#606364",
+                    borderColor: "#ABA4AA",
+                    color: "#C3BCC2",
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Progress Indicator (Batch Import) */}
+          {isImporting && importMode === "batch" && (
+            <div
+              className="p-4 rounded-xl border-2"
               style={{
-                backgroundColor: "#606364",
-                borderColor: "#ABA4AA",
-                color: "#C3BCC2",
+                backgroundColor: "#2A3133",
+                borderColor: "#F59E0B",
               }}
-            />
-          </div>
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium" style={{ color: "#C3BCC2" }}>
+                  Importing videos...
+                </span>
+                <span
+                  className="text-sm font-mono"
+                  style={{ color: "#F59E0B" }}
+                >
+                  {importProgress.current} / {importProgress.total}
+                </span>
+              </div>
+              {/* Progress Bar */}
+              <div
+                className="w-full h-2 rounded-full overflow-hidden"
+                style={{ backgroundColor: "#353A3A" }}
+              >
+                <div
+                  className="h-full transition-all duration-300"
+                  style={{
+                    backgroundColor: "#F59E0B",
+                    width: `${
+                      (importProgress.current / importProgress.total) * 100
+                    }%`,
+                  }}
+                />
+              </div>
+              <p className="text-xs mt-2" style={{ color: "#ABA4AA" }}>
+                Please wait, this may take a few minutes for large batches...
+              </p>
+            </div>
+          )}
+
+          {/* Error List (if any) */}
+          {importErrors.length > 0 && (
+            <div
+              className="p-4 rounded-xl border-2 max-h-48 overflow-y-auto"
+              style={{
+                backgroundColor: "#2A3133",
+                borderColor: "#DC2626",
+              }}
+            >
+              <p className="font-medium mb-2" style={{ color: "#DC2626" }}>
+                ⚠️ {importErrors.length} videos failed to import:
+              </p>
+              <ul
+                className="space-y-1 text-xs font-mono"
+                style={{ color: "#ABA4AA" }}
+              >
+                {importErrors.map((error, index) => (
+                  <li key={index} className="truncate">
+                    • {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Submit */}
           <div className="flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border transition-all duration-300"
+              disabled={isImporting}
+              className="flex-1 px-4 py-2 rounded-lg border transition-all duration-300 disabled:opacity-50"
               style={{
                 backgroundColor: "transparent",
                 borderColor: "#606364",
                 color: "#ABA4AA",
               }}
             >
-              Cancel
+              {isImporting ? "Importing..." : "Cancel"}
             </button>
             <button
               type="submit"
-              disabled={importOnFormVideo.isPending}
-              className="flex-1 px-4 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
+              disabled={importOnFormVideo.isPending || isImporting}
+              className="flex-1 px-4 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
               style={{
                 backgroundColor: "#F59E0B",
                 color: "#FFFFFF",
               }}
               onMouseEnter={e => {
-                if (!importOnFormVideo.isPending) {
+                if (!importOnFormVideo.isPending && !isImporting) {
                   e.currentTarget.style.backgroundColor = "#D97706";
                 }
               }}
               onMouseLeave={e => {
-                if (!importOnFormVideo.isPending) {
+                if (!importOnFormVideo.isPending && !isImporting) {
                   e.currentTarget.style.backgroundColor = "#F59E0B";
                 }
               }}
             >
-              {importOnFormVideo.isPending ? (
+              {importOnFormVideo.isPending || isImporting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                  Importing...
+                  {isImporting
+                    ? `Importing ${importProgress.current}/${importProgress.total}...`
+                    : "Importing..."}
                 </>
               ) : (
                 <>
-                  <Upload className="h-4 w-4 text-black" />
-                  <span className="text-black">Import from OnForm</span>
+                  <Upload className="h-4 w-4" />
+                  {importMode === "single"
+                    ? "Import Video"
+                    : `Import ${
+                        batchUrls.split("\n").filter(l => l.trim()).length
+                      } Videos`}
                 </>
               )}
             </button>
