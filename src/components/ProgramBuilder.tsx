@@ -5,6 +5,7 @@ import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileProgramBuilder from "./MobileProgramBuilder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUIStore } from "@/lib/stores/uiStore";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ import {
   Video,
   Search,
   Clock,
+  Sparkles,
   GripVertical,
   Link,
   Unlink,
@@ -154,6 +156,7 @@ function ProgramBuilder({
   selectedVideoFromLibrary,
   onVideoProcessed,
 }: ProgramBuilderProps) {
+  const { addToast } = useUIStore();
   const [weeks, setWeeks] = useState<Week[]>(initialWeeks);
   const [selectedWeekId, setSelectedWeekId] = useState<string>("");
   const [selectedDayKey, setSelectedDayKey] = useState<DayKey>("sun");
@@ -581,6 +584,54 @@ function ProgramBuilder({
     }
   };
 
+  // Convert day to routine (routineName is now user-provided)
+  const handleConvertDayToRoutine = (
+    routineName: string,
+    items: ProgramItem[]
+  ) => {
+    const exercises = items.map(item => ({
+      title: item.title,
+      type: item.type || "exercise",
+      notes: item.notes || "",
+      sets: item.sets ?? undefined,
+      reps: item.reps ?? undefined,
+      tempo: item.tempo || "",
+      duration: item.duration || "",
+      videoUrl: item.videoUrl ?? undefined,
+      videoId: item.videoId ?? undefined,
+      videoTitle: item.videoTitle ?? undefined,
+      videoThumbnail: item.videoThumbnail ?? undefined,
+    }));
+
+    createRoutineMutation.mutate(
+      {
+        name: routineName,
+        description: `Routine with ${items.length} ${
+          items.length === 1 ? "exercise" : "exercises"
+        }`,
+        exercises: exercises as any,
+      },
+      {
+        onSuccess: () => {
+          addToast({
+            type: "success",
+            title: "Routine Created!",
+            message: `"${routineName}" has been created with ${items.length} ${
+              items.length === 1 ? "exercise" : "exercises"
+            }. Find it in the Routines tab!`,
+          });
+        },
+        onError: error => {
+          addToast({
+            type: "error",
+            title: "Error",
+            message: `Failed to create routine: ${error.message}`,
+          });
+        },
+      }
+    );
+  };
+
   const handleAddRoutineToDay = (
     routine: Routine,
     weekId: string,
@@ -803,14 +854,6 @@ function ProgramBuilder({
                 Add Week
               </Button>
               <Button
-                onClick={() => setIsCreateRoutineModalOpen(true)}
-                variant="outline"
-                className="border-green-500/50 text-green-400 hover:bg-green-500/10"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Routine
-              </Button>
-              <Button
                 onClick={toggleCollapseAll}
                 variant="outline"
                 className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
@@ -842,14 +885,6 @@ function ProgramBuilder({
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Week
-            </Button>
-            <Button
-              onClick={() => setIsCreateRoutineModalOpen(true)}
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/10"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Routine
             </Button>
             <Button
               onClick={toggleCollapseAll}
@@ -900,6 +935,7 @@ function ProgramBuilder({
               setPendingRoutineDay({ weekId, dayKey });
               setIsAddRoutineModalOpen(true);
             }}
+            onConvertToRoutine={handleConvertDayToRoutine}
           />
         ))}
       </div>
@@ -1336,6 +1372,7 @@ interface WeekCardProps {
   onOpenSupersetModal: (item: ProgramItem) => void;
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
+  onConvertToRoutine: (dayLabel: string, items: ProgramItem[]) => void;
 }
 
 function WeekCard({
@@ -1357,6 +1394,7 @@ function WeekCard({
   onOpenSupersetModal,
   getSupersetGroups,
   onOpenAddRoutine,
+  onConvertToRoutine,
 }: WeekCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({
@@ -1459,6 +1497,7 @@ function WeekCard({
                 onOpenSupersetModal={onOpenSupersetModal}
                 getSupersetGroups={getSupersetGroups}
                 onOpenAddRoutine={onOpenAddRoutine}
+                onConvertToRoutine={onConvertToRoutine}
               />
             ))}
           </div>
@@ -1485,6 +1524,7 @@ interface DayCardProps {
   onOpenSupersetModal: (item: ProgramItem) => void;
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
+  onConvertToRoutine?: (dayLabel: string, items: ProgramItem[]) => void;
 }
 
 function DayCard({
@@ -1503,7 +1543,11 @@ function DayCard({
   onOpenSupersetModal,
   getSupersetGroups,
   onOpenAddRoutine,
+  onConvertToRoutine,
 }: DayCardProps) {
+  const [showRoutineInput, setShowRoutineInput] = useState(false);
+  const [routineName, setRoutineName] = useState("");
+
   // Filter out rest day items and check if it's a rest day
   const nonRestItems = items.filter(item => item.type !== "rest");
 
@@ -1552,7 +1596,7 @@ function DayCard({
   return (
     <div className="space-y-3">
       {/* Day Header */}
-      <div className="text-center">
+      <div className="text-center mb-3">
         <h3 className="text-sm font-medium text-gray-300 mb-1">{dayLabel}</h3>
         <div className="text-xs text-gray-500 uppercase tracking-wide">
           {dayKey}
@@ -1646,6 +1690,97 @@ function DayCard({
           <Target className="h-3 w-3 mr-1" />
           Add Routine
         </Button>
+        {!isRestDay && items.length > 0 && (
+          <>
+            {!showRoutineInput ? (
+              <Button
+                onClick={() => {
+                  setShowRoutineInput(true);
+                  setRoutineName("");
+                }}
+                variant="outline"
+                size="sm"
+                className="w-full border-blue-500/50 text-green-600 hover:bg-blue-500/10 hover:border-green-700"
+              >
+                Save as Routine
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={routineName}
+                  onChange={e => setRoutineName(e.target.value)}
+                  placeholder="Name of Routine"
+                  className="w-full h-9 text-xs bg-stone-800 border-neutral-500/50 text-white placeholder-gray-500"
+                  autoFocus
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && routineName.trim()) {
+                      const exercises = items.map(item => ({
+                        title: item.title,
+                        type: item.type || "exercise",
+                        notes: item.notes || "",
+                        sets: item.sets ?? undefined,
+                        reps: item.reps ?? undefined,
+                        tempo: item.tempo || "",
+                        duration: item.duration || "",
+                        videoUrl: item.videoUrl ?? undefined,
+                        videoId: item.videoId ?? undefined,
+                        videoTitle: item.videoTitle ?? undefined,
+                        videoThumbnail: item.videoThumbnail ?? undefined,
+                      }));
+                      onConvertToRoutine?.(routineName.trim(), items);
+                      setShowRoutineInput(false);
+                      setRoutineName("");
+                    } else if (e.key === "Escape") {
+                      setShowRoutineInput(false);
+                      setRoutineName("");
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      setShowRoutineInput(false);
+                      setRoutineName("");
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-7 text-xs border-gray-600 text-gray-400 hover:bg-gray-600"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (routineName.trim()) {
+                        const exercises = items.map(item => ({
+                          title: item.title,
+                          type: item.type || "exercise",
+                          notes: item.notes || "",
+                          sets: item.sets ?? undefined,
+                          reps: item.reps ?? undefined,
+                          tempo: item.tempo || "",
+                          duration: item.duration || "",
+                          videoUrl: item.videoUrl ?? undefined,
+                          videoId: item.videoId ?? undefined,
+                          videoTitle: item.videoTitle ?? undefined,
+                          videoThumbnail: item.videoThumbnail ?? undefined,
+                        }));
+                        onConvertToRoutine?.(routineName.trim(), items);
+                        setShowRoutineInput(false);
+                        setRoutineName("");
+                      }
+                    }}
+                    disabled={!routineName.trim()}
+                    size="sm"
+                    className="flex-1 h-7 text-xs bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                  >
+                    Create
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
