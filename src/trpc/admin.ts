@@ -162,6 +162,8 @@ export const adminRouter = {
         url: z.string(),
         youtubeId: z.string().optional(),
         isYoutube: z.boolean().default(false),
+        onformId: z.string().optional(),
+        isOnForm: z.boolean().default(false),
         filename: z.string().optional(),
         contentType: z.string().optional(),
         size: z.number().optional(),

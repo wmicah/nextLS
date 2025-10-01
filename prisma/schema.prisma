@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  //directUrl = env("DIRECT_URL")
 
 }
 
@@ -105,7 +105,6 @@ model Client {
   events               Event[]
   videos               Video[]
   drillCompletions     DrillCompletion[]
-  routineExerciseCompletions RoutineExerciseCompletion[]
   videoSubmissions     ClientVideoSubmission[]
   analytics            ClientAnalytics?
   swapRequestsSent     TimeSwapRequest[] @relation("SwapRequester")
@@ -129,6 +128,8 @@ model LibraryResource {
   youtubeId   String?
   playlistId  String?
   isYoutube   Boolean           @default(false)
+  onformId    String?           // OnForm video ID for embedding
+  isOnForm    Boolean           @default(false) // True if this is an OnForm video
   isMasterLibrary Boolean       @default(false) // True if this is part of the master library (admin-controlled)
   isActive    Boolean           @default(true)  // Can be deactivated by admin
   isFeatured  Boolean           @default(false) // Can be featured by admin
@@ -647,29 +648,11 @@ model RoutineAssignment {
   
   routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  completions RoutineExerciseCompletion[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("routine_assignments")
-}
-
-model RoutineExerciseCompletion {
-  id                    String           @id @default(cuid())
-  routineAssignmentId   String
-  exerciseId            String
-  clientId              String
-  completedAt           DateTime         @default(now())
-  
-  routineAssignment     RoutineAssignment @relation(fields: [routineAssignmentId], references: [id], onDelete: Cascade)
-  client                Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
-
-  @@unique([routineAssignmentId, exerciseId, clientId])
-  @@map("routine_exercise_completions")
 }
 
 enum UserRole {

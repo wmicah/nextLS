@@ -2433,14 +2433,7 @@ export const appRouter = router({
         z.object({
           title: z.string().min(1).max(255),
           description: z.string().optional(),
-          category: z.enum([
-            "Conditioning",
-            "Drive",
-            "Whip",
-            "Separation",
-            "Stability",
-            "Extension",
-          ]),
+          category: z.string().min(1).max(100), // Allow any category name
           fileUrl: z.string().url(),
           filename: z.string(),
           contentType: z.string(),
@@ -2887,6 +2880,121 @@ export const appRouter = router({
           imported: createdResources.length,
           resources: createdResources,
         };
+      }),
+
+    // Import OnForm video
+    importOnFormVideo: publicProcedure
+      .input(
+        z.object({
+          url: z.string().url(),
+          category: z.string().min(1, "Category is required"),
+          customTitle: z.string().optional(),
+          customDescription: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        try {
+          console.log("🚀 Starting OnForm import for URL:", input.url);
+
+          const { getUser } = getKindeServerSession();
+          const user = await getUser();
+
+          if (!user?.id) {
+            console.error("❌ OnForm import failed: No user ID");
+            throw new TRPCError({ code: "UNAUTHORIZED" });
+          }
+
+          console.log("✅ User authenticated:", user.id);
+
+          // Verify user is a COACH
+          const coach = await db.user.findFirst({
+            where: { id: user.id, role: "COACH" },
+          });
+
+          if (!coach) {
+            console.error("❌ OnForm import failed: User is not a coach");
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Only coaches can import OnForm videos",
+            });
+          }
+
+          console.log("✅ Coach verification passed");
+
+          // Import OnForm utilities
+          const { extractOnFormId, isOnFormUrl } = await import(
+            "@/lib/onform-utils"
+          );
+
+          if (!isOnFormUrl(input.url)) {
+            console.error("❌ OnForm import failed: Invalid URL");
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "Invalid OnForm URL. Please use a valid OnForm video URL.",
+            });
+          }
+
+          const onformId = extractOnFormId(input.url);
+          if (!onformId) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Could not extract OnForm video ID from URL",
+            });
+          }
+
+          console.log("✅ OnForm video ID extracted:", onformId);
+
+          // Use transaction to ensure data consistency
+          const newResource = await db.$transaction(async tx => {
+            const resource = await tx.libraryResource.create({
+              data: {
+                title: input.customTitle || `OnForm Video ${onformId}`,
+                description: input.customDescription || "Imported from OnForm",
+                category: input.category,
+                type: "video",
+                url: input.url,
+                onformId: onformId,
+                isOnForm: true,
+                coachId: ensureUserId(user.id),
+                views: 0,
+                rating: 0,
+              },
+            });
+
+            console.log("✅ OnForm video imported successfully:", resource.id);
+            return resource;
+          });
+
+          console.log(
+            "🎉 OnForm import completed successfully:",
+            newResource.id
+          );
+          return newResource;
+        } catch (error) {
+          console.error("❌ OnForm import failed:", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+            input: {
+              url: input.url,
+              category: input.category,
+            },
+            timestamp: new Date().toISOString(),
+          });
+
+          // Re-throw TRPC errors as-is
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+
+          // Wrap other errors
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `OnForm import failed: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          });
+        }
       }),
 
     getClientVideoSubmissions: publicProcedure.query(async () => {
@@ -6836,16 +6944,6 @@ export const appRouter = router({
           const [year, month, day] = input.startDate.split("-").map(Number);
           const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
-          // Find the highest existing currentCycle for this program-client combination
-          const existingAssignments = client.programAssignments.filter(
-            assignment => assignment.programId === input.programId
-          );
-
-          const maxExistingCycle =
-            existingAssignments.length > 0
-              ? Math.max(...existingAssignments.map(a => a.currentCycle))
-              : 0;
-
           // Create the assignments (one for each repetition)
           for (let cycle = 1; cycle <= input.repetitions; cycle++) {
             const cycleStartDate = new Date(
@@ -6859,7 +6957,7 @@ export const appRouter = router({
                 clientId: client.id,
                 startDate: cycleStartDate,
                 repetitions: input.repetitions,
-                currentCycle: maxExistingCycle + cycle,
+                currentCycle: cycle,
               },
             });
             assignments.push(assignment);
@@ -6919,64 +7017,6 @@ export const appRouter = router({
         });
 
         return { deletedCount: result.count };
-      }),
-
-    // Remove specific program assignment by ID
-    removeAssignment: publicProcedure
-      .input(
-        z.object({
-          assignmentId: z.string(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const { getUser } = getKindeServerSession();
-        const user = await getUser();
-
-        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
-
-        // Verify user is a COACH
-        const coach = await db.user.findFirst({
-          where: { id: user.id, role: "COACH" },
-        });
-
-        if (!coach) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Only coaches can remove program assignments",
-          });
-        }
-
-        // Get the assignment to verify it belongs to this coach
-        const assignment = await db.programAssignment.findFirst({
-          where: { id: input.assignmentId },
-          include: {
-            program: {
-              select: { coachId: true },
-            },
-          },
-        });
-
-        if (!assignment) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Assignment not found",
-          });
-        }
-
-        // Verify the program belongs to this coach
-        if (assignment.program.coachId !== user.id) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only remove your own program assignments",
-          });
-        }
-
-        // Delete the specific assignment
-        await db.programAssignment.delete({
-          where: { id: input.assignmentId },
-        });
-
-        return { success: true };
       }),
 
     // Update assignment progress

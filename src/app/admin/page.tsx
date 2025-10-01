@@ -39,6 +39,7 @@ export default function AdminDashboard() {
     contentType: "",
     size: 0,
     thumbnail: "",
+    onformUrl: "",
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -74,6 +75,7 @@ export default function AdminDashboard() {
           contentType: "",
           size: 0,
           thumbnail: "",
+          onformUrl: "",
         });
         setSelectedFile(null);
       }, 1000);
@@ -577,24 +579,44 @@ export default function AdminDashboard() {
                   setUploadProgress(0);
 
                   try {
-                    // File is already uploaded via UploadThing, get the URL from the stored file
-                    const fileUrl = (selectedFile as any).url;
-
-                    if (!fileUrl) {
-                      throw new Error(
-                        "No file URL found. Please re-upload the file."
-                      );
-                    }
-
                     setIsUploading(true);
                     setUploadProgress(50);
 
-                    // Determine the correct type based on content type
-                    const resourceType = newResource.contentType.startsWith(
-                      "video/"
-                    )
-                      ? "video"
-                      : "document";
+                    let fileUrl = "";
+                    let resourceType = "video";
+                    let isOnForm = false;
+                    let onformId = "";
+
+                    // Check if OnForm URL is provided
+                    if (newResource.onformUrl) {
+                      // Import OnForm utilities
+                      const { extractOnFormId, isOnFormUrl } = await import("@/lib/onform-utils");
+                      
+                      if (isOnFormUrl(newResource.onformUrl)) {
+                        onformId = extractOnFormId(newResource.onformUrl) || "";
+                        fileUrl = newResource.onformUrl;
+                        isOnForm = true;
+                        resourceType = "video";
+                      } else {
+                        throw new Error("Invalid OnForm URL format");
+                      }
+                    } else {
+                      // File is already uploaded via UploadThing, get the URL from the stored file
+                      fileUrl = (selectedFile as any).url;
+
+                      if (!fileUrl) {
+                        throw new Error(
+                          "No file URL found. Please re-upload the file or provide an OnForm URL."
+                        );
+                      }
+
+                      // Determine the correct type based on content type
+                      resourceType = newResource.contentType.startsWith(
+                        "video/"
+                      )
+                        ? "video"
+                        : "document";
+                    }
 
                     console.log("Submitting to admin mutation:", {
                       title: newResource.title,
@@ -605,6 +627,8 @@ export default function AdminDashboard() {
                       filename: newResource.filename,
                       contentType: newResource.contentType,
                       size: newResource.size,
+                      isOnForm,
+                      onformId,
                     });
 
                     // Now save the metadata to the database using the admin mutation
@@ -619,6 +643,8 @@ export default function AdminDashboard() {
                       size: newResource.size,
                       thumbnail: "",
                       isYoutube: false,
+                      isOnForm,
+                      onformId,
                     });
 
                     // Trigger thumbnail generation after successful upload
@@ -710,6 +736,27 @@ export default function AdminDashboard() {
                     className="w-full px-3 py-2 bg-[#2A3133] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
                     placeholder="Describe the training content (e.g., 'Advanced pitching mechanics demonstration')"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    OnForm URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={newResource.onformUrl || ""}
+                    onChange={e =>
+                      setNewResource({
+                        ...newResource,
+                        onformUrl: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-[#2A3133] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                    placeholder="https://onform.net/video/12345 or https://onform.net/embed/12345"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Paste an OnForm video URL to embed it instead of uploading a file
+                  </p>
                 </div>
 
                 <div>

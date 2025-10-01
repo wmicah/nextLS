@@ -20,15 +20,17 @@ import {
 
 import YouTubePlayer from "./YouTubePlayer";
 import YouTubeImportModal from "./YouTubeImportModal";
+import OnFormImportModal from "./OnFormImportModal";
 import UploadResourceModal from "./UploadResourceModal";
 import VideoViewerModal from "./VideoViewerModal";
 import Sidebar from "./Sidebar";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileLibraryPage from "./MobileLibraryPage";
+import CategoryDropdown from "./ui/CategoryDropdown";
 
-const categories = [
-  "All",
+// Default categories that are always available
+const DEFAULT_CATEGORIES = [
   "Conditioning",
   "Drive",
   "Whip",
@@ -44,16 +46,25 @@ function LibraryPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
+  const [isOnFormModalOpen, setIsOnFormModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{
-    id: string;
-    title: string;
-    type: string;
-    isYoutube?: boolean;
-    youtubeId?: string;
-  } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
+
+  // Fetch user's custom categories
+  const { data: userCategoriesData = [] } =
+    trpc.libraryResources.getCategories.useQuery();
+
+  // Combine default categories with user's custom categories
+  const categories = useMemo(() => {
+    const userCategories = userCategoriesData.map(cat => cat.name);
+    // Merge and deduplicate
+    const allCategories = [
+      ...new Set([...DEFAULT_CATEGORIES, ...userCategories]),
+    ].sort();
+    return ["All", ...allCategories];
+  }, [userCategoriesData]);
 
   // Debounce search term to avoid excessive API calls
   useEffect(() => {
@@ -64,13 +75,7 @@ function LibraryPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const handleItemClick = (item: {
-    id: string;
-    title: string;
-    type: string;
-    isYoutube?: boolean;
-    youtubeId?: string;
-  }) => {
+  const handleItemClick = (item: any) => {
     const itemIndex = libraryItems.findIndex(libItem => libItem.id === item.id);
     setCurrentItemIndex(itemIndex);
     setSelectedItem(item);
@@ -298,144 +303,24 @@ function LibraryPage() {
         </div>
       </div>
 
-      {/* Enhanced Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div
-          className="rounded-xl p-6 transform hover:scale-105 transition-all duration-300 shadow-xl border relative overflow-hidden group"
-          style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-        >
-          <div
-            className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-            style={{
-              background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-            }}
-          />
-          <div className="relative flex items-center justify-between">
-            <div>
-              <p
-                className="text-sm font-medium mb-1"
-                style={{ color: "#ABA4AA" }}
-              >
-                Total Resources
-              </p>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#C3BCC2" }}
-              >
-                {stats?.total || 0}
-              </p>
-              <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                Videos & Documents
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
-            >
-              <BookOpen className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="rounded-xl p-6 transform hover:scale-105 transition-all duration-300 shadow-xl border relative overflow-hidden group"
-          style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-        >
-          <div
-            className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-            style={{
-              background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)",
-            }}
-          />
-          <div className="relative flex items-center justify-between">
-            <div>
-              <p
-                className="text-sm font-medium mb-1"
-                style={{ color: "#ABA4AA" }}
-              >
-                Video Content
-              </p>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#C3BCC2" }}
-              >
-                {stats?.videos || 0}
-              </p>
-              <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                Training Videos
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "#DC2626" }}
-            >
-              <Video className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="rounded-xl p-6 transform hover:scale-105 transition-all duration-300 shadow-xl border relative overflow-hidden group"
-          style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-        >
-          <div
-            className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-            style={{
-              background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-            }}
-          />
-          <div className="relative flex items-center justify-between">
-            <div>
-              <p
-                className="text-sm font-medium mb-1"
-                style={{ color: "#ABA4AA" }}
-              >
-                Documents
-              </p>
-              <p
-                className="text-3xl font-bold mb-1"
-                style={{ color: "#C3BCC2" }}
-              >
-                {stats?.documents || 0}
-              </p>
-              <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                Guides & Plans
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "#10B981" }}
-            >
-              <FileText className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Enhanced Search and Filters */}
       <div
-        className="rounded-xl p-6 mb-8 shadow-xl border relative overflow-hidden"
+        className="rounded-xl p-4 mb-8 shadow-xl border relative"
         style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
       >
-        <div
-          className="absolute inset-0 opacity-5"
-          style={{
-            background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-          }}
-        />
-        <div className="relative flex flex-col lg:flex-row gap-6 items-center justify-center lg:justify-between">
+        <div className="flex gap-3 items-center">
           {/* Search */}
-          <div className="relative w-full lg:flex-1 lg:max-w-md">
+          <div className="relative flex-1">
             <Search
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
-              style={{ color: "#606364" }}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+              style={{ color: "#ABA4AA" }}
             />
             <input
               type="text"
               placeholder="Search resources..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-300"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm"
               style={{
                 backgroundColor: "#606364",
                 borderColor: "#ABA4AA",
@@ -444,38 +329,29 @@ function LibraryPage() {
             />
           </div>
 
-          {/* Filters */}
-          <div className="flex gap-4 items-center justify-center lg:justify-end w-full lg:w-auto">
-            <div className="relative">
-              <Filter
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                style={{ color: "#606364" }}
-              />
-              <select
-                value={selectedCategory}
-                onChange={e => setSelectedCategory(e.target.value)}
-                className="pl-10 pr-8 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-300 appearance-none min-w-[140px]"
-                style={{
-                  backgroundColor: "#606364",
-                  borderColor: "#ABA4AA",
-                  color: "#C3BCC2",
-                }}
-              >
-                {categories.map(category => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Filters - Right Side */}
+          <div className="flex gap-2 items-center flex-shrink-0">
+            <CategoryDropdown
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              standardCategories={DEFAULT_CATEGORIES}
+              customCategories={userCategoriesData.filter(
+                cat => !DEFAULT_CATEGORIES.includes(cat.name)
+              )}
+              style={{
+                backgroundColor: "#606364",
+                borderColor: "#ABA4AA",
+                color: "#C3BCC2",
+              }}
+            />
 
             <div
-              className="flex rounded-xl border overflow-hidden"
+              className="flex rounded-lg border overflow-hidden"
               style={{ borderColor: "#606364" }}
             >
               <button
                 onClick={() => setViewMode("grid")}
-                className={`px-4 py-3 transition-all duration-300 flex items-center gap-2 ${
+                className={`px-3 py-2.5 transition-all duration-300 flex items-center gap-1.5 text-sm ${
                   viewMode === "grid" ? "font-medium" : ""
                 }`}
                 style={{
@@ -485,11 +361,11 @@ function LibraryPage() {
                 }}
               >
                 <Grid3X3 className="h-4 w-4" />
-                Grid
+                <span>Grid</span>
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`px-4 py-3 transition-all duration-300 flex items-center gap-2 ${
+                className={`px-3 py-2.5 transition-all duration-300 flex items-center gap-1.5 text-sm ${
                   viewMode === "list" ? "font-medium" : ""
                 }`}
                 style={{
@@ -499,7 +375,7 @@ function LibraryPage() {
                 }}
               >
                 <List className="h-4 w-4" />
-                List
+                <span>List</span>
               </button>
             </div>
           </div>
@@ -578,7 +454,7 @@ function LibraryPage() {
               <button
                 onClick={() => setIsYouTubeModalOpen(true)}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                style={{ backgroundColor: "#DC2626", color: "#C3BCC2" }}
+                style={{ backgroundColor: "#DC2626", color: "#FFFFFF" }}
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = "#B91C1C";
                 }}
@@ -588,6 +464,20 @@ function LibraryPage() {
               >
                 <Video className="h-5 w-5" />
                 Import YouTube
+              </button>
+              <button
+                onClick={() => setIsOnFormModalOpen(true)}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+                style={{ backgroundColor: "#F59E0B", color: "#000000" }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = "#D97706";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "#F59E0B";
+                }}
+              >
+                <Video className="h-5 w-5" />
+                Import OnForm
               </button>
               <button
                 onClick={() => setIsUploadModalOpen(true)}
@@ -648,13 +538,13 @@ function LibraryPage() {
                 ? "Master Library is empty. Contact an administrator to add training resources."
                 : "Start building your library by uploading your first resource or importing from YouTube"}
             </p>
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-3 justify-center flex-wrap">
               {activeTab === "local" && (
                 <>
                   <button
                     onClick={() => setIsYouTubeModalOpen(true)}
                     className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                    style={{ backgroundColor: "#DC2626", color: "#C3BCC2" }}
+                    style={{ backgroundColor: "#DC2626", color: "#FFFFFF" }}
                     onMouseEnter={e => {
                       e.currentTarget.style.backgroundColor = "#B91C1C";
                     }}
@@ -663,6 +553,19 @@ function LibraryPage() {
                     }}
                   >
                     Import from YouTube
+                  </button>
+                  <button
+                    onClick={() => setIsOnFormModalOpen(true)}
+                    className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+                    style={{ backgroundColor: "#F59E0B", color: "#FFFFFF" }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#D97706";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "#F59E0B";
+                    }}
+                  >
+                    Import from OnForm
                   </button>
                   <button
                     onClick={() => {
@@ -1027,6 +930,12 @@ function LibraryPage() {
       <YouTubeImportModal
         isOpen={isYouTubeModalOpen}
         onClose={() => setIsYouTubeModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+      />
+
+      <OnFormImportModal
+        isOpen={isOnFormModalOpen}
+        onClose={() => setIsOnFormModalOpen(false)}
         onSuccess={handleUploadSuccess}
       />
 

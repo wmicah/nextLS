@@ -1,0 +1,19 @@
+# Exclude temp directories and large dependencies
+uploads/temp-videos/
+uploads/temp-videos/
+node_modules/.pnpm/
+
+# Exclude development files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Exclude build artifacts
+.next/cache/
+.next/static/chunks/
+
+# Exclude large dependencies that shouldn't be in serverless functions
+node_modules/sharp/
+node_modules/@ffmpeg/
+

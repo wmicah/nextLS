@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -27,8 +27,8 @@ import VideoViewerModal from "./VideoViewerModal";
 import Sidebar from "./Sidebar";
 import { VideoThumbnail } from "./VideoThumbnail";
 
-const categories = [
-  "All",
+// Default categories that are always available
+const DEFAULT_CATEGORIES = [
   "Conditioning",
   "Drive",
   "Whip",
@@ -52,6 +52,21 @@ export default function MobileLibraryPage() {
     youtubeId?: string;
   } | null>(null);
   const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false);
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+
+  // Fetch user's custom categories
+  const { data: userCategoriesData = [] } =
+    trpc.libraryResources.getCategories.useQuery();
+
+  // Combine default categories with user's custom categories
+  const categories = useMemo(() => {
+    const userCategories = userCategoriesData.map(cat => cat.name);
+    // Merge and deduplicate
+    const allCategories = [
+      ...new Set([...DEFAULT_CATEGORIES, ...userCategories]),
+    ].sort();
+    return ["All", ...allCategories];
+  }, [userCategoriesData]);
 
   const handleItemClick = (item: {
     id: string;
@@ -60,6 +75,8 @@ export default function MobileLibraryPage() {
     isYoutube?: boolean;
     youtubeId?: string;
   }) => {
+    const itemIndex = libraryItems.findIndex(libItem => libItem.id === item.id);
+    setCurrentItemIndex(itemIndex);
     setSelectedItem(item);
     setIsVideoViewerOpen(true);
   };
@@ -192,17 +209,56 @@ export default function MobileLibraryPage() {
 
           {/* Category Filter */}
           <div className="mb-4">
-            <CustomSelect
+            <select
               value={selectedCategory}
-              onChange={setSelectedCategory}
-              options={categories.map(cat => ({ value: cat, label: cat }))}
-              placeholder="Select category"
-              className="w-full"
+              onChange={e => setSelectedCategory(e.target.value)}
+              className="w-full p-3 rounded-lg border focus:outline-none transition-all duration-200"
               style={{
                 backgroundColor: "#1F2426",
-                border: "1px solid #4A5A70",
+                borderColor: "#4A5A70",
+                color: "#C3BCC2",
               }}
-            />
+            >
+              <option value="All">All Categories</option>
+
+              {/* Standard Categories */}
+              <optgroup
+                label="Standard"
+                style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+              >
+                {DEFAULT_CATEGORIES.map(category => (
+                  <option
+                    key={category}
+                    value={category}
+                    style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                  >
+                    {category}
+                  </option>
+                ))}
+              </optgroup>
+
+              {/* Custom Categories */}
+              {userCategoriesData.filter(
+                cat => !DEFAULT_CATEGORIES.includes(cat.name)
+              ).length > 0 && (
+                <optgroup
+                  label="Custom"
+                  style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                >
+                  {userCategoriesData
+                    .filter(cat => !DEFAULT_CATEGORIES.includes(cat.name))
+                    .map(cat => (
+                      <option
+                        key={cat.name}
+                        value={cat.name}
+                        style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                      >
+                        {cat.name} ({cat.count})
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+            </select>
           </div>
 
           {/* View Mode Toggle */}

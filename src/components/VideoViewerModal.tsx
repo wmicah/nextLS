@@ -225,6 +225,62 @@ export default function VideoViewerModal({
           </div>
         </div>
       );
+    } else if (item.isOnForm && item.onformId) {
+      // OnForm video
+      return (
+        <div className="w-full h-full flex items-center justify-center relative">
+          {isVideoLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+            </div>
+          )}
+          <iframe
+            key={`onform-${videoKey}`}
+            width="100%"
+            height="100%"
+            src={`https://onform.net/embed/${item.onformId}`}
+            title={item.title}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+            allowFullScreen
+            className="w-full h-full rounded-lg transition-opacity duration-300"
+            style={{
+              pointerEvents: "auto",
+              backgroundColor: "#000",
+              opacity: isVideoLoading ? 0.5 : 1,
+            }}
+            onLoad={() => {
+              console.log("OnForm iframe loaded successfully");
+              setIsVideoLoading(false);
+            }}
+            onError={() => {
+              console.error("OnForm iframe failed to load");
+              setIsVideoLoading(false);
+            }}
+          />
+          {/* Fallback link in case iframe fails */}
+          <div className="absolute bottom-4 right-4">
+            <a
+              href={`https://onform.net/video/${item.onformId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 rounded-lg text-sm transition-all duration-200"
+              style={{
+                backgroundColor: "#F59E0B",
+                color: "#FFFFFF",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "#D97706";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "#F59E0B";
+              }}
+            >
+              Open on OnForm
+            </a>
+          </div>
+        </div>
+      );
     } else if ((item.type === "Video" || item.type === "video") && item.url) {
       // Master library video or user uploaded video with protection
       if (item.url.startsWith("secure://")) {
@@ -468,6 +524,17 @@ export default function VideoViewerModal({
                 YouTube
               </span>
             )}
+            {item.isOnForm && (
+              <span
+                className="px-3 py-1 text-sm rounded-full"
+                style={{
+                  backgroundColor: "#F59E0B",
+                  color: "#FFFFFF",
+                }}
+              >
+                OnForm
+              </span>
+            )}
             {totalItems > 1 && (
               <span
                 className="px-3 py-1 text-sm font-medium rounded-full"
@@ -568,6 +635,17 @@ export default function VideoViewerModal({
                       }}
                     >
                       YouTube
+                    </span>
+                  )}
+                  {item.isOnForm && (
+                    <span
+                      className="px-3 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        backgroundColor: "#F59E0B",
+                        color: "#FFFFFF",
+                      }}
+                    >
+                      OnForm
                     </span>
                   )}
                 </div>
@@ -828,6 +906,21 @@ export default function VideoViewerModal({
                         <Play className="h-5 w-5" />
                         Watch on YouTube
                       </button>
+                    ) : item.isOnForm ? (
+                      <button
+                        onClick={() => window.open(item.url, "_blank")}
+                        className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                        style={{ backgroundColor: "#F59E0B", color: "#FFFFFF" }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = "#D97706";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = "#F59E0B";
+                        }}
+                      >
+                        <Play className="h-5 w-5" />
+                        Watch on OnForm
+                      </button>
                     ) : isMasterLibraryItem ? (
                       <div
                         className="text-center py-6 px-4 rounded-xl border-2"
@@ -1024,7 +1117,11 @@ export default function VideoViewerModal({
                         style={{ color: "#C3BCC2" }}
                         className="capitalize font-semibold"
                       >
-                        {item.isYoutube ? "YouTube Video" : item.type}
+                        {item.isYoutube
+                          ? "YouTube Video"
+                          : item.isOnForm
+                          ? "OnForm Video"
+                          : item.type}
                       </span>
                     </div>
                     <div
