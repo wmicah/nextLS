@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
-import { X, Upload, Video } from "lucide-react";
+import { X, Upload, Video, HelpCircle, ExternalLink } from "lucide-react";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -31,6 +31,7 @@ export default function OnFormImportModal({
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [showHelp, setShowHelp] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -122,9 +123,108 @@ export default function OnFormImportModal({
                 color: "#C3BCC2",
               }}
             />
-            <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
-              Paste any OnForm video URL to embed it in your library
-            </p>
+
+            {/* Need Help Button with Hover Popup */}
+            <div className="relative mt-2">
+              <button
+                type="button"
+                onMouseEnter={() => setShowHelp(true)}
+                onMouseLeave={() => setShowHelp(false)}
+                className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-300 transform hover:scale-105 border"
+                style={{
+                  color: showHelp ? "#FFFFFF" : "#ABA4AA",
+                  backgroundColor: showHelp ? "#F59E0B" : "transparent",
+                  borderColor: showHelp ? "#F59E0B" : "#606364",
+                  boxShadow: showHelp
+                    ? "0 0 12px rgba(245, 158, 11, 0.4)"
+                    : "none",
+                }}
+              >
+                <HelpCircle
+                  className={`h-4 w-4 transition-transform duration-300 ${
+                    showHelp ? "rotate-12 animate-pulse" : ""
+                  }`}
+                />
+                <span className="font-medium">Need help?</span>
+              </button>
+
+              {/* Help Popup on Hover */}
+              {showHelp && (
+                <div
+                  className="absolute left-0 top-full mt-2 p-4 rounded-xl border-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+                  style={{
+                    backgroundColor: "#2A3133",
+                    borderColor: "#F59E0B",
+                    width: "420px",
+                    boxShadow: "0 0 20px rgba(245, 158, 11, 0.3)",
+                  }}
+                  onMouseEnter={() => setShowHelp(true)}
+                  onMouseLeave={() => setShowHelp(false)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: "#F59E0B" }}
+                    >
+                      <HelpCircle className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3
+                        className="font-semibold mb-2 text-base"
+                        style={{ color: "#F59E0B" }}
+                      >
+                        How to Import OnForm Videos
+                      </h3>
+                      <div
+                        className="space-y-2 text-sm"
+                        style={{ color: "#C3BCC2" }}
+                      >
+                        <p className="font-medium">📋 Step-by-Step:</p>
+                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                          <li>Open your OnForm video</li>
+                          <li>Click the "Share" button</li>
+                          <li>
+                            Set permissions to{" "}
+                            <span
+                              className="font-semibold"
+                              style={{ color: "#F59E0B" }}
+                            >
+                              "Anyone with link can view"
+                            </span>
+                          </li>
+                          <li>Copy the video link</li>
+                          <li>Paste it above and submit</li>
+                        </ol>
+
+                        <div
+                          className="mt-3 p-3 rounded-lg"
+                          style={{ backgroundColor: "#353A3A" }}
+                        >
+                          <p
+                            className="font-medium mb-1"
+                            style={{ color: "#F59E0B" }}
+                          >
+                            ⚠️ Important:
+                          </p>
+                          <p style={{ color: "#ABA4AA" }}>
+                            If the video is private, your clients won't be able
+                            to view it. Make sure to set proper sharing
+                            permissions in OnForm.
+                          </p>
+                        </div>
+
+                        <p
+                          className="text-xs mt-2"
+                          style={{ color: "#ABA4AA" }}
+                        >
+                          💡 Tip: Both regular and embed URLs work
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Category */}
