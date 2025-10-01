@@ -139,27 +139,29 @@ export default function SimpleAssignProgramModal({
     },
   });
 
-  const unassignProgramMutation = trpc.programs.removeAssignment.useMutation({
-    onSuccess: () => {
-      addToast({
-        type: "success",
-        title: "Program Removed!",
-        message: "Program has been removed from client.",
-      });
-      utils.clients.list.invalidate();
-      utils.programs.list.invalidate();
-      utils.clients.getById.invalidate();
-      utils.scheduling.getCoachSchedule.invalidate();
-      utils.scheduling.getCoachUpcomingLessons.invalidate();
-    },
-    onError: error => {
-      addToast({
-        type: "error",
-        title: "Removal Failed",
-        message: error.message || "Failed to remove program.",
-      });
-    },
-  });
+  const unassignProgramMutation = trpc.programs.unassignFromClients.useMutation(
+    {
+      onSuccess: () => {
+        addToast({
+          type: "success",
+          title: "Program Removed!",
+          message: "Program has been removed from client.",
+        });
+        utils.clients.list.invalidate();
+        utils.programs.list.invalidate();
+        utils.clients.getById.invalidate();
+        utils.scheduling.getCoachSchedule.invalidate();
+        utils.scheduling.getCoachUpcomingLessons.invalidate();
+      },
+      onError: error => {
+        addToast({
+          type: "error",
+          title: "Removal Failed",
+          message: error.message || "Failed to remove program.",
+        });
+      },
+    }
+  );
 
   const resetForm = () => {
     setSelectedProgram("");
@@ -224,12 +226,13 @@ export default function SimpleAssignProgramModal({
     });
   };
 
-  const handleRemoveProgram = (assignmentId: string) => {
+  const handleRemoveProgram = (assignment: any) => {
     if (
       confirm("Are you sure you want to remove this program from the client?")
     ) {
       unassignProgramMutation.mutate({
-        assignmentId: assignmentId,
+        programId: assignment.programId,
+        clientIds: [assignment.clientId],
       });
     }
   };
@@ -285,12 +288,13 @@ export default function SimpleAssignProgramModal({
   );
 
   // Handle removing program assignment - extract data from assignment
-  const handleRemoveProgramAssignment = (assignmentId: string) => {
+  const handleRemoveProgramAssignment = (assignment: any) => {
     if (
       confirm("Are you sure you want to remove this program from the client?")
     ) {
       unassignProgramMutation.mutate({
-        assignmentId: assignmentId,
+        programId: assignment.programId,
+        clientIds: [assignment.clientId],
       });
     }
   };
@@ -745,9 +749,7 @@ export default function SimpleAssignProgramModal({
                                 </div>
                               </div>
                               <button
-                                onClick={() =>
-                                  handleRemoveProgram(assignment.id)
-                                }
+                                onClick={() => handleRemoveProgram(assignment)}
                                 className="p-2 rounded-lg  "
                                 style={{
                                   backgroundColor: "#EF4444",
@@ -965,7 +967,7 @@ export default function SimpleAssignProgramModal({
                                 </div>
                                 <button
                                   onClick={() =>
-                                    handleRemoveProgramAssignment(assignment.id)
+                                    handleRemoveProgramAssignment(assignment)
                                   }
                                   className="px-3 py-1 rounded-lg text-sm font-medium"
                                   style={{

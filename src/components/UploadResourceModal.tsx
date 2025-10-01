@@ -305,7 +305,7 @@ export default function UploadResourceModal({
                   </p>
                 </div>
               </div>
-            ) : (
+            ) : uploadedFile ? (
               <div
                 className="border rounded-lg p-4"
                 style={{
@@ -361,7 +361,7 @@ export default function UploadResourceModal({
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Rest of form fields remain the same */}
