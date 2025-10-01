@@ -158,8 +158,8 @@ export async function POST(req: NextRequest) {
               try {
                 await fs.access(videoPath);
                 await fs.unlink(videoPath);
-              } catch (cleanupError) {
-                if (cleanupError.code !== "ENOENT") {
+              } catch (cleanupError: any) {
+                if (cleanupError?.code !== "ENOENT") {
                   console.warn(
                     "Failed to cleanup temp video file:",
                     cleanupError
@@ -181,8 +181,8 @@ export async function POST(req: NextRequest) {
               try {
                 await fs.access(videoPath);
                 await fs.unlink(videoPath);
-              } catch (cleanupError) {
-                if (cleanupError.code !== "ENOENT") {
+              } catch (cleanupError: any) {
+                if (cleanupError?.code !== "ENOENT") {
                   console.warn(
                     "Failed to cleanup temp video file on error:",
                     cleanupError
@@ -206,8 +206,8 @@ export async function POST(req: NextRequest) {
             try {
               await fs.access(videoPath);
               await fs.unlink(videoPath);
-            } catch (cleanupError) {
-              if (cleanupError.code !== "ENOENT") {
+            } catch (cleanupError: any) {
+              if (cleanupError?.code !== "ENOENT") {
                 console.warn(
                   "Failed to cleanup temp video file on FFmpeg error:",
                   cleanupError
@@ -233,8 +233,8 @@ export async function POST(req: NextRequest) {
           try {
             await fs.access(videoPath);
             await fs.unlink(videoPath);
-          } catch (cleanupError) {
-            if (cleanupError.code !== "ENOENT") {
+          } catch (cleanupError: any) {
+            if (cleanupError?.code !== "ENOENT") {
               console.warn(
                 "Failed to cleanup temp video file on FFmpeg error:",
                 cleanupError
@@ -263,9 +263,9 @@ export async function POST(req: NextRequest) {
             // Check if file exists before trying to delete it
             await fs.access(videoPath);
             await fs.unlink(videoPath);
-          } catch (cleanupError) {
+          } catch (cleanupError: any) {
             // Only log if it's not a "file not found" error
-            if (cleanupError.code !== "ENOENT") {
+            if (cleanupError?.code !== "ENOENT") {
               console.warn(
                 "Failed to cleanup temp video file on timeout:",
                 cleanupError
