@@ -250,63 +250,29 @@ function LibraryPage() {
 
   return (
     <Sidebar>
-      {/* Hero Header */}
-      <div className="relative mb-12">
-        <div className="absolute inset-0 rounded-2xl overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              background:
-                "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/40" />
+      {/* Compact Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: "#C3BCC2" }}>
+            Training Library
+          </h1>
+          <p className="text-sm" style={{ color: "#ABA4AA" }}>
+            {activeTab === "master"
+              ? "Browse shared training resources from administrators"
+              : "Manage your personal training resources and uploads"}
+          </p>
         </div>
-
-        <div
-          className="relative p-8 rounded-2xl border"
-          style={{ borderColor: "#606364" }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: "#4A5A70" }}
-                >
-                  <BookOpen className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                </div>
-                <div>
-                  <h1
-                    className="text-4xl font-bold mb-2"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    Training Library
-                  </h1>
-                  <p
-                    className="flex items-center gap-2"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Access professional training resources and drills, or you
-                    may upload your own.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div
-                className="text-4xl font-bold mb-1"
-                style={{ color: "#C3BCC2" }}
-              >
-                {stats?.total || 0}
-              </div>
-              <div className="text-sm" style={{ color: "#ABA4AA" }}>
-                Resources Available
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-3">
+          <span
+            className="px-3 py-1 rounded-full text-sm font-medium"
+            style={{
+              backgroundColor: "#4A5A70",
+              color: "#C3BCC2",
+            }}
+          >
+            {libraryItems.length}{" "}
+            {libraryItems.length === 1 ? "Resource" : "Resources"}
+          </span>
         </div>
       </div>
 
@@ -403,7 +369,10 @@ function LibraryPage() {
               }`}
             >
               <BookOpen className="h-4 w-4" />
-              Master Library
+              <div className="flex flex-col items-start">
+                <span>Shared Library</span>
+                <span className="text-xs opacity-70">(Read-only)</span>
+              </div>
             </button>
             <button
               onClick={() => setActiveTab("local")}
@@ -414,64 +383,80 @@ function LibraryPage() {
               }`}
             >
               <Video className="h-4 w-4" />
-              Local Library
+              <div className="flex flex-col items-start">
+                <span>My Library</span>
+                <span className="text-xs opacity-70">(Full access)</span>
+              </div>
             </button>
           </div>
 
-          {/* Right: Action Buttons (only for Local Library) */}
-          {activeTab === "local" && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsYouTubeModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                style={{ backgroundColor: "#DC2626", color: "#FFFFFF" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#B91C1C";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#DC2626";
+          {/* Right: Action Buttons */}
+          <div className="flex gap-2">
+            {activeTab === "local" ? (
+              <>
+                <button
+                  onClick={() => setIsYouTubeModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                  style={{ backgroundColor: "#DC2626", color: "#FFFFFF" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#B91C1C";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#DC2626";
+                  }}
+                >
+                  <Video className="h-4 w-4" />
+                  Import YouTube
+                </button>
+                <button
+                  onClick={() => setIsOnFormModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                  style={{ backgroundColor: "#F59E0B", color: "#FFFFFF" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#D97706";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#F59E0B";
+                  }}
+                >
+                  <Video className="h-4 w-4" />
+                  Import OnForm
+                </button>
+                <button
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                  style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#606364";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#4A5A70";
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Upload
+                </button>
+              </>
+            ) : (
+              <div
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border"
+                style={{
+                  backgroundColor: "#2D3748",
+                  borderColor: "#4A5A70",
+                  color: "#ABA4AA",
                 }}
               >
-                <Video className="h-4 w-4" />
-                Import YouTube
-              </button>
-              <button
-                onClick={() => setIsOnFormModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                style={{ backgroundColor: "#F59E0B", color: "#FFFFFF" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#D97706";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#F59E0B";
-                }}
-              >
-                <Video className="h-4 w-4" />
-                Import OnForm
-              </button>
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#606364";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Upload
-              </button>
-            </div>
-          )}
-
-          {/* Master Library Notice */}
-          {activeTab === "master" && (
-            <div className="text-sm font-medium" style={{ color: "#ABA4AA" }}>
-              Managed by administrators
-            </div>
-          )}
+                <BookOpen className="h-4 w-4" />
+                <span className="text-sm">Read-only access</span>
+                <span
+                  className="text-xs px-2 py-1 rounded"
+                  style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                >
+                  Admin Only
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Resource Count */}
@@ -482,6 +467,33 @@ function LibraryPage() {
           </p>
         </div>
       </div>
+
+      {/* Permission Guidance */}
+      {activeTab === "master" && (
+        <div
+          className="mb-6 p-4 rounded-lg border"
+          style={{
+            backgroundColor: "#2D3748",
+            borderColor: "#4A5A70",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <BookOpen className="h-5 w-5" style={{ color: "#4A5A70" }} />
+            <div>
+              <h4
+                className="font-semibold text-sm"
+                style={{ color: "#C3BCC2" }}
+              >
+                Shared Library Access
+              </h4>
+              <p className="text-xs" style={{ color: "#ABA4AA" }}>
+                You can view and assign these resources to clients, but only
+                administrators can add or modify them.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Empty State */}
       {libraryItems.length === 0 && (
@@ -500,27 +512,48 @@ function LibraryPage() {
               className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
               style={{ backgroundColor: "#4A5A70" }}
             >
-              <BookOpen className="h-10 w-10" style={{ color: "#C3BCC2" }} />
+              {activeTab === "master" ? (
+                <BookOpen className="h-10 w-10" style={{ color: "#C3BCC2" }} />
+              ) : (
+                <Video className="h-10 w-10" style={{ color: "#C3BCC2" }} />
+              )}
             </div>
             <h3
               className="text-2xl font-bold mb-3"
               style={{ color: "#C3BCC2" }}
             >
-              No resources found
+              {searchTerm || selectedCategory !== "All"
+                ? "No resources found"
+                : activeTab === "master"
+                ? "Shared Library is Empty"
+                : "Start Building Your Library"}
             </h3>
             <p
               className="text-center mb-8 max-w-md"
               style={{ color: "#ABA4AA" }}
             >
               {searchTerm || selectedCategory !== "All"
-                ? "Try adjusting your search terms or filters"
+                ? "Try adjusting your search terms or filters to find what you're looking for."
                 : activeTab === "master"
-                ? "Master Library is empty. Contact an administrator to add training resources."
-                : "Start building your library by uploading your first resource or importing from YouTube"}
+                ? "The shared library doesn't have any resources yet. Contact your administrator to add training resources that everyone can access."
+                : "Upload your first training resource or import from YouTube to start building your personal library."}
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
               {activeTab === "local" && (
                 <>
+                  <button
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#606364";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                    }}
+                  >
+                    Upload Resource
+                  </button>
                   <button
                     onClick={() => setIsYouTubeModalOpen(true)}
                     className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
@@ -547,31 +580,11 @@ function LibraryPage() {
                   >
                     Import from OnForm
                   </button>
-                  <button
-                    onClick={() => {
-                      if (searchTerm || selectedCategory !== "All") {
-                        setSearchTerm("");
-                        setSelectedCategory("All");
-                      } else {
-                        setIsUploadModalOpen(true);
-                      }
-                    }}
-                    className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#606364";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#4A5A70";
-                    }}
-                  >
-                    {searchTerm || selectedCategory !== "All"
-                      ? "Clear Filters"
-                      : "Upload First Resource"}
-                  </button>
                 </>
               )}
-              {activeTab === "master" && (
+              {(activeTab === "master" ||
+                searchTerm ||
+                selectedCategory !== "All") && (
                 <button
                   onClick={() => {
                     if (searchTerm || selectedCategory !== "All") {
@@ -590,7 +603,7 @@ function LibraryPage() {
                 >
                   {searchTerm || selectedCategory !== "All"
                     ? "Clear Filters"
-                    : "Contact Admin"}
+                    : "Contact Administrator"}
                 </button>
               )}
             </div>
