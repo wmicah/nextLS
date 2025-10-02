@@ -51,7 +51,6 @@ export default function QuickAssignRoutineModal({
   const filteredRoutines = routines.filter(
     routine =>
       routine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      routine.level.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (routine.description &&
         routine.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -115,7 +114,7 @@ export default function QuickAssignRoutineModal({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search routines by name, level, or description..."
+                placeholder="Search routines by name or description..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-lg border text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
@@ -191,8 +190,8 @@ export default function QuickAssignRoutineModal({
                           {routine.name}
                         </div>
                         <div className="text-sm text-gray-400">
-                          {routine.level} • {routine.duration} week
-                          {routine.duration !== 1 ? "s" : ""}
+                          {routine.exercises?.length || 0} exercise
+                          {(routine.exercises?.length || 0) !== 1 ? "s" : ""}
                         </div>
                         {routine.description && (
                           <div className="text-sm text-gray-500 mt-1">
