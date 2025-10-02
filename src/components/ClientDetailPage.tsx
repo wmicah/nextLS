@@ -66,6 +66,7 @@ import Sidebar from "@/components/Sidebar";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import SimpleAssignProgramModal from "@/components/SimpleAssignProgramModal";
 import QuickAssignProgramModal from "@/components/QuickAssignProgramModal";
+import QuickAssignRoutineModal from "@/components/QuickAssignRoutineModal";
 import AssignRoutineModal from "@/components/AssignRoutineModal";
 import AssignVideoModal from "@/components/AssignVideoModal";
 import ScheduleLessonModal from "@/components/ScheduleLessonModal";
@@ -85,6 +86,8 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showAssignProgramModal, setShowAssignProgramModal] = useState(false);
   const [showQuickAssignProgramModal, setShowQuickAssignProgramModal] =
+    useState(false);
+  const [showQuickAssignRoutineModal, setShowQuickAssignRoutineModal] =
     useState(false);
   const [showAssignRoutineModal, setShowAssignRoutineModal] = useState(false);
   const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
@@ -626,7 +629,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
                 Assign Program
               </button>
               <button
-                onClick={() => setShowAssignRoutineModal(true)}
+                onClick={() => setShowQuickAssignRoutineModal(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/30"
                 style={{ color: "#10B981" }}
               >
@@ -1002,6 +1005,19 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             />
           )}
 
+          {showQuickAssignRoutineModal && (
+            <QuickAssignRoutineModal
+              isOpen={showQuickAssignRoutineModal}
+              onClose={() => {
+                setShowQuickAssignRoutineModal(false);
+                refreshAllData();
+              }}
+              clientId={clientId}
+              clientName={client.name}
+              startDate={new Date().toISOString().split("T")[0]}
+            />
+          )}
+
           {showAssignRoutineModal && (
             <AssignRoutineModal
               isOpen={showAssignRoutineModal}
@@ -1070,7 +1086,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               setShowDayDetailsModal(false);
             }}
             onAssignRoutine={() => {
-              setShowAssignRoutineModal(true);
+              setShowQuickAssignRoutineModal(true);
               setShowDayDetailsModal(false);
             }}
             onReplaceWithLesson={replacementData => {
