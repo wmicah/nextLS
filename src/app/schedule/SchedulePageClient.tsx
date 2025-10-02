@@ -627,72 +627,31 @@ function SchedulePageClient() {
     <Sidebar>
       <div className="min-h-screen p-6" style={{ backgroundColor: "#2A3133" }}>
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div
-                className="p-3 rounded-lg"
-                style={{ backgroundColor: "#4A5A70" }}
+          {/* Compact Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1
+                className="text-2xl font-bold mb-1"
+                style={{ color: "#C3BCC2" }}
               >
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">
-                  Schedule Management
-                </h1>
-                <p className="text-gray-400">
-                  Manage your availability and schedule lessons
-                </p>
-              </div>
+                Schedule Management
+              </h1>
+              <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                Manage your availability and schedule lessons with clients
+              </p>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowScheduleModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{
-                  backgroundColor: "#10B981",
-                  color: "#FFFFFF",
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Schedule Lesson
-              </button>
-              <button
-                onClick={() => setShowWorkingHoursModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+            <div className="flex items-center gap-3">
+              <span
+                className="px-3 py-1 rounded-full text-sm font-medium"
                 style={{
                   backgroundColor: "#4A5A70",
-                  color: "#FFFFFF",
+                  color: "#C3BCC2",
                 }}
               >
-                <Settings className="h-4 w-4" />
-                Working Hours
-              </button>
+                {coachSchedule.length}{" "}
+                {coachSchedule.length === 1 ? "Lesson" : "Lessons"} This Month
+              </span>
             </div>
-          </div>
-
-          {/* Current Working Hours Display */}
-          <div
-            className="mb-6 p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-sky-400" />
-                <h2 className="text-lg font-semibold text-white">
-                  Current Working Hours
-                </h2>
-              </div>
-            </div>
-            <p className="text-gray-300">
-              {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
-              {coachProfile?.workingHours?.endTime || "6:00 PM"}
-            </p>
-            <p className="text-gray-400 text-sm mt-1">
-              Working Days:{" "}
-              {coachProfile?.workingHours?.workingDays?.join(", ") ||
-                "Monday - Sunday"}
-            </p>
           </div>
 
           {/* Pending Schedule Requests */}
@@ -769,121 +728,68 @@ function SchedulePageClient() {
             </div>
           )}
 
-          {/* Today's Lessons Summary */}
-          {(() => {
-            const today = new Date();
-            const now = new Date();
-            const todaysLessons = getLessonsForDate(today);
-            const nextUpcomingLessons = upcomingLessons.slice(0, 5);
-
-            return (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Today's Lessons */}
-                <div
-                  className="p-4 rounded-lg border-2"
-                  style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <Calendar className="h-5 w-5 text-emerald-400" />
-                    <h3 className="text-lg font-semibold text-white">
-                      Today&apos;s Upcoming Lessons
-                    </h3>
-                  </div>
-                  {todaysLessons.length > 0 ? (
-                    <div className="space-y-2">
-                      {todaysLessons.map((lesson: any, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 rounded bg-emerald-500/10 border border-emerald-500/20 group"
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium text-emerald-300">
-                              {formatTimeInUserTimezone(lesson.date)}
-                            </div>
-                            <div className="text-sm text-emerald-200">
-                              {lesson.client?.name ||
-                                lesson.client?.email ||
-                                "Client"}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-xs text-emerald-400">
-                              {lesson.title}
-                            </div>
-                            <button
-                              onClick={() =>
-                                handleDeleteLesson(lesson.id, lesson.title)
-                              }
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
-                              title="Delete lesson"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm">
-                      No upcoming lessons scheduled for today
-                    </p>
-                  )}
+          {/* Quick Actions & Today's Schedule */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between gap-4 bg-[#1A1D1E] rounded-xl p-3 border border-[#4A5A70]">
+              {/* Left: Today's Schedule */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" style={{ color: "#10B981" }} />
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    {getLessonsForDate(new Date()).length} lessons today
+                  </span>
                 </div>
-
-                {/* Upcoming Lessons */}
                 <div
-                  className="p-4 rounded-lg border-2"
-                  style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <Users className="h-5 w-5 text-sky-400" />
-                    <h3 className="text-lg font-semibold text-white">
-                      Upcoming Lessons
-                    </h3>
-                  </div>
-                  {nextUpcomingLessons.length > 0 ? (
-                    <div className="space-y-2">
-                      {nextUpcomingLessons.map((lesson: any, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 rounded bg-sky-500/10 border border-sky-500/20 group"
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium text-sky-300">
-                              {formatDateTimeInUserTimezone(lesson.date)}
-                            </div>
-                            <div className="text-sm text-sky-200">
-                              {lesson.client?.name ||
-                                lesson.client?.email ||
-                                "Client"}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-xs text-sky-400">
-                              {lesson.title}
-                            </div>
-                            <button
-                              onClick={() =>
-                                handleDeleteLesson(lesson.id, lesson.title)
-                              }
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
-                              title="Delete lesson"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm">
-                      No upcoming lessons scheduled
-                    </p>
-                  )}
+                  className="h-4 w-px"
+                  style={{ backgroundColor: "#606364" }}
+                />
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" style={{ color: "#3B82F6" }} />
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    {upcomingLessons.length} upcoming
+                  </span>
                 </div>
               </div>
-            );
-          })()}
+
+              {/* Right: Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowScheduleModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                  style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#059669";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#10B981";
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Schedule Lesson
+                </button>
+                <button
+                  onClick={() => setShowWorkingHoursModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                  style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#606364";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#4A5A70";
+                  }}
+                >
+                  <Settings className="h-4 w-4" />
+                  Working Hours
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* Month Navigation */}
           <div className="flex items-center justify-between mb-6">
@@ -936,14 +842,14 @@ function SchedulePageClient() {
 
           {/* Calendar */}
           <div
-            className="p-6 rounded-lg border-2"
+            className="p-4 rounded-lg border-2"
             style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
           >
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                 <div
                   key={day}
-                  className="text-center text-sm font-bold text-blue-300 py-3 border-b-2 border-blue-500/30"
+                  className="text-center text-sm font-bold text-blue-300 py-2 border-b border-blue-500/30"
                 >
                   {day}
                 </div>
@@ -981,7 +887,7 @@ function SchedulePageClient() {
                     key={day.toISOString()}
                     onClick={() => !isPast && handleDateClick(day)}
                     className={`
-                      p-2 md:p-3 text-xs md:text-sm rounded-lg transition-all duration-200 relative min-h-[120px] md:min-h-[140px] border-2 overflow-hidden
+                      p-2 text-xs rounded-lg transition-all duration-200 relative min-h-[100px] md:min-h-[120px] border overflow-hidden
                       ${
                         isPast
                           ? "cursor-not-allowed opacity-50"
@@ -1166,7 +1072,7 @@ function SchedulePageClient() {
           {showScheduleModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div
-                className="rounded-2xl shadow-xl border p-6 w-full max-w-md mx-4"
+                className="rounded-2xl shadow-xl border p-6 w-full max-w-2xl mx-4"
                 style={{
                   backgroundColor: "#353A3A",
                   borderColor: "#606364",
@@ -1311,7 +1217,7 @@ function SchedulePageClient() {
           {showDayOverviewModal && selectedDate && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div
-                className="rounded-2xl shadow-xl border p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+                className="rounded-2xl shadow-xl border p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
                 style={{
                   backgroundColor: "#353A3A",
                   borderColor: "#606364",

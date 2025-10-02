@@ -27,13 +27,13 @@ export default function WorkingHoursModal({
     startTime: "9:00 AM",
     endTime: "8:00 PM",
     workingDays: [
+      "Sunday",
       "Monday",
       "Tuesday",
       "Wednesday",
       "Thursday",
       "Friday",
       "Saturday",
-      "Sunday",
     ],
     timeSlotInterval: 60,
   });
@@ -45,13 +45,13 @@ export default function WorkingHoursModal({
         startTime: coachProfile.workingHours.startTime,
         endTime: coachProfile.workingHours.endTime,
         workingDays: coachProfile.workingHours.workingDays || [
+          "Sunday",
           "Monday",
           "Tuesday",
           "Wednesday",
           "Thursday",
           "Friday",
           "Saturday",
-          "Sunday",
         ],
         timeSlotInterval: coachProfile.workingHours.timeSlotInterval || 60,
       });
@@ -195,15 +195,22 @@ export default function WorkingHoursModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className="rounded-2xl shadow-xl border w-full max-w-md max-h-[90vh] overflow-y-auto"
+        className="rounded-2xl shadow-xl border w-full max-w-4xl max-h-[90vh] overflow-y-auto"
         style={{
           backgroundColor: "#353A3A",
           borderColor: "#606364",
         }}
       >
-        <div className="p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Set Working Hours</h2>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-1">
+                Working Hours
+              </h2>
+              <p className="text-sm text-gray-400">
+                Configure your availability for scheduling lessons
+              </p>
+            </div>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white transition-colors p-2 -m-2"
@@ -212,118 +219,198 @@ export default function WorkingHoursModal({
             </button>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Start Time
-              </label>
-              <CustomSelect
-                value={workingHours.startTime}
-                onChange={value =>
-                  setWorkingHours({
-                    ...workingHours,
-                    startTime: value,
-                  })
-                }
-                options={timeOptions}
-                placeholder="Select start time"
-                style={{
-                  backgroundColor: "#2A2F2F",
-                  borderColor: "#606364",
-                }}
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column - Time Settings */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Time Range
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Start Time
+                    </label>
+                    <CustomSelect
+                      value={workingHours.startTime}
+                      onChange={value =>
+                        setWorkingHours({
+                          ...workingHours,
+                          startTime: value,
+                        })
+                      }
+                      options={timeOptions}
+                      placeholder="Select start time"
+                      style={{
+                        backgroundColor: "#2A2F2F",
+                        borderColor: "#606364",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      End Time
+                    </label>
+                    <CustomSelect
+                      value={workingHours.endTime}
+                      onChange={value =>
+                        setWorkingHours({
+                          ...workingHours,
+                          endTime: value,
+                        })
+                      }
+                      options={timeOptions}
+                      placeholder="Select end time"
+                      style={{
+                        backgroundColor: "#2A2F2F",
+                        borderColor: isTimeConfigurationValid()
+                          ? "#606364"
+                          : "#EF4444",
+                      }}
+                    />
+                    {!isTimeConfigurationValid() && (
+                      <p className="text-xs text-red-400 mt-1">
+                        End time must be after start time
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Time Slot Settings
+                </h3>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Time Slot Interval
+                  </label>
+                  <CustomSelect
+                    value={workingHours.timeSlotInterval.toString()}
+                    onChange={value =>
+                      setWorkingHours({
+                        ...workingHours,
+                        timeSlotInterval: parseInt(value),
+                      })
+                    }
+                    options={intervalOptions}
+                    placeholder="Select interval"
+                    style={{
+                      backgroundColor: "#2A2F2F",
+                      borderColor: "#606364",
+                    }}
+                  />
+                  <p className="text-xs text-gray-400 mt-2">
+                    Choose how often you want time slots to be available for
+                    booking
+                  </p>
+                </div>
+              </div>
             </div>
 
+            {/* Right Column - Working Days */}
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                End Time
-              </label>
-              <CustomSelect
-                value={workingHours.endTime}
-                onChange={value =>
-                  setWorkingHours({
-                    ...workingHours,
-                    endTime: value,
-                  })
-                }
-                options={timeOptions}
-                placeholder="Select end time"
-                style={{
-                  backgroundColor: "#2A2F2F",
-                  borderColor: isTimeConfigurationValid()
-                    ? "#606364"
-                    : "#EF4444",
-                }}
-              />
-              {!isTimeConfigurationValid() && (
-                <p className="text-xs text-red-400 mt-1">
-                  End time must be after start time
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
+              <h3 className="text-lg font-semibold text-white mb-4">
                 Working Days
-              </label>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              </h3>
+              <div className="space-y-3">
                 {[
+                  "Sunday",
                   "Monday",
                   "Tuesday",
                   "Wednesday",
                   "Thursday",
                   "Friday",
                   "Saturday",
-                  "Sunday",
                 ].map(day => (
                   <button
                     key={day}
                     type="button"
                     onClick={() => toggleWorkingDay(day)}
-                    className={`p-3 sm:p-2 rounded-lg text-sm font-medium transition-all duration-200 min-h-[48px] ${
+                    className={`w-full p-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between ${
                       workingHours.workingDays.includes(day)
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                        ? "text-white shadow-lg"
+                        : "bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600"
                     }`}
+                    style={{
+                      backgroundColor: workingHours.workingDays.includes(day)
+                        ? "#4A5A70"
+                        : undefined,
+                    }}
                   >
-                    {day.slice(0, 3)}
+                    <span className="font-medium">{day}</span>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 ${
+                        workingHours.workingDays.includes(day)
+                          ? "bg-white border-white"
+                          : "border-gray-400"
+                      }`}
+                    >
+                      {workingHours.workingDays.includes(day) && (
+                        <div
+                          className="w-full h-full rounded-full"
+                          style={{ backgroundColor: "#10B981" }}
+                        />
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Select the days you're available for lessons
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Time Slot Interval
-              </label>
-              <CustomSelect
-                value={workingHours.timeSlotInterval.toString()}
-                onChange={value =>
-                  setWorkingHours({
-                    ...workingHours,
-                    timeSlotInterval: parseInt(value),
-                  })
-                }
-                options={intervalOptions}
-                placeholder="Select interval"
-                style={{
-                  backgroundColor: "#2A2F2F",
-                  borderColor: "#606364",
-                }}
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Choose how often you want time slots to be available
+              <p className="text-xs text-gray-400 mt-3">
+                Select the days you're available for lessons. Clients can only
+                book during your working hours.
               </p>
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
+          {/* Preview Section */}
+          <div
+            className="mt-8 p-4 rounded-lg border"
+            style={{ backgroundColor: "#2A2F2F", borderColor: "#606364" }}
+          >
+            <h3 className="text-lg font-semibold text-white mb-3">Preview</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-400">Working Hours:</span>
+                <span className="text-white ml-2">
+                  {workingHours.startTime} - {workingHours.endTime}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400">Time Slots:</span>
+                <span className="text-white ml-2">
+                  Every {workingHours.timeSlotInterval} minutes
+                </span>
+              </div>
+              <div className="sm:col-span-2">
+                <span className="text-gray-400">Available Days:</span>
+                <span className="text-white ml-2">
+                  {workingHours.workingDays.length > 0
+                    ? workingHours.workingDays
+                        .sort((a, b) => {
+                          const dayOrder = [
+                            "Sunday",
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                          ];
+                          return dayOrder.indexOf(a) - dayOrder.indexOf(b);
+                        })
+                        .join(", ")
+                    : "No days selected"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-8">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-3 sm:py-2 rounded-lg text-sm font-medium transition-all duration-200 border min-h-[48px]"
+              className="flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 border"
               style={{
                 backgroundColor: "transparent",
                 borderColor: "#606364",
@@ -338,10 +425,16 @@ export default function WorkingHoursModal({
                 updateWorkingHoursMutation.isPending ||
                 !isTimeConfigurationValid()
               }
-              className="flex-1 px-4 py-3 sm:py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
+              className="flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
-                backgroundColor: "#4A5A70",
+                backgroundColor: "#10B981",
                 color: "#FFFFFF",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "#059669";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "#10B981";
               }}
             >
               {updateWorkingHoursMutation.isPending ? (
@@ -352,7 +445,7 @@ export default function WorkingHoursModal({
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  Save Hours
+                  Save Working Hours
                 </>
               )}
             </button>

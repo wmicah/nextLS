@@ -492,481 +492,103 @@ function ProgramsPage() {
           className="min-h-screen p-6"
           style={{ backgroundColor: "#2A3133" }}
         >
-          {/* Hero Header */}
-          <div className="mb-8">
-            <div className="rounded-2xl border relative overflow-hidden group">
-              <div
-                className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-                }}
-              />
-              <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <h1
-                        className="text-4xl font-bold mb-2"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        Training Programs
-                      </h1>
-                      <p
-                        className="flex items-center gap-2 text-lg"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        <Sparkles className="h-5 w-5 text-yellow-400" />
-                        {programs.length > 0
-                          ? `Managing ${programs.length} ${
-                              programs.length === 1 ? "program" : "programs"
-                            } for your athletes`
-                          : "Create comprehensive training programs for your clients"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div
-                      className="text-2xl font-bold"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {programs.length}
-                    </div>
-                    <div className="text-sm" style={{ color: "#ABA4AA" }}>
-                      Programs Created
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Compact Summary Bar - Conditional based on active tab */}
-          <div
-            className="rounded-xl p-4 mb-6 shadow-lg border"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-          >
-            {activeTab === "programs" ? (
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-6 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" style={{ color: "#DC2626" }} />
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {totalAssignments} active{" "}
-                      {totalAssignments === 1 ? "assignment" : "assignments"}
-                    </span>
-                  </div>
-                  <div
-                    className="h-4 w-px"
-                    style={{ backgroundColor: "#606364" }}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4" style={{ color: "#10B981" }} />
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {activePrograms}{" "}
-                      {activePrograms === 1 ? "program" : "programs"} in use
-                    </span>
-                  </div>
-                  {unassignedPrograms > 0 && (
-                    <>
-                      <div
-                        className="h-4 w-px"
-                        style={{ backgroundColor: "#606364" }}
-                      />
-                      <div className="flex items-center gap-2">
-                        <AlertCircle
-                          className="h-4 w-4"
-                          style={{ color: "#F59E0B" }}
-                        />
-                        <span
-                          className="text-sm font-medium"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {unassignedPrograms} unassigned
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="text-xs" style={{ color: "#ABA4AA" }}>
-                  Last updated: {new Date().toLocaleDateString()}
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-6 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4" style={{ color: "#10B981" }} />
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {routines.reduce((acc, r) => acc + r.exercises.length, 0)}{" "}
-                      total exercises
-                    </span>
-                  </div>
-                  <div
-                    className="h-4 w-px"
-                    style={{ backgroundColor: "#606364" }}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Activity
-                      className="h-4 w-4"
-                      style={{ color: "#3B82F6" }}
-                    />
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {routines.length > 0
-                        ? Math.round(
-                            routines.reduce(
-                              (acc, r) => acc + r.exercises.length,
-                              0
-                            ) / routines.length
-                          )
-                        : 0}{" "}
-                      avg per routine
-                    </span>
-                  </div>
-                  <div
-                    className="h-4 w-px"
-                    style={{ backgroundColor: "#606364" }}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Sparkles
-                      className="h-4 w-4"
-                      style={{ color: "#F59E0B" }}
-                    />
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {routines.length} total{" "}
-                      {routines.length === 1 ? "routine" : "routines"}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-xs" style={{ color: "#ABA4AA" }}>
-                  Last updated: {new Date().toLocaleDateString()}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Old Stats Cards - REMOVED */}
-          <div className="hidden">
-            <div
-              className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#3A4040";
-                e.currentTarget.style.borderColor = "#4A5A70";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "#353A3A";
-                e.currentTarget.style.borderColor = "#606364";
-              }}
-            >
-              <div
-                className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-                }}
-              />
-              <div className="relative p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <TrendingUp className="h-5 w-5 text-green-400" />
-                </div>
-                <div>
-                  <p
-                    className="text-sm font-medium mb-1"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    Total Programs
-                  </p>
-                  <p
-                    className="text-3xl font-bold mb-1"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {programs.length}
-                  </p>
-                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                    {programs.length > 0
-                      ? "+2 this month"
-                      : "Start your journey"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#3A4040";
-                e.currentTarget.style.borderColor = "#4A5A70";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "#353A3A";
-                e.currentTarget.style.borderColor = "#606364";
-              }}
-            >
-              <div
-                className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
-                }}
-              />
-              <div className="relative p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: "#DC2626" }}
-                  >
-                    <Users className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                  </div>
-                  <Clock className="h-5 w-5 text-red-400" />
-                </div>
-                <div>
-                  <p
-                    className="text-sm font-medium mb-1"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    Assigned Clients
-                  </p>
-                  <p
-                    className="text-3xl font-bold mb-1"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {programs.reduce(
-                      (acc, program) => acc + program.activeClientCount,
-                      0
-                    )}
-                  </p>
-                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                    Active assignments
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#3A4040";
-                e.currentTarget.style.borderColor = "#4A5A70";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "#353A3A";
-                e.currentTarget.style.borderColor = "#606364";
-              }}
-            >
-              <div
-                className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
-                }}
-              />
-              <div className="relative p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: "#10B981" }}
-                  >
-                    <BookOpen
-                      className="h-6 w-6"
-                      style={{ color: "#C3BCC2" }}
-                    />
-                  </div>
-                  <TrendingUp className="h-5 w-5 text-green-400" />
-                </div>
-                <div>
-                  <p
-                    className="text-sm font-medium mb-1"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    Active Programs
-                  </p>
-                  <p
-                    className="text-3xl font-bold mb-1"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {programs.filter(p => p.activeClientCount > 0).length}
-                  </p>
-                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                    In use by clients
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#3A4040";
-                e.currentTarget.style.borderColor = "#4A5A70";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "#353A3A";
-                e.currentTarget.style.borderColor = "#606364";
-              }}
-            >
-              <div
-                className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)",
-                }}
-              />
-              <div className="relative p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: "#F59E0B" }}
-                  >
-                    <Calendar
-                      className="h-6 w-6"
-                      style={{ color: "#C3BCC2" }}
-                    />
-                  </div>
-                  <Clock className="h-5 w-5 text-yellow-400" />
-                </div>
-                <div>
-                  <p
-                    className="text-sm font-medium mb-1"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    Recent Activity
-                  </p>
-                  <p
-                    className="text-3xl font-bold mb-1"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {
-                      programs.filter(p => {
-                        const weekAgo = new Date();
-                        weekAgo.setDate(weekAgo.getDate() - 7);
-                        return new Date(p.updatedAt) > weekAgo;
-                      }).length
-                    }
-                  </p>
-                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                    This week
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <h2
-                className="text-xl font-semibold"
+          {/* Compact Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1
+                className="text-2xl font-bold mb-1"
                 style={{ color: "#C3BCC2" }}
               >
-                Quick Actions
-              </h2>
+                Training Programs
+              </h1>
+              <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                {activeTab === "programs"
+                  ? "Create and manage comprehensive training programs for your athletes"
+                  : "Build reusable exercise routines to use in your programs"}
+              </p>
             </div>
-            <div className="flex flex-wrap gap-4">
-              {/* Create Program button removed - only available in preview tab */}
-              <button
-                onClick={() => {
-                  if (activeTab === "programs") {
-                    setIsAssignModalOpen(true);
-                  } else if (activeTab === "routines") {
-                    // For routines, we need to show a routine selection or open the routine modal
-                    // Since we don't have a specific routine selected, we'll open the routine modal without pre-selection
-                    setIsAssignRoutineModalOpen(true);
-                  }
-                }}
-                className="flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+            <div className="flex items-center gap-3">
+              <span
+                className="px-3 py-1 rounded-full text-sm font-medium"
                 style={{
-                  backgroundColor: "#353A3A",
+                  backgroundColor: "#4A5A70",
                   color: "#C3BCC2",
-                  borderColor: "#606364",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                  e.currentTarget.style.borderColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#353A3A";
-                  e.currentTarget.style.borderColor = "#606364";
                 }}
               >
-                <Users className="h-5 w-5" />
-                Assign to Clients
-              </button>
-              <button
-                onClick={() => (window.location.href = "/library")}
-                className="flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                style={{
-                  backgroundColor: "#353A3A",
-                  color: "#C3BCC2",
-                  borderColor: "#606364",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                  e.currentTarget.style.borderColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#353A3A";
-                  e.currentTarget.style.borderColor = "#606364";
-                }}
-              >
-                <BookOpen className="h-5 w-5" />
-                Browse Library
-              </button>
+                {activeTab === "programs"
+                  ? `${programs.length} ${
+                      programs.length === 1 ? "Program" : "Programs"
+                    }`
+                  : `${routines.length} ${
+                      routines.length === 1 ? "Routine" : "Routines"
+                    }`}
+              </span>
             </div>
           </div>
 
           {/* Tab Navigation */}
           <div className="mb-8">
-            <div
-              className="flex rounded-xl border overflow-hidden"
-              style={{ borderColor: "#606364" }}
-            >
-              <button
-                onClick={() => setActiveTab("programs")}
-                className={`px-6 py-3 transition-all duration-300 flex items-center justify-center gap-2 ${
-                  activeTab === "programs" ? "font-medium" : ""
-                }`}
-                style={{
-                  backgroundColor:
-                    activeTab === "programs" ? "#4A5A70" : "#353A3A",
-                  color: "#C3BCC2",
-                }}
-              >
-                <BookOpen className="h-4 w-4" />
-                Programs
-              </button>
-              <button
-                onClick={() => setActiveTab("routines")}
-                className={`px-6 py-3 transition-all duration-300 flex items-center justify-center gap-2 ${
-                  activeTab === "routines" ? "font-medium" : ""
-                }`}
-                style={{
-                  backgroundColor:
-                    activeTab === "routines" ? "#4A5A70" : "#353A3A",
-                  color: "#C3BCC2",
-                }}
-              >
-                <Target className="h-4 w-4" />
-                Routines
-              </button>
+            <div className="flex items-center justify-between gap-4 bg-[#1A1D1E] rounded-xl p-3 border border-[#4A5A70]">
+              {/* Left: Tabs */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab("programs")}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                    activeTab === "programs"
+                      ? "bg-[#4A5A70] text-white shadow-lg"
+                      : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
+                  }`}
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Programs
+                </button>
+                <button
+                  onClick={() => setActiveTab("routines")}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                    activeTab === "routines"
+                      ? "bg-[#4A5A70] text-white shadow-lg"
+                      : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
+                  }`}
+                >
+                  <Target className="h-4 w-4" />
+                  Routines
+                </button>
+              </div>
+
+              {/* Right: Action Buttons */}
+              <div className="flex gap-2">
+                {activeTab === "programs" ? (
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#606364";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Program
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsRoutineModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#606364";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Routine
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1093,22 +715,6 @@ function ProgramsPage() {
                       {filteredPrograms.length === 1 ? "program" : "programs"}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                      style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor = "#606364";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.backgroundColor = "#4A5A70";
-                      }}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Create Program
-                    </button>
-                  </div>
                 </div>
 
                 {filteredPrograms.length === 0 ? (
@@ -1149,8 +755,8 @@ function ProgramsPage() {
                         style={{ color: "#C3BCC2" }}
                       >
                         {searchTerm || selectedCategory !== "All Categories"
-                          ? "No programs match your filters"
-                          : "No programs yet"}
+                          ? "No Programs Found"
+                          : "Start Building Your Programs"}
                       </h3>
                       <p
                         className="text-center mb-8 max-w-md mx-auto"
@@ -1158,7 +764,8 @@ function ProgramsPage() {
                       >
                         {searchTerm || selectedCategory !== "All Categories" ? (
                           <>
-                            Try adjusting your filters or{" "}
+                            No programs match your current filters. Try
+                            adjusting your search terms or{" "}
                             <button
                               onClick={() => {
                                 setSearchTerm("");
@@ -1167,10 +774,11 @@ function ProgramsPage() {
                               className="underline hover:text-blue-400 transition-colors"
                             >
                               clear all filters
-                            </button>
+                            </button>{" "}
+                            to see all programs.
                           </>
                         ) : (
-                          "Start building comprehensive training programs for your athletes"
+                          "Create comprehensive training programs for your athletes. Build structured workouts with exercises, drills, and progressions."
                         )}
                       </p>
                       <div className="flex flex-col sm:flex-row gap-3 justify-center">
