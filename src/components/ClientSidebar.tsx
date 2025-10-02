@@ -684,6 +684,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                           setIsAnimating(false);
                         }, 200);
                       }}
+                      position="above"
                     />
                   </div>
                 );

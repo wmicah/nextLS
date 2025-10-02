@@ -217,7 +217,7 @@ export default function MobileMessagePopup({
         </div>
 
         {!selectedConversation ? (
-          /* Conversations List */
+          {/* Conversations List */}
           <div className="flex-1 flex flex-col">
             {/* Search */}
             <div className="p-4 border-b" style={{ borderColor: "#4A5568" }}>
@@ -336,7 +336,7 @@ export default function MobileMessagePopup({
             </div>
           </div>
         ) : (
-          /* Chat View */
+          {/* Chat View */}
           <div className="flex-1 flex flex-col">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">

@@ -827,6 +827,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
                         }, 200);
                       }}
                       buttonRef={notificationButtonRef}
+                      position="above"
                     />
                   </div>
                 );

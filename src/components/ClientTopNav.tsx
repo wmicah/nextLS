@@ -323,6 +323,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
           isOpen={showNotifications}
           onClose={() => setShowNotifications(false)}
           buttonRef={notificationsButtonRef}
+          position="below"
         />
       )}
     </div>

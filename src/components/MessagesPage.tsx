@@ -141,14 +141,34 @@ function MessagesPage({}: MessagesPageProps) {
       },
     });
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      const container = messagesEndRef.current.parentElement;
+      if (container) {
+        const isNearBottom =
+          container.scrollTop + container.clientHeight >=
+          container.scrollHeight - 100;
+        if (isNearBottom) {
+          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    }
   }, [messages]);
 
-  // Auto-scroll when pending messages are added
+  // Auto-scroll when pending messages are added (only if user is near bottom)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      const container = messagesEndRef.current.parentElement;
+      if (container) {
+        const isNearBottom =
+          container.scrollTop + container.clientHeight >=
+          container.scrollHeight - 100;
+        if (isNearBottom) {
+          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    }
   }, [pendingMessages]);
 
   // Handle conversation selection

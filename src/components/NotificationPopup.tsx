@@ -22,12 +22,14 @@ interface NotificationPopupProps {
   isOpen: boolean;
   onClose: () => void;
   buttonRef?: RefObject<HTMLButtonElement | null>;
+  position?: "above" | "below"; // New prop to control positioning
 }
 
 export default function NotificationPopup({
   isOpen,
   onClose,
   buttonRef,
+  position = "below", // Default to below for client navbar
 }: NotificationPopupProps) {
   const [isAnimating, setIsAnimating] = useState(true);
   const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
@@ -73,11 +75,17 @@ export default function NotificationPopup({
     if (isOpen && buttonRef?.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setButtonPosition({
-        top: rect.top - 8, // Position above the button with 8px gap
-        left: rect.left + rect.width / 2,
+        top:
+          position === "above"
+            ? rect.top - 8 // Position above the button with 8px gap
+            : rect.bottom + 8, // Position below the button with 8px gap
+        left:
+          position === "above"
+            ? rect.left + rect.width / 2 + 20 // Move 20px right for sidebar
+            : rect.left + rect.width / 2, // Keep centered for navbar
       });
     }
-  }, [isOpen, buttonRef]);
+  }, [isOpen, buttonRef, position]);
 
   // Animation handling
   useEffect(() => {
@@ -188,7 +196,7 @@ export default function NotificationPopup({
       <style jsx>{`
         @keyframes slideInUp {
           from {
-            transform: translateY(8px);
+            transform: translateY(${position === "above" ? "8px" : "-8px"});
             opacity: 0;
           }
           to {
@@ -203,7 +211,7 @@ export default function NotificationPopup({
           }
           to {
             opacity: 0;
-            transform: translateY(8px);
+            transform: translateY(${position === "above" ? "8px" : "-8px"});
           }
         }
       `}</style>
@@ -217,7 +225,10 @@ export default function NotificationPopup({
             : "transform scale-100 opacity-100"
         }`}
         style={{
-          top: buttonPosition.top - 384, // Position above the button (384px is max height of popup)
+          top:
+            position === "above"
+              ? buttonPosition.top - 384 // Position above (384px is max height of popup)
+              : buttonPosition.top, // Position below the button
           left:
             typeof window !== "undefined"
               ? Math.max(
@@ -227,7 +238,8 @@ export default function NotificationPopup({
               : buttonPosition.left - 160, // Keep within viewport
           backgroundColor: "#353A3A",
           borderColor: "#606364",
-          transformOrigin: "bottom center",
+          transformOrigin:
+            position === "above" ? "bottom center" : "top center",
           animation:
             !isAnimating && isOpen ? "slideInUp 0.3s ease-out" : undefined,
           boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
