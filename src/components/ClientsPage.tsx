@@ -28,6 +28,8 @@ import {
   Grid3X3,
   List,
   AlertCircle,
+  Check,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import AddClientModal from "./AddClientModal";
@@ -110,6 +112,13 @@ function ClientsPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
+
+  // Bulk operations state
+  const [selectedClients, setSelectedClients] = useState<Set<string>>(
+    new Set()
+  );
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   const {
     data: clients = [],
@@ -210,6 +219,192 @@ function ClientsPage() {
     router.push(`/clients/${client.id}/detail`);
   };
 
+  // Bulk operations functions
+  const toggleClientSelection = (clientId: string) => {
+    const newSelected = new Set(selectedClients);
+    if (newSelected.has(clientId)) {
+      newSelected.delete(clientId);
+    } else {
+      newSelected.add(clientId);
+    }
+    setSelectedClients(newSelected);
+  };
+
+  const selectAllClients = () => {
+    const allClientIds = new Set(
+      filteredAndSortedClients.map(client => client.id)
+    );
+    setSelectedClients(allClientIds);
+  };
+
+  const clearSelection = () => {
+    setSelectedClients(new Set());
+  };
+
+  const toggleBulkMode = () => {
+    setIsBulkMode(!isBulkMode);
+    if (isBulkMode) {
+      clearSelection();
+    }
+  };
+
+  // Bulk archive function
+  const handleBulkArchive = async () => {
+    if (selectedClients.size === 0) return;
+
+    const clientNames = filteredAndSortedClients
+      .filter(client => selectedClients.has(client.id))
+      .map(client => client.name);
+
+    if (
+      window.confirm(
+        `Archive ${selectedClients.size} client${
+          selectedClients.size === 1 ? "" : "s"
+        }? This will move them to the archived section.`
+      )
+    ) {
+      try {
+        await Promise.all(
+          Array.from(selectedClients).map(clientId =>
+            archiveClient.mutateAsync({ id: clientId })
+          )
+        );
+        clearSelection();
+        setShowBulkActions(false);
+      } catch (error) {
+        console.error("Failed to archive clients:", error);
+      }
+    }
+  };
+
+  // Export functions
+  const exportToCSV = () => {
+    const selectedClientsData = filteredAndSortedClients.filter(client =>
+      selectedClients.has(client.id)
+    );
+
+    if (selectedClientsData.length === 0) {
+      alert("No clients selected for export");
+      return;
+    }
+
+    // Helper function to escape CSV values properly
+    const escapeCSVValue = (value: string): string => {
+      if (value === null || value === undefined) return "";
+      const stringValue = String(value);
+      // Escape quotes by doubling them and wrap in quotes if contains comma, quote, or newline
+      if (
+        stringValue.includes(",") ||
+        stringValue.includes('"') ||
+        stringValue.includes("\n") ||
+        stringValue.includes("\r")
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const csvData = selectedClientsData.map(client => ({
+      Name: client.name,
+      Email: client.email || "",
+      Phone: client.phone || "",
+      "Next Lesson": client.nextLessonDate
+        ? format(new Date(client.nextLessonDate), "MMM d, yyyy")
+        : "No lesson scheduled",
+      "Created Date": format(new Date(client.createdAt), "MMM d, yyyy"),
+      Notes: client.notes || "",
+    }));
+
+    // Create CSV with proper escaping
+    const headers = Object.keys(csvData[0]);
+    const csvRows = [
+      headers.join(","), // Header row
+      ...csvData.map(row =>
+        headers
+          .map(header => escapeCSVValue(row[header as keyof typeof row]))
+          .join(",")
+      ),
+    ];
+
+    const csvContent = csvRows.join("\n");
+
+    // Add BOM for proper UTF-8 encoding in Excel
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clients-export-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    // For now, we'll create a simple HTML-based PDF
+    const selectedClientsData = filteredAndSortedClients.filter(client =>
+      selectedClients.has(client.id)
+    );
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Clients Export</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          <h1>Clients Export - ${format(new Date(), "MMM d, yyyy")}</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Next Lesson</th>
+                <th>Created Date</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${selectedClientsData
+                .map(
+                  client => `
+                <tr>
+                  <td>${client.name}</td>
+                  <td>${client.email || ""}</td>
+                  <td>${client.phone || ""}</td>
+                  <td>${
+                    client.nextLessonDate
+                      ? format(new Date(client.nextLessonDate), "MMM d, yyyy")
+                      : "No lesson scheduled"
+                  }</td>
+                  <td>${format(new Date(client.createdAt), "MMM d, yyyy")}</td>
+                  <td>${client.notes || ""}</td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clients-export-${format(new Date(), "yyyy-MM-dd")}.html`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   // Helper function to check if a lesson date is valid (future only)
   const isValidLessonDate = (lessonDate: string | null) => {
     if (!lessonDate) return false;
@@ -236,6 +431,8 @@ function ClientsPage() {
           bValue = b.name.toLowerCase();
           break;
         case "createdAt":
+          // For "Newest First" (asc), we want descending date order
+          // For "Oldest First" (desc), we want ascending date order
           aValue = new Date(a.createdAt);
           bValue = new Date(b.createdAt);
           break;
@@ -305,10 +502,22 @@ function ClientsPage() {
           bValue = b.name.toLowerCase();
       }
 
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
+      if (sortBy === "createdAt") {
+        // For date sorting, we need to reverse the logic
+        // "Newest First" (asc) = descending date order
+        // "Oldest First" (desc) = ascending date order
+        if (sortOrder === "asc") {
+          return aValue < bValue ? 1 : -1; // Newest first (descending dates)
+        } else {
+          return aValue > bValue ? 1 : -1; // Oldest first (ascending dates)
+        }
       } else {
-        return aValue < bValue ? 1 : -1;
+        // For name and nextLesson, use normal logic
+        if (sortOrder === "asc") {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
       }
     });
 
@@ -356,226 +565,74 @@ function ClientsPage() {
   return (
     <Sidebar>
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Hero Header */}
-        <div className="mb-8">
-          <div className="rounded-2xl border relative overflow-hidden group">
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background:
-                  "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-              }}
-            />
-            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: "#4A5A70" }}
-                  >
-                    <Users className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                  </div>
-                  <div>
-                    <h1
-                      className="text-4xl font-bold mb-2"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Your Athletes
-                    </h1>
-                    <p
-                      className="flex items-center gap-2 text-lg"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      <Sparkles className="h-5 w-5 text-yellow-400" />
-                      {activeTab === "active"
-                        ? activeClients > 0
-                          ? `Managing ${activeClients} ${
-                              activeClients === 1
-                                ? "active athlete"
-                                : "active athletes"
-                            }`
-                          : "Ready to build your coaching team"
-                        : archivedClients > 0
-                        ? `Viewing ${archivedClients} ${
-                            archivedClients === 1
-                              ? "archived athlete"
-                              : "archived athletes"
-                          }`
-                        : "No archived athletes"}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div
-                    className="text-2xl font-bold"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {new Date().toLocaleDateString()}
-                  </div>
-                  <div className="text-sm" style={{ color: "#ABA4AA" }}>
-                    {new Date().toLocaleDateString("en-US", {
-                      weekday: "long",
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats cards removed for cleaner, people-focused design */}
-        <div className="hidden">
-          <div
-            className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#3A4040";
-              e.currentTarget.style.borderColor = "#4A5A70";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#353A3A";
-              e.currentTarget.style.borderColor = "#606364";
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-              }}
-            />
-            <div className="relative p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: "#4A5A70" }}
-                >
-                  <Users className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                </div>
-                <TrendingUp className="h-5 w-5 text-green-400" />
+        {/* Simplified Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: "#4A5A70" }}
+              >
+                <Users className="h-4 w-4" style={{ color: "#C3BCC2" }} />
               </div>
               <div>
-                <p
-                  className="text-sm font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  {activeTab === "active"
-                    ? "Active Athletes"
-                    : "Archived Athletes"}
-                </p>
-                <p
-                  className="text-3xl font-bold mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {activeTab === "active" ? activeClients : archivedClients}
-                </p>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
+                <h1 className="text-2xl font-bold" style={{ color: "#C3BCC2" }}>
+                  Your Athletes
+                </h1>
+                <p className="text-sm" style={{ color: "#ABA4AA" }}>
                   {activeTab === "active"
                     ? activeClients > 0
-                      ? "Active athletes"
+                      ? `${activeClients} active athlete${
+                          activeClients === 1 ? "" : "s"
+                        }`
                       : "No active athletes"
                     : archivedClients > 0
-                    ? "Archived athletes"
+                    ? `${archivedClients} archived athlete${
+                        archivedClients === 1 ? "" : "s"
+                      }`
                     : "No archived athletes"}
                 </p>
               </div>
             </div>
-          </div>
-
-          <div
-            className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#3A4040";
-              e.currentTarget.style.borderColor = "#4A5A70";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#353A3A";
-              e.currentTarget.style.borderColor = "#606364";
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
-              }}
-            />
-            <div className="relative p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: "#DC2626" }}
-                >
-                  <Calendar className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                </div>
-                <Activity className="h-5 w-5 text-red-400" />
-              </div>
-              <div>
-                <p
-                  className="text-sm font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Archived Athletes
-                </p>
-                <p
-                  className="text-3xl font-bold mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {archivedClients}
-                </p>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                  {archivedClients > 0
-                    ? "Previously active"
-                    : "No archived athletes"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#3A4040";
-              e.currentTarget.style.borderColor = "#4A5A70";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#353A3A";
-              e.currentTarget.style.borderColor = "#606364";
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
-              }}
-            />
-            <div className="relative p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: "#10B981" }}
-                >
-                  <Star className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                </div>
-                <TrendingUp className="h-5 w-5 text-green-400" />
-              </div>
-              <div>
-                <p
-                  className="text-sm font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Recent Additions
-                </p>
-                <p
-                  className="text-3xl font-bold mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {recentClients}
-                </p>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                  {recentClients > 0 ? "Last 30 days" : "No recent additions"}
-                </p>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleBulkMode}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+                  isBulkMode ? "ring-2 ring-blue-400" : ""
+                }`}
+                style={{
+                  backgroundColor: isBulkMode ? "#4A5A70" : "#606364",
+                  color: "#C3BCC2",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = "#4A5A70";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = isBulkMode
+                    ? "#4A5A70"
+                    : "#606364";
+                }}
+              >
+                <Users className="h-4 w-4" />
+                {isBulkMode ? "Exit Bulk Mode" : "Bulk Select"}
+              </button>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                style={{
+                  backgroundColor: "#4A5A70",
+                  color: "#C3BCC2",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = "#606364";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "#4A5A70";
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Add Athlete
+              </button>
             </div>
           </div>
         </div>
@@ -704,10 +761,48 @@ function ClientsPage() {
                   color: "#C3BCC2",
                 }}
               >
-                <option value="name">Name (A-Z)</option>
-                <option value="createdAt">Recently Added</option>
-                <option value="nextLesson">Next Lesson</option>
+                <option value="name">
+                  Name {sortOrder === "asc" ? "(A-Z)" : "(Z-A)"}
+                </option>
+                <option value="createdAt">
+                  Recently Added{" "}
+                  {sortOrder === "asc" ? "(Newest First)" : "(Oldest First)"}
+                </option>
+                <option value="nextLesson">
+                  Next Lesson{" "}
+                  {sortOrder === "asc" ? "(Soonest First)" : "(Farthest First)"}
+                </option>
               </select>
+
+              {/* Sort Order Toggle */}
+              <button
+                onClick={() =>
+                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                }
+                className="p-2.5 rounded-lg border transition-all duration-200 hover:scale-105"
+                style={{
+                  backgroundColor: sortOrder === "desc" ? "#4A5A70" : "#606364",
+                  borderColor: "#ABA4AA",
+                  color: "#C3BCC2",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    sortOrder === "desc" ? "#606364" : "#4A5A70";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    sortOrder === "desc" ? "#4A5A70" : "#606364";
+                }}
+                title={
+                  sortOrder === "asc" ? "Sort ascending" : "Sort descending"
+                }
+              >
+                {sortOrder === "asc" ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
 
               {/* View Mode Toggle */}
               <div
@@ -743,85 +838,215 @@ function ClientsPage() {
           </div>
         </div>
 
-        {/* Results Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2
-              className="text-2xl font-bold flex items-center gap-3 mb-2"
-              style={{ color: "#C3BCC2" }}
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Users className="h-4 w-4" style={{ color: "#C3BCC2" }} />
+        {/* Bulk Actions Toolbar */}
+        {isBulkMode && (
+          <div
+            className="mb-4 p-4 rounded-lg border"
+            style={{ backgroundColor: "#353A3A", borderColor: "#4A5A70" }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#4A5A70" }}
+                  >
+                    <Users className="h-3 w-3" style={{ color: "#C3BCC2" }} />
+                  </div>
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    {selectedClients.size > 0
+                      ? `${selectedClients.size} client${
+                          selectedClients.size === 1 ? "" : "s"
+                        } selected`
+                      : "Bulk Selection Mode - Select clients to perform actions"}
+                  </span>
+                </div>
+                <button
+                  onClick={selectAllClients}
+                  className="text-sm px-3 py-1 rounded-lg transition-all duration-200"
+                  style={{
+                    backgroundColor: "#4A5A70",
+                    color: "#C3BCC2",
+                    border: "1px solid #606364",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#606364";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#4A5A70";
+                  }}
+                >
+                  Select All ({filteredAndSortedClients.length})
+                </button>
+                {selectedClients.size > 0 && (
+                  <button
+                    onClick={clearSelection}
+                    className="text-sm px-3 py-1 rounded-lg transition-all duration-200"
+                    style={{
+                      backgroundColor: "transparent",
+                      color: "#ABA4AA",
+                      border: "1px solid #606364",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#3A4040";
+                      e.currentTarget.style.color = "#C3BCC2";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "#ABA4AA";
+                    }}
+                  >
+                    Clear Selection
+                  </button>
+                )}
               </div>
-              Athletes
-            </h2>
-            <p className="flex items-center gap-2" style={{ color: "#ABA4AA" }}>
-              <Clock className="h-4 w-4" />
+              {selectedClients.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={exportToCSV}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                    style={{
+                      backgroundColor: "#10B981",
+                      color: "#FFFFFF",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#059669";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "#10B981";
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={exportToPDF}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                    style={{
+                      backgroundColor: "#3B82F6",
+                      color: "#FFFFFF",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "#2563EB";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "#3B82F6";
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    Export PDF
+                  </button>
+                  {activeTab === "active" && (
+                    <button
+                      onClick={handleBulkArchive}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+                      style={{
+                        backgroundColor: "#F59E0B",
+                        color: "#FFFFFF",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = "#D97706";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "#F59E0B";
+                      }}
+                    >
+                      <Archive className="h-4 w-4" />
+                      Archive Selected
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Results Header */}
+        {filteredAndSortedClients.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm" style={{ color: "#ABA4AA" }}>
               {filteredAndSortedClients.length} of {totalClients}{" "}
               {totalClients === 1 ? "athlete" : "athletes"}
               {searchTerm && ` matching "${searchTerm}"`}
             </p>
           </div>
-        </div>
+        )}
 
         {/* Enhanced Athletes List/Grid */}
         {filteredAndSortedClients.length === 0 ? (
           <div
-            className="rounded-2xl shadow-xl border text-center relative overflow-hidden group"
+            className="rounded-xl border text-center relative overflow-hidden"
             style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
           >
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-              }}
-            />
-            <div className="relative p-12">
+            <div className="relative p-8">
               <div
-                className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
+                className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4"
                 style={{ backgroundColor: "#4A5A70" }}
               >
-                <Users className="h-10 w-10" style={{ color: "#C3BCC2" }} />
+                <Users className="h-8 w-8" style={{ color: "#C3BCC2" }} />
               </div>
               <h3
-                className="text-2xl font-bold mb-3"
+                className="text-xl font-bold mb-2"
                 style={{ color: "#C3BCC2" }}
               >
-                {searchTerm ? "No athletes found" : "Ready to Start Coaching?"}
+                {searchTerm
+                  ? "No athletes found"
+                  : activeTab === "active"
+                  ? "No active athletes"
+                  : "No archived athletes"}
               </h3>
-              <p
-                className="mb-8 max-w-md mx-auto text-lg"
-                style={{ color: "#ABA4AA" }}
-              >
+              <p className="mb-6 max-w-sm mx-auto" style={{ color: "#ABA4AA" }}>
                 {searchTerm
                   ? `No athletes match "${searchTerm}". Try a different search term.`
-                  : "Add your first athlete to begin building your coaching career and transforming lives."}
+                  : activeTab === "active"
+                  ? "Add your first athlete to start building your coaching team."
+                  : "No athletes have been archived yet."}
               </p>
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium mx-auto border"
-                style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#C3BCC2",
-                  borderColor: "#606364",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#606364";
-                  e.currentTarget.style.boxShadow =
-                    "0 10px 25px rgba(0, 0, 0, 0.3)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 15px rgba(0, 0, 0, 0.2)";
-                }}
-              >
-                <Plus className="h-5 w-5" />
-                {searchTerm ? "Add New Athlete" : "Add Your First Athlete"}
-              </button>
+              {!searchTerm && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 hover:scale-105 font-medium mx-auto"
+                  style={{
+                    backgroundColor: "#4A5A70",
+                    color: "#C3BCC2",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#606364";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#4A5A70";
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  {activeTab === "active"
+                    ? "Add Your First Athlete"
+                    : "Add Athlete"}
+                </button>
+              )}
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="text-sm px-4 py-2 rounded-lg transition-all duration-200 mx-auto"
+                  style={{
+                    backgroundColor: "transparent",
+                    color: "#ABA4AA",
+                    border: "1px solid #606364",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#3A4040";
+                    e.currentTarget.style.color = "#C3BCC2";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = "#ABA4AA";
+                  }}
+                >
+                  Clear Search
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -844,12 +1069,16 @@ function ClientsPage() {
                     (client: Client, index: number) => (
                       <div
                         key={client.id}
-                        className="rounded-xl border transition-all duration-300 hover:border-gray-500 cursor-pointer relative overflow-hidden group"
+                        className="rounded-xl border transition-all duration-200 hover:shadow-lg cursor-pointer relative overflow-hidden group"
                         style={{
                           backgroundColor: "#353A3A",
                           borderColor: "#606364",
                         }}
-                        onClick={() => handleOpenProfile(client)}
+                        onClick={() => {
+                          if (!isBulkMode) {
+                            handleOpenProfile(client);
+                          }
+                        }}
                         onMouseEnter={e => {
                           e.currentTarget.style.backgroundColor = "#3A4040";
                           e.currentTarget.style.borderColor = "#4A5A70";
@@ -859,9 +1088,26 @@ function ClientsPage() {
                           e.currentTarget.style.borderColor = "#606364";
                         }}
                       >
-                        <div className="p-3">
-                          <div className="flex items-center justify-between">
+                        <div className="p-4">
+                          <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {isBulkMode && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    toggleClientSelection(client.id);
+                                  }}
+                                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                                    selectedClients.has(client.id)
+                                      ? "bg-blue-500 border-blue-500"
+                                      : "border-gray-400 hover:border-blue-400"
+                                  }`}
+                                >
+                                  {selectedClients.has(client.id) && (
+                                    <Check className="h-3 w-3 text-white" />
+                                  )}
+                                </button>
+                              )}
                               <ProfilePictureUploader
                                 currentAvatarUrl={
                                   client.user?.settings?.avatarUrl ||
@@ -870,9 +1116,10 @@ function ClientsPage() {
                                 userName={client.name}
                                 onAvatarChange={() => {}}
                                 readOnly={true}
+                                size="sm"
                               />
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 mb-1">
                                   <h3
                                     className="text-base font-semibold truncate"
                                     style={{ color: "#C3BCC2" }}
@@ -896,20 +1143,56 @@ function ClientsPage() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs truncate text-gray-400">
+                                <p
+                                  className="text-sm truncate"
+                                  style={{ color: "#ABA4AA" }}
+                                >
                                   {client.email || "No email"}
                                 </p>
+                                {/* Next Lesson */}
+                                <div className="mt-2">
+                                  <p
+                                    className="text-xs font-medium mb-1"
+                                    style={{ color: "#ABA4AA" }}
+                                  >
+                                    Next Lesson:
+                                  </p>
+                                  <p
+                                    className="text-sm font-semibold"
+                                    style={{ color: "#C3BCC2" }}
+                                  >
+                                    {isValidLessonDate(client.nextLessonDate)
+                                      ? format(
+                                          new Date(client.nextLessonDate!),
+                                          "MMM d, yyyy"
+                                        )
+                                      : "No lesson scheduled"}
+                                  </p>
+                                </div>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 ml-2">
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
                                   openFeedback(client);
                                 }}
-                                className="p-1.5 rounded-lg transition-all duration-300 hover:bg-gray-600/50"
-                                style={{ color: "#ABA4AA" }}
+                                className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                                style={{
+                                  color: "#ABA4AA",
+                                  backgroundColor: "transparent",
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.color = "#C3BCC2";
+                                  e.currentTarget.style.backgroundColor =
+                                    "#3A4040";
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.color = "#ABA4AA";
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                }}
                                 title="Add feedback"
                               >
                                 <MessageCircle className="h-4 w-4" />
@@ -920,8 +1203,21 @@ function ClientsPage() {
                                   setSelectedClientForProfile(client);
                                   setIsProfileModalOpen(true);
                                 }}
-                                className="p-1.5 rounded-lg transition-all duration-300 hover:bg-gray-600/50"
-                                style={{ color: "#ABA4AA" }}
+                                className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                                style={{
+                                  color: "#ABA4AA",
+                                  backgroundColor: "transparent",
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.color = "#C3BCC2";
+                                  e.currentTarget.style.backgroundColor =
+                                    "#3A4040";
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.color = "#ABA4AA";
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                }}
                                 title="Edit client"
                               >
                                 <Edit className="h-4 w-4" />
@@ -939,8 +1235,28 @@ function ClientsPage() {
                                   }
                                 }}
                                 disabled={archivingClientId === client.id}
-                                className="p-1.5 rounded-lg transition-all duration-300 hover:bg-gray-600/50 disabled:opacity-50"
-                                style={{ color: "#ABA4AA" }}
+                                className="p-2 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
+                                style={{
+                                  color: "#ABA4AA",
+                                  backgroundColor: "transparent",
+                                }}
+                                onMouseEnter={e => {
+                                  if (!e.currentTarget.disabled) {
+                                    e.currentTarget.style.color =
+                                      activeTab === "active"
+                                        ? "#F59E0B"
+                                        : "#10B981";
+                                    e.currentTarget.style.backgroundColor =
+                                      "#3A4040";
+                                  }
+                                }}
+                                onMouseLeave={e => {
+                                  if (!e.currentTarget.disabled) {
+                                    e.currentTarget.style.color = "#ABA4AA";
+                                    e.currentTarget.style.backgroundColor =
+                                      "transparent";
+                                  }
+                                }}
                                 title={
                                   activeTab === "active"
                                     ? "Archive client"
@@ -1000,8 +1316,13 @@ function ClientsPage() {
                           animationDelay: `${index * 50}ms`,
                         }}
                         onClick={() => {
-                          console.log("Card clicked for client:", client.name);
-                          handleOpenProfile(client);
+                          if (!isBulkMode) {
+                            console.log(
+                              "Card clicked for client:",
+                              client.name
+                            );
+                            handleOpenProfile(client);
+                          }
                         }}
                         onMouseEnter={e => {
                           e.currentTarget.style.backgroundColor = "#3A4040";
@@ -1022,6 +1343,23 @@ function ClientsPage() {
                         <div className="relative p-6">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
+                              {isBulkMode && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    toggleClientSelection(client.id);
+                                  }}
+                                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                                    selectedClients.has(client.id)
+                                      ? "bg-blue-500 border-blue-500"
+                                      : "border-gray-400 hover:border-blue-400"
+                                  }`}
+                                >
+                                  {selectedClients.has(client.id) && (
+                                    <Check className="h-3 w-3 text-white" />
+                                  )}
+                                </button>
+                              )}
                               <ProfilePictureUploader
                                 currentAvatarUrl={
                                   client.user?.settings?.avatarUrl ||
@@ -1060,66 +1398,29 @@ function ClientsPage() {
                                   </p>
                                 )}
 
-                                {/* Program Assignments */}
-                                {client.programAssignments &&
-                                  client.programAssignments.length > 0 && (
-                                    <div className="mt-2">
-                                      <p
-                                        className="text-xs font-medium mb-1"
-                                        style={{ color: "#ABA4AA" }}
-                                      >
-                                        Active Programs:
-                                      </p>
-                                      <div className="flex flex-wrap gap-1">
-                                        {client.programAssignments
-                                          .slice(0, 3)
-                                          .map(assignment => (
-                                            <span
-                                              key={assignment.id}
-                                              className="inline-flex items-center px-2 py-1 rounded text-xs"
-                                              style={{
-                                                backgroundColor: "#3A4040",
-                                                color: "#C3BCC2",
-                                              }}
-                                            >
-                                              {assignment.program.title} (
-                                              {assignment.progress}%)
-                                            </span>
-                                          ))}
-                                        {client.programAssignments.length >
-                                          3 && (
-                                          <span className="text-xs text-gray-400">
-                                            +
-                                            {client.programAssignments.length -
-                                              3}{" "}
-                                            more
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
+                                {/* Next Lesson */}
+                                <div className="mt-2">
+                                  <p
+                                    className="text-xs font-medium mb-1"
+                                    style={{ color: "#ABA4AA" }}
+                                  >
+                                    Next Lesson:
+                                  </p>
+                                  <p
+                                    className="text-sm font-semibold"
+                                    style={{ color: "#C3BCC2" }}
+                                  >
+                                    {isValidLessonDate(client.nextLessonDate)
+                                      ? format(
+                                          new Date(client.nextLessonDate!),
+                                          "MMM d, yyyy"
+                                        )
+                                      : "No lesson scheduled"}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <div className="text-right mr-4">
-                                <p
-                                  className="text-sm font-medium mb-1"
-                                  style={{ color: "#ABA4AA" }}
-                                >
-                                  Next Lesson
-                                </p>
-                                <p
-                                  className="text-sm font-semibold"
-                                  style={{ color: "#C3BCC2" }}
-                                >
-                                  {isValidLessonDate(client.nextLessonDate)
-                                    ? format(
-                                        new Date(client.nextLessonDate!),
-                                        "MMM d, yyyy"
-                                      )
-                                    : "Not scheduled"}
-                                </p>
-                              </div>
                               <div className="flex items-center gap-1">
                                 <button
                                   className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
