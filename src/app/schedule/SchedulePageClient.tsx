@@ -237,8 +237,8 @@ function SchedulePageClient() {
   // Generate calendar days for the current month view
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   const calendarDays = eachDayOfInterval({
     start: calendarStart,
     end: calendarEnd,
@@ -940,7 +940,7 @@ function SchedulePageClient() {
             style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
           >
             <div className="grid grid-cols-7 gap-2">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                 <div
                   key={day}
                   className="text-center text-sm font-bold text-blue-300 py-3 border-b-2 border-blue-500/30"

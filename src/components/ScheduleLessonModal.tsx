@@ -197,8 +197,8 @@ export default function ScheduleLessonModal({
   // Generate calendar days for the current month view
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   const calendarDays = eachDayOfInterval({
     start: calendarStart,
     end: calendarEnd,
@@ -636,7 +636,7 @@ export default function ScheduleLessonModal({
         <div className="mb-6">
           <h3 className="text-sm font-medium text-white mb-3">Select Date</h3>
           <div className="grid grid-cols-7 gap-1">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
               <div key={day} className="text-center text-xs text-gray-400 py-2">
                 {day}
               </div>
