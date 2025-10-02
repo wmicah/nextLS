@@ -67,6 +67,7 @@ import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import SimpleAssignProgramModal from "@/components/SimpleAssignProgramModal";
 import QuickAssignProgramModal from "@/components/QuickAssignProgramModal";
 import QuickAssignRoutineModal from "@/components/QuickAssignRoutineModal";
+import QuickAssignRoutineFromDayModal from "@/components/QuickAssignRoutineFromDayModal";
 import AssignRoutineModal from "@/components/AssignRoutineModal";
 import AssignVideoModal from "@/components/AssignVideoModal";
 import ScheduleLessonModal from "@/components/ScheduleLessonModal";
@@ -89,6 +90,10 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
     useState(false);
   const [showQuickAssignRoutineModal, setShowQuickAssignRoutineModal] =
     useState(false);
+  const [
+    showQuickAssignRoutineFromDayModal,
+    setShowQuickAssignRoutineFromDayModal,
+  ] = useState(false);
   const [showAssignRoutineModal, setShowAssignRoutineModal] = useState(false);
   const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
   const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false);
@@ -1018,6 +1023,23 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             />
           )}
 
+          {showQuickAssignRoutineFromDayModal && (
+            <QuickAssignRoutineFromDayModal
+              isOpen={showQuickAssignRoutineFromDayModal}
+              onClose={() => {
+                setShowQuickAssignRoutineFromDayModal(false);
+                refreshAllData();
+              }}
+              clientId={clientId}
+              clientName={client.name}
+              startDate={
+                selectedDate
+                  ? selectedDate.toISOString().split("T")[0]
+                  : new Date().toISOString().split("T")[0]
+              }
+            />
+          )}
+
           {showAssignRoutineModal && (
             <AssignRoutineModal
               isOpen={showAssignRoutineModal}
@@ -1086,7 +1108,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               setShowDayDetailsModal(false);
             }}
             onAssignRoutine={() => {
-              setShowQuickAssignRoutineModal(true);
+              setShowQuickAssignRoutineFromDayModal(true);
               setShowDayDetailsModal(false);
             }}
             onReplaceWithLesson={replacementData => {
