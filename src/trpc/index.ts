@@ -11333,15 +11333,32 @@ export const appRouter = router({
           });
         }
 
-        // Create the message
+        // Create the message with clear identifier
+        const workoutDate = new Date(input.date).toLocaleDateString();
+        const messageContent = input.drillTitle
+          ? `📝 **Workout Note** - ${input.drillTitle}\n📅 ${workoutDate}\n\n${
+              input.note || ""
+            }`
+          : `📝 **Daily Workout Note**\n📅 ${workoutDate}\n\n${
+              input.note || ""
+            }`;
+
         const message = await db.message.create({
           data: {
             conversationId: conversation.id,
             senderId: user.id,
-            content: input.drillTitle
-              ? `**${input.drillTitle}** - ${input.note || ""}`
-              : input.note || "",
+            content: messageContent,
           },
+        });
+
+        // Debug logging for workout note creation
+        console.log("🔍 Workout Note Created:", {
+          messageId: message.id,
+          senderId: user.id,
+          clientName: client.name,
+          coachId: client.coachId,
+          conversationId: conversation.id,
+          content: messageContent.substring(0, 100),
         });
 
         // Create a notification for the coach (only if coach exists)
@@ -11350,16 +11367,20 @@ export const appRouter = router({
             data: {
               userId: client.coachId,
               type: "MESSAGE",
-              title: `New message from ${client.name}`,
+              title: `📝 Workout Note from ${client.name}`,
               message: input.drillTitle
-                ? `Client feedback on "${input.drillTitle}": ${(
-                    input.note || ""
-                  ).substring(0, 100)}${
-                    (input.note || "").length > 100 ? "..." : ""
-                  }`
-                : `Client note: ${(input.note || "").substring(0, 100)}${
-                    (input.note || "").length > 100 ? "..." : ""
-                  }`,
+                ? `New workout feedback on "${input.drillTitle}" (${new Date(
+                    input.date
+                  ).toLocaleDateString()}): ${(input.note || "").substring(
+                    0,
+                    80
+                  )}${(input.note || "").length > 80 ? "..." : ""}`
+                : `New daily workout note (${new Date(
+                    input.date
+                  ).toLocaleDateString()}): ${(input.note || "").substring(
+                    0,
+                    80
+                  )}${(input.note || "").length > 80 ? "..." : ""}`,
               data: {
                 messageId: message.id,
                 conversationId: conversation.id,

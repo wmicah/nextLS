@@ -300,26 +300,6 @@ ClientProfileModalProps) {
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="px-6 py-4 border-b" style={{ borderColor: "#606364" }}>
-          <div className="flex space-x-1">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === "overview"
-                  ? "text-white"
-                  : "text-gray-400 hover:text-gray-300"
-              }`}
-              style={{
-                backgroundColor:
-                  activeTab === "overview" ? "#4A5A70" : "transparent",
-              }}
-            >
-              Overview
-            </button>
-          </div>
-        </div>
-
         {/* Scrollable Content */}
         <ScrollArea className="h-[calc(95vh-180px)]">
           <div className="p-6">
@@ -1011,7 +991,7 @@ ClientProfileModalProps) {
                         {client.programAssignments.map(assignment => (
                           <div
                             key={assignment.id}
-                            className="p-4 rounded-lg border transition-all duration-200 hover:scale-[1.02]"
+                            className="p-4 rounded-lg borderoadt"
                             style={{
                               backgroundColor: "#353A3A",
                               borderColor: "#606364",

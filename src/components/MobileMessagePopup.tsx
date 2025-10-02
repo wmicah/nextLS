@@ -345,22 +345,38 @@ export default function MobileMessagePopup({
                   message.sender.id ===
                   conversations.find(c => c.id === selectedConversation)
                     ?.coachId;
+                
+                // Check if this is a workout note message
+                const isWorkoutNote = message.content?.includes("📝 **Workout Note**") || message.content?.includes("📝 **Daily Workout Note**");
+                const isFromClient = !isCurrentUser;
 
                 return (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      isCurrentUser ? "justify-end" : "justify-start"
-                    }`}
-                  >
+                  <div key={message.id} className="space-y-2">
+                    {/* Workout Note Header for client messages */}
+                    {isWorkoutNote && isFromClient && (
+                      <div className="w-full">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-400/20">
+                          <span className="text-blue-400 font-medium text-sm">📝 Workout Note</span>
+                          <span className="text-gray-400 text-xs">from client</span>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div
-                      className={`max-w-[85%] px-4 py-3 rounded-2xl text-base ${
-                        isCurrentUser
-                          ? "bg-blue-500 text-white rounded-br-sm"
-                          : "bg-gray-600 text-gray-100 rounded-bl-sm"
+                      className={`flex ${
+                        isCurrentUser ? "justify-end" : "justify-start"
                       }`}
                     >
-                      <FormattedMessage content={message.content} />
+                      <div
+                        className={`max-w-[85%] px-4 py-3 rounded-2xl text-base ${
+                          isCurrentUser
+                            ? "bg-blue-500 text-white rounded-br-sm"
+                            : isWorkoutNote && isFromClient
+                            ? "bg-gray-600 text-gray-100 rounded-bl-sm border border-blue-400"
+                            : "bg-gray-600 text-gray-100 rounded-bl-sm"
+                        }`}
+                      >
+                        <FormattedMessage content={message.content} />
 
                       {/* Message Acknowledgment */}
                       <MessageAcknowledgment

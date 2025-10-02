@@ -318,62 +318,44 @@ function MessagesPage({}: MessagesPageProps) {
   return (
     <Sidebar>
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Hero Header */}
-        <div className="mb-2">
-          <div className="rounded-2xl border relative overflow-hidden group">
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background:
-                  "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-              }}
-            />
-            <div className="relative p-4 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <h1
-                      className="text-4xl font-bold mb-2"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Messages
-                    </h1>
-                    <div
-                      className="flex items-center gap-2 text-lg"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      <div className="h-5 w-5 rounded-full bg-gray-500 flex items-center justify-center">
-                        <File className="h-3 w-3 text-white" />
-                      </div>
-                      <span>
-                        {conversations.length > 0
-                          ? `Stay connected with ${conversations.length} ${
-                              conversations.length === 1
-                                ? "conversation"
-                                : "conversations"
-                            }`
-                          : "Start building relationships with your athletes"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div
-                    className="text-2xl font-bold"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {unreadCount > 0
-                      ? `${unreadCount} unread`
-                      : "All caught up"}
-                  </div>
-                  <div className="text-sm" style={{ color: "#ABA4AA" }}>
-                    {new Date().toLocaleDateString("en-US", {
-                      weekday: "long",
-                    })}
-                  </div>
-                </div>
+        {/* Simple Header */}
+        <div className="p-4 border-b" style={{ borderColor: "#374151" }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: "#C3BCC2" }}>
+                Messages
+              </h1>
+              <div
+                className="flex items-center gap-2 text-sm"
+                style={{ color: "#ABA4AA" }}
+              >
+                <span>
+                  {conversations.length > 0
+                    ? `${conversations.length} ${
+                        conversations.length === 1
+                          ? "conversation"
+                          : "conversations"
+                      }`
+                    : "No conversations yet"}
+                </span>
+                {unreadCount > 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="font-medium" style={{ color: "#4A5A70" }}>
+                      {unreadCount} unread
+                    </span>
+                  </>
+                )}
               </div>
             </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+              style={{ backgroundColor: "#4A5A70", color: "#ffffff" }}
+            >
+              <Plus className="h-4 w-4 inline mr-2" />
+              New Message
+            </button>
           </div>
         </div>
 
@@ -391,34 +373,19 @@ function MessagesPage({}: MessagesPageProps) {
             className="w-80 border-r flex flex-col"
             style={{ borderColor: "#374151", backgroundColor: "#1A1A1A" }}
           >
-            {/* Header */}
-            <div className="p-6 border-b" style={{ borderColor: "#374151" }}>
-              <div className="flex items-center justify-between mb-6">
+            {/* Compact Header with Search */}
+            <div className="p-3 border-b" style={{ borderColor: "#374151" }}>
+              <div className="mb-3">
                 <h2
-                  className="text-2xl font-bold tracking-tight"
+                  className="text-lg font-semibold"
                   style={{ color: "#ffffff" }}
                 >
-                  Conversations
+                  Messages
                 </h2>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg"
-                  style={{ backgroundColor: "#E0E0E0", color: "#000000" }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#E0E0E1";
-                    e.currentTarget.style.transform = "scale(1.1)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#E0E0E0";
-                    e.currentTarget.style.transform = "scale(1)";
-                  }}
-                >
-                  <Plus className="h-5 w-5" />
-                </button>
               </div>
               <div className="relative">
                 <Search
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
                   style={{ color: "#6b7280" }}
                 />
                 <input
@@ -426,7 +393,7 @@ function MessagesPage({}: MessagesPageProps) {
                   placeholder="Search conversations..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl text-sm transition-all duration-300 font-medium"
+                  className="w-full pl-10 pr-4 py-2 rounded-lg text-sm transition-all duration-200"
                   style={{
                     backgroundColor: "#2a2a2a",
                     borderColor: "#374151",
@@ -434,10 +401,10 @@ function MessagesPage({}: MessagesPageProps) {
                     border: "1px solid",
                   }}
                   onFocus={e => {
-                    e.currentTarget.style.borderColor = "#6b7280";
+                    e.currentTarget.style.borderColor = "#4A5A70";
                     e.currentTarget.style.backgroundColor = "#1E1E1E";
                     e.currentTarget.style.boxShadow =
-                      "0 0 0 3px rgba(107, 114, 128, 0.1)";
+                      "0 0 0 2px rgba(74, 90, 112, 0.1)";
                   }}
                   onBlur={e => {
                     e.currentTarget.style.borderColor = "#374151";
@@ -448,104 +415,114 @@ function MessagesPage({}: MessagesPageProps) {
               </div>
             </div>
 
-            {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Conversations List - No Scroll */}
+            <div className="flex-1">
               {filteredConversations.length === 0 ? (
                 <div className="p-4 text-center">
                   <div
-                    className="h-8 w-8 mx-auto mb-2 opacity-50 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: "#ABA4AA", color: "#353A3A" }}
+                    className="h-8 w-8 mx-auto mb-2 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#374151", color: "#ABA4AA" }}
                   >
                     <File className="h-4 w-4" />
                   </div>
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
                     {searchTerm
                       ? "No conversations found"
                       : "No conversations yet"}
                   </p>
                 </div>
               ) : (
-                filteredConversations.map(conversation => {
-                  const otherUser = getOtherUser(conversation);
-                  const lastMessage = conversation.messages[0];
-                  const unreadCount = unreadCountsObj[conversation.id] || 0;
+                <div className="space-y-1">
+                  {filteredConversations.slice(0, 8).map(conversation => {
+                    const otherUser = getOtherUser(conversation);
+                    const lastMessage = conversation.messages[0];
+                    const unreadCount = unreadCountsObj[conversation.id] || 0;
+                    const isSelected = selectedConversation === conversation.id;
 
-                  return (
-                    <div
-                      key={conversation.id}
-                      onClick={() => handleConversationSelect(conversation.id)}
-                      className={`p-4 cursor-pointer transition-all duration-200 border-b ${
-                        selectedConversation === conversation.id
-                          ? "bg-gray-800/50 border-gray-600"
-                          : "border-gray-700 hover:bg-gray-800/30"
-                      }`}
-                      onMouseEnter={e => {
-                        if (selectedConversation !== conversation.id) {
-                          e.currentTarget.style.backgroundColor = "#2a2a2a";
-                          e.currentTarget.style.transform = "translateX(4px)";
+                    return (
+                      <div
+                        key={conversation.id}
+                        onClick={() =>
+                          handleConversationSelect(conversation.id)
                         }
-                      }}
-                      onMouseLeave={e => {
-                        if (selectedConversation !== conversation.id) {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                          e.currentTarget.style.transform = "translateX(0)";
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-4">
-                        <ProfilePictureUploader
-                          currentAvatarUrl={
-                            otherUser?.settings?.avatarUrl ||
-                            otherUser?.avatar ||
-                            null
-                          }
-                          userName={
-                            otherUser?.name || otherUser?.email || "User"
-                          }
-                          onAvatarChange={() => {}}
-                          size="md"
-                          readOnly={true}
-                          className="flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p
-                              className="text-sm font-medium truncate"
-                              style={{ color: "#f9fafb" }}
-                            >
-                              {otherUser?.name ||
-                                otherUser?.email?.split("@")[0] ||
-                                "Unknown"}
-                            </p>
-                            {lastMessage && (
-                              <span
-                                className="text-xs flex-shrink-0 ml-2"
-                                style={{ color: "#6b7280" }}
+                        className={`p-3 cursor-pointer transition-all duration-200 ${
+                          isSelected ? "bg-[#4A5A70]/20" : "hover:bg-[#2a2a2a]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <ProfilePictureUploader
+                              currentAvatarUrl={
+                                otherUser?.settings?.avatarUrl ||
+                                otherUser?.avatar ||
+                                null
+                              }
+                              userName={
+                                otherUser?.name || otherUser?.email || "User"
+                              }
+                              onAvatarChange={() => {}}
+                              size="sm"
+                              readOnly={true}
+                              className="flex-shrink-0"
+                            />
+                            {unreadCount > 0 && (
+                              <div
+                                className="absolute -top-1 -right-1 h-4 w-4 rounded-full flex items-center justify-center text-xs font-bold"
+                                style={{
+                                  backgroundColor: "#4A5A70",
+                                  color: "#ffffff",
+                                }}
                               >
-                                {formatLastMessageTime(lastMessage.createdAt)}
-                              </span>
+                                {unreadCount > 9 ? "9+" : unreadCount}
+                              </div>
                             )}
                           </div>
-                          <div className="flex items-center justify-between">
-                            {lastMessage && (
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
                               <p
-                                className="text-xs truncate"
-                                style={{ color: "#6b7280" }}
+                                className={`text-sm font-medium truncate ${
+                                  unreadCount > 0 ? "font-semibold" : ""
+                                }`}
+                                style={{
+                                  color: isSelected ? "#ffffff" : "#f9fafb",
+                                }}
                               >
-                                {lastMessage.content}
+                                {otherUser?.name ||
+                                  otherUser?.email?.split("@")[0] ||
+                                  "Unknown"}
                               </p>
-                            )}
-                            {unreadCount > 0 && (
-                              <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center ml-2">
-                                {unreadCount}
-                              </span>
-                            )}
+                              {lastMessage && (
+                                <span
+                                  className="text-xs flex-shrink-0 ml-2"
+                                  style={{ color: "#ABA4AA" }}
+                                >
+                                  {formatLastMessageTime(lastMessage.createdAt)}
+                                </span>
+                              )}
+                            </div>
+                            <p
+                              className={`text-xs truncate ${
+                                unreadCount > 0 ? "font-medium" : ""
+                              }`}
+                              style={{
+                                color: unreadCount > 0 ? "#ffffff" : "#6b7280",
+                              }}
+                            >
+                              {lastMessage?.content || "No messages yet"}
+                            </p>
                           </div>
                         </div>
                       </div>
+                    );
+                  })}
+                  {filteredConversations.length > 8 && (
+                    <div className="p-3 text-center">
+                      <p className="text-xs" style={{ color: "#6b7280" }}>
+                        +{filteredConversations.length - 8} more conversations
+                      </p>
                     </div>
-                  );
-                })
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -610,185 +587,233 @@ function MessagesPage({}: MessagesPageProps) {
                   {messages.length === 0 ? (
                     <div className="text-center py-8">
                       <div
-                        className="h-12 w-12 mx-auto mb-4 opacity-50"
+                        className="h-8 w-8 mx-auto mb-3 opacity-50"
                         style={{ color: "#ABA4AA" }}
                       >
-                        <File className="h-12 w-12" />
+                        <File className="h-8 w-8" />
                       </div>
-                      <p style={{ color: "#ABA4AA" }}>
+                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
                         No messages yet. Start the conversation!
                       </p>
                     </div>
                   ) : (
                     <>
-                      {messages.map((message: any) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${
-                            message.sender.id === currentUser?.id
-                              ? "justify-end"
-                              : "justify-start"
-                          }`}
-                        >
+                      {messages.map((message: any) => {
+                        // Check if this is a workout note message
+                        const isWorkoutNote =
+                          message.content?.includes("📝 **Workout Note**") ||
+                          message.content?.includes(
+                            "📝 **Daily Workout Note**"
+                          );
+                        const isFromClient =
+                          message.sender.id !== currentUser?.id;
+
+                        // Debug logging for workout notes
+                        if (isWorkoutNote) {
+                          console.log("🔍 Workout Note Debug:", {
+                            messageId: message.id,
+                            senderId: message.sender.id,
+                            currentUserId: currentUser?.id,
+                            isFromClient,
+                            senderName: message.sender.name,
+                            currentUserName: currentUser?.name,
+                            content: message.content?.substring(0, 100),
+                          });
+                        }
+
+                        return (
                           <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                              message.sender.id === currentUser?.id
-                                ? "rounded-br-none"
-                                : "rounded-bl-none"
+                            key={message.id}
+                            className={`flex ${
+                              isWorkoutNote && isFromClient
+                                ? "justify-start"
+                                : message.sender.id === currentUser?.id
+                                ? "justify-end"
+                                : "justify-start"
                             }`}
-                            style={{
-                              backgroundColor:
-                                message.sender.id === currentUser?.id
-                                  ? "#374151"
-                                  : "#1f2937",
-                              color: "#f9fafb",
-                              border: "1px solid",
-                              borderColor:
-                                message.sender.id === currentUser?.id
-                                  ? "#6b7280"
-                                  : "#374151",
-                            }}
                           >
-                            {message.content && (
-                              <div className="text-sm mb-2">
-                                <FormattedMessage content={message.content} />
-                              </div>
-                            )}
-
-                            {/* Message Acknowledgment */}
-                            <MessageAcknowledgment
-                              messageId={message.id}
-                              requiresAcknowledgment={
-                                message.requiresAcknowledgment || false
-                              }
-                              isAcknowledged={message.isAcknowledged || false}
-                              acknowledgedAt={
-                                message.acknowledgedAt
-                                  ? new Date(message.acknowledgedAt)
-                                  : null
-                              }
-                              isOwnMessage={
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
                                 message.sender.id === currentUser?.id
-                              }
-                            />
-
-                            {/* File Attachment */}
-                            {message.attachmentUrl && (
-                              <div className="mb-2">
-                                {message.attachmentType?.startsWith(
-                                  "image/"
-                                ) ? (
-                                  <img
-                                    src={message.attachmentUrl}
-                                    alt={message.attachmentName || "Image"}
-                                    className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
-                                    style={{ maxHeight: "300px" }}
-                                    onClick={() =>
-                                      message.attachmentUrl &&
-                                      window.open(
-                                        message.attachmentUrl,
-                                        "_blank"
-                                      )
-                                    }
-                                  />
-                                ) : message.attachmentType?.startsWith(
-                                    "video/"
-                                  ) ? (
-                                  <div className="space-y-2">
-                                    <video
-                                      src={message.attachmentUrl}
-                                      controls
-                                      className="max-w-full rounded-lg"
-                                      style={{ maxHeight: "300px" }}
-                                      preload="metadata"
-                                    >
-                                      Your browser does not support the video
-                                      tag.
-                                    </video>
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={() => {
-                                          // Create video record from message attachment
-                                          createVideoMutation.mutate({
-                                            title:
-                                              message.attachmentName ||
-                                              "Video from Message",
-                                            description: `Video attachment from message`,
-                                            url: message.attachmentUrl,
-                                            duration: 0, // Will be updated when video loads
-                                            fileSize:
-                                              message.attachmentSize || 0,
-                                          });
-                                        }}
-                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
-                                      >
-                                        <svg
-                                          className="w-3 h-3"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                          />
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                          />
-                                        </svg>
-                                        Annotate Video
-                                      </button>
-                                    </div>
+                                  ? "rounded-br-sm"
+                                  : "rounded-bl-sm"
+                              } ${
+                                isWorkoutNote && isFromClient
+                                  ? "border border-blue-400/30"
+                                  : ""
+                              }`}
+                              style={{
+                                backgroundColor:
+                                  message.sender.id === currentUser?.id
+                                    ? "#4A5A70"
+                                    : isWorkoutNote && isFromClient
+                                    ? "#1f2937"
+                                    : "#374151",
+                                color: "#f9fafb",
+                                border:
+                                  isWorkoutNote && isFromClient
+                                    ? "1px solid #3b82f6"
+                                    : "none",
+                              }}
+                            >
+                              {/* Workout Note Header */}
+                              {isWorkoutNote && isFromClient && (
+                                <div className="mb-3">
+                                  <div className="text-blue-400 font-medium text-sm mb-1">
+                                    📝 Feedback for program day
                                   </div>
-                                ) : (
-                                  <a
-                                    href={message.attachmentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 p-2 rounded-lg transition-all duration-200 hover:scale-105"
-                                    style={{
-                                      backgroundColor: "#2A3133",
-                                      color: "#C3BCC2",
-                                      border: "1px solid #606364",
-                                    }}
-                                  >
-                                    {message.attachmentType?.startsWith(
-                                      "audio/"
+                                  <div className="text-xs text-gray-400 mb-2">
+                                    {new Date(
+                                      message.createdAt
+                                    ).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              )}
+
+                              {message.content && (
+                                <div className="text-sm mb-2">
+                                  <FormattedMessage content={message.content} />
+                                </div>
+                              )}
+
+                              {/* Message Acknowledgment */}
+                              <MessageAcknowledgment
+                                messageId={message.id}
+                                requiresAcknowledgment={
+                                  message.requiresAcknowledgment || false
+                                }
+                                isAcknowledged={message.isAcknowledged || false}
+                                acknowledgedAt={
+                                  message.acknowledgedAt
+                                    ? new Date(message.acknowledgedAt)
+                                    : null
+                                }
+                                isOwnMessage={
+                                  message.sender.id === currentUser?.id
+                                }
+                              />
+
+                              {/* File Attachment */}
+                              {message.attachmentUrl && (
+                                <div className="mb-2">
+                                  {message.attachmentType?.startsWith(
+                                    "image/"
+                                  ) ? (
+                                    <img
+                                      src={message.attachmentUrl}
+                                      alt={message.attachmentName || "Image"}
+                                      className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
+                                      style={{ maxHeight: "300px" }}
+                                      onClick={() =>
+                                        message.attachmentUrl &&
+                                        window.open(
+                                          message.attachmentUrl,
+                                          "_blank"
+                                        )
+                                      }
+                                    />
+                                  ) : message.attachmentType?.startsWith(
+                                      "video/"
                                     ) ? (
-                                      <File className="h-4 w-4" />
-                                    ) : (
-                                      <File className="h-4 w-4" />
-                                    )}
-                                    <span className="text-sm">
-                                      {message.attachmentName}
-                                    </span>
-                                  </a>
+                                    <div className="space-y-2">
+                                      <video
+                                        src={message.attachmentUrl}
+                                        controls
+                                        className="max-w-full rounded-lg"
+                                        style={{ maxHeight: "300px" }}
+                                        preload="metadata"
+                                      >
+                                        Your browser does not support the video
+                                        tag.
+                                      </video>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => {
+                                            // Create video record from message attachment
+                                            createVideoMutation.mutate({
+                                              title:
+                                                message.attachmentName ||
+                                                "Video from Message",
+                                              description: `Video attachment from message`,
+                                              url: message.attachmentUrl,
+                                              duration: 0, // Will be updated when video loads
+                                              fileSize:
+                                                message.attachmentSize || 0,
+                                            });
+                                          }}
+                                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                                        >
+                                          <svg
+                                            className="w-3 h-3"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            />
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            />
+                                          </svg>
+                                          Annotate Video
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <a
+                                      href={message.attachmentUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 p-2 rounded-lg transition-all duration-200 hover:scale-105"
+                                      style={{
+                                        backgroundColor: "#2A3133",
+                                        color: "#C3BCC2",
+                                        border: "1px solid #606364",
+                                      }}
+                                    >
+                                      {message.attachmentType?.startsWith(
+                                        "audio/"
+                                      ) ? (
+                                        <File className="h-4 w-4" />
+                                      ) : (
+                                        <File className="h-4 w-4" />
+                                      )}
+                                      <span className="text-sm">
+                                        {message.attachmentName}
+                                      </span>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-end gap-1 mt-1">
+                                <span
+                                  className="text-xs"
+                                  style={{ color: "#ABA4AA" }}
+                                >
+                                  {format(
+                                    new Date(message.createdAt),
+                                    "h:mm a"
+                                  )}
+                                </span>
+                                {message.sender.id === currentUser?.id && (
+                                  <CheckCheck
+                                    className="h-3 w-3"
+                                    style={{ color: "#ABA4AA" }}
+                                  />
                                 )}
                               </div>
-                            )}
-
-                            <div className="flex items-center justify-end gap-1 mt-1">
-                              <span
-                                className="text-xs"
-                                style={{ color: "#ABA4AA" }}
-                              >
-                                {format(new Date(message.createdAt), "h:mm a")}
-                              </span>
-                              {message.sender.id === currentUser?.id && (
-                                <CheckCheck
-                                  className="h-3 w-3"
-                                  style={{ color: "#ABA4AA" }}
-                                />
-                              )}
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
 
                       {/* Pending Messages */}
                       {pendingMessages.map(pendingMessage => (
@@ -955,18 +980,18 @@ function MessagesPage({}: MessagesPageProps) {
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                   <div
-                    className="h-16 w-16 mx-auto mb-4 opacity-50 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: "#ABA4AA", color: "#353A3A" }}
+                    className="h-12 w-12 mx-auto mb-4 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#374151", color: "#ABA4AA" }}
                   >
-                    <File className="h-8 w-8" />
+                    <File className="h-6 w-6" />
                   </div>
                   <h3
-                    className="text-xl font-medium mb-2"
+                    className="text-lg font-semibold mb-2"
                     style={{ color: "#C3BCC2" }}
                   >
                     Select a conversation
                   </h3>
-                  <p style={{ color: "#ABA4AA" }}>
+                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
                     Choose a conversation from the sidebar to start messaging
                   </p>
                 </div>
@@ -977,19 +1002,19 @@ function MessagesPage({}: MessagesPageProps) {
 
         {/* Create Conversation Modal */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div
-              className="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4"
+              className="rounded-xl p-6 w-full max-w-md mx-4"
               style={{
-                backgroundColor: "#353A3A",
-                borderColor: "#606364",
+                backgroundColor: "#1A1A1A",
+                borderColor: "#374151",
                 border: "1px solid",
               }}
             >
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <h3
-                  className="text-lg font-medium"
-                  style={{ color: "#C3BCC2" }}
+                  className="text-xl font-semibold"
+                  style={{ color: "#ffffff" }}
                 >
                   Start New Conversation
                 </h3>
@@ -998,43 +1023,40 @@ function MessagesPage({}: MessagesPageProps) {
                     setShowCreateModal(false);
                     setClientSearchTerm("");
                   }}
-                  className="p-1 rounded-md transition-colors"
+                  className="p-2 rounded-lg transition-colors hover:bg-[#374151]"
                   style={{ color: "#ABA4AA" }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#606364";
-                    e.currentTarget.style.color = "#C3BCC2";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.color = "#ABA4AA";
-                  }}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <div className="relative mb-4">
+              <div className="relative mb-6">
                 <Search
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                  style={{ color: "#ABA4AA" }}
+                  style={{ color: "#6b7280" }}
                 />
                 <input
                   type="text"
                   placeholder="Search clients..."
                   value={clientSearchTerm}
                   onChange={e => setClientSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg text-sm transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-3 rounded-lg text-sm transition-all duration-200"
                   style={{
-                    backgroundColor: "#2A3133",
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
+                    backgroundColor: "#2a2a2a",
+                    borderColor: "#374151",
+                    color: "#f9fafb",
                     border: "1px solid",
                   }}
                   onFocus={e => {
                     e.currentTarget.style.borderColor = "#4A5A70";
+                    e.currentTarget.style.backgroundColor = "#1E1E1E";
+                    e.currentTarget.style.boxShadow =
+                      "0 0 0 2px rgba(74, 90, 112, 0.1)";
                   }}
                   onBlur={e => {
-                    e.currentTarget.style.borderColor = "#606364";
+                    e.currentTarget.style.borderColor = "#374151";
+                    e.currentTarget.style.backgroundColor = "#2a2a2a";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 />
               </div>

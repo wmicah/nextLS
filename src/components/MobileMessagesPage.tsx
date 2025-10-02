@@ -620,139 +620,163 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
             <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3 pb-4">
               {messages.map((message: any) => {
                 const isCurrentUser = message.sender.id === currentUser?.id;
+                // Check if this is a workout note message
+                const isWorkoutNote =
+                  message.content?.includes("📝 **Workout Note**") ||
+                  message.content?.includes("📝 **Daily Workout Note**");
+                const isFromClient = !isCurrentUser;
 
                 return (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      isCurrentUser ? "justify-end" : "justify-start"
-                    }`}
-                  >
+                  <div key={message.id} className="space-y-2">
+                    {/* Workout Note Header for client messages */}
+                    {isWorkoutNote && isFromClient && (
+                      <div className="w-full">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-400/20">
+                          <span className="text-blue-400 font-medium text-sm">
+                            📝 Workout Note
+                          </span>
+                          <span className="text-gray-400 text-xs">
+                            from client
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     <div
-                      className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                        isCurrentUser
-                          ? "bg-blue-500 text-white rounded-br-md"
-                          : "bg-gray-700 text-gray-100 rounded-bl-md"
+                      className={`flex ${
+                        isCurrentUser ? "justify-end" : "justify-start"
                       }`}
                     >
-                      <div className="text-sm">
-                        <FormattedMessage content={message.content} />
-                      </div>
+                      <div
+                        className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+                          isCurrentUser
+                            ? "bg-blue-500 text-white rounded-br-md"
+                            : isWorkoutNote && isFromClient
+                            ? "bg-gray-700 text-gray-100 rounded-bl-md border border-blue-400"
+                            : "bg-gray-700 text-gray-100 rounded-bl-md"
+                        }`}
+                      >
+                        <div className="text-sm">
+                          <FormattedMessage content={message.content} />
+                        </div>
 
-                      {/* Message Acknowledgment */}
-                      <MessageAcknowledgment
-                        messageId={message.id}
-                        requiresAcknowledgment={
-                          message.requiresAcknowledgment || false
-                        }
-                        isAcknowledged={message.isAcknowledged || false}
-                        acknowledgedAt={
-                          message.acknowledgedAt
-                            ? new Date(message.acknowledgedAt)
-                            : null
-                        }
-                        isOwnMessage={isCurrentUser}
-                      />
+                        {/* Message Acknowledgment */}
+                        <MessageAcknowledgment
+                          messageId={message.id}
+                          requiresAcknowledgment={
+                            message.requiresAcknowledgment || false
+                          }
+                          isAcknowledged={message.isAcknowledged || false}
+                          acknowledgedAt={
+                            message.acknowledgedAt
+                              ? new Date(message.acknowledgedAt)
+                              : null
+                          }
+                          isOwnMessage={isCurrentUser}
+                        />
 
-                      {message.attachmentUrl && (
-                        <div className="mt-2">
-                          {message.attachmentType?.startsWith("image/") ? (
-                            <img
-                              src={message.attachmentUrl}
-                              alt="Attachment"
-                              className="max-w-full rounded-lg"
-                            />
-                          ) : message.attachmentType?.startsWith("video/") ? (
-                            <div className="space-y-2">
-                              <div className="relative">
-                                <video
-                                  src={message.attachmentUrl}
-                                  controls
-                                  className="max-w-full rounded-lg"
-                                  style={{ maxHeight: "200px" }}
-                                  preload="metadata"
-                                >
-                                  Your browser does not support the video tag.
-                                </video>
-                                {/* Download button for coaches */}
-                                {authData?.user?.role === "COACH" && (
-                                  <button
-                                    onClick={() =>
-                                      handleDownloadVideo(message.id)
-                                    }
-                                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                                    title="Download video"
+                        {message.attachmentUrl && (
+                          <div className="mt-2">
+                            {message.attachmentType?.startsWith("image/") ? (
+                              <img
+                                src={message.attachmentUrl}
+                                alt="Attachment"
+                                className="max-w-full rounded-lg"
+                              />
+                            ) : message.attachmentType?.startsWith("video/") ? (
+                              <div className="space-y-2">
+                                <div className="relative">
+                                  <video
+                                    src={message.attachmentUrl}
+                                    controls
+                                    className="max-w-full rounded-lg"
+                                    style={{ maxHeight: "200px" }}
+                                    preload="metadata"
                                   >
-                                    <Download className="h-3 w-3 text-white" />
-                                  </button>
-                                )}
-                              </div>
-                              {/* Annotation button */}
-                              <button
-                                onClick={() => {
-                                  // Create video record from message attachment
-                                  createVideoMutation.mutate({
-                                    title:
-                                      message.attachmentName ||
-                                      "Video from Message",
-                                    description: `Video attachment from message`,
-                                    url: message.attachmentUrl,
-                                    duration: 0, // Will be updated when video loads
-                                    fileSize: message.attachmentSize || 0,
-                                  });
-                                }}
-                                className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                              >
-                                <svg
-                                  className="w-3 h-3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
+                                    Your browser does not support the video tag.
+                                  </video>
+                                  {/* Download button for coaches */}
+                                  {authData?.user?.role === "COACH" && (
+                                    <button
+                                      onClick={() =>
+                                        handleDownloadVideo(message.id)
+                                      }
+                                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                                      title="Download video"
+                                    >
+                                      <Download className="h-3 w-3 text-white" />
+                                    </button>
+                                  )}
+                                </div>
+                                {/* Annotation button */}
+                                <button
+                                  onClick={() => {
+                                    // Create video record from message attachment
+                                    createVideoMutation.mutate({
+                                      title:
+                                        message.attachmentName ||
+                                        "Video from Message",
+                                      description: `Video attachment from message`,
+                                      url: message.attachmentUrl,
+                                      duration: 0, // Will be updated when video loads
+                                      fileSize: message.attachmentSize || 0,
+                                    });
+                                  }}
+                                  className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                                 >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                  />
-                                </svg>
-                                Annotate Video
-                              </button>
-                            </div>
-                          ) : (
-                            <a
-                              href={message.attachmentUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-sm underline"
-                            >
-                              <File className="h-4 w-4" />
-                              {message.attachmentName || "Attachment"}
-                            </a>
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    />
+                                  </svg>
+                                  Annotate Video
+                                </button>
+                              </div>
+                            ) : (
+                              <a
+                                href={message.attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm underline"
+                              >
+                                <File className="h-4 w-4" />
+                                {message.attachmentName || "Attachment"}
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-end gap-1 mt-2">
+                          <span
+                            className={`text-xs ${
+                              isCurrentUser ? "text-blue-100" : "text-gray-400"
+                            }`}
+                          >
+                            {format(new Date(message.createdAt), "h:mm a")}
+                          </span>
+                          {isCurrentUser && (
+                            <CheckCheck
+                              className={`h-3 w-3 ${
+                                message.isRead
+                                  ? "text-blue-300"
+                                  : "text-gray-400"
+                              }`}
+                            />
                           )}
                         </div>
-                      )}
-                      <div className="flex items-center justify-end gap-1 mt-2">
-                        <span
-                          className={`text-xs ${
-                            isCurrentUser ? "text-blue-100" : "text-gray-400"
-                          }`}
-                        >
-                          {format(new Date(message.createdAt), "h:mm a")}
-                        </span>
-                        {isCurrentUser && (
-                          <CheckCheck
-                            className={`h-3 w-3 ${
-                              message.isRead ? "text-blue-300" : "text-gray-400"
-                            }`}
-                          />
-                        )}
                       </div>
                     </div>
                   </div>
