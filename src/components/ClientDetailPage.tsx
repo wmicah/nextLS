@@ -101,8 +101,29 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   } | null>(null);
 
   // Fetch client data
-  const { data: client, isLoading: clientLoading } =
-    trpc.clients.getById.useQuery({ id: clientId }, { enabled: !!clientId });
+  const {
+    data: client,
+    isLoading: clientLoading,
+    error: clientError,
+  } = trpc.clients.getById.useQuery(
+    { id: clientId },
+    {
+      enabled: !!clientId,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+    }
+  );
+
+  // Redirect to clients page if client is archived or not found
+  useEffect(() => {
+    if (clientError || (!clientLoading && !client)) {
+      router.push("/clients");
+    }
+    // Also redirect if client is archived
+    if (client && client.archived) {
+      router.push("/clients");
+    }
+  }, [clientError, clientLoading, client, router]);
 
   // Fetch coach's schedule for the current month (includes all client lessons)
   const { data: coachSchedule = [] } =
@@ -204,6 +225,26 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
         type: "error",
         title: "Removal Failed",
         message: error.message || "Failed to remove routine.",
+      });
+    },
+  });
+
+  // Delete lesson mutation
+  const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
+    onSuccess: () => {
+      addToast({
+        type: "success",
+        title: "Lesson Removed!",
+        message: "Lesson has been successfully removed.",
+      });
+      refreshAllData();
+    },
+    onError: error => {
+      addToast({
+        type: "error",
+        title: "Failed to Remove Lesson",
+        message:
+          error.message || "An error occurred while removing the lesson.",
       });
     },
   });
@@ -402,6 +443,18 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
       unassignRoutineMutation.mutate({
         routineId: routineData.routineId,
         clientIds: [clientId],
+      });
+    }
+  };
+
+  const handleRemoveLesson = (lessonData: any) => {
+    if (
+      confirm(
+        `Are you sure you want to remove the lesson "${lessonData.lessonTitle}"?`
+      )
+    ) {
+      deleteLessonMutation.mutate({
+        lessonId: lessonData.lessonId,
       });
     }
   };
@@ -1027,6 +1080,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             }}
             onRemoveProgram={handleRemoveProgram}
             onRemoveRoutine={handleRemoveRoutine}
+            onRemoveLesson={handleRemoveLesson}
             getStatusIcon={getStatusIcon}
             getStatusColor={getStatusColor}
           />

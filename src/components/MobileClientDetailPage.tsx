@@ -85,8 +85,29 @@ export default function MobileClientDetailPage({
   const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
 
   // Fetch client data
-  const { data: client, isLoading: clientLoading } =
-    trpc.clients.getById.useQuery({ id: clientId }, { enabled: !!clientId });
+  const {
+    data: client,
+    isLoading: clientLoading,
+    error: clientError,
+  } = trpc.clients.getById.useQuery(
+    { id: clientId },
+    {
+      enabled: !!clientId,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+    }
+  );
+
+  // Redirect to clients page if client is archived or not found
+  useEffect(() => {
+    if (clientError || (!clientLoading && !client)) {
+      router.push("/clients");
+    }
+    // Also redirect if client is archived
+    if (client && client.archived) {
+      router.push("/clients");
+    }
+  }, [clientError, clientLoading, client, router]);
 
   // Fetch coach's schedule for the current month (includes all client lessons)
   const { data: coachSchedule = [], isLoading: lessonsLoading } =

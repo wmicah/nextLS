@@ -26,6 +26,7 @@ interface DayDetailsModalProps {
   onReplaceWithLesson: (replacementData: any) => void;
   onRemoveProgram?: (programData: any) => void;
   onRemoveRoutine?: (routineData: any) => void;
+  onRemoveLesson?: (lessonData: any) => void;
   getStatusIcon: (status: string) => React.ReactNode;
   getStatusColor: (status: string) => string;
 }
@@ -43,6 +44,7 @@ export default function DayDetailsModal({
   onReplaceWithLesson,
   onRemoveProgram,
   onRemoveRoutine,
+  onRemoveLesson,
   getStatusIcon,
   getStatusColor,
 }: DayDetailsModalProps) {
@@ -125,6 +127,17 @@ export default function DayDetailsModal({
         dayDate: selectedDate.toISOString().split("T")[0],
       };
       onRemoveRoutine(routineData);
+    }
+  };
+
+  const handleRemoveLesson = (lesson: any) => {
+    if (onRemoveLesson) {
+      const lessonData = {
+        lessonId: lesson.id,
+        lessonTitle: lesson.title || "Lesson",
+        dayDate: selectedDate.toISOString().split("T")[0],
+      };
+      onRemoveLesson(lessonData);
     }
   };
 
@@ -239,6 +252,20 @@ export default function DayDetailsModal({
                           <div className="flex items-center gap-2">
                             {getStatusIcon(lesson.status)}
                             <div className="text-xs">{lesson.status}</div>
+                            {onRemoveLesson && (
+                              <button
+                                onClick={() => handleRemoveLesson(lesson)}
+                                className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1"
+                                style={{
+                                  backgroundColor: "#EF4444",
+                                  color: "#FFFFFF",
+                                }}
+                                title="Remove Lesson"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                Remove
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -186,7 +186,7 @@ function ClientsPage() {
   ) => {
     if (
       window.confirm(
-        `Are you sure you want to archive ${clientName}? They will be moved to the archived section and can be restored later.`
+        `Are you sure you want to archive ${clientName}? They will be moved to the archived section and all their assignments (programs, routines, lessons, and videos) will be removed. They can be restored later.`
       )
     ) {
       setArchivingClientId(clientId);
@@ -197,7 +197,7 @@ function ClientsPage() {
   const handleArchiveClient = (clientId: string, clientName: string) => {
     if (
       window.confirm(
-        `Are you sure you want to archive ${clientName}? They will be moved to the archived section.`
+        `Are you sure you want to archive ${clientName}? They will be moved to the archived section and all their assignments (programs, routines, lessons, and videos) will be removed.`
       )
     ) {
       archiveClient.mutate({ id: clientId });
@@ -260,7 +260,7 @@ function ClientsPage() {
       window.confirm(
         `Archive ${selectedClients.size} client${
           selectedClients.size === 1 ? "" : "s"
-        }? This will move them to the archived section.`
+        }? This will move them to the archived section and remove all their assignments (programs, routines, lessons, and videos).`
       )
     ) {
       try {

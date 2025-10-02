@@ -1142,12 +1142,52 @@ export const appRouter = router({
           });
         }
 
-        await db.client.update({
-          where: { id: input.id },
-          data: {
-            archived: true,
-            archivedAt: new Date(),
-          },
+        // Archive the client and remove all their assignments
+        await db.$transaction(async tx => {
+          // Archive the client
+          await tx.client.update({
+            where: { id: input.id },
+            data: {
+              archived: true,
+              archivedAt: new Date(),
+            },
+          });
+
+          // Remove all lessons for this client
+          const deletedLessons = await tx.event.deleteMany({
+            where: {
+              clientId: input.id,
+            },
+          });
+
+          // Remove all program assignments for this client
+          const deletedPrograms = await tx.programAssignment.deleteMany({
+            where: {
+              clientId: input.id,
+            },
+          });
+
+          // Remove all routine assignments for this client
+          const deletedRoutines = await tx.routineAssignment.deleteMany({
+            where: {
+              clientId: input.id,
+            },
+          });
+
+          // Remove all video assignments for this client
+          const deletedVideos = await tx.videoAssignment.deleteMany({
+            where: {
+              clientId: input.id,
+            },
+          });
+
+          // Log the cleanup results for debugging
+          console.log(`Archive cleanup for client ${input.id}:`, {
+            lessons: deletedLessons.count,
+            programs: deletedPrograms.count,
+            routines: deletedRoutines.count,
+            videos: deletedVideos.count,
+          });
         });
 
         return { success: true };
@@ -1222,6 +1262,25 @@ export const appRouter = router({
           });
         }
 
+        // First check if client exists at all (including archived)
+        const clientExists = await db.client.findFirst({
+          where: {
+            id: input.id,
+            coachId: ensureUserId(user.id),
+          },
+          select: {
+            id: true,
+            archived: true,
+            name: true,
+          },
+        });
+
+        console.log(`Client ${input.id} lookup:`, {
+          exists: !!clientExists,
+          archived: clientExists?.archived,
+          name: clientExists?.name,
+        });
+
         const client = await db.client.findFirst({
           where: {
             id: input.id,
@@ -1285,11 +1344,17 @@ export const appRouter = router({
         });
 
         if (!client) {
+          console.log(`Client ${input.id} not found or is archived`);
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Client not found",
           });
         }
+
+        console.log(`Client ${input.id} found:`, {
+          name: client.name,
+          archived: client.archived,
+        });
 
         return client;
       }),
@@ -2320,11 +2385,12 @@ export const appRouter = router({
           });
         }
 
-        // Verify the client is assigned to this coach
+        // Verify the client is assigned to this coach and is not archived
         const client = await db.client.findFirst({
           where: {
             userId: input.clientId,
             coachId: ensureUserId(user.id),
+            archived: false, // Only allow access to active clients
           },
         });
 
@@ -5522,6 +5588,7 @@ export const appRouter = router({
         const now = new Date();
 
         // Get all CONFIRMED events (lessons) for the coach in the specified month
+        // Only include lessons for active (non-archived) clients
         const events = await db.event.findMany({
           where: {
             coachId: ensureUserId(user.id),
@@ -5530,6 +5597,9 @@ export const appRouter = router({
               gte: monthStart,
               lte: monthEnd,
               gt: now, // Only return future lessons
+            },
+            client: {
+              archived: false, // Only include lessons for active clients
             },
           },
           include: {
