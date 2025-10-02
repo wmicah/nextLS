@@ -217,7 +217,6 @@ export default function MobileMessagePopup({
         </div>
 
         {!selectedConversation ? (
-          {/* Conversations List */}
           <div className="flex-1 flex flex-col">
             {/* Search */}
             <div className="p-4 border-b" style={{ borderColor: "#4A5568" }}>
@@ -336,7 +335,6 @@ export default function MobileMessagePopup({
             </div>
           </div>
         ) : (
-          {/* Chat View */}
           <div className="flex-1 flex flex-col">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -345,9 +343,11 @@ export default function MobileMessagePopup({
                   message.sender.id ===
                   conversations.find(c => c.id === selectedConversation)
                     ?.coachId;
-                
+
                 // Check if this is a workout note message
-                const isWorkoutNote = message.content?.includes("📝 **Workout Note**") || message.content?.includes("📝 **Daily Workout Note**");
+                const isWorkoutNote =
+                  message.content?.includes("📝 **Workout Note**") ||
+                  message.content?.includes("📝 **Daily Workout Note**");
                 const isFromClient = !isCurrentUser;
 
                 return (
@@ -356,12 +356,16 @@ export default function MobileMessagePopup({
                     {isWorkoutNote && isFromClient && (
                       <div className="w-full">
                         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-400/20">
-                          <span className="text-blue-400 font-medium text-sm">📝 Workout Note</span>
-                          <span className="text-gray-400 text-xs">from client</span>
+                          <span className="text-blue-400 font-medium text-sm">
+                            📝 Workout Note
+                          </span>
+                          <span className="text-gray-400 text-xs">
+                            from client
+                          </span>
                         </div>
                       </div>
                     )}
-                    
+
                     <div
                       className={`flex ${
                         isCurrentUser ? "justify-end" : "justify-start"
@@ -378,34 +382,35 @@ export default function MobileMessagePopup({
                       >
                         <FormattedMessage content={message.content} />
 
-                      {/* Message Acknowledgment */}
-                      <MessageAcknowledgment
-                        messageId={message.id}
-                        requiresAcknowledgment={
-                          message.requiresAcknowledgment || false
-                        }
-                        isAcknowledged={message.isAcknowledged || false}
-                        acknowledgedAt={
-                          message.acknowledgedAt
-                            ? new Date(message.acknowledgedAt)
-                            : null
-                        }
-                        isOwnMessage={isCurrentUser}
-                      />
+                        {/* Message Acknowledgment */}
+                        <MessageAcknowledgment
+                          messageId={message.id}
+                          requiresAcknowledgment={
+                            message.requiresAcknowledgment || false
+                          }
+                          isAcknowledged={message.isAcknowledged || false}
+                          acknowledgedAt={
+                            message.acknowledgedAt
+                              ? new Date(message.acknowledgedAt)
+                              : null
+                          }
+                          isOwnMessage={isCurrentUser}
+                        />
 
-                      <div className="flex items-center justify-end gap-1 mt-2">
-                        <p
-                          className={`text-sm ${
-                            isCurrentUser ? "text-blue-100" : "text-gray-400"
-                          }`}
-                        >
-                          {formatTime(message.createdAt)}
-                        </p>
-                        {isCurrentUser && (
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 bg-blue-200 rounded-full" />
-                          </div>
-                        )}
+                        <div className="flex items-center justify-end gap-1 mt-2">
+                          <p
+                            className={`text-sm ${
+                              isCurrentUser ? "text-blue-100" : "text-gray-400"
+                            }`}
+                          >
+                            {formatTime(message.createdAt)}
+                          </p>
+                          {isCurrentUser && (
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 bg-blue-200 rounded-full" />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
