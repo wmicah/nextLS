@@ -5118,6 +5118,7 @@ export const appRouter = router({
           ]),
           recurrenceInterval: z.number().min(1).max(6), // 1-6 weeks
           sendEmail: z.boolean().optional(),
+          timeZone: z.string().optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -5153,18 +5154,19 @@ export const appRouter = router({
           });
         }
 
-        const startDate = new Date(input.startDate);
+        // Convert string to Date object (this is local time from client)
+        const localStartDate = new Date(input.startDate);
         const endDate = new Date(input.endDate);
 
         // Validate dates
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        if (isNaN(localStartDate.getTime()) || isNaN(endDate.getTime())) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid date format",
           });
         }
 
-        if (startDate >= endDate) {
+        if (localStartDate >= endDate) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "End date must be after start date",
@@ -5172,21 +5174,25 @@ export const appRouter = router({
         }
 
         const now = new Date();
-        if (startDate <= now) {
+        if (localStartDate <= now) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Cannot schedule lessons in the past",
           });
         }
 
-        // Extract time components from the start date to preserve the time for all recurring lessons
-        const startTime = startDate.getHours();
-        const startMinutes = startDate.getMinutes();
-        const startSeconds = startDate.getSeconds();
+        // Convert local time to UTC using the user's timezone
+        const timeZone = input.timeZone || "America/New_York";
+        const utcStartDate = fromZonedTime(localStartDate, timeZone);
+
+        // Extract time components from the UTC start date to preserve the time for all recurring lessons
+        const startTime = utcStartDate.getHours();
+        const startMinutes = utcStartDate.getMinutes();
+        const startSeconds = utcStartDate.getSeconds();
 
         // Calculate lesson dates based on recurrence pattern
         const lessonDates: Date[] = [];
-        let currentDate = new Date(startDate);
+        let currentDate = new Date(utcStartDate);
 
         while (currentDate <= endDate) {
           // Check if the date is on a working day

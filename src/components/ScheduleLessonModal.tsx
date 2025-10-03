@@ -327,6 +327,7 @@ export default function ScheduleLessonModal({
         .padStart(2, "0")}:00`;
       const endDateStr = format(new Date(endDate), "yyyy-MM-dd");
 
+      const timeZone = getUserTimezone();
       scheduleRecurringLessonsMutation.mutate({
         clientId,
         startDate: startDateStr, // Full datetime format with time preserved
@@ -334,6 +335,7 @@ export default function ScheduleLessonModal({
         recurrencePattern,
         recurrenceInterval,
         sendEmail,
+        timeZone,
       });
     } else if (replacementData) {
       // Replace workout with lesson

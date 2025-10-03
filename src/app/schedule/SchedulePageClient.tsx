@@ -1954,6 +1954,7 @@ function SchedulePageClient() {
                                       .padStart(2, "0")}:${minute}:00`;
 
                                     // Schedule recurring lessons
+                                    const timeZone = getUserTimezone();
                                     scheduleRecurringLessonsMutation.mutate({
                                       clientId: scheduleForm.clientId,
                                       startDate: fullStartDateStr, // Full datetime format
@@ -1964,6 +1965,7 @@ function SchedulePageClient() {
                                       recurrencePattern: "weekly",
                                       recurrenceInterval,
                                       sendEmail: true,
+                                      timeZone,
                                     });
                                   }
                                 }}
