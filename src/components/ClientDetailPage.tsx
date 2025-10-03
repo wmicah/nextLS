@@ -70,7 +70,7 @@ import QuickAssignRoutineModal from "@/components/QuickAssignRoutineModal";
 import QuickAssignRoutineFromDayModal from "@/components/QuickAssignRoutineFromDayModal";
 import AssignRoutineModal from "@/components/AssignRoutineModal";
 import AssignVideoModal from "@/components/AssignVideoModal";
-import ScheduleLessonModal from "@/components/ScheduleLessonModal";
+import StreamlinedScheduleLessonModal from "@/components/StreamlinedScheduleLessonModal";
 import DayDetailsModal from "@/components/DayDetailsModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientDetailPage from "@/components/MobileClientDetailPage";
@@ -1070,7 +1070,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
           )}
 
           {showScheduleLessonModal && (
-            <ScheduleLessonModal
+            <StreamlinedScheduleLessonModal
               isOpen={showScheduleLessonModal}
               onClose={() => {
                 setShowScheduleLessonModal(false);
@@ -1080,12 +1080,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               clientId={clientId}
               clientName={client.name}
               clientEmail={client.user?.email}
-              startDate={
-                selectedDate
-                  ? selectedDate.toISOString().split("T")[0]
-                  : undefined
-              }
-              replacementData={replacementData}
+              selectedDate={selectedDate}
             />
           )}
 
