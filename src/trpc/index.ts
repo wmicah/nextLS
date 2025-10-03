@@ -5269,7 +5269,7 @@ export const appRouter = router({
               message: `Your coach has scheduled ${
                 lessonDates.length
               } recurring lessons from ${format(
-                startDate,
+                localStartDate,
                 "MMM d, yyyy"
               )} to ${format(endDate, "MMM d, yyyy")}`,
             },
@@ -5287,7 +5287,7 @@ export const appRouter = router({
           lessons,
           totalLessons: lessonDates.length,
           dateRange: {
-            start: startDate,
+            start: localStartDate,
             end: endDate,
           },
         };
