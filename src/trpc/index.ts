@@ -5108,7 +5108,7 @@ export const appRouter = router({
       .input(
         z.object({
           clientId: z.string(),
-          startDate: z.string(),
+          startDate: z.string(), // Full datetime string (YYYY-MM-DDTHH:mm:ss)
           endDate: z.string(),
           recurrencePattern: z.enum([
             "weekly",
@@ -5179,6 +5179,11 @@ export const appRouter = router({
           });
         }
 
+        // Extract time components from the start date to preserve the time for all recurring lessons
+        const startTime = startDate.getHours();
+        const startMinutes = startDate.getMinutes();
+        const startSeconds = startDate.getSeconds();
+
         // Calculate lesson dates based on recurrence pattern
         const lessonDates: Date[] = [];
         let currentDate = new Date(startDate);
@@ -5188,10 +5193,16 @@ export const appRouter = router({
           if (coach.workingDays) {
             const dayName = format(currentDate, "EEEE");
             if (coach.workingDays.includes(dayName)) {
-              lessonDates.push(new Date(currentDate));
+              // Create a new date with the same time as the original start date
+              const lessonDate = new Date(currentDate);
+              lessonDate.setHours(startTime, startMinutes, startSeconds, 0);
+              lessonDates.push(lessonDate);
             }
           } else {
-            lessonDates.push(new Date(currentDate));
+            // Create a new date with the same time as the original start date
+            const lessonDate = new Date(currentDate);
+            lessonDate.setHours(startTime, startMinutes, startSeconds, 0);
+            lessonDates.push(lessonDate);
           }
 
           // Calculate next lesson date based on recurrence pattern

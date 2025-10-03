@@ -1948,18 +1948,19 @@ function SchedulePageClient() {
                                         ? 0
                                         : parseInt(hour);
 
-                                    // For recurring lessons, we only need the date part (not time)
-                                    // The time will be handled by individual lesson scheduling
-                                    const startDateStr = dateStr; // Just the date part YYYY-MM-DD
+                                    // For recurring lessons, we need the full datetime to preserve the selected time
+                                    const fullStartDateStr = `${dateStr}T${hour24
+                                      .toString()
+                                      .padStart(2, "0")}:${minute}:00`;
 
                                     // Schedule recurring lessons
                                     scheduleRecurringLessonsMutation.mutate({
                                       clientId: scheduleForm.clientId,
-                                      startDate: startDateStr, // Date only format
+                                      startDate: fullStartDateStr, // Full datetime format
                                       endDate: format(
                                         new Date(endDate),
                                         "yyyy-MM-dd"
-                                      ), // Date only format
+                                      ), // End date only (will use same time as start)
                                       recurrencePattern: "weekly",
                                       recurrenceInterval,
                                       sendEmail: true,

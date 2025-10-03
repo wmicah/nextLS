@@ -310,18 +310,27 @@ export default function ScheduleLessonModal({
     );
 
     if (isRecurring && endDate) {
-      // Schedule recurring lessons
+      // Schedule recurring lessons with full datetime to preserve time
       const startDateStr = `${lessonDate.getFullYear()}-${(
         lessonDate.getMonth() + 1
       )
         .toString()
-        .padStart(2, "0")}-${lessonDate.getDate().toString().padStart(2, "0")}`;
+        .padStart(2, "0")}-${lessonDate
+        .getDate()
+        .toString()
+        .padStart(2, "0")}T${lessonDate
+        .getHours()
+        .toString()
+        .padStart(2, "0")}:${lessonDate
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}:00`;
       const endDateStr = format(new Date(endDate), "yyyy-MM-dd");
 
       scheduleRecurringLessonsMutation.mutate({
         clientId,
-        startDate: startDateStr, // Use consistent local date format
-        endDate: endDateStr, // Use consistent local date format
+        startDate: startDateStr, // Full datetime format with time preserved
+        endDate: endDateStr, // End date only (will use same time as start)
         recurrencePattern,
         recurrenceInterval,
         sendEmail,
