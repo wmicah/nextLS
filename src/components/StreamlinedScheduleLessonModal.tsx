@@ -25,6 +25,7 @@ import {
   endOfWeek,
   isSameMonth,
   addWeeks,
+  isPast,
 } from "date-fns";
 
 interface StreamlinedScheduleLessonModalProps {
@@ -423,13 +424,13 @@ export default function StreamlinedScheduleLessonModal({
               {calendarDays.map(day => {
                 const isCurrentMonth = isSameMonth(day, currentMonth);
                 const isSelected = selectedDate && isSameDay(day, selectedDate);
-                const isPast = day < new Date().setHours(0, 0, 0, 0);
+                const isPastDay = isPast(day);
 
                 return (
                   <button
                     key={day.toISOString()}
                     onClick={() => setSelectedDate(day)}
-                    disabled={isPast}
+                    disabled={isPastDay}
                     className={`
                       p-2 rounded-lg text-sm font-medium transition-all duration-200
                       ${
