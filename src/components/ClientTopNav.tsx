@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Home,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +58,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
   );
 
   const handleLogout = () => {
-    router.push("/api/auth/logout");
+    window.location.href = "/api/auth/logout";
   };
 
   const handleSettings = () => {
@@ -76,6 +77,10 @@ function ClientTopNav({ children }: ClientTopNavProps) {
 
   const handleDashboard = () => {
     router.push("/client-dashboard");
+  };
+
+  const handleSchedule = () => {
+    router.push("/client-schedule");
   };
 
   return (
@@ -109,6 +114,15 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   style={{ minWidth: "44px", minHeight: "44px" }}
                 >
                   <Home className="h-6 w-6 text-white group-hover:text-green-400" />
+                </button>
+
+                {/* Schedule */}
+                <button
+                  onClick={handleSchedule}
+                  className="p-3 rounded-xl transition-all duration-200 hover:bg-white/10 group hover:scale-105 touch-manipulation"
+                  style={{ minWidth: "44px", minHeight: "44px" }}
+                >
+                  <Calendar className="h-6 w-6 text-white group-hover:text-blue-400" />
                 </button>
 
                 {/* Messages */}

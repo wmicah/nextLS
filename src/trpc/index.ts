@@ -11610,6 +11610,38 @@ export const appRouter = router({
         return filteredEvents;
       }),
 
+    // Get current client record for the logged-in user
+    getCurrentClient: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get client record
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          coachId: true,
+        },
+      });
+
+      return client;
+    }),
+
     // Get coach's profile for client (including working hours)
     getCoachProfile: publicProcedure.query(async () => {
       const { getUser } = getKindeServerSession();
@@ -13074,9 +13106,21 @@ export const appRouter = router({
                 client2Id: targetEvent.client.userId || "",
               },
             });
-            console.log("New conversation created:", conversation.id);
+            console.log("🔄 New conversation created:", {
+              conversationId: conversation.id,
+              client1Id: currentClient.userId,
+              client2Id: targetEvent.client.userId,
+              currentClientName: currentClient.name,
+              targetClientName: targetEvent.client.name,
+            });
           } else {
-            console.log("Existing conversation found:", conversation.id);
+            console.log("🔄 Existing conversation found:", {
+              conversationId: conversation.id,
+              client1Id: currentClient.userId,
+              client2Id: targetEvent.client.userId,
+              currentClientName: currentClient.name,
+              targetClientName: targetEvent.client.name,
+            });
           }
 
           // Send the swap request message
@@ -13114,7 +13158,82 @@ export const appRouter = router({
             },
           });
 
-          console.log("Swap request message created:", message.id);
+          console.log("💬 Swap request message created:", {
+            messageId: message.id,
+            conversationId: conversation.id,
+            senderId: currentClient.userId,
+            targetUserId: targetEvent.client.userId,
+            swapRequestId: swapRequest.id,
+          });
+
+          // Create notification for the target client
+          await db.notification.create({
+            data: {
+              userId: targetEvent.client.userId || "",
+              type: "MESSAGE",
+              title: "New Swap Request",
+              message: `You have a new time swap request from another client`,
+              data: {
+                conversationId: conversation.id,
+                messageId: message.id,
+                swapRequestId: swapRequest.id,
+              },
+            },
+          });
+
+          console.log("Swap request notification created for target client");
+
+          // Send real-time update via SSE
+          try {
+            const { sendToUser } = await import("@/app/api/sse/messages/route");
+            const { sendMessageNotification } = await import(
+              "@/lib/pushNotificationService"
+            );
+
+            if (targetEvent.client.userId) {
+              // Send new message notification to target client
+              sendToUser(targetEvent.client.userId, {
+                type: "new_message",
+                data: {
+                  message,
+                  conversationId: conversation.id,
+                },
+              });
+
+              // Send push notification
+              await sendMessageNotification(
+                targetEvent.client.userId,
+                currentClient.name || currentClient.email || "Another Client",
+                message.content,
+                conversation.id
+              );
+
+              // Update unread count for target client
+              const unreadCount = await db.message.count({
+                where: {
+                  conversation: {
+                    OR: [
+                      { clientId: targetEvent.client.userId },
+                      { client1Id: targetEvent.client.userId },
+                      { client2Id: targetEvent.client.userId },
+                    ],
+                  },
+                  isRead: false,
+                  senderId: { not: targetEvent.client.userId },
+                },
+              });
+
+              sendToUser(targetEvent.client.userId, {
+                type: "unread_count",
+                data: { count: unreadCount },
+              });
+
+              console.log("Real-time updates sent to target client");
+            }
+          } catch (error) {
+            console.error("Error sending real-time updates:", error);
+            // Don't fail the swap request if SSE fails
+          }
         }
 
         return {

@@ -109,16 +109,32 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
 
-  // Helper function to get the other user from a conversation
+  // Helper function to get the other user from a conversation with privacy controls
   const getOtherUser = (conversation: any, currentUserId: string) => {
     if (conversation.type === "COACH_CLIENT") {
       return conversation.coach?.id === currentUserId
         ? conversation.client
         : conversation.coach;
     } else if (conversation.type === "CLIENT_CLIENT") {
-      return conversation.client1?.id === currentUserId
-        ? conversation.client2
-        : conversation.client1;
+      // For client-to-client conversations, anonymize the other client's info
+      const otherClient =
+        conversation.client1?.id === currentUserId
+          ? conversation.client2
+          : conversation.client1;
+
+      if (otherClient) {
+        return {
+          ...otherClient,
+          name: "Client", // Anonymize name
+          email: "client@example.com", // Anonymize email
+          settings: {
+            ...otherClient.settings,
+            avatarUrl: null, // Remove avatar for privacy
+          },
+          avatar: null, // Remove avatar for privacy
+        };
+      }
+      return otherClient;
     }
     return null;
   };
@@ -851,10 +867,8 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                         )}
                         <div className="flex items-center gap-3">
                           <ProfilePictureUploader
-                            currentAvatarUrl={
-                              client.user?.settings?.avatarUrl || client.avatar
-                            }
-                            userName={client.name || client.email || "User"}
+                            currentAvatarUrl={null} // Anonymize avatar for privacy
+                            userName="Client" // Anonymize name
                             onAvatarChange={() => {}}
                             size="sm"
                             readOnly={true}
@@ -865,16 +879,14 @@ export default function MobileClientMessagesPage({}: MobileClientMessagesPagePro
                               className="font-medium"
                               style={{ color: "#C3BCC2" }}
                             >
-                              {client.name ||
-                                client.email?.split("@")[0] ||
-                                "Unknown"}
+                              Client
                             </p>
                             <div className="flex items-center gap-2">
                               <p
                                 className="text-sm"
                                 style={{ color: "#ABA4AA" }}
                               >
-                                {client.email || "No email"}
+                                client@example.com
                               </p>
                               {!client.userId && (
                                 <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">

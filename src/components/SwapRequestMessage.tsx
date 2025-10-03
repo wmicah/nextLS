@@ -8,6 +8,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import FormattedMessage from "./FormattedMessage";
 
 interface SwapRequestMessageProps {
   message: {
@@ -77,7 +78,7 @@ export default function SwapRequestMessage({
   if (!message.data) {
     return (
       <div className="p-3 bg-gray-50 rounded-lg">
-        <p className="text-gray-700">{message.content}</p>
+        <FormattedMessage content={message.content} />
       </div>
     );
   }
@@ -92,7 +93,7 @@ export default function SwapRequestMessage({
             Swap Request Approved
           </h4>
         </div>
-        <p style={{ color: "#ABA4AA" }}>{message.content}</p>
+        <FormattedMessage content={message.content} />
       </div>
     );
   }
@@ -107,7 +108,7 @@ export default function SwapRequestMessage({
             Swap Request Declined
           </h4>
         </div>
-        <p style={{ color: "#ABA4AA" }}>{message.content}</p>
+        <FormattedMessage content={message.content} />
       </div>
     );
   }
@@ -125,9 +126,9 @@ export default function SwapRequestMessage({
             Swap Request Cancelled
           </h4>
         </div>
-        <p className="mb-2" style={{ color: "#ABA4AA" }}>
-          {message.content}
-        </p>
+        <div className="mb-2" style={{ color: "#ABA4AA" }}>
+          <FormattedMessage content={message.content} />
+        </div>
         <p className="text-sm" style={{ color: "#ABA4AA" }}>
           {message.data.cancelledBy} has cancelled their swap request.
         </p>
@@ -139,7 +140,7 @@ export default function SwapRequestMessage({
   if (message.data.type !== "SWAP_REQUEST") {
     return (
       <div className="p-3 rounded-lg" style={{ backgroundColor: "#2A3133" }}>
-        <p style={{ color: "#ABA4AA" }}>{message.content}</p>
+        <FormattedMessage content={message.content} />
       </div>
     );
   }
@@ -155,9 +156,9 @@ export default function SwapRequestMessage({
           <h3 className="font-medium mb-2" style={{ color: "#C3BCC2" }}>
             Time Swap Request
           </h3>
-          <p className="text-sm mb-3" style={{ color: "#ABA4AA" }}>
-            {message.content}
-          </p>
+          <div className="text-sm mb-3" style={{ color: "#ABA4AA" }}>
+            <FormattedMessage content={message.content} />
+          </div>
         </div>
       </div>
 

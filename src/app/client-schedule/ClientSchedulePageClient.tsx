@@ -129,8 +129,8 @@ function ClientSchedulePageClient() {
   const { data: existingSwapRequests = [], isLoading: isLoadingSwapRequests } =
     trpc.timeSwap.getSwapRequests.useQuery();
 
-  // Get current client info
-  const { data: currentClient } = trpc.user.getProfile.useQuery();
+  // Get current client info - we need the Client record, not User record
+  const { data: currentClient } = trpc.clientRouter.getCurrentClient.useQuery();
 
   // Fetch coach's profile for working hours
   const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
@@ -148,6 +148,109 @@ function ClientSchedulePageClient() {
           request.targetEventId === lessonId) &&
         request.status === "PENDING"
     );
+  };
+
+  // Helper function to anonymize lesson titles for privacy
+  const anonymizeLessonTitle = (title: string, lessonClientId: string) => {
+    if (lessonClientId === currentClient?.id) {
+      return title; // Show full title for client's own lessons
+    }
+
+    // For other clients' lessons, anonymize common patterns
+    let anonymizedTitle = title;
+
+    // Replace "Lesson with [clientname]" with "Lesson with client" - handle multi-word names
+    anonymizedTitle = anonymizedTitle.replace(
+      /Lesson with [a-zA-Z0-9_\s]+?(?=\s*-\s|$)/gi,
+      "Lesson with client"
+    );
+
+    // Replace "Lesson - [clientname] - [description]" with "Lesson - client - [description]"
+    anonymizedTitle = anonymizedTitle.replace(
+      /Lesson - [a-zA-Z0-9_\s]+?(?=\s*-\s)/gi,
+      "Lesson - client"
+    );
+
+    // Replace standalone client names - handle multi-word names
+    // This is a more sophisticated approach for complex patterns
+    if (anonymizedTitle === title) {
+      // Common lesson-related words that should not be replaced
+      const lessonWords = [
+        "lesson",
+        "with",
+        "day",
+        "program",
+        "workout",
+        "session",
+        "training",
+        "practice",
+        "drill",
+        "exercise",
+        "routine",
+        "week",
+        "month",
+        "year",
+        "time",
+        "date",
+        "schedule",
+      ];
+
+      // Split into words and process
+      const words = anonymizedTitle.split(" ");
+      const anonymizedWords = [];
+
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+
+        // Skip if it's a common lesson word
+        if (lessonWords.includes(word.toLowerCase())) {
+          anonymizedWords.push(word);
+          continue;
+        }
+
+        // Skip if it's a number, time, or date
+        if (
+          /^\d+$/.test(word) ||
+          /^\d+:\d+/.test(word) ||
+          /^\d+[ap]m$/i.test(word)
+        ) {
+          anonymizedWords.push(word);
+          continue;
+        }
+
+        // Skip if it's a common word like "the", "and", "or", etc.
+        if (
+          [
+            "the",
+            "and",
+            "or",
+            "for",
+            "to",
+            "of",
+            "in",
+            "at",
+            "by",
+            "on",
+          ].includes(word.toLowerCase())
+        ) {
+          anonymizedWords.push(word);
+          continue;
+        }
+
+        // If it's a potential client name (alphabetic word longer than 2 characters)
+        if (word.length > 2 && /^[a-zA-Z]+$/.test(word)) {
+          anonymizedWords.push("client");
+          continue;
+        }
+
+        // Keep everything else as-is
+        anonymizedWords.push(word);
+      }
+
+      anonymizedTitle = anonymizedWords.join(" ");
+    }
+
+    return anonymizedTitle;
   };
 
   // Helper function to check if there's already a pending request between current client and target lesson's client
@@ -639,7 +742,10 @@ function ClientSchedulePageClient() {
                               {formatTimeInUserTimezone(lesson.date)}
                             </div>
                             <div className="text-sm opacity-80">
-                              {lesson.title}
+                              {anonymizeLessonTitle(
+                                lesson.title,
+                                lesson.clientId
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -685,15 +791,14 @@ function ClientSchedulePageClient() {
                                 "MMM d, h:mm a"
                               )}
                             </div>
-                            <div className="text-sm text-sky-200">
-                              {lesson.client?.name ||
-                                lesson.client?.email ||
-                                "Client"}
-                            </div>
+                            <div className="text-sm text-sky-200">Client</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="text-xs text-sky-400">
-                              {lesson.title}
+                              {anonymizeLessonTitle(
+                                lesson.title,
+                                lesson.clientId
+                              )}
                             </div>
                           </div>
                         </div>
@@ -809,7 +914,7 @@ function ClientSchedulePageClient() {
                       !isPast && isWorkingDay && handleDateClick(day)
                     }
                     className={`
-                      p-2 md:p-3 text-xs md:text-sm rounded-lg transition-all duration-200 relative min-h-[120px] md:min-h-[140px] border-2 touch-manipulation overflow-hidden
+                      group p-2 md:p-3 text-xs md:text-sm rounded-lg transition-all duration-200 relative min-h-[120px] md:min-h-[140px] border-2 touch-manipulation overflow-hidden
                       ${
                         isPast || !isWorkingDay
                           ? "cursor-not-allowed opacity-50"
@@ -827,15 +932,51 @@ function ClientSchedulePageClient() {
                           : "text-gray-600 bg-gray-900/30 border-gray-700"
                       }
                     `}
+                    title={
+                      !isPast && isCurrentMonth && isWorkingDay
+                        ? "Click to request lesson"
+                        : !isWorkingDay && isCurrentMonth && !isPast
+                        ? "Non-working day"
+                        : isPast
+                        ? "Past date"
+                        : ""
+                    }
                   >
                     <div className="font-bold text-sm md:text-lg mb-1 md:mb-2 flex items-center justify-between">
                       <span>{format(day, "d")}</span>
-                      {!isWorkingDay && isCurrentMonth && !isPast && (
-                        <div
-                          className="w-2 h-2 bg-orange-500 rounded-full"
-                          title="Non-working day"
-                        />
-                      )}
+                      <div className="flex items-center gap-1">
+                        {/* Coach lessons count badge */}
+                        {hasCoachLessons && (
+                          <div className="w-5 h-5 rounded-full bg-sky-500/20 border border-sky-400/30 flex items-center justify-center">
+                            <span className="text-xs font-bold text-sky-400">
+                              {coachLessonsForDay.length}
+                            </span>
+                          </div>
+                        )}
+                        {/* My lessons count badge */}
+                        {hasMyLessons && (
+                          <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
+                            <span className="text-xs font-bold text-blue-400">
+                              {
+                                myLessonsForDay.filter(
+                                  lesson => lesson.status !== "CONFIRMED"
+                                ).length
+                              }
+                            </span>
+                          </div>
+                        )}
+                        {/* Non-working day indicator */}
+                        {!isWorkingDay &&
+                          isCurrentMonth &&
+                          !isPast &&
+                          !hasCoachLessons &&
+                          !hasMyLessons && (
+                            <div
+                              className="w-2 h-2 bg-orange-500 rounded-full"
+                              title="Non-working day"
+                            />
+                          )}
+                      </div>
                     </div>
 
                     {/* My Confirmed Lessons - Only show PENDING and DECLINED lessons */}
@@ -865,7 +1006,10 @@ function ClientSchedulePageClient() {
                                       {formatTimeInUserTimezone(lesson.date)}
                                     </div>
                                     <div className="truncate opacity-80 font-medium text-xs leading-tight">
-                                      {lesson.title}
+                                      {anonymizeLessonTitle(
+                                        lesson.title,
+                                        (lesson as any).clientId
+                                      )}
                                     </div>
                                   </div>
                                   <div className="flex-shrink-0">
@@ -905,9 +1049,11 @@ function ClientSchedulePageClient() {
                                     {formatTimeInUserTimezone(lesson.date)}
                                   </div>
                                   <div className="truncate text-sky-200 font-medium text-xs leading-tight">
-                                    {lesson.client?.name ||
-                                      lesson.client?.email ||
-                                      "Client"}
+                                    {lesson.clientId === currentClient?.id
+                                      ? lesson.client?.name ||
+                                        lesson.client?.email ||
+                                        "You"
+                                      : "Client"}
                                   </div>
                                 </div>
                               </div>
@@ -921,23 +1067,16 @@ function ClientSchedulePageClient() {
                       </div>
                     )}
 
-                    {!hasMyLessons && !hasCoachLessons && (
-                      <div className="text-xs text-gray-400 mt-2 font-medium">
-                        {isCurrentMonth && !isPast
-                          ? isWorkingDay
-                            ? "No lessons"
-                            : "Not available"
-                          : ""}
-                      </div>
-                    )}
-
+                    {/* Minimalist approach: Only show essential info */}
                     {!hasMyLessons &&
                       !hasCoachLessons &&
                       isCurrentMonth &&
                       !isPast &&
                       isWorkingDay && (
-                        <div className="text-xs text-blue-400 mt-2 font-medium">
-                          Click to request
+                        <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
+                            <Plus className="h-2.5 w-2.5 text-blue-400" />
+                          </div>
                         </div>
                       )}
                   </div>
@@ -1143,7 +1282,10 @@ function ClientSchedulePageClient() {
                                   {format(lessonDate, "h:mm a")}
                                 </div>
                                 <div className="text-sm opacity-80">
-                                  {lesson.title}
+                                  {anonymizeLessonTitle(
+                                    lesson.title,
+                                    lesson.clientId
+                                  )}
                                 </div>
                                 <div className="text-xs opacity-60">
                                   {lesson.description}
@@ -1206,16 +1348,21 @@ function ClientSchedulePageClient() {
                                     {format(lessonDate, "h:mm a")}
                                   </div>
                                   <div className="text-sm text-sky-200">
-                                    {lesson.client?.name ||
-                                      lesson.client?.email ||
-                                      "Client"}
+                                    {lesson.clientId === currentClient?.id
+                                      ? lesson.client?.name ||
+                                        lesson.client?.email ||
+                                        "You"
+                                      : "Client"}
                                   </div>
                                   <div
                                     className={`text-xs ${
                                       isPast ? "text-gray-600" : "text-sky-400"
                                     }`}
                                   >
-                                    {lesson.title}
+                                    {anonymizeLessonTitle(
+                                      lesson.title,
+                                      lesson.clientId
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -1368,9 +1515,11 @@ function ClientSchedulePageClient() {
                     </h2>
                     <p className="text-gray-400 text-sm">
                       Select which of your lessons you want to swap with{" "}
-                      {selectedSwapLesson.client?.name ||
-                        selectedSwapLesson.client?.email ||
-                        "this client"}
+                      {selectedSwapLesson.clientId === currentClient?.id
+                        ? selectedSwapLesson.client?.name ||
+                          selectedSwapLesson.client?.email ||
+                          "you"
+                        : "this client"}
                     </p>
                   </div>
                   <button

@@ -268,6 +268,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
     setUserDropdownOpen(false);
 
     try {
+      // Use Kinde's proper logout URL
       window.location.href = "/api/auth/logout";
     } catch (error) {
       console.error("Logout failed:", error);
@@ -684,7 +685,6 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                           setIsAnimating(false);
                         }, 200);
                       }}
-                      position="above"
                     />
                   </div>
                 );

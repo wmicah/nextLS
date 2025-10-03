@@ -104,16 +104,32 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
 
-  // Helper function to get the other user from a conversation
+  // Helper function to get the other user from a conversation with privacy controls
   const getOtherUser = (conversation: any, currentUserId: string) => {
     if (conversation.type === "COACH_CLIENT") {
       return conversation.coach?.id === currentUserId
         ? conversation.client
         : conversation.coach;
     } else if (conversation.type === "CLIENT_CLIENT") {
-      return conversation.client1?.id === currentUserId
-        ? conversation.client2
-        : conversation.client1;
+      // For client-to-client conversations, anonymize the other client's info
+      const otherClient =
+        conversation.client1?.id === currentUserId
+          ? conversation.client2
+          : conversation.client1;
+
+      if (otherClient) {
+        return {
+          ...otherClient,
+          name: "Client", // Anonymize name
+          email: "client@example.com", // Anonymize email
+          settings: {
+            ...otherClient.settings,
+            avatarUrl: null, // Remove avatar for privacy
+          },
+          avatar: null, // Remove avatar for privacy
+        };
+      }
+      return otherClient;
     }
     return null;
   };
@@ -618,7 +634,9 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                           }}
                         >
                           {message.content && (
-                            <p className="text-sm mb-2">{message.content}</p>
+                            <div className="text-sm mb-2">
+                              <FormattedMessage content={message.content} />
+                            </div>
                           )}
 
                           {message.data &&

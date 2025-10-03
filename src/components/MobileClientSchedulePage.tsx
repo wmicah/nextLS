@@ -58,6 +58,9 @@ export default function MobileClientSchedulePage() {
       year: currentMonth.getFullYear(),
     });
 
+  // Get current client info for privacy filtering - we need the Client record, not User record
+  const { data: currentClient } = trpc.clientRouter.getCurrentClient.useQuery();
+
   // Fetch client's upcoming lessons
   const { data: upcomingLessons = [] } =
     trpc.clientRouter.getClientUpcomingLessons.useQuery();
@@ -66,6 +69,110 @@ export default function MobileClientSchedulePage() {
   const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
 
   const utils = trpc.useUtils();
+
+  // Helper function to anonymize lesson titles for privacy
+  const anonymizeLessonTitle = (title: string, lessonClientId: string) => {
+    if (lessonClientId === currentClient?.id) {
+      return title; // Show full title for client's own lessons
+    }
+
+    // For other clients' lessons, anonymize common patterns
+    let anonymizedTitle = title;
+
+    // Replace "Lesson with [clientname]" with "Lesson with client" - handle multi-word names
+    anonymizedTitle = anonymizedTitle.replace(
+      /Lesson with [a-zA-Z0-9_\s]+?(?=\s*-\s|$)/gi,
+      "Lesson with client"
+    );
+
+    // Replace "Lesson - [clientname] - [description]" with "Lesson - client - [description]"
+    anonymizedTitle = anonymizedTitle.replace(
+      /Lesson - [a-zA-Z0-9_\s]+?(?=\s*-\s)/gi,
+      "Lesson - client"
+    );
+
+    // Replace standalone client names - handle multi-word names
+    // This is a more sophisticated approach for complex patterns
+    if (anonymizedTitle === title) {
+      // Common lesson-related words that should not be replaced
+      const lessonWords = [
+        "lesson",
+        "with",
+        "day",
+        "program",
+        "workout",
+        "session",
+        "training",
+        "practice",
+        "drill",
+        "exercise",
+        "routine",
+        "week",
+        "month",
+        "year",
+        "time",
+        "date",
+        "schedule",
+      ];
+
+      // Split into words and process
+      const words = anonymizedTitle.split(" ");
+      const anonymizedWords = [];
+
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+
+        // Skip if it's a common lesson word
+        if (lessonWords.includes(word.toLowerCase())) {
+          anonymizedWords.push(word);
+          continue;
+        }
+
+        // Skip if it's a number, time, or date
+        if (
+          /^\d+$/.test(word) ||
+          /^\d+:\d+/.test(word) ||
+          /^\d+[ap]m$/i.test(word)
+        ) {
+          anonymizedWords.push(word);
+          continue;
+        }
+
+        // Skip if it's a common word like "the", "and", "or", etc.
+        if (
+          [
+            "the",
+            "and",
+            "or",
+            "for",
+            "to",
+            "of",
+            "in",
+            "at",
+            "by",
+            "on",
+          ].includes(word.toLowerCase())
+        ) {
+          anonymizedWords.push(word);
+          continue;
+        }
+
+        // If it's a potential client name (alphabetic word longer than 2 characters)
+        if (word.length > 2 && /^[a-zA-Z]+$/.test(word)) {
+          anonymizedWords.push("client");
+          continue;
+        }
+
+        // Keep everything else as-is
+        anonymizedWords.push(word);
+      }
+
+      anonymizedTitle = anonymizedWords.join(" ");
+    }
+
+    return anonymizedTitle;
+  };
+
   const requestScheduleChangeMutation =
     trpc.clientRouter.requestScheduleChange.useMutation({
       onSuccess: () => {
@@ -358,7 +465,10 @@ export default function MobileClientSchedulePage() {
                             {formatTimeInUserTimezone(lesson.date)}
                           </div>
                           <div className="text-xs opacity-80">
-                            {lesson.title}
+                            {anonymizeLessonTitle(
+                              lesson.title,
+                              lesson.clientId
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -398,7 +508,7 @@ export default function MobileClientSchedulePage() {
                           {formatDateTimeInUserTimezone(lesson.date)}
                         </div>
                         <div className="text-sm text-sky-200">
-                          {lesson.title}
+                          {anonymizeLessonTitle(lesson.title, lesson.clientId)}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -594,7 +704,10 @@ export default function MobileClientSchedulePage() {
                                 title={`${format(
                                   new Date(lesson.date),
                                   "h:mm a"
-                                )} - ${lesson.title} (${lesson.status})`}
+                                )} - ${anonymizeLessonTitle(
+                                  lesson.title,
+                                  lesson.clientId
+                                )} (${lesson.status})`}
                               />
                             ))}
                         </div>
@@ -612,11 +725,7 @@ export default function MobileClientSchedulePage() {
                                 title={`${format(
                                   new Date(lesson.date),
                                   "h:mm a"
-                                )} - ${
-                                  lesson.client?.name ||
-                                  lesson.client?.email ||
-                                  "Client"
-                                }`}
+                                )} - ${"Client"}`}
                               />
                             ))}
                         </div>
@@ -814,7 +923,10 @@ export default function MobileClientSchedulePage() {
                                   {formatTimeInUserTimezone(lesson.date)}
                                 </div>
                                 <div className="text-xs opacity-80">
-                                  {lesson.title}
+                                  {anonymizeLessonTitle(
+                                    lesson.title,
+                                    lesson.clientId
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -859,9 +971,11 @@ export default function MobileClientSchedulePage() {
                                 {formatTimeInUserTimezone(lesson.date)}
                               </div>
                               <div className="text-xs text-sky-200">
-                                {lesson.client?.name ||
-                                  lesson.client?.email ||
-                                  "Client"}
+                                {lesson.clientId === currentClient?.id
+                                  ? lesson.client?.name ||
+                                    lesson.client?.email ||
+                                    "You"
+                                  : "Client"}
                               </div>
                             </div>
                           )

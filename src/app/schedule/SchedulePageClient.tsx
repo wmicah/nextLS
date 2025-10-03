@@ -887,7 +887,7 @@ function SchedulePageClient() {
                     key={day.toISOString()}
                     onClick={() => !isPast && handleDateClick(day)}
                     className={`
-                      p-2 text-xs rounded-lg transition-all duration-200 relative min-h-[100px] md:min-h-[120px] border overflow-hidden
+                      group p-2 text-xs rounded-lg transition-all duration-200 relative min-h-[100px] md:min-h-[120px] border overflow-hidden
                       ${
                         isPast
                           ? "cursor-not-allowed opacity-50"
@@ -905,15 +905,47 @@ function SchedulePageClient() {
                           : "text-gray-600 bg-gray-900/30 border-gray-700"
                       }
                     `}
+                    title={
+                      !isPast && isCurrentMonth && isWorkingDay
+                        ? "Click to schedule lesson"
+                        : !isWorkingDay && isCurrentMonth && !isPast
+                        ? "Non-working day"
+                        : isPast
+                        ? "Past date"
+                        : ""
+                    }
                   >
                     <div className="font-bold text-sm md:text-lg mb-1 md:mb-2 flex items-center justify-between">
                       <span>{format(day, "d")}</span>
-                      {!isWorkingDay && isCurrentMonth && !isPast && (
-                        <div
-                          className="w-2 h-2 bg-orange-500 rounded-full"
-                          title="Non-working day"
-                        />
-                      )}
+                      <div className="flex items-center gap-1">
+                        {/* Lesson count badge for scheduled days */}
+                        {hasLessons && (
+                          <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
+                            <span className="text-xs font-bold text-emerald-400">
+                              {lessonsForDay.length}
+                            </span>
+                          </div>
+                        )}
+                        {/* Pending requests badge */}
+                        {hasPending && (
+                          <div className="w-5 h-5 rounded-full bg-orange-500/20 border border-orange-400/30 flex items-center justify-center">
+                            <span className="text-xs font-bold text-orange-400">
+                              {pendingForDay.length}
+                            </span>
+                          </div>
+                        )}
+                        {/* Non-working day indicator - only show if no lessons/pending */}
+                        {!isWorkingDay &&
+                          isCurrentMonth &&
+                          !isPast &&
+                          !hasLessons &&
+                          !hasPending && (
+                            <div
+                              className="w-2 h-2 bg-orange-500 rounded-full"
+                              title="Non-working day"
+                            />
+                          )}
+                      </div>
                     </div>
 
                     {/* Pending Requests */}
@@ -1017,19 +1049,23 @@ function SchedulePageClient() {
                       </div>
                     )}
 
-                    {!hasLessons && !hasPending && (
-                      <div className="text-xs text-gray-400 mt-2 font-medium">
-                        {isCurrentMonth && !isPast ? "No lessons" : ""}
-                      </div>
-                    )}
-                    {!hasLessons && isCurrentMonth && !isPast && (
-                      <div className="text-xs text-blue-400 mt-2 font-medium">
-                        Click to schedule
-                      </div>
-                    )}
-                    {!hasLessons && isCurrentMonth && isPast && (
-                      <div className="text-xs text-gray-500 mt-2 font-medium">
-                        Past date
+                    {/* Minimalist approach: Only show essential info */}
+                    {!hasLessons &&
+                      !hasPending &&
+                      isCurrentMonth &&
+                      !isPast && (
+                        <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
+                            <Plus className="h-2.5 w-2.5 text-blue-400" />
+                          </div>
+                        </div>
+                      )}
+                    {!hasLessons && !hasPending && isCurrentMonth && isPast && (
+                      <div className="absolute bottom-1 right-1">
+                        <div
+                          className="w-2 h-2 rounded-full bg-gray-500/30"
+                          title="Past date"
+                        />
                       </div>
                     )}
 

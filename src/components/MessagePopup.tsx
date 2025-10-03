@@ -5,6 +5,7 @@ import { trpc } from "@/app/_trpc/client";
 import { MessageCircle, X } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import FormattedMessage from "./FormattedMessage";
 
 interface MessagePopupProps {
   isOpen: boolean;
@@ -286,12 +287,12 @@ export default function MessagePopup({
                       </div>
                       <div className="flex items-center justify-between">
                         {lastMessage && (
-                          <p
+                          <div
                             className="text-xs truncate"
                             style={{ color: "#ABA4AA" }}
                           >
-                            {lastMessage.content}
-                          </p>
+                            <FormattedMessage content={lastMessage.content} />
+                          </div>
                         )}
                         {unreadCount > 0 && (
                           <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center ml-2 animate-pulse">

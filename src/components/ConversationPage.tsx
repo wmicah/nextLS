@@ -25,6 +25,7 @@ import Sidebar from "./Sidebar";
 import { format } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import MessageNotification from "./MessageNotification";
+import FormattedMessage from "./FormattedMessage";
 import { downloadVideoFromMessage } from "@/lib/download-utils";
 
 interface ConversationPageProps {
@@ -376,7 +377,9 @@ export default function ConversationPage({
                       }}
                     >
                       {message.content && (
-                        <p className="text-sm mb-2">{message.content}</p>
+                        <div className="text-sm mb-2">
+                          <FormattedMessage content={message.content} />
+                        </div>
                       )}
 
                       {/* File Attachment */}
