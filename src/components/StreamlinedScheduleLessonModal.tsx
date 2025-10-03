@@ -436,7 +436,7 @@ export default function StreamlinedScheduleLessonModal({
                       ${
                         isSelected
                           ? "bg-sky-500 text-white"
-                          : isPast
+                          : isPastDay
                           ? "text-gray-500 cursor-not-allowed"
                           : isCurrentMonth
                           ? "text-white hover:bg-sky-500/20"
