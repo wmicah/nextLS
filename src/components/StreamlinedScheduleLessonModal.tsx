@@ -446,7 +446,7 @@ export default function StreamlinedScheduleLessonModal({
                     style={{
                       backgroundColor: isSelected
                         ? "#0EA5E9"
-                        : isPast
+                        : isPastDay
                         ? "transparent"
                         : isCurrentMonth
                         ? "transparent"
