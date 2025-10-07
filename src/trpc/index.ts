@@ -3020,8 +3020,6 @@ export const appRouter = router({
                 category: input.category,
                 type: "video",
                 url: input.url,
-                onformId: onformId,
-                isOnForm: true,
                 coachId: ensureUserId(user.id),
                 views: 0,
                 rating: 0,

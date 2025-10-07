@@ -602,7 +602,7 @@ export default function MobileSeamlessRoutineModal({
               <div className="space-y-3">
                 {libraryTab === "master" ? (
                   <>
-                    {masterLibraryVideos.map(video => (
+                    {(masterLibraryVideos || []).map(video => (
                       <Card
                         key={video.id}
                         className="bg-[#353A3A] border-[#606364] cursor-pointer hover:bg-[#2A3133] transition-colors"
@@ -654,7 +654,7 @@ export default function MobileSeamlessRoutineModal({
                       </Card>
                     ))}
 
-                    {masterLibraryVideos.length === 0 && (
+                    {(masterLibraryVideos || []).length === 0 && (
                       <div className="text-center py-8">
                         <Video className="h-12 w-12 mx-auto mb-4 text-[#ABA4AA] opacity-50" />
                         <p className="text-[#ABA4AA] mb-2">
@@ -668,7 +668,7 @@ export default function MobileSeamlessRoutineModal({
                   </>
                 ) : (
                   <>
-                    {localLibraryVideos.map(video => (
+                    {(localLibraryVideos || []).map(video => (
                       <Card
                         key={video.id}
                         className="bg-[#353A3A] border-[#606364] cursor-pointer hover:bg-[#2A3133] transition-colors"
@@ -721,7 +721,7 @@ export default function MobileSeamlessRoutineModal({
                       </Card>
                     ))}
 
-                    {localLibraryVideos.length === 0 && (
+                    {(localLibraryVideos || []).length === 0 && (
                       <div className="text-center py-8">
                         <Video className="h-12 w-12 mx-auto mb-4 text-[#ABA4AA] opacity-50" />
                         <p className="text-[#ABA4AA] mb-2">

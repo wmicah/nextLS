@@ -234,8 +234,7 @@ export default function MobileProgramDetailsModal({
                       {currentProgram.level || "No level"}
                     </span>
                     <span className="text-xs px-2 py-1 rounded bg-[#F59E0B] text-white">
-                      {currentProgram.duration || currentProgram.totalWeeks}{" "}
-                      weeks
+                      {currentProgram.duration} weeks
                     </span>
                   </div>
                 </div>
@@ -253,15 +252,17 @@ export default function MobileProgramDetailsModal({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#353A3A] border border-[#606364] rounded-lg p-3 text-center">
                     <div className="text-lg font-bold text-[#4A5A70]">
-                      {currentProgram.activeClientCount}
+                      {currentProgram.weeks?.length || 0}
                     </div>
-                    <div className="text-xs text-[#ABA4AA]">Active Clients</div>
+                    <div className="text-xs text-[#ABA4AA]">Total Weeks</div>
                   </div>
                   <div className="bg-[#353A3A] border border-[#606364] rounded-lg p-3 text-center">
                     <div className="text-lg font-bold text-[#F59E0B]">
-                      {currentProgram.totalWeeks}
+                      {currentProgram.duration || 0}
                     </div>
-                    <div className="text-xs text-[#ABA4AA]">Total Weeks</div>
+                    <div className="text-xs text-[#ABA4AA]">
+                      Duration (weeks)
+                    </div>
                   </div>
                 </div>
               </div>
@@ -381,53 +382,10 @@ export default function MobileProgramDetailsModal({
                 </h3>
               </div>
 
-              {currentProgram.assignments &&
-              currentProgram.assignments.length > 0 ? (
-                <div className="space-y-2">
-                  {currentProgram.assignments.map(assignment => (
-                    <div
-                      key={assignment.id}
-                      className="bg-[#353A3A] border border-[#606364] rounded-lg p-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#4A5A70] flex items-center justify-center">
-                            <Users className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-semibold text-[#C3BCC2]">
-                              {assignment.client.name}
-                            </h4>
-                            <p className="text-xs text-[#ABA4AA]">
-                              Assigned{" "}
-                              {format(
-                                new Date(assignment.assignedAt),
-                                "MMM dd, yyyy"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-semibold text-[#4A5A70]">
-                            {assignment.progress}%
-                          </div>
-                          <div className="w-16 h-1 bg-[#606364] rounded-full mt-1">
-                            <div
-                              className="h-1 bg-[#4A5A70] rounded-full transition-all"
-                              style={{ width: `${assignment.progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Users className="h-8 w-8 text-[#ABA4AA] mx-auto mb-2" />
-                  <p className="text-sm text-[#ABA4AA]">No assignments yet</p>
-                </div>
-              )}
+              <div className="text-center py-8">
+                <Users className="h-8 w-8 text-[#ABA4AA] mx-auto mb-2" />
+                <p className="text-sm text-[#ABA4AA]">No assignments yet</p>
+              </div>
             </div>
           )}
         </div>

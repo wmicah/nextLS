@@ -9,7 +9,7 @@ import ProgramBuilder from "@/components/ProgramBuilder";
 import type {
   Week as ProgramBuilderWeek,
   ProgramItem as ProgramBuilderItem,
-} from "@/components/ProgramBuilder";
+} from "@/components/types/ProgramBuilder";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import { Button } from "@/components/ui/button";

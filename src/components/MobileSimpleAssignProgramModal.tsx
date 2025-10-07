@@ -110,13 +110,13 @@ export default function MobileSimpleAssignProgramModal({
   );
 
   // Assignment mutation
-  const assignProgram = trpc.programs.assign.useMutation({
+  const assignProgram = trpc.programs.assignToClients.useMutation({
     onSuccess: () => {
       utils.programs.list.invalidate();
       utils.clients.list.invalidate();
       addToast({
-        title: "Program assigned successfully",
-        description: "The program has been assigned to the selected clients.",
+        title: "Success",
+        message: "Program assigned successfully",
         type: "success",
       });
       setIsAssigning(false);
@@ -124,8 +124,8 @@ export default function MobileSimpleAssignProgramModal({
     },
     onError: (error: any) => {
       addToast({
-        title: "Assignment failed",
-        description: error.message || "Failed to assign program",
+        title: "Error",
+        message: "Assignment failed",
         type: "error",
       });
       setIsAssigning(false);
@@ -136,7 +136,7 @@ export default function MobileSimpleAssignProgramModal({
     if (!selectedProgram || selectedClients.length === 0) {
       addToast({
         title: "Missing information",
-        description: "Please select a program and at least one client.",
+        message: "Please select a program and at least one client.",
         type: "error",
       });
       return;

@@ -530,12 +530,11 @@ export default function MobileLibraryPage() {
           isOpen={isVideoViewerOpen}
           onClose={() => setIsVideoViewerOpen(false)}
           item={selectedItem}
-          onDelete={handleDeleteSuccess}
+          onDelete={activeTab === "local" ? handleDeleteSuccess : undefined}
           onPrevious={navigateToPrevious}
           onNext={navigateToNext}
           currentIndex={currentItemIndex}
           totalItems={libraryItems.length}
-          canDelete={activeTab === "local"}
         />
       )}
     </div>
