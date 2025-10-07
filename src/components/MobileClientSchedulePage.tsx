@@ -5,17 +5,17 @@ import { trpc } from "@/app/_trpc/client";
 import {
   Calendar,
   Clock,
-  Plus,
   ChevronLeft,
   ChevronRight,
-  Users,
   CheckCircle,
   XCircle,
   AlertCircle,
-  X,
+  ArrowRightLeft,
+  Loader2,
+  Home,
+  Users,
+  Plus,
 } from "lucide-react";
-import CustomSelect from "./ui/CustomSelect";
-import ClientSidebar from "./ClientSidebar";
 import {
   format,
   startOfMonth,
@@ -30,278 +30,191 @@ import {
 } from "date-fns";
 import {
   formatTimeInUserTimezone,
-  formatDateTimeInUserTimezone,
+  getUserTimezone,
 } from "@/lib/timezone-utils";
+import MobileClientNavigation from "./MobileClientNavigation";
+import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
+import MobileSwapRequests from "./MobileSwapRequests";
 
 export default function MobileClientSchedulePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showRequestModal, setShowRequestModal] = useState(false);
   const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [requestForm, setRequestForm] = useState({
-    date: "",
-    time: "",
-    reason: "",
-  });
+  const [showSwapRequests, setShowSwapRequests] = useState(false);
+  const [selectedSwapLesson, setSelectedSwapLesson] = useState<any>(null);
 
-  // Fetch coach's schedule for the current month
+  // Fetch all schedule data for current and adjacent months
   const { data: coachSchedule = [] } =
     trpc.clientRouter.getCoachScheduleForClient.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
     });
 
-  // Fetch client's confirmed lessons
+  const { data: prevMonthSchedule = [] } =
+    trpc.clientRouter.getCoachScheduleForClient.useQuery({
+      month: currentMonth.getMonth() === 0 ? 11 : currentMonth.getMonth() - 1,
+      year:
+        currentMonth.getMonth() === 0
+          ? currentMonth.getFullYear() - 1
+          : currentMonth.getFullYear(),
+    });
+
+  const { data: nextMonthSchedule = [] } =
+    trpc.clientRouter.getCoachScheduleForClient.useQuery({
+      month: currentMonth.getMonth() === 11 ? 0 : currentMonth.getMonth() + 1,
+      year:
+        currentMonth.getMonth() === 11
+          ? currentMonth.getFullYear() + 1
+          : currentMonth.getFullYear(),
+    });
+
+  const allCoachSchedule = [
+    ...coachSchedule,
+    ...prevMonthSchedule,
+    ...nextMonthSchedule,
+  ];
+
+  // Fetch client's lessons
   const { data: clientLessons = [] } =
     trpc.clientRouter.getClientLessons.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
     });
 
-  // Get current client info for privacy filtering - we need the Client record, not User record
-  const { data: currentClient } = trpc.clientRouter.getCurrentClient.useQuery();
+  const { data: prevMonthClientLessons = [] } =
+    trpc.clientRouter.getClientLessons.useQuery({
+      month: currentMonth.getMonth() === 0 ? 11 : currentMonth.getMonth() - 1,
+      year:
+        currentMonth.getMonth() === 0
+          ? currentMonth.getFullYear() - 1
+          : currentMonth.getFullYear(),
+    });
 
-  // Fetch client's upcoming lessons
+  const { data: nextMonthClientLessons = [] } =
+    trpc.clientRouter.getClientLessons.useQuery({
+      month: currentMonth.getMonth() === 11 ? 0 : currentMonth.getMonth() + 1,
+      year:
+        currentMonth.getMonth() === 11
+          ? currentMonth.getFullYear() + 1
+          : currentMonth.getFullYear(),
+    });
+
+  const allClientLessons = [
+    ...clientLessons,
+    ...prevMonthClientLessons,
+    ...nextMonthClientLessons,
+  ];
+
+  // Fetch upcoming lessons
   const { data: upcomingLessons = [] } =
     trpc.clientRouter.getClientUpcomingLessons.useQuery();
 
-  // Fetch coach's profile for working hours
+  // Fetch swap requests
+  const { data: existingSwapRequests = [], isLoading: isLoadingSwapRequests } =
+    trpc.timeSwap.getSwapRequests.useQuery();
+
+  // Get current client info
+  const { data: currentClient } = trpc.clientRouter.getCurrentClient.useQuery();
+
+  // Fetch coach's profile
   const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
+
+  // Swap mutation
+  const createSwapRequestMutation =
+    trpc.timeSwap.createSwapRequestFromLesson.useMutation({
+      onSuccess: () => {
+        setSelectedSwapLesson(null);
+        utils.timeSwap.getSwapRequests.invalidate();
+        alert("Swap request sent successfully!");
+      },
+      onError: (error: any) => {
+        alert(error.message || "Failed to create swap request");
+      },
+    });
 
   const utils = trpc.useUtils();
 
-  // Helper function to anonymize lesson titles for privacy
+  // Helper functions
+  const hasPendingSwapRequest = (lessonId: string) => {
+    if (isLoadingSwapRequests || !Array.isArray(existingSwapRequests)) {
+      return false;
+    }
+    return existingSwapRequests.some(
+      (request: any) =>
+        (request.requesterEventId === lessonId ||
+          request.targetEventId === lessonId) &&
+        request.status === "PENDING"
+    );
+  };
+
+  const hasPendingRequestWithTarget = (targetLesson: any) => {
+    if (isLoadingSwapRequests || !Array.isArray(existingSwapRequests)) {
+      return false;
+    }
+    return existingSwapRequests.some(
+      (request: any) =>
+        request.targetEventId === targetLesson.id &&
+        request.status === "PENDING"
+    );
+  };
+
   const anonymizeLessonTitle = (title: string, lessonClientId: string) => {
     if (lessonClientId === currentClient?.id) {
-      return title; // Show full title for client's own lessons
+      return title;
     }
-
-    // For other clients' lessons, anonymize common patterns
-    let anonymizedTitle = title;
-
-    // Replace "Lesson with [clientname]" with "Lesson with client" - handle multi-word names
-    anonymizedTitle = anonymizedTitle.replace(
+    let anonymizedTitle = title.replace(
       /Lesson with [a-zA-Z0-9_\s]+?(?=\s*-\s|$)/gi,
       "Lesson with client"
     );
-
-    // Replace "Lesson - [clientname] - [description]" with "Lesson - client - [description]"
-    anonymizedTitle = anonymizedTitle.replace(
-      /Lesson - [a-zA-Z0-9_\s]+?(?=\s*-\s)/gi,
-      "Lesson - client"
-    );
-
-    // Replace standalone client names - handle multi-word names
-    // This is a more sophisticated approach for complex patterns
-    if (anonymizedTitle === title) {
-      // Common lesson-related words that should not be replaced
-      const lessonWords = [
-        "lesson",
-        "with",
-        "day",
-        "program",
-        "workout",
-        "session",
-        "training",
-        "practice",
-        "drill",
-        "exercise",
-        "routine",
-        "week",
-        "month",
-        "year",
-        "time",
-        "date",
-        "schedule",
-      ];
-
-      // Split into words and process
-      const words = anonymizedTitle.split(" ");
-      const anonymizedWords = [];
-
-      for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-
-        // Skip if it's a common lesson word
-        if (lessonWords.includes(word.toLowerCase())) {
-          anonymizedWords.push(word);
-          continue;
-        }
-
-        // Skip if it's a number, time, or date
-        if (
-          /^\d+$/.test(word) ||
-          /^\d+:\d+/.test(word) ||
-          /^\d+[ap]m$/i.test(word)
-        ) {
-          anonymizedWords.push(word);
-          continue;
-        }
-
-        // Skip if it's a common word like "the", "and", "or", etc.
-        if (
-          [
-            "the",
-            "and",
-            "or",
-            "for",
-            "to",
-            "of",
-            "in",
-            "at",
-            "by",
-            "on",
-          ].includes(word.toLowerCase())
-        ) {
-          anonymizedWords.push(word);
-          continue;
-        }
-
-        // If it's a potential client name (alphabetic word longer than 2 characters)
-        if (word.length > 2 && /^[a-zA-Z]+$/.test(word)) {
-          anonymizedWords.push("client");
-          continue;
-        }
-
-        // Keep everything else as-is
-        anonymizedWords.push(word);
-      }
-
-      anonymizedTitle = anonymizedWords.join(" ");
-    }
-
     return anonymizedTitle;
   };
 
-  const requestScheduleChangeMutation =
-    trpc.clientRouter.requestScheduleChange.useMutation({
-      onSuccess: () => {
-        utils.clientRouter.getCoachScheduleForClient.invalidate();
-        utils.clientRouter.getClientLessons.invalidate();
-        utils.clientRouter.getClientUpcomingLessons.invalidate();
-        setShowRequestModal(false);
-        setRequestForm({ date: "", time: "", reason: "" });
-        setSelectedDate(null);
-      },
-      onError: error => {
-        alert(`Error requesting schedule change: ${error.message}`);
-      },
-    });
-
-  // Generate calendar days for the current month view
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
-  const calendarDays = eachDayOfInterval({
-    start: calendarStart,
-    end: calendarEnd,
-  });
-
   const navigateMonth = (direction: "prev" | "next") => {
-    setCurrentMonth(
-      direction === "prev"
-        ? subMonths(currentMonth, 1)
-        : addMonths(currentMonth, 1)
+    setCurrentMonth(prev =>
+      direction === "prev" ? subMonths(prev, 1) : addMonths(prev, 1)
     );
   };
 
-  const getLessonsForDate = (date: Date) => {
-    const now = new Date();
-    const lessons = coachSchedule.filter((lesson: { date: string }) => {
-      const lessonDate = new Date(lesson.date);
-      const lessonDateOnly = new Date(
-        lessonDate.getFullYear(),
-        lessonDate.getMonth(),
-        lessonDate.getDate()
-      );
-      const targetDateOnly = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-      );
-      const isSame = lessonDateOnly.getTime() === targetDateOnly.getTime();
-      const isFuture = lessonDate > now;
-      return isSame && isFuture;
-    });
-    return lessons;
-  };
-
-  const getClientLessonsForDate = (date: Date) => {
-    const lessons = clientLessons.filter((lesson: { date: string }) => {
-      const lessonDate = new Date(lesson.date);
-      const lessonDateOnly = new Date(
-        lessonDate.getFullYear(),
-        lessonDate.getMonth(),
-        lessonDate.getDate()
-      );
-      const targetDateOnly = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-      );
-      const isSame = lessonDateOnly.getTime() === targetDateOnly.getTime();
-      return isSame;
-    });
-
-    return lessons.sort(
-      (a: { date: string }, b: { date: string }) =>
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-  };
-
-  const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
-    setRequestForm({
-      ...requestForm,
-      date: format(date, "yyyy-MM-dd"),
-    });
+  const handleDateClick = (day: Date) => {
+    setSelectedDate(day);
     setShowDayOverviewModal(true);
   };
 
-  const handleRequestScheduleChange = () => {
-    if (!requestForm.date || !requestForm.time) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    requestScheduleChangeMutation.mutate({
-      requestedDate: requestForm.date,
-      requestedTime: requestForm.time,
-      reason: requestForm.reason,
-    });
+  const getCalendarDays = () => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const startDate = startOfWeek(monthStart);
+    const endDate = endOfWeek(monthEnd);
+    return eachDayOfInterval({ start: startDate, end: endDate });
   };
 
-  // Generate time slots based on coach's working hours
-  const generateTimeSlots = () => {
+  const getLessonsForDate = (date: Date) => {
+    const dateString = format(date, "yyyy-MM-dd");
+    return allCoachSchedule.filter(
+      (lesson: any) =>
+        format(new Date(lesson.date), "yyyy-MM-dd") === dateString
+    );
+  };
+
+  const getClientLessonsForDate = (date: Date) => {
+    const dateString = format(date, "yyyy-MM-dd");
+    return allClientLessons.filter(
+      (lesson: any) =>
+        format(new Date(lesson.date), "yyyy-MM-dd") === dateString
+    );
+  };
+
+  const generateAvailableTimeSlots = (date: Date) => {
     const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
     const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
     const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
-    const workingDays = coachProfile?.workingHours?.workingDays || [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-      "Sunday",
-    ];
-
     const slots = [];
-
-    if (requestForm.date) {
-      const selectedDate = new Date(requestForm.date);
-      const dayName = format(selectedDate, "EEEE");
-      if (!workingDays.includes(dayName)) {
-        return [];
-      }
-    }
 
     const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
     const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
 
     if (!startMatch || !endMatch) {
-      for (let hour = 9; hour < 18; hour++) {
+      for (let hour = 9; hour < 20; hour++) {
         const displayHour = hour > 12 ? hour - 12 : hour;
         const period = hour >= 12 ? "PM" : "AM";
         slots.push(`${displayHour}:00 ${period}`);
@@ -325,9 +238,14 @@ export default function MobileClientSchedulePage() {
       endTotalMinutes = parseInt(endMinute);
 
     const now = new Date();
-    const isToday =
-      requestForm.date && format(now, "yyyy-MM-dd") === requestForm.date;
+    const isToday = format(now, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
     const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const existingLessons = getLessonsForDate(date);
+    const bookedTimes = existingLessons.map((lesson: any) => {
+      const lessonDate = new Date(lesson.date);
+      return format(lessonDate, "h:mm a");
+    });
 
     for (
       let totalMinutes = startTotalMinutes;
@@ -344,13 +262,15 @@ export default function MobileClientSchedulePage() {
         hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
       const period = hour24 >= 12 ? "PM" : "AM";
       const minuteStr = minute.toString().padStart(2, "0");
-      slots.push(`${displayHour}:${minuteStr} ${period}`);
+      const timeSlot = `${displayHour}:${minuteStr} ${period}`;
+
+      if (!bookedTimes.includes(timeSlot)) {
+        slots.push(timeSlot);
+      }
     }
 
     return slots;
   };
-
-  const timeSlots = generateTimeSlots();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -379,569 +299,249 @@ export default function MobileClientSchedulePage() {
   };
 
   return (
-    <ClientSidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Mobile Header */}
-        <div
-          className="sticky top-0 z-40 px-4 py-4 border-b"
-          style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className="p-3 rounded-lg"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
-                  My Schedule
-                </h1>
-                <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                  View availability & request changes
-                </p>
-              </div>
+    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-[#2A3133] to-[#353A3A] border-b border-[#4A5A70] px-4 py-4 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4A5A70] to-[#606364] flex items-center justify-center shadow-md">
+              <Calendar className="h-5 w-5 text-white" />
             </div>
-            <button
-              onClick={() => setShowRequestModal(true)}
-              className="p-3 rounded-lg transition-all duration-200"
-              style={{ backgroundColor: "#10B981" }}
-            >
-              <Plus className="w-5 h-5 text-white" />
-            </button>
+            <div>
+              <h1 className="text-xl font-bold text-white">My Schedule</h1>
+              <p className="text-sm text-gray-300">View & request lessons</p>
+            </div>
+          </div>
+          <MobileClientNavigation currentPage="schedule" />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="p-4 pb-20 space-y-6">
+        {/* Coach's Working Hours */}
+        <div className="p-4 rounded-xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <Clock className="h-5 w-5 text-sky-400" />
+            <h2 className="text-lg font-semibold text-white">
+              Coach's Working Hours
+            </h2>
+          </div>
+          <p className="text-gray-300 text-sm">
+            {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
+            {coachProfile?.workingHours?.endTime || "6:00 PM"}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {(
+              coachProfile?.workingHours?.workingDays || [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ]
+            ).map((day: string) => (
+              <span
+                key={day}
+                className="px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-xs"
+              >
+                {day.slice(0, 3)}
+              </span>
+            ))}
           </div>
         </div>
 
-        <div className="p-4 space-y-6">
-          {/* Coach's Working Hours */}
-          <div
-            className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowSwapRequests(true)}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-md"
           >
-            <div className="flex items-center gap-3 mb-3">
-              <Clock className="w-5 h-5 text-sky-400" />
-              <h2 className="text-lg font-semibold text-white">
-                Coach's Working Hours
-              </h2>
-            </div>
-            <p className="text-gray-300">
-              {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
-              {coachProfile?.workingHours?.endTime || "6:00 PM"}
-            </p>
-            <p className="text-gray-400 text-sm mt-1">
-              Working Days:{" "}
-              {coachProfile?.workingHours?.workingDays?.join(", ") ||
-                "Monday - Sunday"}
-            </p>
-          </div>
+            <Users className="h-4 w-4" />
+            Swap Requests
+          </button>
+        </div>
 
-          {/* My Lessons Today */}
-          {(() => {
-            const today = new Date();
-            const myTodaysLessons = getClientLessonsForDate(today);
-            return myTodaysLessons.length > 0 ? (
-              <div
-                className="p-4 rounded-lg border-2"
-                style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <Calendar className="w-5 h-5 text-emerald-400" />
-                  <h2 className="text-lg font-semibold text-white">
-                    My Lessons Today ({myTodaysLessons.length})
-                  </h2>
-                </div>
-                <div className="space-y-2">
-                  {myTodaysLessons.map((lesson: any, index: number) => (
-                    <div
-                      key={index}
-                      className={`rounded p-3 border-2 ${getStatusColor(
-                        lesson.status
-                      )}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-medium">
-                            {formatTimeInUserTimezone(lesson.date)}
-                          </div>
-                          <div className="text-xs opacity-80">
-                            {anonymizeLessonTitle(
-                              lesson.title,
-                              lesson.clientId
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(lesson.status)}
-                          <div className="text-xs">{lesson.status}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null;
-          })()}
-
-          {/* Upcoming Lessons */}
-          {upcomingLessons.length > 0 && (
-            <div
-              className="p-4 rounded-lg border-2"
-              style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Users className="w-5 h-5 text-sky-400" />
-                <h2 className="text-lg font-semibold text-white">
-                  Upcoming Lessons ({upcomingLessons.length})
-                </h2>
-              </div>
-              <div className="space-y-2">
-                {upcomingLessons
-                  .slice(0, 5)
-                  .map((lesson: any, index: number) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 rounded bg-sky-500/10 border border-sky-500/20"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium text-sky-300">
-                          {formatDateTimeInUserTimezone(lesson.date)}
-                        </div>
-                        <div className="text-sm text-sky-200">
-                          {anonymizeLessonTitle(lesson.title, lesson.clientId)}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(lesson.status)}
-                        <div className="text-xs text-sky-400">
-                          {lesson.status}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                {upcomingLessons.length > 5 && (
-                  <div className="text-center text-sm text-gray-400 py-2">
-                    +{upcomingLessons.length - 5} more lessons
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* My Schedule Requests */}
-          {(() => {
-            // Get all lessons with pending/declined status
-            const allLessons = [...upcomingLessons, ...clientLessons];
-            const scheduleRequests = allLessons.filter(
-              lesson =>
-                lesson.status === "PENDING" || lesson.status === "DECLINED"
-            );
-
-            return scheduleRequests.length > 0 ? (
-              <div
-                className="p-4 rounded-lg border-2"
-                style={{ backgroundColor: "#1F2426", borderColor: "#FFA500" }}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <AlertCircle className="w-5 h-5 text-orange-400" />
-                  <h2 className="text-lg font-semibold text-white">
-                    My Schedule Requests ({scheduleRequests.length})
-                  </h2>
-                </div>
-                <div className="space-y-2">
-                  {scheduleRequests
-                    .slice(0, 3)
-                    .map((request: any, index: number) => (
-                      <div
-                        key={index}
-                        className={`flex items-center justify-between p-3 rounded border-2 ${getStatusColor(
-                          request.status
-                        )}`}
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">
-                            {format(new Date(request.date), "MMM d, h:mm a")}
-                          </div>
-                          <div className="text-sm opacity-80">
-                            {request.title}
-                          </div>
-                          {request.reason && (
-                            <div className="text-xs opacity-70 mt-1">
-                              Reason: {request.reason}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(request.status)}
-                          <div className="text-xs">{request.status}</div>
-                        </div>
-                      </div>
-                    ))}
-                  {scheduleRequests.length > 3 && (
-                    <div className="text-center text-sm text-orange-300 py-2">
-                      +{scheduleRequests.length - 3} more requests
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : null;
-          })()}
-
+        {/* Calendar */}
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
           {/* Month Navigation */}
-          <div
-            className="flex items-center justify-between p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-          >
+          <div className="flex items-center justify-between p-4 mb-6 rounded-xl bg-gradient-to-r from-[#353A3A] to-[#40454A] shadow-inner">
             <button
               onClick={() => navigateMonth("prev")}
-              className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+              className="p-3 rounded-xl bg-[#4A5A70] hover:bg-[#606364] transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <ChevronLeft className="h-5 w-5 text-white" />
             </button>
-            <h3 className="text-xl font-semibold text-white">
+            <h3 className="text-2xl font-bold text-white">
               {format(currentMonth, "MMMM yyyy")}
             </h3>
             <button
               onClick={() => navigateMonth("next")}
-              className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+              className="p-3 rounded-xl bg-[#4A5A70] hover:bg-[#606364] transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <ChevronRight className="h-5 w-5 text-white" />
             </button>
           </div>
 
-          {/* Mobile Calendar */}
-          <div
-            className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-          >
-            <div className="grid grid-cols-7 gap-2 mb-4">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+          {/* Day Headers */}
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+              <div
+                key={day}
+                className="text-center text-sm font-bold text-[#ABA4AA] py-3 bg-[#353A3A] rounded-lg"
+              >
+                {day.slice(0, 1)}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {getCalendarDays().map(day => {
+              const isToday = isSameDay(day, new Date());
+              const isCurrentMonth = isSameMonth(day, currentMonth);
+              const isPast = day < new Date();
+              const dayName = format(day, "EEEE");
+              const workingDays = coachProfile?.workingHours?.workingDays || [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ];
+              const isWorkingDay = workingDays.includes(dayName);
+
+              const availableSlotsCount =
+                !isPast && isWorkingDay
+                  ? generateAvailableTimeSlots(day).length
+                  : 0;
+
+              return (
                 <div
-                  key={day}
-                  className="text-center text-sm font-bold text-blue-300 py-3 border-b-2 border-blue-500/30"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-              {calendarDays.map(day => {
-                const isToday = isSameDay(day, new Date());
-                const isCurrentMonth = isSameMonth(day, currentMonth);
-                const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
-                const coachLessonsForDay = getLessonsForDate(day);
-                const myLessonsForDay = getClientLessonsForDate(day);
-
-                const dayName = format(day, "EEEE");
-                const workingDays = coachProfile?.workingHours?.workingDays || [
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday",
-                  "Saturday",
-                  "Sunday",
-                ];
-                const isWorkingDay = workingDays.includes(dayName);
-
-                const hasCoachLessons = coachLessonsForDay.length > 0;
-                const hasMyLessons =
-                  myLessonsForDay.filter(
-                    lesson => lesson.status !== "CONFIRMED"
-                  ).length > 0;
-
-                return (
-                  <div
-                    key={day.toISOString()}
-                    onClick={() =>
-                      !isPast && isWorkingDay && handleDateClick(day)
-                    }
-                    className={`
-                    p-2 text-sm rounded-lg transition-all duration-200 relative min-h-[50px] border-2 overflow-hidden
+                  key={day.toISOString()}
+                  onClick={() =>
+                    !isPast && isWorkingDay && handleDateClick(day)
+                  }
+                  className={`
+                    aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all duration-200 relative border-2 cursor-pointer active:scale-95 p-1 shadow-md hover:shadow-lg overflow-hidden
                     ${
                       isPast || !isWorkingDay
                         ? "cursor-not-allowed opacity-50"
-                        : "cursor-pointer"
+                        : ""
                     }
                     ${
                       isToday
-                        ? "bg-blue-500/20 text-blue-300 border-blue-400 shadow-lg"
+                        ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-400 shadow-blue-500/30 font-bold"
                         : isPast
                         ? "text-gray-500 bg-gray-700/30 border-gray-600"
                         : !isWorkingDay
                         ? "text-orange-400 bg-orange-500/10 border-orange-500/30"
                         : isCurrentMonth
-                        ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
-                        : "text-gray-600 bg-gray-900/30 border-gray-700"
+                        ? "text-white bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70] hover:from-[#606364] hover:to-[#4A5A70]"
+                        : "text-gray-600 bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-700"
                     }
                   `}
-                  >
-                    <div className="font-bold text-sm mb-1 flex items-center justify-between">
-                      <span>{format(day, "d")}</span>
-                      {!isWorkingDay && isCurrentMonth && !isPast && (
-                        <div
-                          className="w-1.5 h-1.5 bg-orange-500 rounded-full"
-                          title="Non-working day"
-                        />
-                      )}
-                    </div>
-                    {hasMyLessons && (
-                      <div className="flex justify-center items-center mt-1">
-                        <div className="flex flex-wrap gap-0.5 justify-center">
-                          {myLessonsForDay
-                            .filter(lesson => lesson.status !== "CONFIRMED")
-                            .slice(0, 2)
-                            .map((lesson: any, index: number) => (
-                              <div
-                                key={index}
-                                className={`w-2 h-2 rounded-full ${
-                                  lesson.status === "PENDING"
-                                    ? "bg-yellow-400"
-                                    : lesson.status === "DECLINED"
-                                    ? "bg-red-400"
-                                    : "bg-blue-400"
-                                }`}
-                                title={`${format(
-                                  new Date(lesson.date),
-                                  "h:mm a"
-                                )} - ${anonymizeLessonTitle(
-                                  lesson.title,
-                                  lesson.clientId
-                                )} (${lesson.status})`}
-                              />
-                            ))}
-                        </div>
+                >
+                  <div className="font-bold text-xs flex items-center justify-between w-full">
+                    <span>{format(day, "d")}</span>
+                    {availableSlotsCount > 0 && (
+                      <div className="w-3 h-3 rounded-full bg-green-500/40 border border-green-400 flex items-center justify-center">
+                        <span className="text-[6px] font-bold text-white">
+                          {availableSlotsCount}
+                        </span>
                       </div>
                     )}
-                    {hasCoachLessons && !hasMyLessons && (
-                      <div className="flex justify-center items-center mt-1">
-                        <div className="flex flex-wrap gap-0.5 justify-center">
-                          {coachLessonsForDay
-                            .slice(0, 2)
-                            .map((lesson: any, index: number) => (
-                              <div
-                                key={index}
-                                className="w-2 h-2 rounded-full bg-sky-400"
-                                title={`${format(
-                                  new Date(lesson.date),
-                                  "h:mm a"
-                                )} - ${"Client"}`}
-                              />
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                    {!hasMyLessons &&
-                      !hasCoachLessons &&
-                      isCurrentMonth &&
-                      !isPast &&
-                      isWorkingDay && (
-                        <div className="flex justify-center items-center mt-1">
-                          <div className="w-1.5 h-1.5 rounded-full bg-gray-400 opacity-50" />
-                        </div>
-                      )}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
+      </div>
 
-        {/* Request Schedule Change Modal */}
-        {showRequestModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {/* Day Overview Modal */}
+      {showDayOverviewModal && selectedDate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div
+            className="rounded-2xl shadow-xl border w-full max-w-md max-h-[90vh] overflow-y-auto"
+            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+          >
             <div
-              className="rounded-2xl shadow-xl border w-full max-w-md max-h-[80vh] overflow-y-auto"
+              className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
-              <div
-                className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-              >
+              <div>
                 <h2 className="text-xl font-bold text-white">
-                  Request Schedule Change
+                  {format(selectedDate, "MMM d, yyyy")}
                 </h2>
-                <button
-                  onClick={() => {
-                    setShowRequestModal(false);
-                    setRequestForm({ date: "", time: "", reason: "" });
-                  }}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+                <p className="text-gray-400 text-xs">
+                  {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
+                  {coachProfile?.workingHours?.endTime || "6:00 PM"}
+                </p>
               </div>
-              <div className="p-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={requestForm.date}
-                    onChange={e =>
-                      setRequestForm({ ...requestForm, date: e.target.value })
-                    }
-                    className="w-full p-3 rounded-lg border text-white"
-                    style={{
-                      backgroundColor: "#2A2F2F",
-                      borderColor: "#606364",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Time
-                  </label>
-                  <CustomSelect
-                    value={requestForm.time}
-                    onChange={value =>
-                      setRequestForm({ ...requestForm, time: value })
-                    }
-                    options={[
-                      { value: "", label: "Select a time" },
-                      ...timeSlots.map(slot => ({
-                        value: slot,
-                        label: slot,
-                      })),
-                    ]}
-                    placeholder="Select a time"
-                    style={{
-                      backgroundColor: "#2A2F2F",
-                      borderColor: "#606364",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Reason (Optional)
-                  </label>
-                  <textarea
-                    value={requestForm.reason}
-                    onChange={e =>
-                      setRequestForm({ ...requestForm, reason: e.target.value })
-                    }
-                    placeholder="Why do you need this schedule change?"
-                    rows={3}
-                    className="w-full p-3 rounded-lg border text-white"
-                    style={{
-                      backgroundColor: "#2A2F2F",
-                      borderColor: "#606364",
-                    }}
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={() => {
-                      setShowRequestModal(false);
-                      setRequestForm({ date: "", time: "", reason: "" });
-                    }}
-                    className="flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 border"
-                    style={{
-                      backgroundColor: "transparent",
-                      borderColor: "#606364",
-                      color: "#FFFFFF",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleRequestScheduleChange}
-                    disabled={requestScheduleChangeMutation.isPending}
-                    className="flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
-                  >
-                    {requestScheduleChangeMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                        Requesting...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4" />
-                        Request Change
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Day Overview Modal */}
-        {showDayOverviewModal && selectedDate && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div
-              className="rounded-2xl shadow-xl border w-full max-w-md max-h-[80vh] overflow-y-auto"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div
-                className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+              <button
+                onClick={() => setShowDayOverviewModal(false)}
+                className="p-2 rounded-lg transition-colors hover:bg-gray-700"
+                style={{ color: "#C3BCC2" }}
               >
-                <div>
-                  <h2 className="text-xl font-bold text-white">
-                    {format(selectedDate, "EEEE, MMMM d, yyyy")}
-                  </h2>
-                  <p className="text-gray-400 text-sm">
-                    Coach's Hours:{" "}
-                    {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
-                    {coachProfile?.workingHours?.endTime || "6:00 PM"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowDayOverviewModal(false);
-                    setSelectedDate(null);
-                  }}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="p-4 space-y-4">
-                {/* My Lessons */}
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-6">
+              {/* My Lessons */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  My Lessons
+                </h3>
                 {(() => {
                   const myDayLessons = getClientLessonsForDate(selectedDate);
                   return myDayLessons.length > 0 ? (
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-3">
-                        My Lessons
-                      </h3>
-                      <div className="space-y-2">
-                        {myDayLessons.map((lesson: any, index: number) => (
-                          <div
-                            key={index}
-                            className={`rounded p-3 border-2 ${getStatusColor(
-                              lesson.status
-                            )}`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-sm font-medium">
-                                  {formatTimeInUserTimezone(lesson.date)}
-                                </div>
-                                <div className="text-xs opacity-80">
-                                  {anonymizeLessonTitle(
-                                    lesson.title,
-                                    lesson.clientId
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {getStatusIcon(lesson.status)}
-                                <div className="text-xs">{lesson.status}</div>
-                              </div>
+                    <div className="space-y-2">
+                      {myDayLessons.map((lesson: any, index: number) => (
+                        <div
+                          key={index}
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 ${getStatusColor(
+                            lesson.status
+                          )}`}
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">
+                              {format(new Date(lesson.date), "h:mm a")}
+                            </div>
+                            <div className="text-xs opacity-80">
+                              {anonymizeLessonTitle(
+                                lesson.title,
+                                lesson.clientId
+                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(lesson.status)}
+                            <div className="text-xs">{lesson.status}</div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ) : null;
+                  ) : (
+                    <div className="text-center py-6 bg-gray-800/30 rounded-lg">
+                      <Calendar className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">
+                        No lessons scheduled
+                      </p>
+                    </div>
+                  );
                 })()}
+              </div>
 
-                {/* Coach's Lessons */}
+              {/* Coach's Lessons */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  Coach's Scheduled Lessons
+                </h3>
                 {(() => {
                   const coachDayLessons = getLessonsForDate(selectedDate);
                   const myLessons = getClientLessonsForDate(selectedDate);
@@ -955,53 +555,252 @@ export default function MobileClientSchedulePage() {
                       lesson.clientId !== null &&
                       !myClientIds.includes(lesson.clientId)
                   );
-                  return otherClientLessons.length > 0 ? (
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-3">
-                        Coach's Other Lessons
-                      </h3>
-                      <div className="space-y-2">
-                        {otherClientLessons.map(
-                          (lesson: any, index: number) => (
-                            <div
-                              key={index}
-                              className="bg-sky-500/10 rounded p-3 border border-sky-500/20"
-                            >
-                              <div className="text-sm font-medium text-sky-300">
-                                {formatTimeInUserTimezone(lesson.date)}
-                              </div>
-                              <div className="text-xs text-sky-200">
-                                {lesson.clientId === currentClient?.id
-                                  ? lesson.client?.name ||
-                                    lesson.client?.email ||
-                                    "You"
-                                  : "Client"}
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
 
-                {/* Request Button */}
-                <button
-                  onClick={() => {
-                    setShowDayOverviewModal(false);
-                    setShowRequestModal(true);
-                  }}
-                  className="w-full px-4 py-3 rounded-lg text-white transition-all duration-200 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: "#10B981" }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Request Schedule Change
-                </button>
+                  return otherClientLessons.length > 0 ? (
+                    <div className="space-y-2">
+                      {otherClientLessons.map((lesson: any, index: number) => {
+                        const isPast = new Date(lesson.date) < new Date();
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 rounded-lg border bg-sky-500/10 border-sky-500/20"
+                          >
+                            <div className="flex-1">
+                              <div className="font-medium text-sky-300 text-sm">
+                                {format(new Date(lesson.date), "h:mm a")}
+                              </div>
+                              <div className="text-xs text-sky-200">Client</div>
+                            </div>
+                            {!isPast &&
+                              upcomingLessons.length > 0 &&
+                              !hasPendingRequestWithTarget(lesson) && (
+                                <button
+                                  onClick={() => setSelectedSwapLesson(lesson)}
+                                  className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded-lg text-xs"
+                                >
+                                  <ArrowRightLeft className="h-3 w-3" />
+                                  Swap
+                                </button>
+                              )}
+                            {!isPast && hasPendingRequestWithTarget(lesson) && (
+                              <span className="text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded">
+                                Pending
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-gray-800/30 rounded-lg">
+                      <Users className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">
+                        No other lessons scheduled
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Available Time Slots */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  Available Time Slots
+                </h3>
+                {(() => {
+                  const availableSlots =
+                    generateAvailableTimeSlots(selectedDate);
+                  return availableSlots.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {availableSlots.map((slot, index) => (
+                        <button
+                          key={index}
+                          className="p-2 rounded-lg border text-center transition-all duration-200 text-xs"
+                          style={{
+                            backgroundColor: "#2A2F2F",
+                            borderColor: "#606364",
+                            color: "#FFFFFF",
+                          }}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-gray-800/30 rounded-lg">
+                      <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">
+                        No available time slots
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </ClientSidebar>
+        </div>
+      )}
+
+      {/* Swap Requests Modal */}
+      {showSwapRequests && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div
+            className="rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            style={{ backgroundColor: "#2A3133" }}
+          >
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
+                  Time Swap Requests
+                </h2>
+                <button
+                  onClick={() => setShowSwapRequests(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+              <MobileSwapRequests />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lesson Selection Modal for Swap */}
+      {selectedSwapLesson && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div
+            className="rounded-2xl shadow-xl border p-4 w-full max-w-md max-h-[80vh] overflow-y-auto"
+            style={{
+              backgroundColor: "#353A3A",
+              borderColor: "#606364",
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Choose Your Lesson to Swap
+                </h2>
+                <p className="text-gray-400 text-xs">
+                  Select which of your lessons you want to swap
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSwapLesson(null)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                  <div>
+                    <p className="font-medium text-blue-300 text-sm">
+                      Target:{" "}
+                      {format(new Date(selectedSwapLesson.date), "MMM d")} at{" "}
+                      {format(new Date(selectedSwapLesson.date), "h:mm a")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="text-sm font-semibold text-white mb-2">
+                Your Available Lessons:
+              </h3>
+
+              {isLoadingSwapRequests ? (
+                <div className="text-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto mb-2" />
+                  <p className="text-gray-400 text-xs">Loading...</p>
+                </div>
+              ) : upcomingLessons.length > 0 ? (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {upcomingLessons.map((myLesson: any, index: number) => {
+                    const hasPendingRequest = hasPendingSwapRequest(
+                      myLesson.id
+                    );
+                    const hasPendingWithTarget =
+                      hasPendingRequestWithTarget(selectedSwapLesson);
+                    const isDisabled =
+                      hasPendingRequest ||
+                      hasPendingWithTarget ||
+                      createSwapRequestMutation.isPending;
+
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          if (!isDisabled) {
+                            createSwapRequestMutation.mutate({
+                              targetEventId: selectedSwapLesson.id,
+                              requesterEventId: myLesson.id,
+                            });
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className={`w-full p-3 rounded-lg border text-left transition-all duration-200 text-xs ${
+                          isDisabled
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-sky-500/10 hover:border-sky-500/30"
+                        }`}
+                        style={{
+                          backgroundColor: isDisabled ? "#1F2937" : "#2A2F2F",
+                          borderColor: isDisabled ? "#4B5563" : "#606364",
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-white">
+                              {format(new Date(myLesson.date), "MMM d")} at{" "}
+                              {format(new Date(myLesson.date), "h:mm a")}
+                              {hasPendingRequest && (
+                                <span className="ml-1 text-yellow-400">
+                                  (Pending)
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-gray-300">{myLesson.title}</p>
+                          </div>
+                          {createSwapRequestMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+                          ) : (
+                            <ArrowRightLeft className="h-4 w-4 text-blue-400" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 bg-gray-800/30 rounded-lg">
+                  <Calendar className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                  <p className="text-gray-400 text-xs">
+                    No lessons available to swap
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setSelectedSwapLesson(null)}
+              className="w-full px-4 py-2 border rounded-lg text-sm"
+              style={{
+                backgroundColor: "#2A2F2F",
+                borderColor: "#606364",
+                color: "#E5E7EB",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Navigation */}
+      <MobileClientBottomNavigation />
+    </div>
   );
 }

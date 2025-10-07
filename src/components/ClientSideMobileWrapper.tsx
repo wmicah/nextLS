@@ -19,6 +19,15 @@ import NotificationsPage from "./NotificationsPage";
 import MobileNotificationsPage from "./MobileNotificationsPage";
 import MessagesPage from "./MessagesPage";
 import MobileMessagesPage from "./MobileMessagesPage";
+// Client components
+import ClientProgramPage from "./ClientProgramPage";
+import MobileClientProgramPage from "./MobileClientProgramPage";
+import ClientSchedulePageClient from "../app/client-schedule/ClientSchedulePageClient";
+import MobileClientSchedulePage from "./MobileClientSchedulePage";
+import ClientMessagesPage from "./ClientMessagesPage";
+import MobileClientMessagesPage from "./MobileClientMessagesPage";
+import ClientSettingsPage from "./ClientSettingsPage";
+import MobileClientSettingsPage from "./MobileClientSettingsPage";
 
 interface ClientSideMobileWrapperProps {
   children?: ReactNode;
@@ -66,6 +75,31 @@ export default function ClientSideMobileWrapper({
 
   if (pathname === "/messages") {
     return isMobile ? <MobileMessagesPage /> : <MessagesPage />;
+  }
+
+  // Client pages
+  if (pathname === "/client-dashboard") {
+    return isMobile ? <MobileClientProgramPage /> : <ClientProgramPage />;
+  }
+
+  if (pathname === "/client-schedule") {
+    return isMobile ? (
+      <MobileClientSchedulePage />
+    ) : (
+      <ClientSchedulePageClient />
+    );
+  }
+
+  if (pathname === "/client-messages") {
+    return isMobile ? <MobileClientMessagesPage /> : <ClientMessagesPage />;
+  }
+
+  if (pathname === "/client-settings") {
+    return isMobile ? <MobileClientSettingsPage /> : <ClientSettingsPage />;
+  }
+
+  if (pathname === "/client-notifications") {
+    return isMobile ? <MobileNotificationsPage /> : <NotificationsPage />;
   }
 
   // For other pages, render the children as-is

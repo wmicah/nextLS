@@ -22,5 +22,10 @@ export default async function NotificationsPage() {
     redirect("/role-selection");
   }
 
+  // If user is a client, redirect to client notifications
+  if (dbUser.role === "CLIENT") {
+    redirect("/client-notifications");
+  }
+
   return <ClientSideMobileWrapper />;
 }

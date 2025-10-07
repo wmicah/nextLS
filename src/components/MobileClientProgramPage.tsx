@@ -1,133 +1,195 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
-  Calendar as CalendarIcon,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   Check,
   Clock,
   Play,
+  Target,
+  TrendingUp,
+  Award,
+  CalendarCheck,
+  CalendarX,
+  CalendarClock,
+  Dumbbell,
+  BookOpen,
+  Zap,
+  Star,
+  CheckCircle2,
+  Home,
+  X,
+  AlertCircle,
+  CheckCircle,
+  Circle,
   MessageSquare,
   Upload,
-  CalendarDays,
   Video,
-  CheckCircle2,
-  Search,
-  X,
-  Loader2,
-  BookOpen,
+  Send,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   format,
-  addMonths,
-  subMonths,
   startOfMonth,
   endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  addMonths,
+  subMonths,
   startOfWeek,
   endOfWeek,
-  eachDayOfInterval,
   isSameMonth,
+  addDays,
   isToday,
 } from "date-fns";
-import { cn } from "@/lib/utils";
+import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
+import MobileClientNavigation from "./MobileClientNavigation";
+import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
+import ClientProgramDayModal from "./ClientProgramDayModal";
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import ClientSidebar from "./ClientSidebar";
 
-/* -------- Types (adjust to your server shapes if needed) -------- */
-type Drill = {
+interface Drill {
   id: string;
   title: string;
-  description?: string;
-  duration?: string;
+  sets?: number;
+  reps?: number;
+  tempo?: string;
+  tags?: string[];
   completed?: boolean;
-  isYoutube?: boolean;
-  youtubeId?: string;
   videoUrl?: string;
-};
+  supersetId?: string;
+  supersetOrder?: number;
+}
 
-type DayEntry = {
-  id: string;
-  date: string; // "yyyy-MM-dd"
-  isRestDay: boolean;
+interface ProgramData {
+  programId: string;
+  programTitle: string;
+  programDescription?: string;
   drills: Drill[];
-};
+  isRestDay: boolean;
+  expectedTime: number;
+  completedDrills: number;
+  totalDrills: number;
+}
 
-type CalendarData = Record<string, DayEntry>;
-
-type Program = {
-  title: string;
-  weeks: Array<{ days: Array<unknown> }>;
-};
-
-type VideoAssignment = {
-  id: string;
-  title: string;
-  description?: string;
-  thumbnail?: string;
-  isCompleted?: boolean;
-};
-
-type ViewMode = "week" | "month";
+interface DayData {
+  date: string;
+  programs: ProgramData[];
+  isRestDay: boolean;
+  totalDrills: number;
+  completedDrills: number;
+  drills: Drill[];
+  expectedTime: number;
+}
 
 export default function MobileClientProgramPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
-  const [selectedDay, setSelectedDay] = useState<DayEntry | null>(null);
-  const [showVideoModal, setShowVideoModal] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
+  const [completedProgramDrills, setCompletedProgramDrills] = useState<
+    Set<string>
+  >(new Set());
+
+  // Additional state for day modal functionality
+  const [noteToCoach, setNoteToCoach] = useState("");
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+  const [isVideoSubmissionModalOpen, setIsVideoSubmissionModalOpen] =
+    useState(false);
+  const [selectedDrillForVideo, setSelectedDrillForVideo] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<
-    "all" | "completed" | "pending"
-  >("all");
+  const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [selectedDrillForComment, setSelectedDrillForComment] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [commentText, setCommentText] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  const utils = trpc.useUtils();
+  // Get client's assigned program
+  const {
+    data: programInfo,
+    isLoading: programLoading,
+    error: programError,
+  } = trpc.clientRouter.getAssignedProgram.useQuery();
 
-  // Fetch program data
-  const { data: program, isLoading: programLoading } =
-    trpc.clientRouter.getAssignedProgram.useQuery();
+  // Mutations for day modal functionality
+  const markDrillCompleteMutation =
+    trpc.clientRouter.markDrillComplete.useMutation();
+  const sendNoteToCoachMutation =
+    trpc.clientRouter.sendNoteToCoach.useMutation();
+  const addCommentToDrillMutation =
+    trpc.clientRouter.addCommentToDrill.useMutation();
 
-  // Fetch video assignments
-  const { data: videoAssignments = [], isLoading: videosLoading } =
-    trpc.clientRouter.getVideoAssignments.useQuery();
-
-  // Fetch calendar data
   const {
     data: calendarData,
     error: calendarError,
     isLoading: calendarLoading,
-  } = trpc.clientRouter.getProgramCalendar.useQuery<CalendarData>({
+    refetch: refetchCalendar,
+  } = trpc.clientRouter.getProgramCalendar.useQuery({
     year: currentDate.getFullYear(),
     month: currentDate.getMonth() + 1,
-    viewMode,
+    viewMode: "month",
   });
 
-  // Drill completion mutation (invalidate instead of full reload)
-  const markDrillCompleteMutation =
-    trpc.clientRouter.markDrillComplete.useMutation({
-      onSuccess: async () => {
-        await utils.clientRouter.getProgramCalendar.invalidate();
-        // keep selection after update
-        if (selectedDay?.date) {
-          const updated = await utils.clientRouter.getProgramCalendar.fetch({
-            year: currentDate.getFullYear(),
-            month: currentDate.getMonth() + 1,
-            viewMode,
-          });
-          if (updated && selectedDay.date in updated) {
-            setSelectedDay(updated[selectedDay.date]);
-          }
-        }
-      },
+  // Debug logging
+  console.log("MobileClientProgramPage - programInfo:", programInfo);
+  console.log("MobileClientProgramPage - programLoading:", programLoading);
+  console.log("MobileClientProgramPage - programError:", programError);
+  console.log("MobileClientProgramPage - calendarData:", calendarData);
+  console.log(
+    "MobileClientProgramPage - calendarData type:",
+    typeof calendarData,
+    Array.isArray(calendarData)
+  );
+
+  // Get current week's calendar data
+  const currentWeekStart = startOfWeek(new Date());
+  const currentWeekEnd = endOfWeek(new Date());
+  const startDateString = `${currentWeekStart.getFullYear()}-${(
+    currentWeekStart.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${currentWeekStart
+    .getDate()
+    .toString()
+    .padStart(2, "0")}`;
+  const endDateString = `${currentWeekEnd.getFullYear()}-${(
+    currentWeekEnd.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${currentWeekEnd.getDate().toString().padStart(2, "0")}`;
+
+  const { data: currentWeekData, isLoading: currentWeekLoading } =
+    trpc.clientRouter.getProgramCalendar.useQuery({
+      year: currentWeekStart.getFullYear(),
+      month: currentWeekStart.getMonth() + 1,
+      viewMode: "week",
     });
+
+  // Initialize completion state from server data
+  useEffect(() => {
+    if (selectedDay?.programs) {
+      const serverCompletedDrills = new Set<string>();
+      selectedDay.programs.forEach(program => {
+        program.drills.forEach(drill => {
+          if (drill.completed) {
+            serverCompletedDrills.add(drill.id);
+          }
+        });
+      });
+      setCompletedProgramDrills(serverCompletedDrills);
+    }
+  }, [selectedDay]);
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate(prev =>
@@ -135,682 +197,518 @@ export default function MobileClientProgramPage() {
     );
   };
 
-  const filteredVideos = useMemo(() => {
-    return (videoAssignments as any[]).filter(v => {
-      const matchesSearch = v.video?.title
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchesFilter =
-        filterStatus === "all" ||
-        (filterStatus === "completed" && v.completed) ||
-        (filterStatus === "pending" && !v.completed);
-      return matchesSearch && matchesFilter;
-    });
-  }, [videoAssignments, searchTerm, filterStatus]);
+  const handleDateClick = (day: Date) => {
+    if (!calendarData) return;
 
-  const visibleDays = useMemo(() => {
-    if (!currentDate) return [];
-    if (viewMode === "week") {
-      const start = startOfWeek(currentDate, { weekStartsOn: 1 });
-      const end = endOfWeek(currentDate, { weekStartsOn: 1 });
-      return eachDayOfInterval({ start, end });
+    const dayString = format(day, "yyyy-MM-dd");
+    let dayData: DayData | undefined;
+
+    if (Array.isArray(calendarData)) {
+      dayData = calendarData.find((d: DayData) => d.date === dayString);
+    } else if (typeof calendarData === "object") {
+      dayData = (calendarData as any)[dayString];
     }
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  }, [currentDate, viewMode]);
 
+    if (dayData) {
+      setSelectedDay(dayData);
+      setSelectedDate(day);
+      setIsDayModalOpen(true);
+    }
+  };
+
+  // Handler functions for day modal
   const handleMarkDrillComplete = async (
     drillId: string,
     completed: boolean
   ) => {
+    setCompletedProgramDrills(prev => {
+      const newSet = new Set(prev);
+      if (completed) {
+        newSet.add(drillId);
+      } else {
+        newSet.delete(drillId);
+      }
+      return newSet;
+    });
+
     try {
-      await markDrillCompleteMutation.mutateAsync({ drillId, completed });
+      await markDrillCompleteMutation.mutateAsync({
+        drillId,
+        completed,
+      });
     } catch (error) {
-      console.error("❌ Failed to update drill completion:", error);
-    }
-  };
-
-  const handleOpenVideo = (drill: Drill) => {
-    setVideoError(null);
-    if (drill.isYoutube && drill.youtubeId) {
-      setSelectedVideo({
-        id: `youtube-${drill.youtubeId}`,
-        isYoutube: true,
-        youtubeId: drill.youtubeId,
-        title: drill.title || "Training Video",
-        url: `https://www.youtube.com/watch?v=${drill.youtubeId}`,
-        type: "video",
+      console.error("Failed to update drill completion:", error);
+      // Revert optimistic update on error
+      setCompletedProgramDrills(prev => {
+        const newSet = new Set(prev);
+        if (completed) {
+          newSet.delete(drillId);
+        } else {
+          newSet.add(drillId);
+        }
+        return newSet;
       });
-      setIsVideoPlayerOpen(true);
-      return;
     }
-    if (drill.videoUrl) {
-      setSelectedVideo({
-        id: `video-${drill.id}`,
-        url: drill.videoUrl,
-        type: "video",
-        title: drill.title || "Training Video",
-        isYoutube: false,
+  };
+
+  const handleMarkAllComplete = async () => {
+    if (!selectedDay) return;
+
+    if (confirm("Mark all drills for this day as complete?")) {
+      const allDrillIds = selectedDay.drills.map(drill => drill.id);
+      allDrillIds.forEach(drillId => {
+        handleMarkDrillComplete(drillId, true);
       });
-      setIsVideoPlayerOpen(true);
-      return;
     }
-    setVideoError("No video available for this drill");
   };
 
-  const handleCloseVideo = () => {
-    setIsVideoPlayerOpen(false);
-    setSelectedVideo(null);
-    setVideoError(null);
+  const handleSendNote = async () => {
+    if (!noteToCoach.trim() || !selectedDay) return;
+
+    setIsSubmittingNote(true);
+    try {
+      await sendNoteToCoachMutation.mutateAsync({
+        date: selectedDay.date,
+        note: noteToCoach,
+      });
+      setNoteToCoach("");
+    } catch (error) {
+      console.error("Failed to send note:", error);
+    } finally {
+      setIsSubmittingNote(false);
+    }
   };
 
-  if (programLoading) {
+  const handleSubmitVideo = (drillId: string, drillTitle: string) => {
+    setSelectedDrillForVideo({ id: drillId, title: drillTitle });
+    setIsVideoSubmissionModalOpen(true);
+  };
+
+  const handleOpenVideo = (videoUrl: string, drill: any) => {
+    setSelectedVideo({
+      id: drill.id,
+      title: drill.title,
+      url: videoUrl,
+      isYoutube: drill.isYoutube,
+      youtubeId: drill.youtubeId,
+    });
+    setIsVideoPlayerOpen(true);
+  };
+
+  const handleOpenCommentModal = (drill: { id: string; title: string }) => {
+    setSelectedDrillForComment(drill);
+    setIsCommentModalOpen(true);
+  };
+
+  const handleSubmitComment = async () => {
+    if (!commentText.trim() || !selectedDrillForComment) return;
+
+    setIsSubmittingComment(true);
+    try {
+      await addCommentToDrillMutation.mutateAsync({
+        drillId: selectedDrillForComment.id,
+        comment: commentText,
+      });
+      setCommentText("");
+      setIsCommentModalOpen(false);
+    } catch (error) {
+      console.error("Failed to submit comment:", error);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const getCalendarDays = () => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const startDate = startOfWeek(monthStart);
+    const endDate = endOfWeek(monthEnd);
+
+    return eachDayOfInterval({ start: startDate, end: endDate });
+  };
+
+  if (programLoading || calendarLoading) {
     return (
-      <ClientSidebar>
-        <div className="min-h-screen flex items-center justify-center bg-[#2A3133]">
-          <div className="flex items-center space-x-3 text-[#C3BCC2]">
-            <Loader2 className="h-8 w-8 animate-spin text-[#4A5A70]" />
-            <span className="text-lg">Loading your program...</span>
-          </div>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "#2A3133" }}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4" />
+          <p className="text-white">Loading your program...</p>
         </div>
-      </ClientSidebar>
+      </div>
     );
   }
 
-  if (!program) {
+  if (programError || calendarError) {
     return (
-      <ClientSidebar>
-        <div className="min-h-screen flex items-center justify-center bg-[#2A3133]">
-          <div className="text-center">
-            <BookOpen className="w-16 h-16 mx-auto mb-4 text-[#606364]" />
-            <h2 className="text-xl font-semibold mb-3 text-[#C3BCC2]">
-              No Program Assigned
-            </h2>
-            <p className="text-lg text-[#ABA4AA]">
-              Your coach hasn't assigned a training program yet.
-            </p>
-          </div>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "#2A3133" }}
+      >
+        <div className="text-center">
+          <p className="text-red-400 mb-4">
+            {programError
+              ? "Error loading assigned program"
+              : "Error loading program data"}
+          </p>
+          <Button
+            onClick={() => refetchCalendar()}
+            className="bg-[#4A5A70] hover:bg-[#606364] text-white"
+          >
+            Try Again
+          </Button>
         </div>
-      </ClientSidebar>
+      </div>
     );
   }
 
-  const totalWeeks = program.weeks?.length ?? 0;
-  const totalDays =
-    program.weeks?.reduce((acc, w) => acc + (w.days?.length ?? 0), 0) ?? 0;
+  if (!programInfo) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "#2A3133" }}
+      >
+        <div className="text-center p-6">
+          <Target className="h-16 w-16 text-[#ABA4AA] mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">
+            No Program Assigned
+          </h2>
+          <p className="text-[#ABA4AA] mb-4">
+            Your coach hasn't assigned you a program yet.
+          </p>
+          <p className="text-sm text-[#606364]">
+            Contact your coach to get started!
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <ClientSidebar>
-      <div className="min-h-screen bg-[#2A3133]">
-        {/* Header */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#4A5A70]">
-                <BookOpen className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-white">
-                  Training Program
-                </h1>
-                <p className="text-xs text-gray-400">{program.title}</p>
-              </div>
+    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-[#2A3133] to-[#353A3A] border-b border-[#4A5A70] px-4 py-4 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4A5A70] to-[#606364] flex items-center justify-center shadow-md">
+              <Home className="h-5 w-5 text-white" />
             </div>
-            <div className="flex gap-2">
-              <button
-                aria-label="Open video submission"
-                className="p-2 rounded-lg bg-[#4A5A70]"
-                onClick={() => setShowVideoModal(true)}
-              >
-                <Upload className="w-4 h-4 text-white" />
-              </button>
+            <div>
+              <h1 className="text-xl font-bold text-white">My Program</h1>
+              <p className="text-sm text-gray-300">Training & progress</p>
             </div>
           </div>
+          <MobileClientNavigation currentPage="dashboard" />
         </div>
+      </div>
 
-        {/* Stats */}
-        <div className="mb-4">
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            <div className="flex-shrink-0 w-24 rounded-lg border p-2 bg-[#353A3A] border-[#606364]">
-              <div className="text-center">
-                <div className="text-lg font-bold text-white">{totalWeeks}</div>
-                <div className="text-xs text-gray-400">Weeks</div>
-              </div>
-            </div>
-            <div className="flex-shrink-0 w-24 rounded-lg border p-2 bg-[#353A3A] border-[#606364]">
-              <div className="text-center">
-                <div className="text-lg font-bold text-white">{totalDays}</div>
-                <div className="text-xs text-gray-400">Days</div>
-              </div>
-            </div>
-            <div className="flex-shrink-0 w-24 rounded-lg border p-2 bg-[#353A3A] border-[#606364]">
-              <div className="text-center">
-                <div className="text-lg font-bold text-white">
-                  {/* Placeholder: if you return an aggregate completion from API, swap here */}
-                  —
-                </div>
-                <div className="text-xs text-gray-400">Completed</div>
-              </div>
-            </div>
-            <div className="flex-shrink-0 w-24 rounded-lg border p-2 bg-[#353A3A] border-[#606364]">
-              <div className="text-center">
-                <div className="text-lg font-bold text-white">
-                  {videoAssignments.length}
-                </div>
-                <div className="text-xs text-gray-400">Videos</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Calendar Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <Button
+      {/* Main Content */}
+      <div className="p-4 pb-20 space-y-6">
+        {/* Calendar View */}
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
+          {/* Month Navigation */}
+          <div className="flex items-center justify-between p-4 mb-6 rounded-xl bg-gradient-to-r from-[#353A3A] to-[#40454A] shadow-inner">
+            <button
               onClick={() => navigateMonth("prev")}
-              variant="ghost"
-              size="sm"
-              className="p-2 rounded-xl hover:bg-white/10 transition-all"
-              aria-label="Previous month"
+              className="p-3 rounded-xl bg-[#4A5A70] hover:bg-[#606364] transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <ChevronLeft className="h-4 w-4 text-white" />
-            </Button>
-            <h2 className="text-lg font-bold text-white text-center">
+              <ChevronLeft className="h-5 w-5 text-white" />
+            </button>
+            <h3 className="text-2xl font-bold text-white">
               {format(currentDate, "MMMM yyyy")}
-            </h2>
-            <Button
+            </h3>
+            <button
               onClick={() => navigateMonth("next")}
-              variant="ghost"
-              size="sm"
-              className="p-2 rounded-xl hover:bg-white/10 transition-all"
-              aria-label="Next month"
+              className="p-3 rounded-xl bg-[#4A5A70] hover:bg-[#606364] transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <ChevronRight className="h-4 w-4 text-white" />
-            </Button>
+              <ChevronRight className="h-5 w-5 text-white" />
+            </button>
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setViewMode("week")}
-              variant={viewMode === "week" ? "default" : "ghost"}
-              size="sm"
-              className={cn(
-                "px-3 py-2 rounded-xl font-medium text-xs",
-                viewMode === "week"
-                  ? "bg-blue-500 text-white"
-                  : "text-[#ABA4AA]"
-              )}
-            >
-              <CalendarDays className="h-3 w-3 mr-1" />
-              Week
-            </Button>
-            <Button
-              onClick={() => setViewMode("month")}
-              variant={viewMode === "month" ? "default" : "ghost"}
-              size="sm"
-              className={cn(
-                "px-3 py-2 rounded-xl font-medium text-xs",
-                viewMode === "month"
-                  ? "bg-blue-500 text-white"
-                  : "text-[#ABA4AA]"
-              )}
-            >
-              <CalendarIcon className="h-3 w-3 mr-1" />
-              Month
-            </Button>
+
+          {/* Day Headers */}
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+              <div
+                key={day}
+                className="text-center text-sm font-bold text-[#ABA4AA] py-3 bg-[#353A3A] rounded-lg"
+              >
+                {day.slice(0, 1)}
+              </div>
+            ))}
           </div>
-        </div>
 
-        {/* Calendar Grid */}
-        <div
-          className={cn(
-            "grid gap-1 mb-4",
-            viewMode === "week" ? "grid-cols-7" : "grid-cols-7"
-          )}
-        >
-          {/* Day headers */}
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
-            <div
-              key={day}
-              className="p-2 text-center text-xs font-bold text-[#ABA4AA]"
-            >
-              {day}
-            </div>
-          ))}
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {getCalendarDays().map(day => {
+              const isToday = isSameDay(day, new Date());
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const dayString = format(day, "yyyy-MM-dd");
+              const dayData =
+                calendarData &&
+                typeof calendarData === "object" &&
+                !Array.isArray(calendarData)
+                  ? (calendarData as any)[dayString]
+                  : Array.isArray(calendarData)
+                  ? calendarData.find((d: DayData) => d.date === dayString)
+                  : undefined;
+              const hasWorkout =
+                dayData && !dayData.isRestDay && dayData.totalDrills > 0;
+              const isCompleted =
+                dayData &&
+                dayData.completedDrills === dayData.totalDrills &&
+                dayData.totalDrills > 0;
+              const isPartial =
+                dayData &&
+                dayData.completedDrills > 0 &&
+                dayData.completedDrills < dayData.totalDrills;
 
-          {/* Days */}
-          {calendarLoading && (
-            <div className="col-span-7 flex items-center justify-center py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-[#4A5A70]" />
-            </div>
-          )}
+              // Get program indicators for this day
+              const programIndicators =
+                dayData?.programs?.map(
+                  (program: ProgramData, index: number) => {
+                    const remaining =
+                      program.totalDrills - program.completedDrills;
+                    const isRestDay = program.isRestDay;
 
-          {!calendarLoading && calendarError && (
-            <div className="col-span-7 text-center text-sm text-red-300">
-              Couldn’t load calendar. Please try again.
-            </div>
-          )}
-
-          {!calendarLoading &&
-            calendarData &&
-            visibleDays.map(date => {
-              const key = format(date, "yyyy-MM-dd");
-              const dayData = (calendarData as CalendarData)[key];
-              const inMonth = isSameMonth(date, currentDate);
-              const today = isToday(date);
+                    return {
+                      id: program.programId,
+                      title: program.programTitle,
+                      remaining,
+                      isRestDay,
+                      color:
+                        index === 0
+                          ? "blue"
+                          : index === 1
+                          ? "green"
+                          : index === 2
+                          ? "purple"
+                          : "orange",
+                    };
+                  }
+                ) || [];
 
               return (
                 <div
-                  key={key}
-                  className={cn(
-                    "min-h-[60px] p-1 rounded-lg transition-all border cursor-pointer hover:scale-[1.02]",
-                    inMonth
-                      ? "bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20 hover:bg-white/10"
-                      : "bg-white/5 border-white/5 opacity-60",
-                    today &&
-                      "ring-2 ring-blue-500/30 border-blue-400/50 bg-blue-500/10"
-                  )}
-                  onClick={() => {
-                    if (
-                      dayData &&
-                      (dayData.drills.length > 0 || dayData.isRestDay)
-                    ) {
-                      setSelectedDay(dayData);
-                    }
-                  }}
+                  key={day.toISOString()}
+                  onClick={() => handleDateClick(day)}
+                  className={`
+                      aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all duration-200 relative border-2 cursor-pointer active:scale-95 p-0.5 shadow-md hover:shadow-lg overflow-hidden
+                      ${
+                        isToday
+                          ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-400 shadow-blue-500/30 font-bold"
+                          : isCurrentMonth
+                          ? programIndicators.length > 0
+                            ? "text-white bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70] hover:from-[#606364] hover:to-[#4A5A70]"
+                            : "text-[#ABA4AA] bg-gradient-to-br from-[#353A3A] to-[#40454A] border-[#606364] hover:from-[#4A5A70] hover:to-[#606364]"
+                          : "text-gray-600 bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-700"
+                      }
+                    `}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span
-                      className={cn(
-                        "text-xs font-medium",
-                        inMonth ? "text-white" : "text-gray-400",
-                        today && "font-bold text-blue-400"
-                      )}
-                    >
-                      {format(date, "d")}
-                    </span>
+                  <div className="font-bold text-xs leading-none">
+                    {format(day, "d")}
                   </div>
-
-                  {/* Drills preview */}
-                  {dayData && dayData.drills.length > 0 && (
-                    <div className="space-y-1">
-                      {dayData.drills.slice(0, 2).map((drill, idx) => (
-                        <div
-                          key={drill.id ?? idx}
-                          className={cn(
-                            "text-xs p-1 rounded border",
-                            drill.completed
-                              ? "bg-green-600/10 border-green-500/40"
-                              : "bg-slate-700/40 border-slate-600"
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-white text-[11px] truncate">
-                              {drill.title}
-                            </span>
-                            {drill.completed && (
-                              <Check className="h-3 w-3 text-green-400" />
-                            )}
+                  {programIndicators.length > 0 && (
+                    <div className="flex justify-center items-center gap-0.5 mt-0.5">
+                      {programIndicators
+                        .slice(0, 2)
+                        .map((indicator: any, idx: number) => (
+                          <div
+                            key={indicator.id}
+                            className={`w-2 h-2 rounded-full flex items-center justify-center text-[6px] font-bold shadow-sm border ${
+                              indicator.isRestDay
+                                ? "bg-orange-500 text-white border-orange-400"
+                                : indicator.color === "blue"
+                                ? "bg-blue-500 text-white border-blue-400"
+                                : indicator.color === "green"
+                                ? "bg-green-500 text-white border-green-400"
+                                : indicator.color === "purple"
+                                ? "bg-purple-500 text-white border-purple-400"
+                                : "bg-orange-500 text-white border-orange-400"
+                            }`}
+                            title={`${indicator.title}: ${indicator.remaining} exercises remaining`}
+                          >
+                            {indicator.isRestDay ? "R" : indicator.remaining}
                           </div>
-                        </div>
-                      ))}
-                      {dayData.drills.length > 2 && (
-                        <div className="text-[11px] text-gray-400 text-center">
-                          +{dayData.drills.length - 2} more
+                        ))}
+                      {programIndicators.length > 2 && (
+                        <div className="w-2 h-2 rounded-full bg-gray-500 text-white border border-gray-400 flex items-center justify-center text-[6px] font-bold">
+                          +
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Rest day */}
-                  {dayData && dayData.isRestDay && (
-                    <div className="text-xs text-gray-400 text-center">
-                      Rest
                     </div>
                   )}
                 </div>
               );
             })}
+          </div>
         </div>
+      </div>
 
-        {/* Selected Day Details */}
-        {selectedDay && (
-          <div className="rounded-xl p-4 mb-4 shadow-lg border bg-[#2B3038] border-[#606364]">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-[#C3BCC2]">
-                {selectedDay.isRestDay ? "Rest Day" : "Today's Workouts"}
-              </h2>
+      {/* Day Modal - Full functionality */}
+      {isDayModalOpen && selectedDay && (
+        <ClientProgramDayModal
+          isOpen={isDayModalOpen}
+          onClose={() => setIsDayModalOpen(false)}
+          selectedDay={selectedDay}
+          selectedDate={selectedDate}
+          programs={selectedDay?.programs || []}
+          onMarkDrillComplete={handleMarkDrillComplete}
+          onMarkAllComplete={handleMarkAllComplete}
+          onOpenVideo={handleOpenVideo}
+          onOpenCommentModal={handleOpenCommentModal}
+          onOpenVideoSubmissionModal={handleSubmitVideo}
+          onSendNote={handleSendNote}
+          noteToCoach={noteToCoach}
+          setNoteToCoach={setNoteToCoach}
+          isSubmittingNote={isSubmittingNote}
+          completedProgramDrills={completedProgramDrills}
+          calculateDayCompletionCounts={(dayData, selectedDate) => {
+            if (!dayData) return { totalDrills: 0, completedDrills: 0 };
+            return {
+              totalDrills: dayData.totalDrills,
+              completedDrills: dayData.completedDrills,
+            };
+          }}
+          calculateDayAssignmentCounts={(dayData, selectedDate) => {
+            if (!dayData)
+              return { totalAssignments: 0, completedAssignments: 0 };
+            return {
+              totalAssignments: 0,
+              completedAssignments: 0,
+            };
+          }}
+          onMarkRoutineExerciseComplete={(
+            exerciseId: string,
+            routineAssignmentId: string,
+            completed: boolean
+          ) => {
+            // Handle routine exercise completion if needed
+            console.log(
+              "Routine exercise completion:",
+              exerciseId,
+              routineAssignmentId,
+              completed
+            );
+          }}
+        />
+      )}
+
+      {/* Video Submission Modal */}
+      {isVideoSubmissionModalOpen && selectedDrillForVideo && (
+        <ClientVideoSubmissionModal
+          isOpen={isVideoSubmissionModalOpen}
+          onClose={() => {
+            setIsVideoSubmissionModalOpen(false);
+            setSelectedDrillForVideo(null);
+          }}
+          drillId={selectedDrillForVideo.id}
+          drillTitle={selectedDrillForVideo.title}
+        />
+      )}
+
+      {/* Video Player Modal */}
+      {isVideoPlayerOpen && selectedVideo && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] bg-[#1F2426] rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-[#606364]">
+              <h3 className="text-lg font-semibold text-white">
+                {selectedVideo.title}
+              </h3>
               <button
-                onClick={() => setShowNotesModal(true)}
-                className="p-1 rounded bg-[#4A5A70]"
-                aria-label="Add notes"
+                onClick={() => {
+                  setIsVideoPlayerOpen(false);
+                  setSelectedVideo(null);
+                }}
+                className="text-[#ABA4AA] hover:text-white"
               >
-                <MessageSquare className="w-4 h-4 text-white" />
+                <X className="h-6 w-6" />
               </button>
             </div>
-
-            <div className="text-sm mb-3 text-[#ABA4AA]">
-              {selectedDay.isRestDay
-                ? "Take a break and recover"
-                : `${selectedDay.drills.length} workout${
-                    selectedDay.drills.length !== 1 ? "s" : ""
-                  } scheduled`}
-            </div>
-
-            {!selectedDay.isRestDay && (
-              <div className="space-y-3">
-                {selectedDay.drills.map((drill, index) => (
-                  <div
-                    key={drill.id}
-                    className="p-3 rounded-lg border bg-[#353A3A] border-[#606364]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-[#4A5A70]">
-                          <span className="text-xs font-bold text-[#C3BCC2]">
-                            {index + 1}
-                          </span>
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-sm text-[#C3BCC2]">
-                            {drill.title}
-                          </h4>
-                          {drill.description && (
-                            <p className="text-xs text-[#ABA4AA]">
-                              {drill.description}
-                            </p>
-                          )}
-                          {drill.duration && (
-                            <div className="flex items-center gap-1 mt-1 text-[#ABA4AA]">
-                              <Clock className="h-3 w-3" />
-                              <span className="text-xs">{drill.duration}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() =>
-                            handleMarkDrillComplete(drill.id, !drill.completed)
-                          }
-                          className={cn(
-                            "p-2 rounded-lg transition-all hover:scale-110",
-                            drill.completed
-                              ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
-                              : "bg-gray-600 text-gray-100 hover:bg-gray-500"
-                          )}
-                          aria-label={
-                            drill.completed
-                              ? "Mark incomplete"
-                              : "Mark complete"
-                          }
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleOpenVideo(drill)}
-                          className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all hover:scale-110"
-                          aria-label="Open video"
-                        >
-                          <Play className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Search & Filter */}
-        <div className="flex gap-2 mb-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[#ABA4AA]" />
-            <input
-              type="text"
-              placeholder="Search videos..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 rounded-lg text-sm bg-[#353A3A] text-[#C3BCC2] border border-[#606364] outline-none focus:ring-2 focus:ring-blue-500/40"
-            />
-          </div>
-          <select
-            value={filterStatus}
-            onChange={e =>
-              setFilterStatus(e.target.value as typeof filterStatus)
-            }
-            className="px-3 py-2 rounded-lg text-sm bg-[#353A3A] text-[#C3BCC2] border border-[#606364] outline-none"
-          >
-            <option value="all">All</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
-
-        {/* Video Assignments */}
-        {videosLoading ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-6 w-6 animate-spin text-[#4A5A70]" />
-          </div>
-        ) : filteredVideos.length > 0 ? (
-          <div className="space-y-3">
-            {filteredVideos.map(video => (
-              <div
-                key={video.id}
-                className="rounded-lg overflow-hidden transition-all hover:scale-[1.02] shadow-lg border bg-[#2B3038] border-[#606364]"
-              >
-                <div className="aspect-video relative bg-[#606364]">
-                  {video.video?.url ? (
-                    <Image
-                      src={video.video.url}
-                      alt={`Video thumbnail: ${video.video.title}`}
-                      width={1024}
-                      height={576}
-                      className="w-full h-full object-cover"
-                      priority={false}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Play className="w-8 h-8 text-[#ABA4AA]" />
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      setSelectedVideo({
-                        id: video.id,
-                        title: video.video?.title,
-                        type: "video",
-                        url: video.video?.url,
-                      });
-                      setShowVideoModal(true);
-                    }}
-                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
-                    aria-label="Open video"
-                  >
-                    <Play className="w-12 h-12 text-white" />
-                  </button>
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold text-[#C3BCC2]">
-                      {video.video?.title}
-                    </h3>
-                    {video.completed && (
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    )}
-                  </div>
-                  {video.video?.description && (
-                    <p className="text-xs mb-3 text-[#ABA4AA]">
-                      {video.video.description}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <div
-                      className={cn(
-                        "px-2 py-1 rounded text-xs font-medium text-white",
-                        video.completed ? "bg-emerald-500" : "bg-[#4A5A70]"
-                      )}
-                    >
-                      {video.completed ? "Completed" : "Assigned"}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedVideo({
-                          id: video.id,
-                          title: video.video?.title,
-                          type: "video",
-                          url: video.video?.url,
-                        });
-                        setShowVideoModal(true);
-                      }}
-                      className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-[#4A5A70] text-[#C3BCC2]"
-                      aria-label="Watch video"
-                    >
-                      <Play className="w-3 h-3" />
-                      Watch
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-6">
-            <Video className="w-8 h-8 mx-auto mb-3 text-[#606364]" />
-            <h3 className="text-base font-semibold mb-2 text-[#C3BCC2]">
-              No video assignments
-            </h3>
-            <p className="text-sm text-[#ABA4AA]">
-              Your coach will assign training videos soon
-            </p>
-          </div>
-        )}
-
-        {/* Notes Modal */}
-        {showNotesModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-[#353A3A] border border-[#606364]">
-              <div className="p-4 border-b border-[#606364]">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-[#C3BCC2]">
-                    Add Notes
-                  </h3>
-                  <button
-                    onClick={() => setShowNotesModal(false)}
-                    className="p-2 rounded-lg text-[#ABA4AA] hover:bg-gray-700 transition-colors"
-                    aria-label="Close notes"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-4">
-                <Textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  placeholder="Add your notes about today's workout..."
-                  rows={4}
-                  className="w-full mb-4 bg-[#2A3133] text-[#C3BCC2] border border-[#606364]"
+            <div className="p-4">
+              {selectedVideo.isYoutube ? (
+                <iframe
+                  width="100%"
+                  height="400"
+                  src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}`}
+                  title={selectedVideo.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="rounded-lg"
                 />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowNotesModal(false)}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-[#606364] text-[#C3BCC2]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      // TODO: wire to submit notes API
-                      setShowNotesModal(false);
-                      setNotes("");
-                    }}
-                    disabled={!notes.trim()}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-[#4A5A70] text-[#C3BCC2] disabled:opacity-50"
-                  >
-                    Save Notes
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Video Submission Modal */}
-        {showVideoModal && (
-          <ClientVideoSubmissionModal
-            isOpen={showVideoModal}
-            onClose={() => {
-              setShowVideoModal(false);
-              setSelectedVideo(null);
-            }}
-            drillId={selectedVideo?.id}
-            drillTitle={selectedVideo?.title}
-          />
-        )}
-
-        {/* Video Player Modal */}
-        {isVideoPlayerOpen && selectedVideo && (
-          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-2xl border border-gray-600 w-full max-w-4xl max-h-[90vh] overflow-hidden">
-              <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white">
-                  {selectedVideo.title}
-                </h3>
-                <button
-                  onClick={handleCloseVideo}
-                  className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                  aria-label="Close player"
+              ) : (
+                <video
+                  controls
+                  className="w-full rounded-lg"
+                  src={selectedVideo.url}
                 >
-                  <X className="h-5 w-5" />
-                </button>
+                  Your browser does not support the video tag.
+                </video>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comment Modal */}
+      {isCommentModalOpen && selectedDrillForComment && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-[#1F2426] rounded-lg border-2 border-[#4A5A70] p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Add Comment</h3>
+              <button
+                onClick={() => {
+                  setIsCommentModalOpen(false);
+                  setSelectedDrillForComment(null);
+                  setCommentText("");
+                }}
+                className="text-[#ABA4AA] hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#C3BCC2] mb-2">
+                  Comment for {selectedDrillForComment.title}
+                </label>
+                <textarea
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  className="w-full p-3 bg-[#353A3A] border border-[#606364] text-[#C3BCC2] rounded-lg focus:ring-2 focus:ring-[#4A5A70] focus:border-transparent"
+                  rows={4}
+                  placeholder="Add your comment..."
+                />
               </div>
-
-              <div className="p-4">
-                {videoError && (
-                  <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p className="text-red-300 text-sm">{videoError}</p>
-                  </div>
-                )}
-
-                <div className="aspect-video bg-black rounded-xl overflow-hidden">
-                  {selectedVideo.isYoutube && selectedVideo.youtubeId ? (
-                    <iframe
-                      src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=0&rel=0&modestbranding=1&showinfo=0`}
-                      title={selectedVideo.title || "Training Video"}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      className="w-full h-full"
-                      referrerPolicy="strict-origin-when-cross-origin"
-                    />
-                  ) : selectedVideo.url ? (
-                    <video
-                      controls
-                      controlsList="nodownload"
-                      disablePictureInPicture
-                      className="w-full h-full object-contain bg-black"
-                      onContextMenu={e => e.preventDefault()}
-                    >
-                      <source src={selectedVideo.url} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <div className="text-center">
-                        <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No video available</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    setIsCommentModalOpen(false);
+                    setSelectedDrillForComment(null);
+                    setCommentText("");
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitComment}
+                  disabled={!commentText.trim() || isSubmittingComment}
+                  className="flex-1 bg-[#4A5A70] hover:bg-[#606364] text-white"
+                >
+                  {isSubmittingComment ? "Submitting..." : "Submit"}
+                </Button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </ClientSidebar>
+        </div>
+      )}
+
+      {/* Bottom Navigation */}
+      <MobileClientBottomNavigation />
+    </div>
   );
 }

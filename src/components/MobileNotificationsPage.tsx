@@ -30,6 +30,8 @@ import {
 import { useRouter } from "next/navigation";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
+import MobileClientNavigation from "./MobileClientNavigation";
+import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 
 interface MobileNotificationsPageProps {}
 
@@ -379,7 +381,11 @@ export default function MobileNotificationsPage({}: MobileNotificationsPageProps
               </p>
             </div>
           </div>
-          <MobileNavigation currentPage="notifications" />
+          {isCoach ? (
+            <MobileNavigation currentPage="notifications" />
+          ) : (
+            <MobileClientNavigation currentPage="notifications" />
+          )}
         </div>
       </div>
 
@@ -739,7 +745,7 @@ export default function MobileNotificationsPage({}: MobileNotificationsPageProps
           )}
         </div>
       </div>
-      <MobileBottomNavigation />
+      {isCoach ? <MobileBottomNavigation /> : <MobileClientBottomNavigation />}
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { checkClientAccess } from "@/lib/clientAccessControl";
-import ClientProgramPage from "@/components/ClientProgramPage";
+import ClientSideMobileWrapper from "@/components/ClientSideMobileWrapper";
 
 const Page = async () => {
   // This will automatically redirect if client doesn't have a coach
   await checkClientAccess("/client-dashboard");
 
-  return <ClientProgramPage />;
+  return <ClientSideMobileWrapper />;
 };
 
 export default Page;

@@ -11,18 +11,30 @@ import {
   Palette,
   Save,
   Settings as SettingsIcon,
-  ChevronLeft,
-  Menu,
   Activity,
   Clock,
+  Home,
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
+import MobileClientNavigation from "./MobileClientNavigation";
+import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function MobileClientSettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [isLoading, setIsLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showTabMenu, setShowTabMenu] = useState(false);
 
   // Form state for each tab
   const [profileData, setProfileData] = useState({
@@ -67,6 +79,8 @@ export default function MobileClientSettingsPage() {
   const updateSettingsMutation = trpc.settings.updateSettings.useMutation({
     onSuccess: () => {
       refetchSettings();
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     },
   });
 
@@ -74,410 +88,435 @@ export default function MobileClientSettingsPage() {
     onSuccess: () => {
       refetchSettings();
       refetchUser();
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     },
   });
 
   // Update form data when settings load
   useEffect(() => {
     if (userSettings && currentUser) {
-      setProfileData(prev => ({
-        ...prev,
+      setProfileData({
         name: currentUser.name || "",
         phone: userSettings.phone || "",
         location: userSettings.location || "",
         bio: userSettings.bio || "",
         avatarUrl: userSettings.avatarUrl || "",
-      }));
+      });
 
-      setNotificationData(prev => ({
-        ...prev,
+      setNotificationData({
         emailNotifications: userSettings.emailNotifications ?? true,
         pushNotifications: userSettings.pushNotifications ?? true,
         soundNotifications: userSettings.soundNotifications ?? false,
         messageNotifications: userSettings.messageNotifications ?? true,
         scheduleNotifications: userSettings.scheduleNotifications ?? true,
-      }));
+      });
 
-      setTrainingData(prev => ({
-        ...prev,
+      setTrainingData({
         preferredWorkoutTime: "morning",
         workoutDuration: 60,
         experienceLevel: "beginner",
         goals: "",
         injuries: "",
-      }));
+      });
 
-      setAppearanceData(prev => ({
-        ...prev,
-        compactSidebar: userSettings.compactSidebar ?? false,
-        showAnimations: userSettings.showAnimations ?? true,
+      setAppearanceData({
+        compactSidebar: false,
+        showAnimations: true,
         darkMode: true,
-      }));
+      });
     }
-  }, [userSettings?.id, currentUser?.id]);
+  }, [userSettings]);
 
-  // Settings tabs
-  const tabs = [
-    { id: "profile", name: "Profile", icon: <User className="w-5 h-5" /> },
-    {
-      id: "notifications",
-      name: "Notifications",
-      icon: <Bell className="w-5 h-5" />,
-    },
-    {
-      id: "training",
-      name: "Training Preferences",
-      icon: <Target className="w-5 h-5" />,
-    },
-    {
-      id: "appearance",
-      name: "Appearance",
-      icon: <Palette className="w-5 h-5" />,
-    },
-  ];
-
-  const handleSave = async () => {
+  const handleSaveProfile = async () => {
     setIsLoading(true);
-    setSaveSuccess(false);
     try {
-      // Save current tab settings based on active tab
-      switch (activeTab) {
-        case "profile":
-          await updateProfileMutation.mutateAsync({
-            name: profileData.name,
-            phone: profileData.phone,
-            location: profileData.location,
-            bio: profileData.bio,
-            avatarUrl: profileData.avatarUrl,
-          });
-          break;
-        case "notifications":
-          await updateSettingsMutation.mutateAsync({
-            emailNotifications: notificationData.emailNotifications,
-            pushNotifications: notificationData.pushNotifications,
-            soundNotifications: notificationData.soundNotifications,
-            messageNotifications: notificationData.messageNotifications,
-            scheduleNotifications: notificationData.scheduleNotifications,
-          });
-          break;
-        case "training":
-          // Training preferences would be saved here
-          // This would need to be implemented in the backend
-          break;
-        case "appearance":
-          await updateSettingsMutation.mutateAsync({
-            compactSidebar: appearanceData.compactSidebar,
-            showAnimations: appearanceData.showAnimations,
-          });
-          break;
-      }
+      await updateProfileMutation.mutateAsync({
+        name: profileData.name,
+        phone: profileData.phone,
+        location: profileData.location,
+        bio: profileData.bio,
+        avatarUrl: profileData.avatarUrl,
+      });
     } catch (error) {
-      console.error("Failed to save settings:", error);
+      console.error("Error updating profile:", error);
     } finally {
       setIsLoading(false);
-      setSaveSuccess(true);
-      // Hide success message after 3 seconds
-      setTimeout(() => setSaveSuccess(false), 3000);
     }
   };
 
-  const currentTab = tabs.find(tab => tab.id === activeTab);
+  const handleSaveSettings = async () => {
+    setIsLoading(true);
+    try {
+      await updateSettingsMutation.mutateAsync({
+        emailNotifications: notificationData.emailNotifications,
+        pushNotifications: notificationData.pushNotifications,
+        soundNotifications: notificationData.soundNotifications,
+        messageNotifications: notificationData.messageNotifications,
+        scheduleNotifications: notificationData.scheduleNotifications,
+        compactSidebar: appearanceData.compactSidebar,
+        showAnimations: appearanceData.showAnimations,
+      });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const tabs = [
+    { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> },
+    {
+      id: "notifications",
+      label: "Notifications",
+      icon: <Bell className="h-4 w-4" />,
+    },
+    { id: "training", label: "Training", icon: <Target className="h-4 w-4" /> },
+    {
+      id: "appearance",
+      label: "Appearance",
+      icon: <Palette className="h-4 w-4" />,
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
-      <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700">
-        <div className="flex items-center justify-between p-4">
+      <div className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowTabMenu(true)}
-              className="p-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#4A5A70" }}
             >
-              <Menu className="w-5 h-5" />
-            </button>
+              <SettingsIcon className="h-4 w-4 text-white" />
+            </div>
             <div>
-              <h1 className="text-lg font-semibold text-white">Settings</h1>
-              <p className="text-sm text-gray-400">{currentTab?.name}</p>
+              <h1 className="text-lg font-bold text-white">Settings</h1>
+              <p className="text-xs text-gray-400">Account preferences</p>
             </div>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={isLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save
-              </>
-            )}
-          </button>
+          <MobileClientNavigation currentPage="settings" />
         </div>
       </div>
 
-      {/* Tab Menu Modal */}
-      {showTabMenu && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
-          <div className="fixed inset-y-0 left-0 w-80 bg-gray-900 border-r border-gray-700">
-            <div className="p-4 border-b border-gray-700">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">Settings</h2>
-                <button
-                  onClick={() => setShowTabMenu(false)}
-                  className="p-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            <nav className="p-4 space-y-2">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setShowTabMenu(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-300 hover:bg-gray-800"
-                  }`}
-                >
-                  {tab.icon}
-                  <span className="font-medium">{tab.name}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
+      {/* Main Content */}
+      <div className="p-4 pb-20 space-y-6">
+        {/* Tab Navigation */}
+        <div className="grid grid-cols-2 gap-2">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`p-3 rounded-lg transition-colors flex items-center gap-2 ${
+                activeTab === tab.id
+                  ? "bg-[#4A5A70] text-white"
+                  : "bg-[#353A3A] text-[#C3BCC2] hover:bg-[#4A5A70] hover:text-white"
+              }`}
+            >
+              {tab.icon}
+              <span className="text-sm font-medium">{tab.label}</span>
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Success Message */}
-        {saveSuccess && (
-          <div className="mb-4 p-3 bg-green-600 text-white rounded-lg flex items-center gap-2">
-            <Save className="w-4 h-4" />
-            Settings saved successfully!
-          </div>
-        )}
-
-        {/* Profile Settings */}
+        {/* Profile Tab */}
         {activeTab === "profile" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white">
-              Profile Settings
-            </h2>
-
-            {/* Profile Picture */}
-            <div>
-              <label className="block text-sm font-medium mb-3 text-gray-300">
-                Profile Picture
-              </label>
-              <div className="flex flex-col items-center gap-4">
+          <div
+            className="p-4 rounded-lg border-2"
+            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+          >
+            <div className="space-y-4">
+              <div className="text-center">
                 <ProfilePictureUploader
                   currentAvatarUrl={profileData.avatarUrl}
-                  userName={currentUser?.name || "User"}
-                  onAvatarChange={url =>
-                    setProfileData(prev => ({
-                      ...prev,
-                      avatarUrl: url,
-                    }))
-                  }
+                  userName={profileData.name}
+                  onAvatarChange={newUrl => {
+                    setProfileData(prev => ({ ...prev, avatarUrl: newUrl }));
+                  }}
                   size="lg"
+                  readOnly={false}
                 />
-                <div className="text-center">
-                  <p className="text-sm text-gray-400">
-                    Tap your profile picture to upload a new one
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Supports JPG, PNG up to 4MB
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={profileData.name}
-                  onChange={e =>
-                    setProfileData(prev => ({
-                      ...prev,
-                      name: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                  placeholder="Enter your full name"
-                />
+                <p className="text-sm text-[#ABA4AA] mt-2">
+                  Tap to change profile picture
+                </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={currentUser?.email || ""}
-                  disabled
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-gray-400 opacity-50"
-                  placeholder="Enter your email"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={profileData.phone}
-                  onChange={e =>
-                    setProfileData(prev => ({
-                      ...prev,
-                      phone: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                  placeholder="Enter your phone number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  value={profileData.location}
-                  onChange={e =>
-                    setProfileData(prev => ({
-                      ...prev,
-                      location: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                  placeholder="Enter your location"
-                />
-              </div>
-            </div>
-
-            {/* Bio */}
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-300">
-                Bio
-              </label>
-              <textarea
-                rows={4}
-                value={profileData.bio}
-                onChange={e =>
-                  setProfileData(prev => ({
-                    ...prev,
-                    bio: e.target.value,
-                  }))
-                }
-                className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
-                placeholder="Tell your coach about yourself..."
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Notifications Settings */}
-        {activeTab === "notifications" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white">
-              Notification Settings
-            </h2>
-
-            <div className="space-y-4">
-              {[
-                { key: "emailNotifications", label: "Email Notifications" },
-                { key: "pushNotifications", label: "Push Notifications" },
-                { key: "soundNotifications", label: "Sound Notifications" },
-                { key: "messageNotifications", label: "Message Notifications" },
-                {
-                  key: "scheduleNotifications",
-                  label: "Schedule Notifications",
-                },
-              ].map(({ key, label }) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between p-4 bg-gray-800 rounded-xl"
-                >
-                  <span className="text-white font-medium">{label}</span>
-                  <button
-                    onClick={() =>
-                      setNotificationData(prev => ({
+              <div className="space-y-4">
+                <div>
+                  <Label
+                    htmlFor="name"
+                    className="text-[#C3BCC2] text-sm font-medium"
+                  >
+                    Full Name
+                  </Label>
+                  <Input
+                    id="name"
+                    value={profileData.name}
+                    onChange={e =>
+                      setProfileData(prev => ({
                         ...prev,
-                        [key]: !prev[key as keyof typeof notificationData],
+                        name: e.target.value,
                       }))
                     }
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      notificationData[key as keyof typeof notificationData]
-                        ? "bg-blue-600"
-                        : "bg-gray-600"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        notificationData[key as keyof typeof notificationData]
-                          ? "translate-x-6"
-                          : "translate-x-1"
-                      }`}
-                    />
-                  </button>
+                    className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                    placeholder="Enter your full name"
+                  />
                 </div>
-              ))}
+
+                <div>
+                  <Label
+                    htmlFor="phone"
+                    className="text-[#C3BCC2] text-sm font-medium"
+                  >
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={profileData.phone}
+                    onChange={e =>
+                      setProfileData(prev => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                    className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="location"
+                    className="text-[#C3BCC2] text-sm font-medium"
+                  >
+                    Location
+                  </Label>
+                  <Input
+                    id="location"
+                    value={profileData.location}
+                    onChange={e =>
+                      setProfileData(prev => ({
+                        ...prev,
+                        location: e.target.value,
+                      }))
+                    }
+                    className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                    placeholder="Enter your location"
+                  />
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="bio"
+                    className="text-[#C3BCC2] text-sm font-medium"
+                  >
+                    Bio
+                  </Label>
+                  <Textarea
+                    id="bio"
+                    value={profileData.bio}
+                    onChange={e =>
+                      setProfileData(prev => ({ ...prev, bio: e.target.value }))
+                    }
+                    className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                    placeholder="Tell us about yourself..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSaveProfile}
+                disabled={isLoading}
+                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Saving...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="h-4 w-4" />
+                    Save Profile
+                  </div>
+                )}
+              </Button>
+
+              {saveSuccess && (
+                <div className="text-center text-green-400 text-sm">
+                  Profile saved successfully!
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Training Preferences */}
-        {activeTab === "training" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white">
-              Training Preferences
-            </h2>
-
+        {/* Notifications Tab */}
+        {activeTab === "notifications" && (
+          <div
+            className="p-4 rounded-lg border-2"
+            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+          >
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Preferred Workout Time
-                </label>
-                <select
-                  value={trainingData.preferredWorkoutTime}
-                  onChange={e =>
-                    setTrainingData(prev => ({
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                    Email Notifications
+                  </Label>
+                  <p className="text-xs text-[#ABA4AA]">
+                    Receive email updates
+                  </p>
+                </div>
+                <Switch
+                  checked={notificationData.emailNotifications}
+                  onCheckedChange={checked =>
+                    setNotificationData(prev => ({
                       ...prev,
-                      preferredWorkoutTime: e.target.value,
+                      emailNotifications: checked,
                     }))
                   }
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                    Push Notifications
+                  </Label>
+                  <p className="text-xs text-[#ABA4AA]">
+                    Receive push notifications
+                  </p>
+                </div>
+                <Switch
+                  checked={notificationData.pushNotifications}
+                  onCheckedChange={checked =>
+                    setNotificationData(prev => ({
+                      ...prev,
+                      pushNotifications: checked,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                    Sound Notifications
+                  </Label>
+                  <p className="text-xs text-[#ABA4AA]">
+                    Play sounds for notifications
+                  </p>
+                </div>
+                <Switch
+                  checked={notificationData.soundNotifications}
+                  onCheckedChange={checked =>
+                    setNotificationData(prev => ({
+                      ...prev,
+                      soundNotifications: checked,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                    Message Notifications
+                  </Label>
+                  <p className="text-xs text-[#ABA4AA]">
+                    Notify about new messages
+                  </p>
+                </div>
+                <Switch
+                  checked={notificationData.messageNotifications}
+                  onCheckedChange={checked =>
+                    setNotificationData(prev => ({
+                      ...prev,
+                      messageNotifications: checked,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                    Schedule Notifications
+                  </Label>
+                  <p className="text-xs text-[#ABA4AA]">
+                    Notify about schedule changes
+                  </p>
+                </div>
+                <Switch
+                  checked={notificationData.scheduleNotifications}
+                  onCheckedChange={checked =>
+                    setNotificationData(prev => ({
+                      ...prev,
+                      scheduleNotifications: checked,
+                    }))
+                  }
+                />
+              </div>
+
+              <Button
+                onClick={handleSaveSettings}
+                disabled={isLoading}
+                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Saving...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="h-4 w-4" />
+                    Save Notifications
+                  </div>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Training Tab */}
+        {activeTab === "training" && (
+          <div
+            className="p-4 rounded-lg border-2"
+            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+          >
+            <div className="space-y-4">
+              <div>
+                <Label className="text-[#C3BCC2] text-sm font-medium">
+                  Preferred Workout Time
+                </Label>
+                <Select
+                  value={trainingData.preferredWorkoutTime}
+                  onValueChange={value =>
+                    setTrainingData(prev => ({
+                      ...prev,
+                      preferredWorkoutTime: value,
+                    }))
+                  }
                 >
-                  <option value="morning">Morning (6 AM - 12 PM)</option>
-                  <option value="afternoon">Afternoon (12 PM - 6 PM)</option>
-                  <option value="evening">Evening (6 PM - 10 PM)</option>
-                  <option value="flexible">Flexible</option>
-                </select>
+                  <SelectTrigger className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="morning">Morning</SelectItem>
+                    <SelectItem value="afternoon">Afternoon</SelectItem>
+                    <SelectItem value="evening">Evening</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Preferred Workout Duration (minutes)
-                </label>
-                <input
+                <Label className="text-[#C3BCC2] text-sm font-medium">
+                  Workout Duration (minutes)
+                </Label>
+                <Input
                   type="number"
                   value={trainingData.workoutDuration}
                   onChange={e =>
@@ -486,38 +525,44 @@ export default function MobileClientSettingsPage() {
                       workoutDuration: parseInt(e.target.value) || 60,
                     }))
                   }
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
                   placeholder="60"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
+                <Label className="text-[#C3BCC2] text-sm font-medium">
                   Experience Level
-                </label>
-                <select
+                </Label>
+                <Select
                   value={trainingData.experienceLevel}
-                  onChange={e =>
+                  onValueChange={value =>
                     setTrainingData(prev => ({
                       ...prev,
-                      experienceLevel: e.target.value,
+                      experienceLevel: value,
                     }))
                   }
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                 >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="professional">Professional</option>
-                </select>
+                  <SelectTrigger className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="beginner">Beginner</SelectItem>
+                    <SelectItem value="intermediate">Intermediate</SelectItem>
+                    <SelectItem value="advanced">Advanced</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Goals
-                </label>
-                <textarea
-                  rows={3}
+                <Label
+                  htmlFor="goals"
+                  className="text-[#C3BCC2] text-sm font-medium"
+                >
+                  Training Goals
+                </Label>
+                <Textarea
+                  id="goals"
                   value={trainingData.goals}
                   onChange={e =>
                     setTrainingData(prev => ({
@@ -525,17 +570,21 @@ export default function MobileClientSettingsPage() {
                       goals: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
+                  className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
                   placeholder="What are your training goals?"
+                  rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
+                <Label
+                  htmlFor="injuries"
+                  className="text-[#C3BCC2] text-sm font-medium"
+                >
                   Injuries or Limitations
-                </label>
-                <textarea
-                  rows={3}
+                </Label>
+                <Textarea
+                  id="injuries"
                   value={trainingData.injuries}
                   onChange={e =>
                     setTrainingData(prev => ({
@@ -543,98 +592,127 @@ export default function MobileClientSettingsPage() {
                       injuries: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
-                  placeholder="Any injuries or physical limitations your coach should know about?"
+                  className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                  placeholder="Any injuries or limitations we should know about?"
+                  rows={3}
                 />
               </div>
+
+              <Button
+                onClick={handleSaveSettings}
+                disabled={isLoading}
+                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Saving...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="h-4 w-4" />
+                    Save Training Info
+                  </div>
+                )}
+              </Button>
             </div>
           </div>
         )}
 
-        {/* Appearance Settings */}
+        {/* Appearance Tab */}
         {activeTab === "appearance" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white">
-              Appearance Settings
-            </h2>
-
+          <div
+            className="p-4 rounded-lg border-2"
+            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+          >
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-800 rounded-xl">
-                <span className="text-white font-medium">Compact Sidebar</span>
-                <button
-                  onClick={() =>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                    Compact Sidebar
+                  </Label>
+                  <p className="text-xs text-[#ABA4AA]">
+                    Use a more compact sidebar layout
+                  </p>
+                </div>
+                <Switch
+                  checked={appearanceData.compactSidebar}
+                  onCheckedChange={checked =>
                     setAppearanceData(prev => ({
                       ...prev,
-                      compactSidebar: !prev.compactSidebar,
+                      compactSidebar: checked,
                     }))
                   }
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    appearanceData.compactSidebar
-                      ? "bg-blue-600"
-                      : "bg-gray-600"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      appearanceData.compactSidebar
-                        ? "translate-x-6"
-                        : "translate-x-1"
-                    }`}
-                  />
-                </button>
+                />
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-800 rounded-xl">
-                <span className="text-white font-medium">Show Animations</span>
-                <button
-                  onClick={() =>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                    Show Animations
+                  </Label>
+                  <p className="text-xs text-[#ABA4AA]">
+                    Enable UI animations and transitions
+                  </p>
+                </div>
+                <Switch
+                  checked={appearanceData.showAnimations}
+                  onCheckedChange={checked =>
                     setAppearanceData(prev => ({
                       ...prev,
-                      showAnimations: !prev.showAnimations,
+                      showAnimations: checked,
                     }))
                   }
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    appearanceData.showAnimations
-                      ? "bg-blue-600"
-                      : "bg-gray-600"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      appearanceData.showAnimations
-                        ? "translate-x-6"
-                        : "translate-x-1"
-                    }`}
-                  />
-                </button>
+                />
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-800 rounded-xl">
-                <span className="text-white font-medium">Dark Mode</span>
-                <button
-                  onClick={() =>
-                    setAppearanceData(prev => ({
-                      ...prev,
-                      darkMode: !prev.darkMode,
-                    }))
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                    Dark Mode
+                  </Label>
+                  <p className="text-xs text-[#ABA4AA]">
+                    Use dark theme (always enabled on mobile)
+                  </p>
+                </div>
+                <Switch
+                  checked={appearanceData.darkMode}
+                  onCheckedChange={checked =>
+                    setAppearanceData(prev => ({ ...prev, darkMode: checked }))
                   }
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    appearanceData.darkMode ? "bg-blue-600" : "bg-gray-600"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      appearanceData.darkMode
-                        ? "translate-x-6"
-                        : "translate-x-1"
-                    }`}
-                  />
-                </button>
+                />
               </div>
+
+              <Button
+                onClick={handleSaveSettings}
+                disabled={isLoading}
+                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Saving...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="h-4 w-4" />
+                    Save Appearance
+                  </div>
+                )}
+              </Button>
             </div>
+          </div>
+        )}
+
+        {saveSuccess && (
+          <div className="text-center text-green-400 text-sm">
+            Settings saved successfully!
           </div>
         )}
       </div>
+
+      {/* Bottom Navigation */}
+      <MobileClientBottomNavigation />
     </div>
   );
 }
