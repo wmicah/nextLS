@@ -28,6 +28,8 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import MobileNavigation from "./MobileNavigation";
+import MobileBottomNavigation from "./MobileBottomNavigation";
 
 interface MobileNotificationsPageProps {}
 
@@ -359,383 +361,385 @@ export default function MobileNotificationsPage({}: MobileNotificationsPageProps
   const filterCounts = getFilterCounts();
 
   return (
-    <div className="flex flex-col overflow-x-hidden">
+    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
-      <div className="sticky top-0 z-20 bg-[#2A3133] border-b border-[#606364] px-4 py-4 shadow-lg">
-        <div className="flex items-center justify-between mb-3">
+      <div className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.back()}
-              className="p-2 rounded-lg transition-colors hover:bg-gray-700 touch-manipulation"
-              style={{ color: "#C3BCC2" }}
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#4A5A70" }}
             >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Bell className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-                {unreadCount > 0 && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                )}
-              </div>
-              <div>
-                <h1
-                  className="text-lg font-semibold"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  Notifications
-                </h1>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                  {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
-                </p>
-              </div>
+              <Bell className="h-4 w-4 text-white" />
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {selectedNotifications.length > 0 && (
-              <button
-                onClick={handleBulkMarkAsRead}
-                disabled={markAsReadMutation.isPending}
-                className="px-3 py-2 rounded-lg transition-colors hover:bg-gray-700 disabled:opacity-50 touch-manipulation"
-                style={{ color: "#C3BCC2" }}
-              >
-                <Check className="h-4 w-4" />
-              </button>
-            )}
-
-            {unreadCount > 0 && (
-              <button
-                onClick={() => markAllAsReadMutation.mutate()}
-                disabled={markAllAsReadMutation.isPending}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-700 disabled:opacity-50 touch-manipulation"
-                style={{ color: "#C3BCC2" }}
-              >
-                <CheckCheck className="h-4 w-4" />
-              </button>
-            )}
-
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="p-2 rounded-lg transition-colors hover:bg-gray-700 touch-manipulation"
-              style={{ color: "#C3BCC2" }}
-            >
-              <Search className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Search */}
-        {showSearch && (
-          <div className="relative mb-3">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-              style={{ color: "#ABA4AA" }}
-            />
-            <input
-              type="text"
-              placeholder="Search notifications..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
-              style={{
-                backgroundColor: "#1A1D1E",
-                borderColor: "#606364",
-                color: "#C3BCC2",
-              }}
-            />
-          </div>
-        )}
-
-        {/* Filter Tabs - Mobile Optimized */}
-        <div className="flex items-center gap-1 overflow-x-auto">
-          {[
-            { key: "all", label: "All", count: filterCounts.all },
-            { key: "unread", label: "Unread", count: filterCounts.unread },
-            {
-              key: "messages",
-              label: "Messages",
-              count: filterCounts.messages,
-            },
-            { key: "lessons", label: "Lessons", count: filterCounts.lessons },
-            // Only show programs filter for clients
-            ...(isCoach
-              ? []
-              : [
-                  {
-                    key: "programs",
-                    label: "Programs",
-                    count: filterCounts.programs,
-                  },
-                ]),
-          ].map(({ key, label, count }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key as any)}
-              className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors touch-manipulation ${
-                filter === key
-                  ? "text-white"
-                  : "text-gray-500 hover:text-white hover:bg-gray-600"
-              }`}
-              style={{
-                backgroundColor: filter === key ? "#4A5A70" : "transparent",
-                color: filter === key ? "#FFFFFF" : "#9CA3AF",
-              }}
-            >
-              {label} ({count})
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Bulk Selection Header */}
-      {selectedNotifications.length > 0 && (
-        <div className="bg-blue-500/10 border-b border-blue-500/20 px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={
-                  selectedNotifications.length === filteredNotifications.length
-                }
-                onChange={handleSelectAll}
-                className="w-4 h-4 rounded border-2 border-gray-300 text-blue-500 focus:ring-blue-500"
-              />
-              <span
-                className="text-sm font-medium"
-                style={{ color: "#C3BCC2" }}
-              >
-                {selectedNotifications.length}
-              </span>
-            </div>
-            <button
-              onClick={handleBulkMarkAsRead}
-              disabled={markAsReadMutation.isPending}
-              className="text-sm transition-colors hover:bg-blue-500/20 disabled:opacity-50 px-2 py-1 rounded"
-              style={{ color: "#60A5FA" }}
-            >
-              Mark Read
-            </button>
-            <button
-              onClick={handleBulkDelete}
-              disabled={deleteMultipleNotificationsMutation.isPending}
-              className="text-sm transition-colors hover:bg-red-500/20 disabled:opacity-50 px-2 py-1 rounded"
-              style={{ color: "#F87171" }}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Notifications List - Mobile Optimized */}
-      <div className="flex-1 overflow-y-auto">
-        {filteredNotifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full px-4 py-8">
-            <div className="text-center">
-              <Bell
-                className="h-12 w-12 mx-auto mb-3 opacity-30"
-                style={{ color: "#ABA4AA" }}
-              />
-              <h3
-                className="text-base font-medium mb-2"
-                style={{ color: "#C3BCC2" }}
-              >
-                {searchQuery
-                  ? "No notifications found"
-                  : filter === "unread"
-                  ? "No unread notifications"
-                  : "No notifications yet"}
-              </h3>
-              <p className="text-sm text-center" style={{ color: "#ABA4AA" }}>
-                {searchQuery
-                  ? "Try adjusting your search terms"
-                  : filter === "unread"
-                  ? "You're all caught up!"
-                  : "You'll see notifications here when they arrive."}
+            <div>
+              <h1 className="text-lg font-bold text-white">Notifications</h1>
+              <p className="text-xs text-gray-400">
+                {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
               </p>
             </div>
           </div>
-        ) : (
-          <div className="px-4 py-3">
-            {Object.entries(groupedNotifications).map(
-              ([dateGroup, groupNotifications]) => (
-                <div key={dateGroup} className="mb-6">
-                  {/* Date Group Header */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <h2
-                      className="text-xs font-semibold uppercase tracking-wide"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      {dateGroup}
-                    </h2>
-                    <div
-                      className="flex-1 h-px"
-                      style={{ backgroundColor: "#606364" }}
-                    ></div>
-                    <span
-                      className="text-xs px-2 py-1 rounded-full"
-                      style={{ backgroundColor: "#606364", color: "#ABA4AA" }}
-                    >
-                      {groupNotifications.length}
-                    </span>
-                  </div>
+          <MobileNavigation currentPage="notifications" />
+        </div>
+      </div>
 
-                  {/* Notifications in Group */}
-                  <div className="space-y-2">
-                    {groupNotifications.map((notification: any) => {
-                      const typeInfo = getNotificationTypeInfo(
-                        notification.type
-                      );
-                      const IconComponent = typeInfo.icon;
-                      const isSelected = selectedNotifications.includes(
-                        notification.id
-                      );
+      {/* Quick Actions */}
+      <div className="p-4 border-b border-[#606364]">
+        <div className="flex items-center gap-2">
+          {selectedNotifications.length > 0 && (
+            <button
+              onClick={handleBulkMarkAsRead}
+              disabled={markAsReadMutation.isPending}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
+            >
+              <Check className="h-4 w-4" />
+              Mark Read
+            </button>
+          )}
 
-                      return (
-                        <div
-                          key={notification.id}
-                          className={`group relative rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer touch-manipulation ${
-                            !notification.isRead
-                              ? `${typeInfo.bgColor} ${typeInfo.borderColor} border-l-4`
-                              : "border-gray-600/50 hover:border-gray-500"
-                          } ${isSelected ? "ring-2 ring-blue-500" : ""}`}
-                          style={{
-                            backgroundColor: !notification.isRead
-                              ? "#1A1D1E"
-                              : "#2A3133",
-                          }}
-                          onClick={() => handleNotificationClick(notification)}
-                        >
-                          <div className="p-3">
-                            <div className="flex items-start gap-3">
-                              {/* Selection Checkbox */}
-                              <div className="flex-shrink-0 pt-0.5">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                  }}
-                                  onChange={e => {
-                                    e.stopPropagation();
-                                    handleSelectNotification(notification.id);
-                                  }}
-                                  className="w-4 h-4 rounded border-2 border-gray-300 text-blue-500 focus:ring-blue-500"
-                                />
-                              </div>
+          {unreadCount > 0 && (
+            <button
+              onClick={() => markAllAsReadMutation.mutate()}
+              disabled={markAllAsReadMutation.isPending}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+            >
+              <CheckCheck className="h-4 w-4" />
+              Mark All Read
+            </button>
+          )}
 
-                              {/* Notification Icon */}
-                              <div
-                                className={`flex-shrink-0 p-2 rounded-lg ${typeInfo.bgColor}`}
-                              >
-                                <IconComponent
-                                  className={`h-4 w-4 ${typeInfo.color}`}
-                                />
-                              </div>
+          <button
+            onClick={() => setShowSearch(!showSearch)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+          >
+            <Search className="h-4 w-4" />
+            Search
+          </button>
+        </div>
+      </div>
 
-                              {/* Notification Content */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h4
-                                        className={`text-sm font-medium truncate ${
-                                          !notification.isRead
-                                            ? "font-semibold"
-                                            : ""
-                                        }`}
-                                        style={{ color: "#C3BCC2" }}
-                                      >
-                                        {notification.title}
-                                      </h4>
-                                      <span
-                                        className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
-                                        style={{
-                                          backgroundColor: "#606364",
-                                          color: "#ABA4AA",
-                                        }}
-                                      >
-                                        {typeInfo.label}
-                                      </span>
-                                      {!notification.isRead && (
-                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0"></div>
-                                      )}
-                                    </div>
-                                    <p
-                                      className="text-xs mb-2 line-clamp-2"
-                                      style={{ color: "#ABA4AA" }}
-                                    >
-                                      {notification.message}
-                                    </p>
-                                  </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto pb-20">
+        <div className="p-4 space-y-4">
+          {/* Search */}
+          {showSearch && (
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                style={{ color: "#ABA4AA" }}
+              />
+              <input
+                type="text"
+                placeholder="Search notifications..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
+                style={{
+                  backgroundColor: "#1A1D1E",
+                  borderColor: "#606364",
+                  color: "#C3BCC2",
+                }}
+              />
+            </div>
+          )}
 
-                                  {/* Time and Actions */}
-                                  <div className="flex items-center gap-1">
-                                    <span
-                                      className="text-xs"
-                                      style={{ color: "#ABA4AA" }}
-                                    >
-                                      {formatNotificationTime(
-                                        notification.createdAt
-                                      )}
-                                    </span>
-                                    <button
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        if (!notification.isRead) {
-                                          markAsReadMutation.mutate({
-                                            notificationId: notification.id,
-                                          });
-                                        }
-                                      }}
-                                      disabled={markAsReadMutation.isPending}
-                                      className={`p-1 rounded transition-colors hover:bg-gray-600 disabled:opacity-50 ${
-                                        !notification.isRead
-                                          ? "opacity-100"
-                                          : "opacity-0 group-hover:opacity-100"
-                                      }`}
-                                      style={{ color: "#ABA4AA" }}
-                                      title="Mark as read"
-                                    >
-                                      {!notification.isRead ? (
-                                        <Eye className="h-3 w-3" />
-                                      ) : (
-                                        <EyeOff className="h-3 w-3" />
-                                      )}
-                                    </button>
-                                  </div>
+          {/* Filter Tabs - Mobile Optimized */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-2">
+            {[
+              { key: "all", label: "All", count: filterCounts.all },
+              { key: "unread", label: "Unread", count: filterCounts.unread },
+              {
+                key: "messages",
+                label: "Messages",
+                count: filterCounts.messages,
+              },
+              { key: "lessons", label: "Lessons", count: filterCounts.lessons },
+              // Only show programs filter for clients
+              ...(isCoach
+                ? []
+                : [
+                    {
+                      key: "programs",
+                      label: "Programs",
+                      count: filterCounts.programs,
+                    },
+                  ]),
+            ].map(({ key, label, count }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key as any)}
+                className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors touch-manipulation ${
+                  filter === key
+                    ? "text-white"
+                    : "text-gray-500 hover:text-white hover:bg-gray-600"
+                }`}
+                style={{
+                  backgroundColor: filter === key ? "#4A5A70" : "transparent",
+                  color: filter === key ? "#FFFFFF" : "#9CA3AF",
+                }}
+              >
+                {label} ({count})
+              </button>
+            ))}
+          </div>
+
+          {/* Bulk Selection Header */}
+          {selectedNotifications.length > 0 && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedNotifications.length ===
+                      filteredNotifications.length
+                    }
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-2 border-gray-300 text-blue-500 focus:ring-blue-500"
+                  />
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    {selectedNotifications.length} selected
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleBulkMarkAsRead}
+                    disabled={markAsReadMutation.isPending}
+                    className="text-sm transition-colors hover:bg-blue-500/20 disabled:opacity-50 px-2 py-1 rounded"
+                    style={{ color: "#60A5FA" }}
+                  >
+                    Mark Read
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={deleteMultipleNotificationsMutation.isPending}
+                    className="text-sm transition-colors hover:bg-red-500/20 disabled:opacity-50 px-2 py-1 rounded"
+                    style={{ color: "#F87171" }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications List - Mobile Optimized */}
+          {filteredNotifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full px-4 py-8">
+              <div className="text-center">
+                <Bell
+                  className="h-12 w-12 mx-auto mb-3 opacity-30"
+                  style={{ color: "#ABA4AA" }}
+                />
+                <h3
+                  className="text-base font-medium mb-2"
+                  style={{ color: "#C3BCC2" }}
+                >
+                  {searchQuery
+                    ? "No notifications found"
+                    : filter === "unread"
+                    ? "No unread notifications"
+                    : "No notifications yet"}
+                </h3>
+                <p className="text-sm text-center" style={{ color: "#ABA4AA" }}>
+                  {searchQuery
+                    ? "Try adjusting your search terms"
+                    : filter === "unread"
+                    ? "You're all caught up!"
+                    : "You'll see notifications here when they arrive."}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="px-4 py-3">
+              {Object.entries(groupedNotifications).map(
+                ([dateGroup, groupNotifications]) => (
+                  <div key={dateGroup} className="mb-6">
+                    {/* Date Group Header */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <h2
+                        className="text-xs font-semibold uppercase tracking-wide"
+                        style={{ color: "#ABA4AA" }}
+                      >
+                        {dateGroup}
+                      </h2>
+                      <div
+                        className="flex-1 h-px"
+                        style={{ backgroundColor: "#606364" }}
+                      ></div>
+                      <span
+                        className="text-xs px-2 py-1 rounded-full"
+                        style={{ backgroundColor: "#606364", color: "#ABA4AA" }}
+                      >
+                        {groupNotifications.length}
+                      </span>
+                    </div>
+
+                    {/* Notifications in Group */}
+                    <div className="space-y-2">
+                      {groupNotifications.map((notification: any) => {
+                        const typeInfo = getNotificationTypeInfo(
+                          notification.type
+                        );
+                        const IconComponent = typeInfo.icon;
+                        const isSelected = selectedNotifications.includes(
+                          notification.id
+                        );
+
+                        return (
+                          <div
+                            key={notification.id}
+                            className={`group relative rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer touch-manipulation ${
+                              !notification.isRead
+                                ? `${typeInfo.bgColor} ${typeInfo.borderColor} border-l-4`
+                                : "border-gray-600/50 hover:border-gray-500"
+                            } ${isSelected ? "ring-2 ring-blue-500" : ""}`}
+                            style={{
+                              backgroundColor: !notification.isRead
+                                ? "#1A1D1E"
+                                : "#2A3133",
+                            }}
+                            onClick={() =>
+                              handleNotificationClick(notification)
+                            }
+                          >
+                            <div className="p-3">
+                              <div className="flex items-start gap-3">
+                                {/* Selection Checkbox */}
+                                <div className="flex-shrink-0 pt-0.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                    }}
+                                    onChange={e => {
+                                      e.stopPropagation();
+                                      handleSelectNotification(notification.id);
+                                    }}
+                                    className="w-4 h-4 rounded border-2 border-gray-300 text-blue-500 focus:ring-blue-500"
+                                  />
                                 </div>
 
-                                {/* Action Buttons for Specific Types */}
-                                {notification.type ===
-                                  "CLIENT_JOIN_REQUEST" && (
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <button
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        router.push("/clients");
-                                      }}
-                                      className="px-2 py-1 text-xs rounded transition-colors hover:bg-blue-500/20"
-                                      style={{ color: "#60A5FA" }}
-                                    >
-                                      View Client
-                                    </button>
+                                {/* Notification Icon */}
+                                <div
+                                  className={`flex-shrink-0 p-2 rounded-lg ${typeInfo.bgColor}`}
+                                >
+                                  <IconComponent
+                                    className={`h-4 w-4 ${typeInfo.color}`}
+                                  />
+                                </div>
+
+                                {/* Notification Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <h4
+                                          className={`text-sm font-medium truncate ${
+                                            !notification.isRead
+                                              ? "font-semibold"
+                                              : ""
+                                          }`}
+                                          style={{ color: "#C3BCC2" }}
+                                        >
+                                          {notification.title}
+                                        </h4>
+                                        <span
+                                          className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
+                                          style={{
+                                            backgroundColor: "#606364",
+                                            color: "#ABA4AA",
+                                          }}
+                                        >
+                                          {typeInfo.label}
+                                        </span>
+                                        {!notification.isRead && (
+                                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                        )}
+                                      </div>
+                                      <p
+                                        className="text-xs mb-2 line-clamp-2"
+                                        style={{ color: "#ABA4AA" }}
+                                      >
+                                        {notification.message}
+                                      </p>
+                                    </div>
+
+                                    {/* Time and Actions */}
+                                    <div className="flex items-center gap-1">
+                                      <span
+                                        className="text-xs"
+                                        style={{ color: "#ABA4AA" }}
+                                      >
+                                        {formatNotificationTime(
+                                          notification.createdAt
+                                        )}
+                                      </span>
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          if (!notification.isRead) {
+                                            markAsReadMutation.mutate({
+                                              notificationId: notification.id,
+                                            });
+                                          }
+                                        }}
+                                        disabled={markAsReadMutation.isPending}
+                                        className={`p-1 rounded transition-colors hover:bg-gray-600 disabled:opacity-50 ${
+                                          !notification.isRead
+                                            ? "opacity-100"
+                                            : "opacity-0 group-hover:opacity-100"
+                                        }`}
+                                        style={{ color: "#ABA4AA" }}
+                                        title="Mark as read"
+                                      >
+                                        {!notification.isRead ? (
+                                          <Eye className="h-3 w-3" />
+                                        ) : (
+                                          <EyeOff className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    </div>
                                   </div>
-                                )}
+
+                                  {/* Action Buttons for Specific Types */}
+                                  {notification.type ===
+                                    "CLIENT_JOIN_REQUEST" && (
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          router.push("/clients");
+                                        }}
+                                        className="px-2 py-1 text-xs rounded transition-colors hover:bg-blue-500/20"
+                                        style={{ color: "#60A5FA" }}
+                                      >
+                                        View Client
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )
-            )}
-          </div>
-        )}
+                )
+              )}
+            </div>
+          )}
+        </div>
       </div>
+      <MobileBottomNavigation />
     </div>
   );
 }

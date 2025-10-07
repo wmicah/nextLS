@@ -26,13 +26,16 @@ import {
   MoreVertical,
   X,
   Check,
+  Download,
+  Grid3X3,
+  List,
 } from "lucide-react";
 import { format } from "date-fns";
-import CustomSelect from "./ui/CustomSelect";
 import AddClientModal from "./AddClientModal";
-import Sidebar from "./Sidebar";
 import ClientProfileModal from "./ClientProfileModal";
 import ProfilePictureUploader from "./ProfilePictureUploader";
+import MobileNavigation from "./MobileNavigation";
+import MobileBottomNavigation from "./MobileBottomNavigation";
 
 interface Client {
   id: string;
@@ -102,11 +105,15 @@ export default function MobileClientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
-  const [showSearch, setShowSearch] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedClients, setSelectedClients] = useState<string[]>([]);
-  const [isMultiSelect, setIsMultiSelect] = useState(false);
+
+  // Bulk operations state
+  const [selectedClients, setSelectedClients] = useState<Set<string>>(
+    new Set()
+  );
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   const {
     data: clients = [],
@@ -116,6 +123,7 @@ export default function MobileClientsPage() {
     archived: activeTab === "archived",
   });
 
+  // Get counts for both tabs
   const { data: activeClientsData = [] } = trpc.clients.list.useQuery({
     archived: false,
   });
@@ -125,6 +133,7 @@ export default function MobileClientsPage() {
   });
   const utils = trpc.useUtils();
 
+  // Mutation to update notes
   const updateNotes = trpc.clients.updateNotes.useMutation({
     onSuccess: () => {
       utils.clients.list.invalidate();
@@ -169,7 +178,7 @@ export default function MobileClientsPage() {
   const handleArchiveClient = (clientId: string, clientName: string) => {
     if (
       window.confirm(
-        `Are you sure you want to archive ${clientName}? They will be moved to the archived section.`
+        `Are you sure you want to archive ${clientName}? They will be moved to the archived section and all their assignments (programs, routines, lessons, and videos) will be removed.`
       )
     ) {
       archiveClient.mutate({ id: clientId });
@@ -190,14 +199,138 @@ export default function MobileClientsPage() {
     router.push(`/clients/${client.id}/detail`);
   };
 
+  // Bulk operations functions
+  const toggleClientSelection = (clientId: string) => {
+    const newSelected = new Set(selectedClients);
+    if (newSelected.has(clientId)) {
+      newSelected.delete(clientId);
+    } else {
+      newSelected.add(clientId);
+    }
+    setSelectedClients(newSelected);
+  };
+
+  const selectAllClients = () => {
+    const allClientIds = new Set(
+      filteredAndSortedClients.map(client => client.id)
+    );
+    setSelectedClients(allClientIds);
+  };
+
+  const clearSelection = () => {
+    setSelectedClients(new Set());
+  };
+
+  const toggleBulkMode = () => {
+    setIsBulkMode(!isBulkMode);
+    if (isBulkMode) {
+      clearSelection();
+    }
+  };
+
+  // Bulk archive function
+  const handleBulkArchive = async () => {
+    if (selectedClients.size === 0) return;
+
+    const clientNames = filteredAndSortedClients
+      .filter(client => selectedClients.has(client.id))
+      .map(client => client.name);
+
+    if (
+      window.confirm(
+        `Archive ${selectedClients.size} client${
+          selectedClients.size === 1 ? "" : "s"
+        }? This will move them to the archived section and remove all their assignments (programs, routines, lessons, and videos).`
+      )
+    ) {
+      try {
+        await Promise.all(
+          Array.from(selectedClients).map(clientId =>
+            archiveClient.mutateAsync({ id: clientId })
+          )
+        );
+        clearSelection();
+        setShowBulkActions(false);
+      } catch (error) {
+        console.error("Failed to archive clients:", error);
+      }
+    }
+  };
+
+  // Export functions
+  const exportToCSV = () => {
+    const selectedClientsData = filteredAndSortedClients.filter(client =>
+      selectedClients.has(client.id)
+    );
+
+    if (selectedClientsData.length === 0) {
+      alert("No clients selected for export");
+      return;
+    }
+
+    // Helper function to escape CSV values properly
+    const escapeCSVValue = (value: string): string => {
+      if (value === null || value === undefined) return "";
+      const stringValue = String(value);
+      // Escape quotes by doubling them and wrap in quotes if contains comma, quote, or newline
+      if (
+        stringValue.includes(",") ||
+        stringValue.includes('"') ||
+        stringValue.includes("\n") ||
+        stringValue.includes("\r")
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const csvData = selectedClientsData.map(client => ({
+      Name: client.name,
+      Email: client.email || "",
+      Phone: client.phone || "",
+      "Next Lesson": client.nextLessonDate
+        ? format(new Date(client.nextLessonDate), "MMM d, yyyy")
+        : "No lesson scheduled",
+      "Created Date": format(new Date(client.createdAt), "MMM d, yyyy"),
+      Notes: client.notes || "",
+    }));
+
+    // Create CSV with proper escaping
+    const headers = Object.keys(csvData[0]);
+    const csvRows = [
+      headers.join(","), // Header row
+      ...csvData.map(row =>
+        headers
+          .map(header => escapeCSVValue(row[header as keyof typeof row]))
+          .join(",")
+      ),
+    ];
+
+    const csvContent = csvRows.join("\n");
+
+    // Add BOM for proper UTF-8 encoding in Excel
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clients-export-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Helper function to check if a lesson date is valid (future only)
   const isValidLessonDate = (lessonDate: string | null) => {
     if (!lessonDate) return false;
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0); // Reset to start of day
     const lesson = new Date(lessonDate);
     return lesson > today;
   };
 
+  // Filter and sort clients
   const filteredAndSortedClients = clients
     .filter(
       (client: Client) =>
@@ -236,24 +369,6 @@ export default function MobileClientsPage() {
           const aNextLesson = getNextLessonDate(a);
           const bNextLesson = getNextLessonDate(b);
 
-          const aHasLessonToday =
-            a.nextLessonDate &&
-            new Date(a.nextLessonDate).getTime() === today.getTime() &&
-            new Date(a.nextLessonDate) > now;
-          const bHasLessonToday =
-            b.nextLessonDate &&
-            new Date(b.nextLessonDate).getTime() === today.getTime() &&
-            new Date(b.nextLessonDate) > now;
-
-          if (aHasLessonToday && !bHasLessonToday) return -1;
-          if (!aHasLessonToday && bHasLessonToday) return 1;
-
-          if (aHasLessonToday && bHasLessonToday) {
-            const aTime = new Date(a.nextLessonDate!).getTime();
-            const bTime = new Date(b.nextLessonDate!).getTime();
-            return aTime - bTime;
-          }
-
           if (aNextLesson && bNextLesson) {
             aValue = aNextLesson;
             bValue = bNextLesson;
@@ -271,161 +386,197 @@ export default function MobileClientsPage() {
           bValue = b.name.toLowerCase();
       }
 
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
+      if (sortBy === "createdAt") {
+        if (sortOrder === "asc") {
+          return aValue < bValue ? 1 : -1;
+        } else {
+          return aValue > bValue ? 1 : -1;
+        }
       } else {
-        return aValue < bValue ? 1 : -1;
+        if (sortOrder === "asc") {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
       }
     });
 
+  // Calculate stats
   const totalClients = clients.length;
   const activeClients = activeClientsData.length;
   const archivedClients = archivedClientsData.length;
-  const recentClients = clients.filter((c: Client) => {
-    const createdAt = new Date(c.createdAt);
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return createdAt > thirtyDaysAgo;
-  }).length;
 
   if (isLoading) {
     return (
-      <Sidebar>
-        <div className="flex items-center justify-center h-64">
-          <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2"
-            style={{ borderColor: "#4A5A70" }}
-          />
-        </div>
-      </Sidebar>
+      <div className="flex items-center justify-center h-64">
+        <div
+          className="animate-spin rounded-full h-8 w-8 border-b-2"
+          style={{ borderColor: "#4A5A70" }}
+        />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Sidebar>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-red-400">Error loading clients: {error.message}</p>
-        </div>
-      </Sidebar>
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-400">Error loading clients: {error.message}</p>
+      </div>
     );
   }
 
   return (
-    <Sidebar>
-      <div
-        className="min-h-screen w-full max-w-full overflow-x-hidden"
-        style={{ backgroundColor: "#2A3133" }}
-      >
-        {/* Mobile Header */}
-        <div className="sticky top-0 z-30 bg-[#2A3133] border-b border-[#606364] py-3">
-          <div className="flex items-center justify-between w-full min-w-0">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Users className="h-4 w-4" style={{ color: "#C3BCC2" }} />
-              </div>
-              <h1 className="text-lg font-bold text-[#C3BCC2] truncate">
-                Athletes
-              </h1>
-              <span
-                className="px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
-                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-              >
-                {activeTab === "active" ? activeClients : archivedClients}
-              </span>
+    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#4A5A70" }}
+            >
+              <Users className="h-4 w-4 text-white" />
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => setShowSearch(!showSearch)}
-                className="p-2 rounded-lg bg-[#353A3A] border border-[#606364] min-h-[44px] min-w-[44px] flex items-center justify-center"
-              >
-                <Search className="h-4 w-4 text-[#C3BCC2]" />
-              </button>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="p-2 rounded-lg bg-[#353A3A] border border-[#606364] min-h-[44px] min-w-[44px] flex items-center justify-center"
-              >
-                <Filter className="h-4 w-4 text-[#C3BCC2]" />
-              </button>
+            <div>
+              <h1 className="text-lg font-bold text-white">Your Athletes</h1>
+              <p className="text-xs text-gray-400">
+                {activeTab === "active"
+                  ? activeClients > 0
+                    ? `${activeClients} active athlete${
+                        activeClients === 1 ? "" : "s"
+                      }`
+                    : "No active athletes"
+                  : archivedClients > 0
+                  ? `${archivedClients} archived athlete${
+                      archivedClients === 1 ? "" : "s"
+                    }`
+                  : "No archived athletes"}
+              </p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleBulkMode}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                isBulkMode ? "bg-blue-500" : "bg-[#4A5A70]"
+              }`}
+            >
+              <Users className="h-4 w-4 text-white" />
+            </button>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="p-2 rounded-lg bg-[#4A5A70] text-white"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <MobileNavigation currentPage="clients" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="p-4 pb-20 space-y-4">
+        {/* Tabs */}
+        <div className="flex space-x-1 p-1 rounded-xl border bg-[#353A3A] border-[#606364]">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+              activeTab === "active" ? "shadow-lg" : ""
+            }`}
+            style={{
+              backgroundColor:
+                activeTab === "active" ? "#4A5A70" : "transparent",
+              color: activeTab === "active" ? "#FFFFFF" : "#ABA4AA",
+            }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>Active Athletes</span>
+              <span
+                className="px-2 py-1 rounded-full text-xs font-medium"
+                style={{
+                  backgroundColor:
+                    activeTab === "active" ? "#FFFFFF" : "#4A5A70",
+                  color: activeTab === "active" ? "#4A5A70" : "#C3BCC2",
+                }}
+              >
+                {activeClientsData.length}
+              </span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("archived")}
+            className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+              activeTab === "archived" ? "shadow-lg" : ""
+            }`}
+            style={{
+              backgroundColor:
+                activeTab === "archived" ? "#4A5A70" : "transparent",
+              color: activeTab === "archived" ? "#FFFFFF" : "#ABA4AA",
+            }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Archive className="h-4 w-4" />
+              <span>Archived Athletes</span>
+              <span
+                className="px-2 py-1 rounded-full text-xs font-medium"
+                style={{
+                  backgroundColor:
+                    activeTab === "archived" ? "#FFFFFF" : "#4A5A70",
+                  color: activeTab === "archived" ? "#4A5A70" : "#C3BCC2",
+                }}
+              >
+                {archivedClientsData.length}
+              </span>
+            </div>
+          </button>
         </div>
 
-        {/* Mobile Search Bar */}
-        {showSearch && (
-          <div className="py-3 bg-[#353A3A] border-b border-[#606364] w-full">
-            <div className="relative w-full">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                style={{ color: "#ABA4AA" }}
-              />
+        {/* Search and Filters */}
+        <div className="bg-[#353A3A] border border-[#606364] rounded-xl p-4">
+          <div className="space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search athletes..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-12 py-3 rounded-lg border text-sm"
-                style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                }}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border bg-[#606364] border-[#ABA4AA] text-[#C3BCC2] text-sm"
               />
-              <button
-                onClick={() => setShowSearch(false)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg"
-              >
-                <X className="h-4 w-4 text-[#ABA4AA]" />
-              </button>
             </div>
-          </div>
-        )}
 
-        {/* Mobile Filters */}
-        {showFilters && (
-          <div className="py-3 bg-[#353A3A] border-b border-[#606364] w-full">
-            <div className="flex items-center gap-2 mb-3 w-full">
-              <Filter className="h-4 w-4 text-[#ABA4AA] flex-shrink-0" />
-              <span className="text-sm font-medium text-[#C3BCC2] flex-1 min-w-0">
-                Filters
-              </span>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="ml-auto flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg"
-              >
-                <X className="h-4 w-4 text-[#ABA4AA]" />
-              </button>
-            </div>
-            <div className="flex gap-2 mb-3 w-full">
-              <CustomSelect
+            {/* Filters Row */}
+            <div className="flex gap-2">
+              {/* Sort Dropdown */}
+              <select
                 value={sortBy}
-                onChange={value => setSortBy(value)}
-                options={[
-                  { value: "name", label: "Sort by Name" },
-                  { value: "createdAt", label: "Sort by Date Added" },
-                  { value: "nextLesson", label: "Sort by Next Lesson" },
-                ]}
-                placeholder="Sort by"
-                className="flex-1"
-                style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                }}
-              />
+                onChange={e => setSortBy(e.target.value)}
+                className="flex-1 px-3 py-2.5 rounded-lg border bg-[#606364] border-[#ABA4AA] text-[#C3BCC2] text-sm"
+              >
+                <option value="name">
+                  Name {sortOrder === "asc" ? "(A-Z)" : "(Z-A)"}
+                </option>
+                <option value="createdAt">
+                  Recently Added{" "}
+                  {sortOrder === "asc" ? "(Newest First)" : "(Oldest First)"}
+                </option>
+                <option value="nextLesson">
+                  Next Lesson{" "}
+                  {sortOrder === "asc" ? "(Soonest First)" : "(Farthest First)"}
+                </option>
+              </select>
+
+              {/* Sort Order Toggle */}
               <button
                 onClick={() =>
                   setSortOrder(sortOrder === "asc" ? "desc" : "asc")
                 }
-                className="px-3 py-2 rounded-lg border flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                }}
+                className="p-2.5 rounded-lg border bg-[#606364] border-[#ABA4AA] text-[#C3BCC2]"
+                title={
+                  sortOrder === "asc" ? "Sort ascending" : "Sort descending"
+                }
               >
                 {sortOrder === "asc" ? (
                   <ChevronUp className="h-4 w-4" />
@@ -433,336 +584,239 @@ export default function MobileClientsPage() {
                   <ChevronDown className="h-4 w-4" />
                 )}
               </button>
+
+              {/* View Mode Toggle */}
+              <div className="flex rounded-lg border border-[#ABA4AA] overflow-hidden">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 transition-all duration-200 ${
+                    viewMode === "grid" ? "bg-[#4A5A70]" : "bg-[#606364]"
+                  } text-[#C3BCC2]`}
+                  title="Grid View"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 transition-all duration-200 ${
+                    viewMode === "list" ? "bg-[#4A5A70]" : "bg-[#606364]"
+                  } text-[#C3BCC2]`}
+                  title="List View"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk Actions Toolbar */}
+        {isBulkMode && (
+          <div className="bg-[#353A3A] border border-[#4A5A70] rounded-lg p-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-[#4A5A70] flex items-center justify-center">
+                  <Users className="h-3 w-3 text-[#C3BCC2]" />
+                </div>
+                <span className="text-sm font-medium text-[#C3BCC2]">
+                  {selectedClients.size > 0
+                    ? `${selectedClients.size} client${
+                        selectedClients.size === 1 ? "" : "s"
+                      } selected`
+                    : "Bulk Selection Mode - Select clients to perform actions"}
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={selectAllClients}
+                  className="text-sm px-3 py-1 rounded-lg bg-[#4A5A70] text-[#C3BCC2] border border-[#606364]"
+                >
+                  Select All ({filteredAndSortedClients.length})
+                </button>
+                {selectedClients.size > 0 && (
+                  <button
+                    onClick={clearSelection}
+                    className="text-sm px-3 py-1 rounded-lg bg-transparent text-[#ABA4AA] border border-[#606364]"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+              </div>
+
+              {selectedClients.size > 0 && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={exportToCSV}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#10B981] text-white"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export CSV
+                  </button>
+                  {activeTab === "active" && (
+                    <button
+                      onClick={handleBulkArchive}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F59E0B] text-white"
+                    >
+                      <Archive className="h-4 w-4" />
+                      Archive Selected
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Mobile Stats - Horizontal Scroll */}
-        <div className="py-4 w-full">
-          <div className="flex gap-3 overflow-x-auto pb-2 w-full">
-            <div
-              className="flex-shrink-0 w-32 rounded-xl border p-3"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: "#4A5A70" }}
-                >
-                  <Users className="h-3 w-3" style={{ color: "#C3BCC2" }} />
-                </div>
-                <TrendingUp className="h-3 w-3 text-green-400" />
-              </div>
-              <div>
-                <p
-                  className="text-xs font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Active
-                </p>
-                <p className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
-                  {activeClients}
-                </p>
-              </div>
-            </div>
-
-            <div
-              className="flex-shrink-0 w-32 rounded-xl border p-3"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: "#DC2626" }}
-                >
-                  <Archive className="h-3 w-3" style={{ color: "#C3BCC2" }} />
-                </div>
-                <Activity className="h-3 w-3 text-red-400" />
-              </div>
-              <div>
-                <p
-                  className="text-xs font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Archived
-                </p>
-                <p className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
-                  {archivedClients}
-                </p>
-              </div>
-            </div>
-
-            <div
-              className="flex-shrink-0 w-32 rounded-xl border p-3"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: "#10B981" }}
-                >
-                  <Star className="h-3 w-3" style={{ color: "#C3BCC2" }} />
-                </div>
-                <Sparkles className="h-3 w-3 text-green-400" />
-              </div>
-              <div>
-                <p
-                  className="text-xs font-medium mb-1"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Recent
-                </p>
-                <p className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
-                  {recentClients}
-                </p>
-              </div>
-            </div>
+        {/* Results Header */}
+        {filteredAndSortedClients.length > 0 && (
+          <div>
+            <p className="text-sm text-[#ABA4AA]">
+              {filteredAndSortedClients.length} of {totalClients}{" "}
+              {totalClients === 1 ? "athlete" : "athletes"}
+              {searchTerm && ` matching "${searchTerm}"`}
+            </p>
           </div>
-        </div>
+        )}
 
-        {/* Mobile Tab Navigation */}
-        <div className="mb-4 w-full">
-          <div
-            className="flex rounded-xl border p-1 w-full"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-          >
-            <button
-              onClick={() => setActiveTab("active")}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
-                activeTab === "active" ? "shadow-lg" : ""
-              }`}
-              style={{
-                backgroundColor:
-                  activeTab === "active" ? "#4A5A70" : "transparent",
-                color: activeTab === "active" ? "#FFFFFF" : "#ABA4AA",
-              }}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Users className="h-4 w-4" />
-                <span>Active</span>
-                <span
-                  className="px-2 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor:
-                      activeTab === "active" ? "#FFFFFF" : "#4A5A70",
-                    color: activeTab === "active" ? "#4A5A70" : "#C3BCC2",
-                  }}
-                >
-                  {activeClientsData.length}
-                </span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab("archived")}
-              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
-                activeTab === "archived" ? "shadow-lg" : ""
-              }`}
-              style={{
-                backgroundColor:
-                  activeTab === "archived" ? "#4A5A70" : "transparent",
-                color: activeTab === "archived" ? "#FFFFFF" : "#ABA4AA",
-              }}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Archive className="h-4 w-4" />
-                <span>Archived</span>
-                <span
-                  className="px-2 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor:
-                      activeTab === "archived" ? "#FFFFFF" : "#4A5A70",
-                    color: activeTab === "archived" ? "#4A5A70" : "#C3BCC2",
-                  }}
-                >
-                  {archivedClientsData.length}
-                </span>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Client Cards */}
-        <div className="pb-20 w-full">
-          {filteredAndSortedClients.length === 0 ? (
-            <div
-              className="rounded-2xl border text-center py-12"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Users className="h-8 w-8" style={{ color: "#C3BCC2" }} />
-              </div>
-              <h3
-                className="text-lg font-bold mb-2"
-                style={{ color: "#C3BCC2" }}
-              >
-                {searchTerm ? "No athletes found" : "Ready to Start Coaching?"}
-              </h3>
-              <p className="mb-6 text-sm" style={{ color: "#ABA4AA" }}>
-                {searchTerm
-                  ? `No athletes match "${searchTerm}". Try a different search term.`
-                  : "Add your first athlete to begin building your coaching career."}
-              </p>
+        {/* Athletes List/Grid */}
+        {filteredAndSortedClients.length === 0 ? (
+          <div className="bg-[#353A3A] border border-[#606364] rounded-xl text-center p-8">
+            <div className="w-16 h-16 rounded-xl bg-[#4A5A70] flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-[#C3BCC2]" />
+            </div>
+            <h3 className="text-xl font-bold mb-2 text-[#C3BCC2]">
+              {searchTerm
+                ? "No athletes found"
+                : activeTab === "active"
+                ? "No active athletes"
+                : "No archived athletes"}
+            </h3>
+            <p className="mb-6 max-w-sm mx-auto text-[#ABA4AA]">
+              {searchTerm
+                ? `No athletes match "${searchTerm}". Try a different search term.`
+                : activeTab === "active"
+                ? "Add your first athlete to start building your coaching team."
+                : "No athletes have been archived yet."}
+            </p>
+            {!searchTerm && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 shadow-lg font-medium mx-auto border"
-                style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#C3BCC2",
-                  borderColor: "#606364",
-                }}
+                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-[#4A5A70] text-[#C3BCC2] font-medium mx-auto"
               >
                 <Plus className="h-4 w-4" />
-                {searchTerm ? "Add New Athlete" : "Add Your First Athlete"}
+                {activeTab === "active"
+                  ? "Add Your First Athlete"
+                  : "Add Athlete"}
               </button>
-            </div>
-          ) : (
-            <div className="space-y-3 w-full">
-              {filteredAndSortedClients.map((client: Client, index: number) => (
-                <div
-                  key={client.id}
-                  onClick={() => router.push(`/clients/${client.id}/detail`)}
-                  className="rounded-2xl border transition-all duration-300 relative overflow-hidden w-full cursor-pointer hover:opacity-90"
-                  style={{
-                    backgroundColor: "#353A3A",
-                    borderColor: "#606364",
-                  }}
-                >
-                  <div className="p-4 w-full">
-                    <div className="flex items-center gap-3 mb-3 w-full">
-                      <ProfilePictureUploader
-                        currentAvatarUrl={
-                          client.user?.settings?.avatarUrl || client.avatar
-                        }
-                        userName={client.name}
-                        onAvatarChange={() => {}}
-                        size="sm"
-                        readOnly={true}
-                        className="flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3
-                            className="text-base font-bold truncate flex-1 min-w-0"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            {client.name}
-                          </h3>
-                          <div
-                            className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                              isValidLessonDate(client.nextLessonDate)
-                                ? "bg-green-400"
-                                : "bg-gray-400"
+            )}
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="text-sm px-4 py-2 rounded-lg bg-transparent text-[#ABA4AA] border border-[#606364] mx-auto"
+              >
+                Clear Search
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Grid View */}
+            {viewMode === "grid" && (
+              <div className="grid grid-cols-1 gap-4">
+                {filteredAndSortedClients.map((client: Client) => (
+                  <div
+                    key={client.id}
+                    className="bg-[#353A3A] border border-[#606364] rounded-xl p-4 transition-all duration-200 hover:bg-[#3A4040] hover:border-[#4A5A70] cursor-pointer"
+                    onClick={() => {
+                      if (!isBulkMode) {
+                        handleOpenProfile(client);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {isBulkMode && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              toggleClientSelection(client.id);
+                            }}
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                              selectedClients.has(client.id)
+                                ? "bg-blue-500 border-blue-500"
+                                : "border-gray-400 hover:border-blue-400"
                             }`}
-                          />
+                          >
+                            {selectedClients.has(client.id) && (
+                              <Check className="h-3 w-3 text-white" />
+                            )}
+                          </button>
+                        )}
+                        <ProfilePictureUploader
+                          currentAvatarUrl={
+                            client.user?.settings?.avatarUrl || client.avatar
+                          }
+                          userName={client.name}
+                          onAvatarChange={() => {}}
+                          readOnly={true}
+                          size="sm"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-base font-semibold truncate text-[#C3BCC2]">
+                              {client.name}
+                            </h3>
+                            {isValidLessonDate(client.nextLessonDate) && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#10B981] text-white">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {format(
+                                  new Date(client.nextLessonDate!),
+                                  "MMM d"
+                                )}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm truncate text-[#ABA4AA]">
+                            {client.email || "No email"}
+                          </p>
+                          <div className="mt-2">
+                            <p className="text-xs font-medium mb-1 text-[#ABA4AA]">
+                              Next Lesson:
+                            </p>
+                            <p className="text-sm font-semibold text-[#C3BCC2]">
+                              {isValidLessonDate(client.nextLessonDate)
+                                ? format(
+                                    new Date(client.nextLessonDate!),
+                                    "MMM d, yyyy"
+                                  )
+                                : "No lesson scheduled"}
+                            </p>
+                          </div>
                         </div>
-                        <p
-                          className="text-xs truncate"
-                          style={{ color: "#ABA4AA" }}
-                        >
-                          Added{" "}
-                          {format(new Date(client.createdAt), "MMM d, yyyy")}
-                        </p>
                       </div>
-                      <button
-                        onClick={e => e.stopPropagation()}
-                        className="p-2 rounded-lg flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div
-                        className="rounded-lg p-3"
-                        style={{ backgroundColor: "#3A4040" }}
-                      >
-                        <p
-                          className="text-xs font-medium mb-1"
-                          style={{ color: "#ABA4AA" }}
-                        >
-                          Next Lesson
-                        </p>
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {isValidLessonDate(client.nextLessonDate)
-                            ? format(new Date(client.nextLessonDate!), "MMM d")
-                            : "Not scheduled"}
-                        </p>
-                      </div>
-                      <div
-                        className="rounded-lg p-3"
-                        style={{ backgroundColor: "#3A4040" }}
-                      >
-                        <p
-                          className="text-xs font-medium mb-1"
-                          style={{ color: "#ABA4AA" }}
-                        >
-                          Last Workout
-                        </p>
-                        <p
-                          className="text-sm font-semibold truncate"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {client.lastCompletedWorkout || "None"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium flex-shrink-0`}
-                        style={{
-                          backgroundColor: isValidLessonDate(
-                            client.nextLessonDate
-                          )
-                            ? "#10B981"
-                            : "#3A4040",
-                          color: isValidLessonDate(client.nextLessonDate)
-                            ? "#DCFCE7"
-                            : "#C3BCC2",
-                        }}
-                      >
-                        {isValidLessonDate(client.nextLessonDate)
-                          ? "🔥 Active"
-                          : "💤 Available"}
-                      </span>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {client.email && (
-                          <button
-                            onClick={e => e.stopPropagation()}
-                            className="p-2 rounded-lg transition-all duration-300 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            style={{ color: "#ABA4AA" }}
-                            title={client.email}
-                          >
-                            <Mail className="h-4 w-4" />
-                          </button>
-                        )}
-                        {client.phone && (
-                          <button
-                            onClick={e => e.stopPropagation()}
-                            className="p-2 rounded-lg transition-all duration-300 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            style={{ color: "#ABA4AA" }}
-                            title={client.phone}
-                          >
-                            <Phone className="h-4 w-4" />
-                          </button>
-                        )}
+                      <div className="flex items-center gap-1 ml-2">
                         <button
                           onClick={e => {
                             e.stopPropagation();
                             openFeedback(client);
                           }}
-                          className="p-2 rounded-lg transition-all duration-300 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                          style={{ color: "#ABA4AA" }}
+                          className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040]"
                           title="Add feedback"
                         >
                           <MessageCircle className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedClientForProfile(client);
+                            setIsProfileModalOpen(true);
+                          }}
+                          className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040]"
+                          title="Edit client"
+                        >
+                          <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={e => {
@@ -774,14 +828,15 @@ export default function MobileClientsPage() {
                             }
                           }}
                           disabled={archivingClientId === client.id}
-                          className="p-2 rounded-lg transition-all duration-300 disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                          style={{ color: "#ABA4AA" }}
+                          className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040] disabled:opacity-50"
+                          title={
+                            activeTab === "active"
+                              ? "Archive client"
+                              : "Unarchive client"
+                          }
                         >
                           {archivingClientId === client.id ? (
-                            <div
-                              className="animate-spin rounded-full h-4 w-4 border-b-2"
-                              style={{ borderColor: "#EF4444" }}
-                            />
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#F59E0B]" />
                           ) : (
                             <Archive className="h-4 w-4" />
                           )}
@@ -789,107 +844,174 @@ export default function MobileClientsPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Floating Action Button */}
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg border flex items-center justify-center transition-all duration-300 transform hover:scale-110"
-          style={{
-            backgroundColor: "#4A5A70",
-            borderColor: "#606364",
-            color: "#C3BCC2",
-          }}
-        >
-          <Plus className="h-6 w-6" />
-        </button>
-
-        <AddClientModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onAddClient={() => {
-            console.log("Client added successfully!");
-          }}
-        />
-
-        {selectedClientForProfile && (
-          <ClientProfileModal
-            isOpen={isProfileModalOpen}
-            onClose={() => {
-              setIsProfileModalOpen(false);
-              setSelectedClientForProfile(null);
-            }}
-            clientId={selectedClientForProfile.id}
-            clientName={selectedClientForProfile.name}
-            clientEmail={selectedClientForProfile.email}
-            clientPhone={selectedClientForProfile.phone}
-            clientNotes={selectedClientForProfile.notes}
-            clientAvatar={selectedClientForProfile.avatar}
-          />
-        )}
-
-        {/* Feedback Modal */}
-        {isFeedbackOpen && feedbackClient && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="absolute inset-0 bg-black/60"
-              onClick={() => setIsFeedbackOpen(false)}
-            />
-            <div
-              className="relative w-full max-w-lg rounded-xl shadow-2xl border p-6 max-h-[90vh] overflow-y-auto"
-              style={{ backgroundColor: "#2B3038", borderColor: "#606364" }}
-            >
-              <h3
-                className="text-lg font-bold mb-4"
-                style={{ color: "#C3BCC2" }}
-              >
-                Leave feedback for {feedbackClient.name}
-              </h3>
-              <textarea
-                value={feedbackText}
-                onChange={e => setFeedbackText(e.target.value)}
-                className="w-full rounded-lg p-3 border mb-4 text-sm resize-none"
-                style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                }}
-                rows={6}
-                placeholder="Type feedback/notes here..."
-              />
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => setIsFeedbackOpen(false)}
-                  className="px-4 py-2 rounded-lg border"
-                  style={{
-                    backgroundColor: "transparent",
-                    borderColor: "#606364",
-                    color: "#ABA4AA",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={submitFeedback}
-                  disabled={updateNotes.isPending}
-                  className="px-4 py-2 rounded-lg shadow-lg border disabled:opacity-50"
-                  style={{
-                    backgroundColor: "#4A5A70",
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
-                  }}
-                >
-                  {updateNotes.isPending ? "Saving..." : "Save"}
-                </button>
+                ))}
               </div>
-            </div>
-          </div>
+            )}
+
+            {/* List View */}
+            {viewMode === "list" && (
+              <div className="space-y-4">
+                {filteredAndSortedClients.map((client: Client) => (
+                  <div
+                    key={client.id}
+                    className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4 transition-all duration-200 hover:bg-[#3A4040] hover:border-[#4A5A70] cursor-pointer"
+                    onClick={() => {
+                      if (!isBulkMode) {
+                        handleOpenProfile(client);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {isBulkMode && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              toggleClientSelection(client.id);
+                            }}
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                              selectedClients.has(client.id)
+                                ? "bg-blue-500 border-blue-500"
+                                : "border-gray-400 hover:border-blue-400"
+                            }`}
+                          >
+                            {selectedClients.has(client.id) && (
+                              <Check className="h-3 w-3 text-white" />
+                            )}
+                          </button>
+                        )}
+                        <ProfilePictureUploader
+                          currentAvatarUrl={
+                            client.user?.settings?.avatarUrl || client.avatar
+                          }
+                          userName={client.name}
+                          onAvatarChange={() => {}}
+                          size="md"
+                          readOnly={true}
+                          className="flex-shrink-0"
+                        />
+                        <div>
+                          <h3 className="text-xl font-bold mb-2 text-[#C3BCC2]">
+                            {client.name}
+                          </h3>
+                          <p className="text-sm mb-1 text-[#ABA4AA]">
+                            Added{" "}
+                            {format(new Date(client.createdAt), "MMM d, yyyy")}
+                          </p>
+                          {client.email && (
+                            <p className="text-sm flex items-center gap-1 text-[#ABA4AA]">
+                              <Mail className="h-3 w-3" />
+                              {client.email}
+                            </p>
+                          )}
+                          <div className="mt-2">
+                            <p className="text-xs font-medium mb-1 text-[#ABA4AA]">
+                              Next Lesson:
+                            </p>
+                            <p className="text-sm font-semibold text-[#C3BCC2]">
+                              {isValidLessonDate(client.nextLessonDate)
+                                ? format(
+                                    new Date(client.nextLessonDate!),
+                                    "MMM d, yyyy"
+                                  )
+                                : "No lesson scheduled"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (activeTab === "active") {
+                              handleArchiveClient(client.id, client.name);
+                            } else {
+                              handleUnarchiveClient(client.id, client.name);
+                            }
+                          }}
+                          disabled={archivingClientId === client.id}
+                          className="p-2 rounded-xl text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040] disabled:opacity-50"
+                        >
+                          {archivingClientId === client.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#F59E0B]" />
+                          ) : (
+                            <Archive className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
-    </Sidebar>
+
+      {/* Modals */}
+      <AddClientModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAddClient={() => {
+          console.log("Client added successfully!");
+        }}
+      />
+
+      {selectedClientForProfile && (
+        <ClientProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => {
+            setIsProfileModalOpen(false);
+            setSelectedClientForProfile(null);
+          }}
+          clientId={selectedClientForProfile.id}
+          clientName={selectedClientForProfile.name}
+          clientEmail={selectedClientForProfile.email}
+          clientPhone={selectedClientForProfile.phone}
+          clientNotes={selectedClientForProfile.notes}
+          clientAvatar={selectedClientForProfile.avatar}
+        />
+      )}
+
+      {/* Feedback Modal */}
+      {isFeedbackOpen && feedbackClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setIsFeedbackOpen(false)}
+          />
+          <div className="relative w-full max-w-lg rounded-xl shadow-2xl border p-4 max-h-[90vh] overflow-y-auto bg-[#2B3038] border-[#606364]">
+            <h3 className="text-lg font-bold mb-3 text-[#C3BCC2]">
+              Leave feedback for {feedbackClient.name}
+            </h3>
+            <textarea
+              value={feedbackText}
+              onChange={e => setFeedbackText(e.target.value)}
+              className="w-full rounded-lg p-3 border mb-4 text-sm resize-none bg-[#2A3133] border-[#606364] text-[#C3BCC2]"
+              rows={6}
+              placeholder="Type feedback/notes here..."
+            />
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setIsFeedbackOpen(false)}
+                className="w-full px-4 py-2 rounded-lg border bg-transparent border-[#606364] text-[#ABA4AA]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitFeedback}
+                disabled={updateNotes.isPending}
+                className="w-full px-4 py-2 rounded-lg shadow-lg border disabled:opacity-50 bg-[#4A5A70] border-[#606364] text-[#C3BCC2]"
+              >
+                {updateNotes.isPending ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Navigation */}
+      <MobileBottomNavigation />
+    </div>
   );
 }

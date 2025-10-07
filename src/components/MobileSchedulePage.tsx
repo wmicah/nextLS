@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import WorkingHoursModal from "./WorkingHoursModal";
 import CustomSelect from "./ui/CustomSelect";
-import Sidebar from "./Sidebar";
-import { useSidebarState } from "@/hooks/useSidebarState";
+import MobileNavigation from "./MobileNavigation";
+import MobileBottomNavigation from "./MobileBottomNavigation";
 import {
   format,
   startOfMonth,
@@ -39,7 +39,6 @@ import {
 } from "@/lib/timezone-utils";
 
 export default function MobileSchedulePage() {
-  const isSidebarOpen = useSidebarState();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showWorkingHoursModal, setShowWorkingHoursModal] = useState(false);
@@ -312,52 +311,92 @@ export default function MobileSchedulePage() {
   const timeSlots = generateTimeSlots();
 
   return (
-    <Sidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Mobile Header */}
-        <div
-          className={`sticky top-0 z-10 px-4 py-4 border-b transition-all duration-500 ease-in-out ${
-            isSidebarOpen ? "md:ml-64" : "md:ml-20"
-          }`}
-          style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className="p-3 rounded-lg"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
-                  Schedule
-                </h1>
-                <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                  Manage lessons & availability
-                </p>
-              </div>
+    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#4A5A70" }}
+            >
+              <Calendar className="h-4 w-4 text-white" />
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowScheduleModal(true)}
-                className="p-3 rounded-lg transition-all duration-200"
-                style={{ backgroundColor: "#10B981" }}
-              >
-                <Plus className="w-5 h-5 text-white" />
-              </button>
-              <button
-                onClick={() => setShowWorkingHoursModal(true)}
-                className="p-3 rounded-lg transition-all duration-200"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Settings className="w-5 h-5 text-white" />
-              </button>
+            <div>
+              <h1 className="text-lg font-bold text-white">Schedule</h1>
+              <p className="text-xs text-gray-400">
+                Manage lessons & availability
+              </p>
             </div>
           </div>
+          <MobileNavigation currentPage="schedule" />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="p-4 pb-20 space-y-6">
+        {/* Quick Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200"
+            style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
+          >
+            <Plus className="w-4 h-4" />
+            Schedule Lesson
+          </button>
+          <button
+            onClick={() => setShowWorkingHoursModal(true)}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200"
+            style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+          >
+            <Settings className="w-4 h-4" />
+            Working Hours
+          </button>
         </div>
 
-        <div className="p-4 space-y-6">
+        <div className="p-4 space-y-4">
+          {/* Today's Overview - Always Visible */}
+          {(() => {
+            const today = new Date();
+            const todaysLessons = getLessonsForDate(today);
+            return todaysLessons.length > 0 ? (
+              <div
+                className="p-4 rounded-lg border-2"
+                style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <Calendar className="w-5 h-5 text-emerald-400" />
+                  <h2 className="text-lg font-semibold text-white">
+                    Today's Lessons ({todaysLessons.length})
+                  </h2>
+                </div>
+                <div className="space-y-2">
+                  {todaysLessons.map((lesson: any, index: number) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded bg-emerald-500/10 border border-emerald-500/20"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-emerald-300">
+                          {formatTimeInUserTimezone(lesson.date)}
+                        </div>
+                        <div className="text-sm text-emerald-200">
+                          {lesson.client?.name ||
+                            lesson.client?.email ||
+                            "Client"}
+                        </div>
+                      </div>
+                      <div className="text-xs text-emerald-400">
+                        {lesson.title}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
+
           {/* Working Hours Display */}
           <div
             className="p-4 rounded-lg border-2"
@@ -453,58 +492,6 @@ export default function MobileSchedulePage() {
             </div>
           )}
 
-          {/* Today's Lessons */}
-          {(() => {
-            const today = new Date();
-            const todaysLessons = getLessonsForDate(today);
-            return todaysLessons.length > 0 ? (
-              <div
-                className="p-4 rounded-lg border-2"
-                style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <Calendar className="w-5 h-5 text-emerald-400" />
-                  <h2 className="text-lg font-semibold text-white">
-                    Today's Upcoming Lessons ({todaysLessons.length})
-                  </h2>
-                </div>
-                <div className="space-y-2">
-                  {todaysLessons.map((lesson: any, index: number) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 rounded bg-emerald-500/10 border border-emerald-500/20 group"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium text-emerald-300">
-                          {formatTimeInUserTimezone(lesson.date)}
-                        </div>
-                        <div className="text-sm text-emerald-200">
-                          {lesson.client?.name ||
-                            lesson.client?.email ||
-                            "Client"}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-emerald-400">
-                          {lesson.title}
-                        </div>
-                        <button
-                          onClick={() =>
-                            handleDeleteLesson(lesson.id, lesson.title)
-                          }
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
-                          title="Delete lesson"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null;
-          })()}
-
           {/* Upcoming Lessons */}
           {upcomingLessons.length > 0 && (
             <div
@@ -574,17 +561,20 @@ export default function MobileSchedulePage() {
             className="p-4 rounded-lg border-2"
             style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
           >
-            <div className="grid grid-cols-7 gap-2 mb-4">
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 gap-1 mb-3">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                 <div
                   key={day}
-                  className="text-center text-sm font-bold text-blue-300 py-3 border-b-2 border-blue-500/30"
+                  className="text-center text-xs font-semibold text-gray-400 py-2"
                 >
-                  {day}
+                  {day.slice(0, 1)}
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-2">
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-1">
               {calendarDays.map(day => {
                 const isToday = isSameDay(day, new Date());
                 const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -610,43 +600,38 @@ export default function MobileSchedulePage() {
                     key={day.toISOString()}
                     onClick={() => !isPast && handleDateClick(day)}
                     className={`
-                    p-2 text-sm rounded-lg transition-all duration-200 relative min-h-[50px] border-2 overflow-hidden
+                    aspect-square flex flex-col items-center justify-center text-xs rounded-lg transition-all duration-200 relative min-h-[44px] border
                     ${
                       isPast
-                        ? "cursor-not-allowed opacity-50"
-                        : "cursor-pointer"
+                        ? "cursor-not-allowed opacity-40"
+                        : "cursor-pointer active:scale-95"
                     }
                     ${
                       isToday
-                        ? "bg-blue-500/20 text-blue-300 border-blue-400 shadow-lg"
+                        ? "bg-blue-500 text-white border-blue-400 shadow-lg font-bold"
                         : isPast
-                        ? "text-gray-500 bg-gray-700/30 border-gray-600"
+                        ? "text-gray-500 bg-gray-700/20 border-gray-600"
                         : isCurrentMonth
                         ? isWorkingDay
-                          ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
+                          ? "text-white bg-gray-800/60 border-gray-600 hover:bg-blue-500/20 hover:border-blue-400"
                           : "text-orange-400 bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 hover:border-orange-400"
                         : "text-gray-600 bg-gray-900/30 border-gray-700"
                     }
                   `}
                   >
-                    <div className="font-bold text-sm mb-1 flex items-center justify-between">
-                      <span>{format(day, "d")}</span>
-                      {!isWorkingDay && isCurrentMonth && !isPast && (
-                        <div
-                          className="w-1.5 h-1.5 bg-orange-500 rounded-full"
-                          title="Non-working day"
-                        />
-                      )}
-                    </div>
+                    {/* Date Number */}
+                    <div className="font-bold text-sm">{format(day, "d")}</div>
+
+                    {/* Lesson Indicators */}
                     {hasLessons && (
                       <div className="flex justify-center items-center mt-1">
-                        <div className="flex flex-wrap gap-0.5 justify-center">
+                        <div className="flex gap-0.5">
                           {lessonsForDay
-                            .slice(0, 3)
+                            .slice(0, 2)
                             .map((lesson: any, index: number) => (
                               <div
                                 key={index}
-                                className="w-2 h-2 rounded-full bg-emerald-400"
+                                className="w-1.5 h-1.5 rounded-full bg-emerald-400"
                                 title={`${format(
                                   new Date(lesson.date),
                                   "h:mm a"
@@ -657,22 +642,23 @@ export default function MobileSchedulePage() {
                                 }`}
                               />
                             ))}
-                          {lessonsForDay.length > 3 && (
+                          {lessonsForDay.length > 2 && (
                             <div
-                              className="w-2 h-2 rounded-full bg-emerald-300"
-                              title={`+${
-                                lessonsForDay.length - 3
-                              } more lessons`}
+                              className="w-1.5 h-1.5 rounded-full bg-emerald-300"
+                              title={`+${lessonsForDay.length - 2} more`}
                             />
                           )}
                         </div>
                       </div>
                     )}
-                    {!hasLessons && isCurrentMonth && !isPast && (
-                      <div className="flex justify-center items-center mt-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400 opacity-50" />
-                      </div>
-                    )}
+
+                    {/* Non-working day indicator */}
+                    {!isWorkingDay &&
+                      isCurrentMonth &&
+                      !isPast &&
+                      !hasLessons && (
+                        <div className="w-1 h-1 bg-orange-500 rounded-full mt-1" />
+                      )}
                   </div>
                 );
               })}
@@ -935,6 +921,7 @@ export default function MobileSchedulePage() {
           }
         />
       </div>
-    </Sidebar>
+      <MobileBottomNavigation />
+    </div>
   );
 }

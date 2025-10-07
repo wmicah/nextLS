@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -18,14 +18,14 @@ import {
   Eye,
   X,
 } from "lucide-react";
-import CustomSelect from "./ui/CustomSelect";
-
 import YouTubePlayer from "./YouTubePlayer";
 import YouTubeImportModal from "./YouTubeImportModal";
+import OnFormImportModal from "./OnFormImportModal";
 import UploadResourceModal from "./UploadResourceModal";
 import VideoViewerModal from "./VideoViewerModal";
-import Sidebar from "./Sidebar";
-import { VideoThumbnail } from "./VideoThumbnail";
+import MobileNavigation from "./MobileNavigation";
+import MobileBottomNavigation from "./MobileBottomNavigation";
+import CategoryDropdown from "./ui/CategoryDropdown";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -38,19 +38,15 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export default function MobileLibraryPage() {
-  const [activeTab, setActiveTab] = useState<"master" | "local">("master");
+  const [activeTab, setActiveTab] = useState<"master" | "local">("local");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
+  const [isOnFormModalOpen, setIsOnFormModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{
-    id: string;
-    title: string;
-    type: string;
-    isYoutube?: boolean;
-    youtubeId?: string;
-  } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
 
@@ -68,17 +64,37 @@ export default function MobileLibraryPage() {
     return ["All", ...allCategories];
   }, [userCategoriesData]);
 
-  const handleItemClick = (item: {
-    id: string;
-    title: string;
-    type: string;
-    isYoutube?: boolean;
-    youtubeId?: string;
-  }) => {
+  // Debounce search term to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const handleItemClick = (item: any) => {
     const itemIndex = libraryItems.findIndex(libItem => libItem.id === item.id);
     setCurrentItemIndex(itemIndex);
     setSelectedItem(item);
     setIsVideoViewerOpen(true);
+  };
+
+  // Navigation functions
+  const navigateToPrevious = () => {
+    if (libraryItems.length === 0) return;
+    const newIndex =
+      currentItemIndex > 0 ? currentItemIndex - 1 : libraryItems.length - 1;
+    setCurrentItemIndex(newIndex);
+    setSelectedItem(libraryItems[newIndex]);
+  };
+
+  const navigateToNext = () => {
+    if (libraryItems.length === 0) return;
+    const newIndex =
+      currentItemIndex < libraryItems.length - 1 ? currentItemIndex + 1 : 0;
+    setCurrentItemIndex(newIndex);
+    setSelectedItem(libraryItems[newIndex]);
   };
 
   // Use tRPC queries with refetch
@@ -89,6 +105,8 @@ export default function MobileLibraryPage() {
     refetch: refetchMaster,
   } = trpc.admin.getMasterLibrary.useQuery(undefined, {
     enabled: activeTab === "master",
+    placeholderData: previousData => previousData,
+    staleTime: 30000,
   });
 
   const {
@@ -98,10 +116,15 @@ export default function MobileLibraryPage() {
     refetch: refetchLocal,
   } = trpc.library.list.useQuery(
     {
-      search: searchTerm || undefined,
+      search: debouncedSearchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
     },
-    { enabled: activeTab === "local" }
+    {
+      enabled: activeTab === "local",
+      placeholderData: previousData => previousData,
+      staleTime: 30000,
+      refetchOnWindowFocus: false,
+    }
   );
 
   // Combine data based on active tab
@@ -128,322 +151,393 @@ export default function MobileLibraryPage() {
     refetchStats();
   };
 
-  // Filter items based on search and category
-  const filteredItems = libraryItems.filter((item: any) => {
-    const matchesSearch = item.title
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "All" || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Handle upload/import success
+  const handleUploadSuccess = () => {
+    if (activeTab === "master") {
+      refetchMaster();
+    } else {
+      refetchLocal();
+    }
+    refetchStats();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div
+          className="animate-spin rounded-full h-8 w-8 border-b-2"
+          style={{ borderColor: "#4A5A70" }}
+        />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-400">Error loading library: {error.message}</p>
+      </div>
+    );
+  }
 
   return (
-    <Sidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Header */}
-        <div
-          className="sticky top-0 z-10 border-b px-4 py-4"
-          style={{ backgroundColor: "#2A3133", borderColor: "#4A5A70" }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-white">Video Library</h1>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsYouTubeModalOpen(true)}
-                className="p-2 rounded-lg transition-all duration-200"
-                style={{ backgroundColor: "#EF4444" }}
-                title="Import from YouTube"
-              >
-                <Play className="w-5 h-5 text-white" />
-              </button>
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="p-2 rounded-lg transition-all duration-200"
-                style={{ backgroundColor: "#10B981" }}
-                title="Upload Video"
-              >
-                <Plus className="w-5 h-5 text-white" />
-              </button>
+    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#4A5A70" }}
+            >
+              <BookOpen className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-white">Training Library</h1>
+              <p className="text-xs text-gray-400">
+                {activeTab === "master" ? "Shared resources" : "Your resources"}
+              </p>
             </div>
           </div>
-
-          {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search videos..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-lg border text-white placeholder-gray-400"
-              style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-            />
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setActiveTab("master")}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
-                activeTab === "master" ? "text-white" : "text-gray-400"
-              }`}
+          <div className="flex items-center gap-2">
+            <span
+              className="px-3 py-1 rounded-full text-sm font-medium"
               style={{
-                backgroundColor: activeTab === "master" ? "#4A5A70" : "#1F2426",
-              }}
-            >
-              Master Library
-            </button>
-            <button
-              onClick={() => setActiveTab("local")}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
-                activeTab === "local" ? "text-white" : "text-gray-400"
-              }`}
-              style={{
-                backgroundColor: activeTab === "local" ? "#4A5A70" : "#1F2426",
-              }}
-            >
-              My Library
-            </button>
-          </div>
-
-          {/* Category Filter */}
-          <div className="mb-4">
-            <select
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-              className="w-full p-3 rounded-lg border focus:outline-none transition-all duration-200"
-              style={{
-                backgroundColor: "#1F2426",
-                borderColor: "#4A5A70",
+                backgroundColor: "#4A5A70",
                 color: "#C3BCC2",
               }}
             >
-              <option value="All">All Categories</option>
-
-              {/* Standard Categories */}
-              <optgroup
-                label="Standard"
-                style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-              >
-                {DEFAULT_CATEGORIES.map(category => (
-                  <option
-                    key={category}
-                    value={category}
-                    style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                  >
-                    {category}
-                  </option>
-                ))}
-              </optgroup>
-
-              {/* Custom Categories */}
-              {userCategoriesData.filter(
-                cat => !DEFAULT_CATEGORIES.includes(cat.name)
-              ).length > 0 && (
-                <optgroup
-                  label="Custom"
-                  style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                >
-                  {userCategoriesData
-                    .filter(cat => !DEFAULT_CATEGORIES.includes(cat.name))
-                    .map(cat => (
-                      <option
-                        key={cat.name}
-                        value={cat.name}
-                        style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                      >
-                        {cat.name} ({cat.count})
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-            </select>
-          </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center justify-between">
-            <div
-              className="flex gap-1 p-1 rounded-lg"
-              style={{ backgroundColor: "#1F2426" }}
-            >
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-2 rounded transition-all duration-200 ${
-                  viewMode === "grid"
-                    ? "bg-blue-500 text-white"
-                    : "text-gray-400"
-                }`}
-              >
-                <Grid3X3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-2 rounded transition-all duration-200 ${
-                  viewMode === "list"
-                    ? "bg-blue-500 text-white"
-                    : "text-gray-400"
-                }`}
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="text-sm text-gray-400">
-              {filteredItems.length} videos
-            </div>
+              {libraryItems.length}
+            </span>
+            <MobileNavigation currentPage="library" />
           </div>
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="p-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-gray-400">Loading videos...</p>
+      {/* Main Content */}
+      <div className="p-4 pb-20 space-y-4">
+        {/* Tabs */}
+        <div className="flex space-x-1 p-1 rounded-xl border bg-[#353A3A] border-[#606364]">
+          <button
+            onClick={() => setActiveTab("master")}
+            className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+              activeTab === "master" ? "shadow-lg" : ""
+            }`}
+            style={{
+              backgroundColor:
+                activeTab === "master" ? "#4A5A70" : "transparent",
+              color: activeTab === "master" ? "#FFFFFF" : "#ABA4AA",
+            }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              <span>Shared Library</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("local")}
+            className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+              activeTab === "local" ? "shadow-lg" : ""
+            }`}
+            style={{
+              backgroundColor:
+                activeTab === "local" ? "#4A5A70" : "transparent",
+              color: activeTab === "local" ? "#FFFFFF" : "#ABA4AA",
+            }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Video className="h-4 w-4" />
+              <span>My Library</span>
+            </div>
+          </button>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="bg-[#353A3A] border border-[#606364] rounded-xl p-4">
+          <div className="space-y-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search resources..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border bg-[#606364] border-[#ABA4AA] text-[#C3BCC2] text-sm"
+              />
+            </div>
+
+            {/* Filters Row */}
+            <div className="flex gap-2">
+              {/* Category Dropdown */}
+              <CategoryDropdown
+                value={selectedCategory}
+                onChange={setSelectedCategory}
+                standardCategories={DEFAULT_CATEGORIES}
+                customCategories={userCategoriesData.filter(
+                  cat => !DEFAULT_CATEGORIES.includes(cat.name)
+                )}
+                style={{
+                  backgroundColor: "#606364",
+                  borderColor: "#ABA4AA",
+                  color: "#C3BCC2",
+                }}
+              />
+
+              {/* View Mode Toggle */}
+              <div className="flex rounded-lg border border-[#ABA4AA] overflow-hidden">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 transition-all duration-200 ${
+                    viewMode === "grid" ? "bg-[#4A5A70]" : "bg-[#606364]"
+                  } text-[#C3BCC2]`}
+                  title="Grid View"
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 transition-all duration-200 ${
+                    viewMode === "list" ? "bg-[#4A5A70]" : "bg-[#606364]"
+                  } text-[#C3BCC2]`}
+                  title="List View"
+                >
+                  <List className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          ) : error ? (
-            <div className="text-center py-12">
-              <p className="text-red-400 mb-4">Error loading videos</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{ backgroundColor: "#4A5A70", color: "#FFFFFF" }}
-              >
-                Retry
-              </button>
-            </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="text-center py-12">
-              <Video className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-400 mb-4">No videos found</p>
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
-              >
-                Upload Your First Video
-              </button>
-            </div>
-          ) : (
-            <div
-              className={
-                viewMode === "grid" ? "grid grid-cols-2 gap-4" : "space-y-3"
-              }
-            >
-              {filteredItems.map((item: any, index: number) => (
-                <div
-                  key={item.id || index}
-                  onClick={() => handleItemClick(item)}
-                  className="cursor-pointer transition-all duration-200 hover:scale-105"
-                >
-                  {viewMode === "grid" ? (
-                    <div
-                      className="rounded-lg border overflow-hidden"
-                      style={{
-                        backgroundColor: "#1F2426",
-                        borderColor: "#4A5A70",
-                      }}
-                    >
-                      <div className="aspect-video relative">
-                        <VideoThumbnail
-                          item={item}
-                          videoType={
-                            activeTab === "master" ? "master" : "local"
-                          }
-                          className="w-full h-full"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                          <Play className="w-8 h-8 text-white opacity-0 hover:opacity-100 transition-opacity duration-200" />
-                        </div>
-                      </div>
-                      <div className="p-3">
-                        <h3 className="font-medium text-white text-sm mb-1 line-clamp-2">
-                          {item.title}
-                        </h3>
-                        <p className="text-xs text-gray-400">
-                          {item.category || "Uncategorized"}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className="flex items-center gap-3 p-3 rounded-lg border"
-                      style={{
-                        backgroundColor: "#1F2426",
-                        borderColor: "#4A5A70",
-                      }}
-                    >
-                      <div className="w-16 h-12 rounded relative flex-shrink-0">
-                        <VideoThumbnail
-                          item={item}
-                          videoType={
-                            activeTab === "master" ? "master" : "local"
-                          }
-                          className="w-full h-full"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                          <Play className="w-4 h-4 text-white opacity-0 hover:opacity-100 transition-opacity duration-200" />
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-white text-sm mb-1 line-clamp-1">
-                          {item.title}
-                        </h3>
-                        <p className="text-xs text-gray-400">
-                          {item.category || "Uncategorized"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* Modals */}
-        {isYouTubeModalOpen && (
-          <YouTubeImportModal
-            isOpen={isYouTubeModalOpen}
-            onClose={() => setIsYouTubeModalOpen(false)}
-            onSuccess={() => {
-              setIsYouTubeModalOpen(false);
-              if (activeTab === "local") {
-                refetchLocal();
-              }
-              refetchStats();
-            }}
-          />
+        {/* Action Buttons */}
+        {activeTab === "local" && (
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setIsYouTubeModalOpen(true)}
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#DC2626] text-white"
+            >
+              <Video className="h-5 w-5" />
+              <span className="text-xs font-medium">YouTube</span>
+            </button>
+            <button
+              onClick={() => setIsOnFormModalOpen(true)}
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#F59E0B] text-white"
+            >
+              <Video className="h-5 w-5" />
+              <span className="text-xs font-medium">OnForm</span>
+            </button>
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#4A5A70] text-white"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="text-xs font-medium">Upload</span>
+            </button>
+          </div>
         )}
 
-        {isUploadModalOpen && (
-          <UploadResourceModal
-            isOpen={isUploadModalOpen}
-            onClose={() => setIsUploadModalOpen(false)}
-            onSuccess={() => {
-              setIsUploadModalOpen(false);
-              if (activeTab === "local") {
-                refetchLocal();
-              }
-              refetchStats();
-            }}
-          />
+        {/* Permission Guidance */}
+        {activeTab === "master" && (
+          <div className="bg-[#2D3748] border border-[#4A5A70] rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <BookOpen className="h-5 w-5 text-[#4A5A70]" />
+              <div>
+                <h4 className="font-semibold text-sm text-[#C3BCC2]">
+                  Shared Library Access
+                </h4>
+                <p className="text-xs text-[#ABA4AA]">
+                  View and assign resources to clients. Only administrators can
+                  modify.
+                </p>
+              </div>
+            </div>
+          </div>
         )}
 
-        {isVideoViewerOpen && selectedItem && (
-          <VideoViewerModal
-            isOpen={isVideoViewerOpen}
-            onClose={() => {
-              setIsVideoViewerOpen(false);
-              setSelectedItem(null);
-            }}
-            item={selectedItem}
-            onDelete={handleDeleteSuccess}
-          />
+        {/* Results Header */}
+        {libraryItems.length > 0 && (
+          <div>
+            <p className="text-sm text-[#ABA4AA]">
+              {libraryItems.length}{" "}
+              {libraryItems.length === 1 ? "resource" : "resources"} found
+            </p>
+          </div>
+        )}
+
+        {/* Resources List/Grid */}
+        {libraryItems.length === 0 ? (
+          <div className="bg-[#353A3A] border border-[#606364] rounded-xl text-center p-8">
+            <div className="w-16 h-16 rounded-xl bg-[#4A5A70] flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="h-8 w-8 text-[#C3BCC2]" />
+            </div>
+            <h3 className="text-xl font-bold mb-2 text-[#C3BCC2]">
+              {searchTerm
+                ? "No resources found"
+                : activeTab === "master"
+                ? "No shared resources"
+                : "No resources in your library"}
+            </h3>
+            <p className="mb-6 max-w-sm mx-auto text-[#ABA4AA]">
+              {searchTerm
+                ? `No resources match "${searchTerm}". Try a different search term.`
+                : activeTab === "master"
+                ? "No shared resources are available yet."
+                : "Add your first resource to start building your library."}
+            </p>
+            {!searchTerm && activeTab === "local" && (
+              <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+                <button
+                  onClick={() => setIsYouTubeModalOpen(true)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#DC2626] text-white"
+                >
+                  <Video className="h-5 w-5" />
+                  <span className="text-xs font-medium">YouTube</span>
+                </button>
+                <button
+                  onClick={() => setIsOnFormModalOpen(true)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#F59E0B] text-white"
+                >
+                  <Video className="h-5 w-5" />
+                  <span className="text-xs font-medium">OnForm</span>
+                </button>
+                <button
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#4A5A70] text-white"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span className="text-xs font-medium">Upload</span>
+                </button>
+              </div>
+            )}
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="text-sm px-4 py-2 rounded-lg bg-transparent text-[#ABA4AA] border border-[#606364] mx-auto"
+              >
+                Clear Search
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Grid View */}
+            {viewMode === "grid" && (
+              <div className="grid grid-cols-2 gap-3">
+                {libraryItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className="bg-[#353A3A] border border-[#606364] rounded-xl p-3 transition-all duration-200 hover:bg-[#3A4040] hover:border-[#4A5A70] cursor-pointer"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-[#C3BCC2] line-clamp-2 flex-1">
+                          {item.title}
+                        </h3>
+                        {item.type === "VIDEO" && (
+                          <Play className="h-3 w-3 text-[#ABA4AA] ml-1 flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-xs text-[#ABA4AA] line-clamp-1">
+                        {item.category || "Uncategorized"}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-[#4A5A70] text-[#C3BCC2]">
+                          {item.type}
+                        </span>
+                        {item.isYoutube && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-[#DC2626] text-white">
+                            YT
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* List View */}
+            {viewMode === "list" && (
+              <div className="space-y-4">
+                {libraryItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className="bg-[#353A3A] border border-[#606364] rounded-xl p-5 transition-all duration-200 hover:bg-[#3A4040] hover:border-[#4A5A70] cursor-pointer"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-[#C3BCC2] mb-1 line-clamp-2">
+                            {item.title}
+                          </h3>
+                          <p className="text-sm text-[#ABA4AA] mb-2">
+                            {item.category || "Uncategorized"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3">
+                          {item.type === "VIDEO" && (
+                            <div className="w-8 h-8 rounded-full bg-[#4A5A70] flex items-center justify-center">
+                              <Play className="h-4 w-4 text-white ml-0.5" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm px-3 py-1.5 rounded-lg bg-[#4A5A70] text-[#C3BCC2] font-medium">
+                          {item.type}
+                        </span>
+                        {item.isYoutube && (
+                          <span className="text-sm px-3 py-1.5 rounded-lg bg-[#DC2626] text-white font-medium">
+                            YouTube
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
-    </Sidebar>
+
+      {/* Bottom Navigation */}
+      <MobileBottomNavigation />
+
+      {/* Modals */}
+      <YouTubeImportModal
+        isOpen={isYouTubeModalOpen}
+        onClose={() => setIsYouTubeModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+      />
+
+      <OnFormImportModal
+        isOpen={isOnFormModalOpen}
+        onClose={() => setIsOnFormModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+      />
+
+      <UploadResourceModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+      />
+
+      {selectedItem && (
+        <VideoViewerModal
+          isOpen={isVideoViewerOpen}
+          onClose={() => setIsVideoViewerOpen(false)}
+          item={selectedItem}
+          onDelete={handleDeleteSuccess}
+          onPrevious={navigateToPrevious}
+          onNext={navigateToNext}
+          currentIndex={currentItemIndex}
+          totalItems={libraryItems.length}
+          canDelete={activeTab === "local"}
+        />
+      )}
+    </div>
   );
 }

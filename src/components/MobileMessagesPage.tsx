@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
-import { useSidebarState } from "@/hooks/useSidebarState";
 import {
   Search,
   Plus,
@@ -15,8 +14,10 @@ import {
   ArrowLeft,
   Download,
   Video,
+  MessageCircle,
 } from "lucide-react";
-import Sidebar from "./Sidebar";
+import MobileNavigation from "./MobileNavigation";
+import MobileBottomNavigation from "./MobileBottomNavigation";
 import { format } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import ProfilePictureUploader from "./ProfilePictureUploader";
@@ -33,7 +34,6 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
   >(null);
-  const isSidebarOpen = useSidebarState();
   const [searchTerm, setSearchTerm] = useState("");
   const [messageText, setMessageText] = useState("");
   const [showFileUpload, setShowFileUpload] = useState(false);
@@ -323,50 +323,28 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   });
 
   return (
-    <Sidebar
-      user={
-        sidebarUser
-          ? { name: sidebarUser.name, email: sidebarUser.email }
-          : undefined
-      }
-    >
-      <div
-        className="h-screen flex flex-col overflow-hidden"
-        style={{
-          backgroundColor: "#2A3133",
-          height: "100dvh", // Dynamic viewport height for mobile
-        }}
-      >
-        {/* Mobile Header */}
-        <div
-          className={`sticky top-0 z-10 bg-[#2A3133] border-b border-[#606364] px-4 py-3 transition-all duration-500 ease-in-out ${
-            isSidebarOpen ? "md:ml-64" : "md:ml-20"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
-                  Messages
-                </h1>
-                <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                  {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
-                </p>
-              </div>
+    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: "#4A5A70" }}
+            >
+              <MessageCircle className="h-4 w-4 text-white" />
             </div>
-            {/* Only show + button when viewing conversation list */}
-            {!selectedConversation && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 shadow-lg touch-manipulation"
-                style={{ backgroundColor: "#E0E0E0", color: "#000000" }}
-              >
-                <Plus className="h-6 w-6" />
-              </button>
-            )}
+            <div>
+              <h1 className="text-lg font-bold text-white">Messages</h1>
+              <p className="text-xs text-gray-400">Chat with clients</p>
+            </div>
           </div>
+          <MobileNavigation currentPage="messages" />
         </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Conversations List */}
         {!selectedConversation && (
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -525,18 +503,18 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
         {/* Mobile Chat Area */}
         {selectedConversation && (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Chat Header */}
+            {/* Fixed Chat Header - Below Main Header */}
             <div
-              className="px-4 py-3 border-b flex items-center justify-between"
+              className="fixed top-16 left-0 right-0 px-4 py-2 border-b flex items-center justify-between z-40"
               style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="p-2 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95"
-                  style={{ minWidth: "44px", minHeight: "44px" }}
+                  className="p-1.5 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95"
+                  style={{ minWidth: "36px", minHeight: "36px" }}
                 >
-                  <ArrowLeft className="h-6 w-6" style={{ color: "#C3BCC2" }} />
+                  <ArrowLeft className="h-4 w-4" style={{ color: "#C3BCC2" }} />
                 </button>
                 <ProfilePictureUploader
                   currentAvatarUrl={(() => {
@@ -568,13 +546,13 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                     return "User";
                   })()}
                   onAvatarChange={() => {}}
-                  size="lg"
+                  size="sm"
                   readOnly={true}
                   className="flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
                   <h3
-                    className="font-semibold text-base truncate"
+                    className="font-semibold text-sm truncate"
                     style={{ color: "#C3BCC2" }}
                   >
                     {(() => {
@@ -595,7 +573,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                       return "Unknown";
                     })()}
                   </h3>
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
                     {(() => {
                       const conversation = conversations.find(
                         (c: { id: string; type: string }) =>
@@ -608,16 +586,16 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                   </p>
                 </div>
               </div>
-              <button className="p-2 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95">
+              <button className="p-1.5 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95">
                 <MoreVertical
-                  className="h-5 w-5"
+                  className="h-4 w-4"
                   style={{ color: "#ABA4AA" }}
                 />
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3 pb-4">
+            <div className="flex-1 overflow-y-auto px-4 pt-20 pb-24 space-y-3">
               {messages.map((message: any) => {
                 const isCurrentUser = message.sender.id === currentUser?.id;
                 // Check if this is a workout note message
@@ -862,8 +840,9 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
             </div>
 
             {/* Message Input */}
+            {/* Fixed Message Input - iOS Style */}
             <div
-              className="px-4 py-3 border-t flex-shrink-0"
+              className="fixed bottom-20 left-0 right-0 px-4 py-3 border-t flex-shrink-0 z-40"
               style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
             >
               <RichMessageInput
@@ -1009,6 +988,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
           />
         )}
       </div>
-    </Sidebar>
+      <MobileBottomNavigation />
+    </div>
   );
 }

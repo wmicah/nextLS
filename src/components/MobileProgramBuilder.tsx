@@ -687,41 +687,55 @@ export default function MobileProgramBuilder({
       style={{ backgroundColor: "#2A3133" }}
     >
       {/* Mobile Header */}
-      <div className="sticky top-0 z-30 bg-[#2A3133] border-b border-[#606364] py-3">
+      <div className="sticky top-0 z-30 bg-[#2A3133] border-b border-[#606364] py-3 px-4">
         <div className="flex items-center justify-between w-full min-w-0">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             {programDetails?.onBack && (
               <Button
                 variant="ghost"
                 onClick={programDetails.onBack}
-                className="p-2 text-[#C3BCC2] hover:text-white hover:bg-[#353A3A] min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 text-[#C3BCC2] hover:text-white hover:bg-[#353A3A] min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: "#4A5A70" }}
-            >
-              <Calendar className="h-4 w-4" style={{ color: "#C3BCC2" }} />
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: "#4A5A70" }}
+              >
+                <Calendar className="h-5 w-5" style={{ color: "#C3BCC2" }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg font-bold text-[#C3BCC2] break-words truncate">
+                  {programDetails?.title || "Program Builder"}
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span
+                    className="px-2 py-1 rounded-full text-xs font-medium"
+                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                  >
+                    {weeks.length} week{weeks.length !== 1 ? "s" : ""}
+                  </span>
+                  {programDetails?.level && (
+                    <span
+                      className="px-2 py-1 rounded-full text-xs font-medium"
+                      style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
+                    >
+                      {programDetails.level}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <h1 className="text-lg font-bold text-[#C3BCC2] break-words">
-              {programDetails?.title || "Program Builder"}
-            </h1>
-            <span
-              className="px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
-              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-            >
-              {weeks.length} week{weeks.length !== 1 ? "s" : ""}
-            </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               onClick={handleSave}
               disabled={programDetails?.isSaving}
-              className="p-2 rounded-lg bg-green-600 hover:bg-green-700 text-white min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="p-3 rounded-lg bg-green-600 hover:bg-green-700 text-white min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
             >
-              <Save className="h-4 w-4" />
+              <Save className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -767,43 +781,41 @@ export default function MobileProgramBuilder({
       )}
 
       {/* Action Buttons */}
-      <div className="p-4">
+      <div className="p-4 space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <Button
             onClick={addWeek}
-            className="bg-blue-600 hover:bg-blue-700 text-white h-12"
+            className="bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-lg shadow-lg font-medium"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-5 w-5 mr-2" />
             Add Week
           </Button>
           <Button
             onClick={() => setIsCreateRoutineModalOpen(true)}
             variant="outline"
-            className="border-green-500/50 text-green-400 hover:bg-green-500/10 h-12"
+            className="border-green-500/50 text-green-400 hover:bg-green-500/10 h-14 rounded-lg font-medium"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Target className="h-5 w-5 mr-2" />
             Create Routine
           </Button>
         </div>
-        <div className="mt-3">
-          <Button
-            onClick={toggleCollapseAll}
-            variant="outline"
-            className="w-full border-[#606364] text-[#C3BCC2] hover:bg-[#353A3A] hover:text-white h-12"
-          >
-            {weeks.every(week => week.collapsed) ? (
-              <>
-                <Expand className="h-4 w-4 mr-2" />
-                Expand All
-              </>
-            ) : (
-              <>
-                <Minimize className="h-4 w-4 mr-2" />
-                Collapse All
-              </>
-            )}
-          </Button>
-        </div>
+        <Button
+          onClick={toggleCollapseAll}
+          variant="outline"
+          className="w-full border-[#606364] text-[#C3BCC2] hover:bg-[#353A3A] hover:text-white h-12 rounded-lg font-medium"
+        >
+          {weeks.every(week => week.collapsed) ? (
+            <>
+              <Expand className="h-4 w-4 mr-2" />
+              Expand All Weeks
+            </>
+          ) : (
+            <>
+              <Minimize className="h-4 w-4 mr-2" />
+              Collapse All Weeks
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Weeks List */}
@@ -1314,7 +1326,7 @@ function MobileWeekCard({
     <Card
       ref={setNodeRef}
       style={style}
-      className="bg-[#353A3A] border-[#606364] shadow-lg w-full"
+      className="bg-[#353A3A] border-[#606364] shadow-lg w-full rounded-xl"
     >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -1323,41 +1335,48 @@ function MobileWeekCard({
               variant="ghost"
               size="sm"
               onClick={onToggleCollapse}
-              className="p-1 h-8 w-8 text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#2A3133] flex-shrink-0"
+              className="p-2 h-10 w-10 text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#2A3133] flex-shrink-0 rounded-lg"
             >
               {week.collapsed ? (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-5 w-5" />
               )}
             </Button>
-            <CardTitle className="text-lg font-bold text-[#C3BCC2] break-words">
-              {week.name}
-            </CardTitle>
-            <Badge
-              variant="outline"
-              className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs flex-shrink-0"
-            >
-              {weekIndex + 1}
-            </Badge>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-lg font-bold text-[#C3BCC2] break-words">
+                {week.name}
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge
+                  variant="outline"
+                  className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs"
+                >
+                  Week {weekIndex + 1}
+                </Badge>
+                <span className="text-xs text-[#ABA4AA]">
+                  {Object.values(week.days).flat().length} exercises
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={onDuplicate}
-              className="border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] h-8 px-2"
+              className="border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] h-9 px-3 rounded-lg"
             >
-              <Copy className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">Duplicate</span>
+              <Copy className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Copy</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="border-red-500 text-red-400 hover:bg-red-500/10 h-8 px-2"
+              className="border-red-500 text-red-400 hover:bg-red-500/10 h-9 px-3 rounded-lg"
             >
-              <Trash2 className="h-3 w-3 mr-1" />
+              <Trash2 className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Delete</span>
             </Button>
           </div>
@@ -1499,17 +1518,20 @@ function MobileDayCard({
       {/* Day Content */}
       <Card
         className={cn(
-          "min-h-[200px] w-full",
+          "min-h-[200px] w-full rounded-lg",
           isRestDay
             ? "bg-[#2A3133]/30 border-[#606364]/30"
             : "bg-[#2A3133]/50 border-[#606364]/50"
         )}
       >
-        <CardContent className="p-3">
+        <CardContent className="p-4">
           {isRestDay ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-[#ABA4AA]">
-              <Moon className="h-6 w-6 mb-2 opacity-50" />
-              <span className="text-xs font-medium">Rest Day</span>
+            <div className="flex flex-col items-center justify-center h-full text-center text-[#ABA4AA] py-8">
+              <Moon className="h-8 w-8 mb-3 opacity-50" />
+              <span className="text-sm font-medium">Rest Day</span>
+              <span className="text-xs text-[#606364] mt-1">
+                No exercises scheduled
+              </span>
             </div>
           ) : (
             <DndContext
@@ -1566,18 +1588,18 @@ function MobileDayCard({
           onClick={() => onAddItem()}
           variant="outline"
           size="sm"
-          className="w-full border-[#606364]/50 text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] hover:border-[#606364] h-10"
+          className="w-full border-[#606364]/50 text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] hover:border-[#606364] h-12 rounded-lg font-medium"
         >
-          <Video className="h-3 w-3 mr-1" />
+          <Video className="h-4 w-4 mr-2" />
           Add from Library
         </Button>
         <Button
           onClick={() => onOpenAddRoutine(weekId, dayKey)}
           variant="outline"
           size="sm"
-          className="w-full border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-400 h-10"
+          className="w-full border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-400 h-12 rounded-lg font-medium"
         >
-          <Target className="h-3 w-3 mr-1" />
+          <Target className="h-4 w-4 mr-2" />
           Add Routine
         </Button>
       </div>
@@ -1647,7 +1669,7 @@ function MobileSortableDrillItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "rounded-lg p-3 border transition-all duration-200",
+        "rounded-lg p-4 border transition-all duration-200 shadow-sm",
         isDragging && "opacity-50 scale-95",
         isSuperset
           ? "bg-purple-600/30 border-purple-500/50"
@@ -1671,14 +1693,14 @@ function MobileSortableDrillItem({
         </div>
       )}
 
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-3">
         {/* Drag handle */}
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 text-[#ABA4AA] hover:text-[#C3BCC2] flex-shrink-0"
+          className="cursor-grab active:cursor-grabbing p-2 text-[#ABA4AA] hover:text-[#C3BCC2] flex-shrink-0 rounded-lg hover:bg-[#2A3133]"
         >
-          <GripVertical className="h-3 w-3" />
+          <GripVertical className="h-4 w-4" />
         </div>
 
         {/* Item content */}
@@ -1746,14 +1768,14 @@ function MobileSortableDrillItem({
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-col gap-1 flex-shrink-0">
+        <div className="flex flex-col gap-2 flex-shrink-0">
           {/* Superset Chain Link Button */}
           {!item.supersetId ? (
             <Button
               variant="ghost"
               size="sm"
               onClick={onAddSuperset}
-              className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30"
+              className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30 rounded-lg"
               title="Add Superset"
             >
               <Link className="h-4 w-4" />
@@ -1763,7 +1785,7 @@ function MobileSortableDrillItem({
               variant="ghost"
               size="sm"
               onClick={() => onRemoveSuperset(item.id)}
-              className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30"
+              className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30 rounded-lg"
               title="Remove Superset"
             >
               <Unlink className="h-4 w-4" />
@@ -1774,17 +1796,19 @@ function MobileSortableDrillItem({
             variant="ghost"
             size="sm"
             onClick={onEdit}
-            className="h-6 w-6 p-0 text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#2A3133]"
+            className="h-8 w-8 p-0 text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#2A3133] rounded-lg"
+            title="Edit"
           >
-            <Edit className="h-3 w-3" />
+            <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg"
+            title="Delete"
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>

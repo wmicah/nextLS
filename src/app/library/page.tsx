@@ -1,7 +1,7 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import LibraryPage from "@/components/LibraryPage";
+import ClientSideMobileWrapper from "@/components/ClientSideMobileWrapper";
 
 export default async function Library() {
   const { getUser } = getKindeServerSession();
@@ -35,5 +35,5 @@ export default async function Library() {
     redirect("/auth-callback?origin=library");
   }
 
-  return <LibraryPage />;
+  return <ClientSideMobileWrapper />;
 }

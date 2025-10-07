@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { withMobileDetection } from "@/lib/mobile-detection";
-import MobileProgramBuilder from "./MobileProgramBuilder";
+import MobileProgramBuilderNew from "./MobileProgramBuilderNew";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUIStore } from "@/lib/stores/uiStore";
@@ -76,64 +76,18 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 // Types
-type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
-
-export interface ProgramItem {
-  id: string;
-  title: string;
-  type?: "exercise" | "drill" | "video" | "routine" | "superset" | "rest";
-  description?: string;
-  notes?: string;
-  sets?: number;
-  reps?: number;
-  tempo?: string;
-  duration?: string;
-  videoUrl?: string;
-  videoId?: string;
-  videoTitle?: string;
-  videoThumbnail?: string;
-  routineId?: string;
-  supersetId?: string; // ID of the superset group
-  supersetOrder?: number; // Order within the superset (1 or 2)
-}
+import {
+  DayKey,
+  ProgramItem,
+  Week,
+  ProgramBuilderProps,
+} from "./types/ProgramBuilder";
 
 interface Routine {
   id: string;
   name: string;
   description: string;
   exercises: ProgramItem[];
-}
-
-export interface Week {
-  id: string;
-  name: string; // "Week 1", "Week 2", etc.
-  days: Record<DayKey, ProgramItem[]>;
-  collapsed?: boolean;
-}
-
-interface ProgramBuilderProps {
-  onSave?: (weeks: Week[]) => void;
-  initialWeeks?: Week[];
-  programDetails?: {
-    title: string;
-    description?: string;
-    level: string;
-    duration: number;
-    onBack?: () => void;
-    onSave?: (weeks?: Week[]) => void;
-    isSaving?: boolean;
-    lastSaved?: Date | null;
-  };
-  onOpenVideoLibrary?: () => void;
-  selectedVideoFromLibrary?: {
-    id: string;
-    title: string;
-    description?: string;
-    duration?: string;
-    url?: string;
-    thumbnail?: string;
-  } | null;
-  onVideoProcessed?: () => void;
 }
 
 const DAY_LABELS: Record<DayKey, string> = {
@@ -2334,4 +2288,4 @@ function VideoDetailsDialog({
 }
 
 // Export with mobile detection
-export default withMobileDetection(MobileProgramBuilder, ProgramBuilder);
+export default withMobileDetection(MobileProgramBuilderNew, ProgramBuilder);

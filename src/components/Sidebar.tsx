@@ -22,7 +22,6 @@ import {
   FiX,
   FiChevronLeft,
   FiChevronRight,
-  FiBarChart2,
   FiVideo,
   FiTrendingUp,
 } from "react-icons/fi";
@@ -139,7 +138,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
       name: "Dashboard",
       icon: <FiHome />,
       href: "/dashboard",
-      description: "Overview & analytics",
+      description: "Overview & insights",
       badge: null,
       gradient: "from-blue-500 to-cyan-500",
     },
@@ -175,14 +174,6 @@ export default function Sidebar({ user, children }: SidebarProps) {
       description: "Lesson planning",
       badge: null,
       gradient: "from-indigo-500 to-purple-500",
-    },
-    {
-      name: "Analytics",
-      icon: <FiBarChart2 />,
-      href: "/analytics",
-      description: "Data insights",
-      badge: null,
-      gradient: "from-emerald-500 to-teal-500",
     },
     {
       name: "Videos",

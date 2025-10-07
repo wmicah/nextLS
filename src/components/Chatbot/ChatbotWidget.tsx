@@ -149,6 +149,11 @@ export default function ChatbotWidget() {
     }, 100);
   };
 
+  // Hide floating button on mobile since AI chat is now in bottom navigation
+  if (isMobile) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {/* Floating Chat Button */}
