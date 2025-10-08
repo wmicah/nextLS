@@ -42,6 +42,9 @@ export default function MobileClientSchedulePage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showSwapRequests, setShowSwapRequests] = useState(false);
   const [selectedSwapLesson, setSelectedSwapLesson] = useState<any>(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [requestReason, setRequestReason] = useState("");
 
   // Fetch all schedule data for current and adjacent months
   const { data: coachSchedule = [] } =
@@ -129,6 +132,25 @@ export default function MobileClientSchedulePage() {
       },
       onError: (error: any) => {
         alert(error.message || "Failed to create swap request");
+      },
+    });
+
+  // Lesson request mutation
+  const requestScheduleChangeMutation =
+    trpc.clientRouter.requestScheduleChange.useMutation({
+      onSuccess: data => {
+        setShowRequestModal(false);
+        setSelectedTimeSlot(null);
+        setRequestReason("");
+        setSelectedDate(null);
+        setShowDayOverviewModal(false);
+        // Refetch data
+        utils.clientRouter.getCoachScheduleForClient.refetch();
+        utils.clientRouter.getClientLessons.refetch();
+        alert("Lesson request sent successfully!");
+      },
+      onError: (error: any) => {
+        alert(error.message || "Failed to send lesson request");
       },
     });
 
@@ -615,7 +637,11 @@ export default function MobileClientSchedulePage() {
                       {availableSlots.map((slot, index) => (
                         <button
                           key={index}
-                          className="p-2 rounded-lg border text-center transition-all duration-200 text-xs"
+                          onClick={() => {
+                            setSelectedTimeSlot(slot);
+                            setShowRequestModal(true);
+                          }}
+                          className="p-2 rounded-lg border text-center transition-all duration-200 text-xs hover:bg-blue-500/20 hover:border-blue-400"
                           style={{
                             backgroundColor: "#2A2F2F",
                             borderColor: "#606364",
@@ -795,6 +821,85 @@ export default function MobileClientSchedulePage() {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lesson Request Modal */}
+      {showRequestModal && selectedDate && selectedTimeSlot && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div
+            className="rounded-2xl shadow-xl border w-full max-w-md max-h-[90vh] overflow-y-auto"
+            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+          >
+            <div
+              className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
+              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+            >
+              <div>
+                <h2 className="text-xl font-bold text-white">Request Lesson</h2>
+                <p className="text-gray-400 text-xs">
+                  {format(selectedDate, "MMM d, yyyy")} at {selectedTimeSlot}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRequestModal(false)}
+                className="p-2 rounded-lg transition-colors hover:bg-gray-700"
+                style={{ color: "#C3BCC2" }}
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Reason for lesson request (optional)
+                </label>
+                <textarea
+                  value={requestReason}
+                  onChange={e => setRequestReason(e.target.value)}
+                  placeholder="Any specific goals or areas you'd like to focus on..."
+                  className="w-full p-3 rounded-lg border text-white placeholder-gray-400 bg-[#2A2F2F] border-[#606364] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowRequestModal(false)}
+                  className="flex-1 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 bg-[#4A5A70] hover:bg-[#606364] text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedDate && selectedTimeSlot) {
+                      // Capture user's timezone
+                      const timeZone =
+                        Intl.DateTimeFormat().resolvedOptions().timeZone ||
+                        "America/New_York";
+
+                      // Format date as YYYY-MM-DD to match desktop version
+                      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+
+                      requestScheduleChangeMutation.mutate({
+                        requestedDate: formattedDate,
+                        requestedTime: selectedTimeSlot,
+                        reason: requestReason,
+                        timeZone: timeZone,
+                      });
+                    }
+                  }}
+                  disabled={requestScheduleChangeMutation.isPending}
+                  className="flex-1 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {requestScheduleChangeMutation.isPending
+                    ? "Sending..."
+                    : "Send Request"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

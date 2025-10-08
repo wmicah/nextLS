@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Home,
@@ -10,7 +10,11 @@ import {
   Calendar,
   Settings,
   X,
+  LogOut,
+  Check,
 } from "lucide-react";
+import { trpc } from "@/app/_trpc/client";
+import ProfilePictureUploader from "./ProfilePictureUploader";
 
 interface MobileNavigationProps {
   currentPage?: string;
@@ -20,7 +24,13 @@ export default function MobileNavigation({
   currentPage,
 }: MobileNavigationProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
   const router = useRouter();
+  const logoutButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Get current user info
+  const { data: currentUser } = trpc.user.getProfile.useQuery();
+  const { data: userSettings } = trpc.settings.getSettings.useQuery();
 
   // Prevent body scroll when menu is open
   useEffect(() => {
@@ -35,6 +45,27 @@ export default function MobileNavigation({
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
+
+  // Handle clicks outside logout button
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        logoutButtonRef.current &&
+        !logoutButtonRef.current.contains(event.target as Node) &&
+        showLogout
+      ) {
+        setShowLogout(false);
+      }
+    };
+
+    if (showLogout) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLogout]);
 
   const navigationItems = [
     {
@@ -78,6 +109,10 @@ export default function MobileNavigation({
   const handleNavigation = (href: string) => {
     setIsOpen(false);
     router.push(href);
+  };
+
+  const handleLogout = () => {
+    window.location.href = "/api/auth/logout";
   };
 
   return (
@@ -155,15 +190,59 @@ export default function MobileNavigation({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* User Profile Footer */}
         <div className="p-4 border-t border-[#606364]">
           <div className="bg-[#2A2F2F] border border-[#606364] rounded-lg p-3">
-            <p className="text-xs text-gray-400 text-center">
-              Next Level Softball
-            </p>
-            <p className="text-xs text-gray-500 text-center mt-1">
-              Coach Dashboard
-            </p>
+            <div className="flex items-center gap-3">
+              <div className="border border-white/20 rounded-full p-0.5">
+                <ProfilePictureUploader
+                  currentAvatarUrl={userSettings?.avatarUrl || null}
+                  userName={currentUser?.name || currentUser?.email || "User"}
+                  onAvatarChange={() => {}}
+                  size="sm"
+                  readOnly={true}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {currentUser?.name || currentUser?.email || "User"}
+                </p>
+                <p className="text-xs text-gray-400 truncate">Coach</p>
+              </div>
+
+              <button
+                ref={logoutButtonRef}
+                onClick={() => {
+                  if (showLogout) {
+                    handleLogout();
+                  } else {
+                    setShowLogout(true);
+                  }
+                }}
+                className={`rounded-full p-2 transition-all duration-300 ${
+                  showLogout
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "bg-[#4A5A70] hover:bg-[#606364] text-white"
+                }`}
+              >
+                <div className="relative w-4 h-4">
+                  <LogOut
+                    className={`absolute inset-0 w-4 h-4 transition-all duration-300 ${
+                      showLogout
+                        ? "opacity-0 rotate-180 scale-0"
+                        : "opacity-100 rotate-0 scale-100"
+                    }`}
+                  />
+                  <Check
+                    className={`absolute inset-0 w-4 h-4 transition-all duration-300 ${
+                      showLogout
+                        ? "opacity-100 rotate-0 scale-100"
+                        : "opacity-0 rotate-180 scale-0"
+                    }`}
+                  />
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>

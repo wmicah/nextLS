@@ -63,6 +63,7 @@ export default function MobileSchedulePage() {
     ],
     timeSlotInterval: 60,
   });
+  const [showAllPendingRequests, setShowAllPendingRequests] = useState(false);
 
   // Fetch coach's schedule for the current month
   const { data: coachSchedule = [] } =
@@ -432,7 +433,10 @@ export default function MobileSchedulePage() {
                 </h2>
               </div>
               <div className="space-y-3">
-                {pendingRequests.slice(0, 3).map((request: any) => (
+                {(showAllPendingRequests
+                  ? pendingRequests
+                  : pendingRequests.slice(0, 3)
+                ).map((request: any) => (
                   <div
                     key={request.id}
                     className="flex items-center justify-between p-3 rounded-lg border border-orange-500/20 bg-orange-500/10"
@@ -489,6 +493,26 @@ export default function MobileSchedulePage() {
                   </div>
                 ))}
               </div>
+              {pendingRequests.length > 3 && (
+                <div className="mt-3">
+                  <button
+                    onClick={() =>
+                      setShowAllPendingRequests(!showAllPendingRequests)
+                    }
+                    className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                    style={{
+                      backgroundColor: showAllPendingRequests
+                        ? "#4A5A70"
+                        : "#FFA500",
+                      color: "#FFFFFF",
+                    }}
+                  >
+                    {showAllPendingRequests
+                      ? "Show Less"
+                      : `View All ${pendingRequests.length} Requests`}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
