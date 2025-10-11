@@ -59,7 +59,7 @@ async function sendWelcomeMessage(coachId: string, clientUserId: string) {
       return; // Don't send duplicate welcome message
     }
 
-    // Get coach info for the message
+    // Get coach info and settings for the message
     const coach = await db.user.findUnique({
       where: { id: coachId },
       select: { name: true, email: true },
@@ -68,12 +68,23 @@ async function sendWelcomeMessage(coachId: string, clientUserId: string) {
     const coachName =
       coach?.name || coach?.email?.split("@")[0] || "Your Coach";
 
+    // Get coach's custom welcome message from settings
+    const coachSettings = await db.userSettings.findUnique({
+      where: { userId: coachId },
+      select: { defaultWelcomeMessage: true },
+    });
+
+    // Use custom welcome message if set, otherwise use default
+    const welcomeContent = coachSettings?.defaultWelcomeMessage
+      ? coachSettings.defaultWelcomeMessage
+      : `Welcome to Next Level Softball! Hi there, I'm ${coachName}, your softball coach. I'm excited to work with you and help you reach your goals. Feel free to message me anytime with questions, concerns, or just to chat about your progress.`;
+
     // Create welcome message
     const welcomeMessage = await db.message.create({
       data: {
         conversationId,
         senderId: coachId,
-        content: `Welcome to Next Level Softball! Hi there, I'm ${coachName}, your softball coach. I'm excited to work with you and help you reach your goals. Feel free to message me anytime with questions, concerns, or just to chat about your progress.`,
+        content: welcomeContent,
       },
     });
 
@@ -579,6 +590,156 @@ export const appRouter = router({
         });
         return !!user;
       }),
+
+    // Delete user account and all associated data
+    deleteAccount: publicProcedure
+      .input(
+        z.object({
+          confirmationText: z.string(),
+          reason: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Require confirmation text for safety
+        if (input.confirmationText !== "DELETE MY ACCOUNT") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Please type 'DELETE MY ACCOUNT' to confirm account deletion",
+          });
+        }
+
+        try {
+          // Store account deletion analytics before deleting user
+          await db.accountDeletionLog.create({
+            data: {
+              userId: user.id,
+              userEmail: user.email || "unknown",
+              reason: input.reason || "no_reason_provided",
+              deletedAt: new Date(),
+              userAgent: "web_app", // Could be enhanced to capture actual user agent
+            },
+          });
+
+          // Step 1: Delete from Kinde first (if configured)
+          const { deleteKindeUser, isKindeManagementApiConfigured } =
+            await import("@/lib/kinde-api");
+
+          let kindeDeleted = false;
+          if (isKindeManagementApiConfigured()) {
+            const kindeResult = await deleteKindeUser(user.id);
+            kindeDeleted = kindeResult.success;
+
+            if (!kindeResult.success) {
+              console.warn(
+                `⚠️ Failed to delete user from Kinde: ${kindeResult.error}. Proceeding with database deletion.`
+              );
+            }
+          } else {
+            console.warn(
+              "⚠️ Kinde Management API not configured. User will only be deleted from database."
+            );
+          }
+
+          // Step 2: Delete from database
+          // Use Prisma's cascading delete - this will delete all related records
+          // due to the onDelete: Cascade relationships in the schema
+          await db.user.delete({
+            where: { id: user.id },
+          });
+
+          console.log(
+            `✅ User account deleted from database: ${user.id} - Reason: ${
+              input.reason || "No reason provided"
+            } - Kinde deleted: ${kindeDeleted}`
+          );
+
+          return {
+            success: true,
+            message: "Account deleted successfully",
+            kindeDeleted,
+          };
+        } catch (error) {
+          console.error("❌ Error deleting user account:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Failed to delete account. Please try again or contact support.",
+          });
+        }
+      }),
+
+    // Get account deletion analytics (admin only)
+    getAccountDeletionAnalytics: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Check if user is admin
+      const dbUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: { isAdmin: true },
+      });
+
+      if (!dbUser?.isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Admin access required",
+        });
+      }
+
+      // Get deletion analytics
+      const deletions = await db.accountDeletionLog.findMany({
+        orderBy: { deletedAt: "desc" },
+        take: 100, // Limit to recent 100 deletions
+      });
+
+      // Calculate time-based stats
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const deletionsThisWeek = deletions.filter(
+        d => new Date(d.deletedAt) >= oneWeekAgo
+      ).length;
+
+      const deletionsThisMonth = deletions.filter(
+        d => new Date(d.deletedAt) >= oneMonthAgo
+      ).length;
+
+      // Aggregate by reason
+      const reasonCounts = deletions.reduce((acc, deletion) => {
+        const reason = deletion.reason || "no_reason_provided";
+        acc[reason] = (acc[reason] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Convert to array and sort by count
+      const topReasons = Object.entries(reasonCounts)
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Top 10 reasons
+
+      // Check if Kinde Management API is configured
+      const { isKindeManagementApiConfigured } = await import(
+        "@/lib/kinde-api"
+      );
+
+      return {
+        totalDeletions: deletions.length,
+        deletionsThisWeek,
+        deletionsThisMonth,
+        topReasons,
+        recentDeletions: deletions.slice(0, 20), // Show last 20 deletions
+        kindeIntegrationEnabled: isKindeManagementApiConfigured(),
+      };
+    }),
   }),
 
   clients: router({
@@ -606,6 +767,50 @@ export const appRouter = router({
             code: "FORBIDDEN",
             message: "Only coaches can view clients",
           });
+        }
+
+        // Get coach settings for auto-archive
+        const coachSettings = await db.userSettings.findUnique({
+          where: { userId: user.id },
+          select: { autoArchiveDays: true },
+        });
+
+        // Auto-archive inactive clients based on coach settings
+        if (coachSettings?.autoArchiveDays) {
+          const inactivityThreshold = new Date();
+          inactivityThreshold.setDate(
+            inactivityThreshold.getDate() - coachSettings.autoArchiveDays
+          );
+
+          // Find clients that should be auto-archived
+          const clientsToArchive = await db.client.findMany({
+            where: {
+              coachId: ensureUserId(user.id),
+              archived: false,
+              updatedAt: {
+                lt: inactivityThreshold,
+              },
+            },
+            select: { id: true },
+          });
+
+          // Archive them if any found
+          if (clientsToArchive.length > 0) {
+            await db.client.updateMany({
+              where: {
+                id: {
+                  in: clientsToArchive.map(c => c.id),
+                },
+              },
+              data: {
+                archived: true,
+                archivedAt: new Date(),
+              },
+            });
+            console.log(
+              `📦 Auto-archived ${clientsToArchive.length} inactive clients`
+            );
+          }
         }
 
         const whereClause: any = { coachId: ensureUserId(user.id) };
@@ -894,6 +1099,20 @@ export const appRouter = router({
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches can create clients",
+          });
+        }
+
+        // Check if coach requires client email
+        const coachSettings = await db.userSettings.findUnique({
+          where: { userId: user.id },
+          select: { requireClientEmail: true },
+        });
+
+        if (coachSettings?.requireClientEmail && !input.email) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Email is required for new clients. Please provide a client email address.",
           });
         }
 
@@ -9282,6 +9501,7 @@ export const appRouter = router({
 
         if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
+        // Get user settings from database
         const settings = await db.userSettings.findUnique({
           where: { userId: user.id },
         });
@@ -9468,20 +9688,6 @@ export const appRouter = router({
       data: userData,
       exportedAt: new Date().toISOString(),
     };
-  }),
-
-  deleteAccount: publicProcedure.mutation(async () => {
-    const { getUser } = getKindeServerSession();
-    const user = await getUser();
-
-    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
-
-    // Delete user and all associated data (cascade will handle related records)
-    await db.user.delete({
-      where: { id: user.id },
-    });
-
-    return { success: true };
   }),
 
   // Video Feedback System
@@ -14004,6 +14210,111 @@ export const appRouter = router({
           period: input.period,
         };
       }),
+  }),
+
+  // Utility procedures
+  utils: router({
+    // Cleanup old messages from archived clients
+    cleanupArchivedMessages: publicProcedure.mutation(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can perform cleanup",
+        });
+      }
+
+      // Get coach settings
+      const coachSettings = await db.userSettings.findUnique({
+        where: { userId: user.id },
+        select: { messageRetentionDays: true },
+      });
+
+      if (!coachSettings?.messageRetentionDays) {
+        return {
+          success: true,
+          deletedCount: 0,
+          message: "Message retention not configured",
+        };
+      }
+
+      // Calculate retention threshold
+      const retentionThreshold = new Date();
+      retentionThreshold.setDate(
+        retentionThreshold.getDate() - coachSettings.messageRetentionDays
+      );
+
+      // Find archived clients for this coach
+      const archivedClients = await db.client.findMany({
+        where: {
+          coachId: user.id,
+          archived: true,
+        },
+        select: { userId: true },
+      });
+
+      const archivedClientUserIds = archivedClients
+        .filter(c => c.userId)
+        .map(c => c.userId!);
+
+      if (archivedClientUserIds.length === 0) {
+        return {
+          success: true,
+          deletedCount: 0,
+          message: "No archived clients found",
+        };
+      }
+
+      // Find conversations with archived clients
+      const conversations = await db.conversation.findMany({
+        where: {
+          coachId: user.id,
+          clientId: {
+            in: archivedClientUserIds,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (conversations.length === 0) {
+        return {
+          success: true,
+          deletedCount: 0,
+          message: "No conversations with archived clients",
+        };
+      }
+
+      // Delete old messages from these conversations
+      const result = await db.message.deleteMany({
+        where: {
+          conversationId: {
+            in: conversations.map(c => c.id),
+          },
+          createdAt: {
+            lt: retentionThreshold,
+          },
+        },
+      });
+
+      console.log(
+        `🧹 Cleaned up ${result.count} old messages from archived clients`
+      );
+
+      return {
+        success: true,
+        deletedCount: result.count,
+        message: `Deleted ${result.count} old messages`,
+      };
+    }),
   }),
 
   admin: adminRouter,

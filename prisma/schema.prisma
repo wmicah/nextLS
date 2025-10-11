@@ -989,3 +989,16 @@ enum SwapStatus {
   DECLINED
   EXPIRED
 }
+
+// Account deletion analytics
+model AccountDeletionLog {
+  id        String   @id @default(cuid())
+  userId    String   // User ID before deletion (for analytics)
+  userEmail String   // User email before deletion (for analytics)
+  reason    String?  // Reason for deletion
+  deletedAt DateTime @default(now())
+  userAgent String?  // User agent for analytics
+  createdAt DateTime @default(now())
+
+  @@map("account_deletion_logs")
+}

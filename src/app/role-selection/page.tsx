@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
-import { Users, User } from "lucide-react";
+import { Users, User, AlertCircle } from "lucide-react";
+import DeleteAccountModal from "@/components/DeleteAccountModal";
 
 export default function RoleSelectionPage() {
   const [selectedRole, setSelectedRole] = useState<"COACH" | "CLIENT" | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const router = useRouter();
 
   const updateRole = trpc.user?.updateRole?.useMutation({
@@ -127,7 +129,33 @@ export default function RoleSelectionPage() {
             {isLoading ? "Setting up account..." : "Continue"}
           </button>
         </div>
+
+        {/* Account deletion option */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-3">
+              Selected the wrong role by mistake?
+            </p>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="inline-flex items-center gap-2 text-sm text-red-600 hover:text-red-700 transition-colors"
+            >
+              <AlertCircle className="h-4 w-4" />
+              Delete my account and start over
+            </button>
+            <p className="text-xs text-gray-500 mt-2">
+              You can delete your account and register again with the correct
+              role
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }

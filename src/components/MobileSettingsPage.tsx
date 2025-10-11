@@ -14,8 +14,10 @@ import {
   Settings as SettingsIcon,
   ChevronLeft,
   Menu,
+  AlertTriangle,
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
+import DeleteAccountModal from "@/components/DeleteAccountModal";
 import { useMobileDetection } from "@/lib/mobile-detection";
 
 export default function MobileSettingsPage() {
@@ -23,6 +25,7 @@ export default function MobileSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showTabMenu, setShowTabMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Form state for each tab
   const [profileData, setProfileData] = useState({
@@ -168,6 +171,11 @@ export default function MobileSettingsPage() {
       id: "appearance",
       name: "Appearance",
       icon: <Palette className="w-5 h-5" />,
+    },
+    {
+      id: "account",
+      name: "Account Settings",
+      icon: <SettingsIcon className="w-5 h-5" />,
     },
   ];
 
@@ -805,7 +813,35 @@ export default function MobileSettingsPage() {
             </div>
           </div>
         )}
+
+        {/* Delete Account Section */}
+        <div className="mt-6 p-4 bg-red-950/10 border border-red-500/20 rounded-xl">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-400 mb-2">Danger Zone</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Once you delete your account, there is no going back. All your
+                data, programs, clients, and progress will be permanently
+                removed.
+              </p>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/50 rounded-lg transition-colors"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }

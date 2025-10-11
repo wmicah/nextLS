@@ -507,22 +507,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
             >
               <div className="flex items-center gap-2">
                 {/* Logo is a secondary toggle via double-click */}
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer group"
-                  onDoubleClick={toggleDesktopSidebar}
-                  title="Double-click to collapse/expand"
-                  style={{ backgroundColor: "#4A5A70" }}
-                >
-                  <Image
-                    src="/logo image.png"
-                    alt="Next Level Softball"
-                    width={40}
-                    height={40}
-                    className="w-full h-full object-cover group-active:scale-95 transition-transform"
-                    priority
-                  />
-                </div>
-                Next Level Softball
+                NextLevel Coaching
               </div>
             </span>
             <span

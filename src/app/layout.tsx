@@ -28,10 +28,9 @@ export const metadata: Metadata = {
     template: "%s | Next Level Softball",
   },
   description:
-    "Transform your softball game with AI-powered coaching, personalized training programs, and expert guidance. Join the next level of softball excellence.",
+    "Coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
   keywords: [
     "softball coaching",
-    "AI coaching",
     "softball training",
     "personalized programs",
     "softball lessons",
@@ -59,7 +58,7 @@ export const metadata: Metadata = {
     url: "/",
     title: "Next Level Softball - Professional Coaching Platform",
     description:
-      "Transform your softball game with AI-powered coaching, personalized training programs, and expert guidance.",
+      "Coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
     siteName: "Next Level Softball",
     images: [
       {
@@ -74,7 +73,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Next Level Softball - Professional Coaching Platform",
     description:
-      "Transform your softball game with AI-powered coaching, personalized training programs, and expert guidance.",
+      "Coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
     images: ["/dashboard-preview.jpg"],
     creator: "@nextlevelsoftball",
   },
@@ -173,8 +172,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "SportsOrganization",
               name: "Next Level Softball",
-              description:
-                "Professional softball coaching platform with AI-powered training",
+              description: "Professional softball coaching platform",
               url: "https://nextlevelsoftball.com",
               logo: "https://nextlevelsoftball.com/logo2.png",
               sameAs: [
@@ -196,14 +194,13 @@ export default function RootLayout({
               serviceType: "Softball Coaching",
               offers: {
                 "@type": "Offer",
-                description:
-                  "AI-powered softball coaching and training programs",
+                description: "Professional softball coaching platform",
               },
             }),
           }}
         />
       </head>
-      <body className={`${inter.className} pb-20`}>
+      <body className={`${inter.className} text-slate-100 antialiased`}>
         <ErrorBoundary>
           <Providers>
             <ThemeProvider>

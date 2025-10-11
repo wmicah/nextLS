@@ -56,6 +56,8 @@ export default function AdminDashboard() {
   const { data: masterLibrary = [], refetch: refetchMasterLibrary } =
     trpc.admin.getMasterLibraryForAdmin.useQuery();
   const { data: stats } = trpc.admin.getStats.useQuery();
+  const { data: deletionAnalytics } =
+    trpc.user.getAccountDeletionAnalytics.useQuery();
 
   const addResourceMutation = trpc.admin.addToMasterLibrary.useMutation({
     onSuccess: () => {
@@ -149,6 +151,7 @@ export default function AdminDashboard() {
     { id: "users", label: "User Management", icon: Users },
     { id: "performance", label: "Performance", icon: TrendingUp },
     { id: "security", label: "Security", icon: Shield },
+    { id: "analytics", label: "Account Analytics", icon: AlertTriangle },
     { id: "settings", label: "Admin Settings", icon: Settings },
   ];
 
@@ -542,6 +545,140 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === "analytics" && (
+          <div className="space-y-6">
+            <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+              <div className="flex items-center gap-3 mb-6">
+                <AlertTriangle className="w-6 h-6 text-orange-500" />
+                <h2 className="text-2xl font-bold">
+                  Account Deletion Analytics
+                </h2>
+              </div>
+
+              {deletionAnalytics && (
+                <div className="space-y-6">
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white">
+                          {deletionAnalytics.totalDeletions}
+                        </div>
+                        <div className="text-sm text-gray-400">
+                          Total Deletions
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white">
+                          {deletionAnalytics.deletionsThisMonth}
+                        </div>
+                        <div className="text-sm text-gray-400">This Month</div>
+                      </div>
+                    </div>
+                    <div className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white">
+                          {deletionAnalytics.deletionsThisWeek}
+                        </div>
+                        <div className="text-sm text-gray-400">This Week</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Reasons */}
+                  <div className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]">
+                    <h3 className="text-lg font-semibold mb-4">
+                      Top Deletion Reasons
+                    </h3>
+                    <div className="space-y-3">
+                      {deletionAnalytics.topReasons.map((reason, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-[#4A5A70] flex items-center justify-center text-xs font-medium">
+                              {index + 1}
+                            </div>
+                            <span className="text-gray-300 capitalize">
+                              {reason.reason.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                          <span className="text-white font-medium">
+                            {reason.count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recent Deletions */}
+                  <div className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]">
+                    <h3 className="text-lg font-semibold mb-4">
+                      Recent Account Deletions
+                    </h3>
+                    <div className="space-y-3">
+                      {deletionAnalytics.recentDeletions.length > 0 ? (
+                        deletionAnalytics.recentDeletions.map(
+                          (deletion, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between py-2 border-b border-[#4A5A70] last:border-b-0"
+                            >
+                              <div className="flex-1">
+                                <div className="text-white font-medium">
+                                  {deletion.userEmail}
+                                </div>
+                                <div className="text-sm text-gray-400">
+                                  Reason:{" "}
+                                  {deletion.reason?.replace(/_/g, " ") ||
+                                    "No reason provided"}
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-400">
+                                {new Date(
+                                  deletion.deletedAt
+                                ).toLocaleDateString()}
+                              </div>
+                            </div>
+                          )
+                        )
+                      ) : (
+                        <div className="text-gray-400 text-center py-4">
+                          No recent deletions to display
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Kinde Deletion Status */}
+                  <div className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]">
+                    <h3 className="text-lg font-semibold mb-4">
+                      Kinde Integration Status
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          deletionAnalytics.kindeIntegrationEnabled
+                            ? "bg-green-500"
+                            : "bg-orange-500"
+                        }`}
+                      ></div>
+                      <span className="text-gray-300">
+                        {deletionAnalytics.kindeIntegrationEnabled
+                          ? "Kinde Management API configured - Complete account deletion enabled"
+                          : "Kinde Management API not configured - Database-only deletion"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === "settings" && (
           <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
             <h2 className="text-xl font-bold mb-4">Admin Settings</h2>
@@ -590,8 +727,10 @@ export default function AdminDashboard() {
                     // Check if OnForm URL is provided
                     if (newResource.onformUrl) {
                       // Import OnForm utilities
-                      const { extractOnFormId, isOnFormUrl } = await import("@/lib/onform-utils");
-                      
+                      const { extractOnFormId, isOnFormUrl } = await import(
+                        "@/lib/onform-utils"
+                      );
+
                       if (isOnFormUrl(newResource.onformUrl)) {
                         onformId = extractOnFormId(newResource.onformUrl) || "";
                         fileUrl = newResource.onformUrl;
@@ -755,7 +894,8 @@ export default function AdminDashboard() {
                     placeholder="https://onform.net/video/12345 or https://onform.net/embed/12345"
                   />
                   <p className="text-xs text-gray-400 mt-1">
-                    Paste an OnForm video URL to embed it instead of uploading a file
+                    Paste an OnForm video URL to embed it instead of uploading a
+                    file
                   </p>
                 </div>
 

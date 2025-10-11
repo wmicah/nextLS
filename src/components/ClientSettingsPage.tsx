@@ -82,10 +82,10 @@ function ClientSettingsPage() {
       if (userSettings) {
         setProfileData({
           name: currentUser?.name || "",
-          phone: userSettings.phone || "",
-          location: userSettings.location || "",
-          bio: userSettings.bio || "",
-          avatarUrl: userSettings.avatarUrl || "",
+          phone: userSettings?.phone || "",
+          location: userSettings?.location || "",
+          bio: userSettings?.bio || "",
+          avatarUrl: userSettings?.avatarUrl || "",
         });
 
         setNotificationData({

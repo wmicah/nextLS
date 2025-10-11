@@ -13,10 +13,22 @@ import {
   ArrowRight,
   Mail,
   Phone,
+  LogOut,
+  AlertTriangle,
+  Settings,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import DeleteAccountModal from "@/components/DeleteAccountModal";
 
 export default function ClientWaitingPage() {
   const [refreshCount, setRefreshCount] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const router = useRouter();
+
+  const handleLogout = () => {
+    // Redirect to Kinde logout with prompt=login to force re-authentication
+    window.location.href = "/api/auth/logout?post_logout_redirect_url=/";
+  };
 
   // Auto-refresh every 30 seconds to check for coach assignment
   useEffect(() => {
@@ -265,6 +277,54 @@ export default function ClientWaitingPage() {
           </div>
         </div>
 
+        {/* Account Management Section */}
+        <div
+          className="mt-12 p-8 rounded-2xl border"
+          style={{
+            backgroundColor: "#1E1E1E",
+            borderColor: "#2a2a2a",
+          }}
+        >
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Settings className="h-5 w-5 text-gray-400" />
+              <h3 className="text-xl font-semibold text-white">
+                Account Options
+              </h3>
+            </div>
+            <p className="text-gray-400 text-sm">
+              Need to make changes to your account or role?
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+
+            {/* Delete Account Button */}
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Delete Account
+            </button>
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-xs text-gray-500">
+              Selected the wrong role? You can delete your account and register
+              again with the correct role.
+            </p>
+          </div>
+        </div>
+
         {/* Footer */}
         <div
           className="text-center py-8 border-t"
@@ -280,6 +340,12 @@ export default function ClientWaitingPage() {
           </p>
         </div>
       </div>
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 }
