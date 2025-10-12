@@ -4,167 +4,157 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-
 }
 
 model User {
-  id                       String            @id @default(cuid())
-  email                    String            @unique
+  id                       String                  @id @default(cuid())
+  email                    String                  @unique
   name                     String?
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
-  stripeCurrentPeriodEnd   DateTime?         @map("stripe_current_period_end")
-  stripeCustomerId         String?           @unique @map("stripe_customer_id")
-  stripePriceId            String?           @map("stripe_price_id")
-  stripeSubscriptionId     String?           @unique @map("stripe_subscription_id")
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  stripeCurrentPeriodEnd   DateTime?               @map("stripe_current_period_end")
+  stripeCustomerId         String?                 @unique @map("stripe_customer_id")
+  stripePriceId            String?                 @map("stripe_price_id")
+  stripeSubscriptionId     String?                 @unique @map("stripe_subscription_id")
   role                     UserRole?
-  isAdmin                  Boolean           @default(false) // True if user has admin privileges
-  lastLoginAt              DateTime?         @map("last_login_at") // Track last login for session validation
-  workingHoursStart        String?           @map("working_hours_start")
-  workingHoursEnd          String?           @map("working_hours_end")
-  workingDays              String[]          @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) @map("working_days")
-  timeSlotInterval         Int               @default(60) @map("time_slot_interval") // Time slot interval in minutes (15, 30, 45, 60)
-  clientConversations      Conversation[]    @relation("ClientConversations")
-  coachConversations       Conversation[]    @relation("CoachConversations")
-  client1Conversations     Conversation[]    @relation("Client1Conversations")
-  client2Conversations     Conversation[]    @relation("Client2Conversations")
+  workingHoursStart        String?                 @map("working_hours_start")
+  workingHoursEnd          String?                 @map("working_hours_end")
+  isAdmin                  Boolean                 @default(false)
+  inviteCode               String?                 @unique @map("invite_code")
+  workingDays              String[]                @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) @map("working_days")
+  timeSlotInterval         Int                     @default(60) @map("time_slot_interval")
+  lastLoginAt              DateTime?               @map("last_login_at")
+  client1Conversations     Conversation[]          @relation("Client1Conversations")
+  client2Conversations     Conversation[]          @relation("Client2Conversations")
+  clientConversations      Conversation[]          @relation("ClientConversations")
+  coachConversations       Conversation[]          @relation("CoachConversations")
   sentMessages             Message[]
-  assignedWorkoutsAsClient AssignedWorkout[] @relation("ClientAssignedWorkouts")
-  coachedWorkouts          AssignedWorkout[] @relation("CoachAssignedWorkouts")
-  clients                  Client[]          @relation("CoachClients")
-  clientProfile            Client?           @relation("UserClient")
-  assignedEvents           Event[]           @relation("CoachEvents")
-  libraryResources         LibraryResource[]
-  clientProgress           Progress[]        @relation("ClientProgress")
-  assignedProgress         Progress[]        @relation("CoachProgress")
-  videoAssignments         VideoAssignment[]
-  weeklySchedulesAsClient  WeeklySchedule[]  @relation("ClientWeeklySchedules")
-  coachedSchedules         WeeklySchedule[]  @relation("CoachWeeklySchedules")
-  workoutTemplates         WorkoutTemplate[]
-  clientWorkouts           Workout[]         @relation("ClientWorkouts")
-  assignedWorkouts         Workout[]         @relation("CoachWorkouts")
-  programs                 Program[]         @relation("CoachPrograms")
-  notifications            Notification[]
-  inbox                   UserInbox?
-  settings                 UserSettings?
-  uploadedVideos           Video[]           @relation("UserVideos")
-  adminAuditLogs           AdminAuditLog[]   // Admin audit trail
-  videoFeedback            VideoFeedback[]   @relation("CoachVideoFeedback")
-  videoAnnotations         VideoAnnotation[] @relation("CoachVideoAnnotations")
-  videoAudioNotes          VideoAudioNote[]  @relation("CoachVideoAudioNotes")
-  screenRecordings         ScreenRecording[] @relation("CoachScreenRecordings")
-  clientVideoSubmissions   ClientVideoSubmission[] @relation("CoachVideoSubmissions")
+  inbox                    UserInbox?
+  adminAuditLogs           AdminAuditLog[]
+  assignedWorkoutsAsClient AssignedWorkout[]       @relation("ClientAssignedWorkouts")
+  coachedWorkouts          AssignedWorkout[]       @relation("CoachAssignedWorkouts")
   clientAnalytics          ClientAnalytics[]
+  clientVideoSubmissions   ClientVideoSubmission[] @relation("CoachVideoSubmissions")
+  clients                  Client[]                @relation("CoachClients")
+  clientProfile            Client?                 @relation("UserClient")
   coachAnalytics           CoachAnalytics?
-  routines                 Routine[]        @relation("CoachRoutines")
+  assignedEvents           Event[]                 @relation("CoachEvents")
+  libraryResources         LibraryResource[]
+  notifications            Notification[]
   programReplacements      ProgramDayReplacement[]
+  programs                 Program[]               @relation("CoachPrograms")
+  clientProgress           Progress[]              @relation("ClientProgress")
+  assignedProgress         Progress[]              @relation("CoachProgress")
+  routines                 Routine[]               @relation("CoachRoutines")
+  screenRecordings         ScreenRecording[]       @relation("CoachScreenRecordings")
+  settings                 UserSettings?
+  videoAnnotations         VideoAnnotation[]       @relation("CoachVideoAnnotations")
+  videoAssignments         VideoAssignment[]
+  videoAudioNotes          VideoAudioNote[]        @relation("CoachVideoAudioNotes")
+  videoFeedback            VideoFeedback[]         @relation("CoachVideoFeedback")
+  uploadedVideos           Video[]                 @relation("UserVideos")
+  weeklySchedulesAsClient  WeeklySchedule[]        @relation("ClientWeeklySchedules")
+  coachedSchedules         WeeklySchedule[]        @relation("CoachWeeklySchedules")
+  workoutTemplates         WorkoutTemplate[]
+  clientWorkouts           Workout[]               @relation("ClientWorkouts")
+  assignedWorkouts         Workout[]               @relation("CoachWorkouts")
 
   @@map("users")
 }
 
 model Client {
-  id                   String    @id @default(cuid())
+  id                   String                  @id @default(cuid())
   name                 String
   email                String?
   phone                String?
   notes                String?
   coachId              String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
   nextLessonDate       DateTime?
   lastCompletedWorkout String?
   avatar               String?
   dueDate              String?
   lastActivity         String?
   updates              String?
-  userId               String?   @unique
-  archived             Boolean   @default(false)
+  userId               String?                 @unique
+  archived             Boolean                 @default(false)
   archivedAt           DateTime?
-  
-  // Client physical information
   age                  Int?
-  height               String? // e.g., "6'2"", "185cm"
-  dominantHand         DominantHand? // R/L
-  movementStyle        MovementStyle? // Airplane/Helicopter
-  reachingAbility      ReachingAbility? // Reacher/Non Reacher
-  averageSpeed         Float? // mph
-  topSpeed             Float? // mph
-  dropSpinRate         Int? // rpm
-  changeupSpinRate     Int? // rpm
-  riseSpinRate         Int? // rpm
-  curveSpinRate        Int? // rpm
-  
-  coach                User?     @relation("CoachClients", fields: [coachId], references: [id])
-  user                 User?     @relation("UserClient", fields: [userId], references: [id])
+  averageSpeed         Float?
+  changeupSpinRate     Int?
+  curveSpinRate        Int?
+  dropSpinRate         Int?
+  height               String?
+  reachingAbility      ReachingAbility?
+  riseSpinRate         Int?
+  topSpeed             Float?
+  dominantHand         DominantHand?
+  movementStyle        MovementStyle?
+  analytics            ClientAnalytics?
+  videoSubmissions     ClientVideoSubmission[]
+  coach                User?                   @relation("CoachClients", fields: [coachId], references: [id])
+  user                 User?                   @relation("UserClient", fields: [userId], references: [id])
+  drillCompletions     DrillCompletion[]
+  events               Event[]
   programAssignments   ProgramAssignment[]
   programReplacements  ProgramDayReplacement[]
   routineAssignments   RoutineAssignment[]
-  events               Event[]
+  swapRequestsSent     TimeSwapRequest[]       @relation("SwapRequester")
+  swapRequestsReceived TimeSwapRequest[]       @relation("SwapTarget")
   videos               Video[]
-  drillCompletions     DrillCompletion[]
-  videoSubmissions     ClientVideoSubmission[]
-  analytics            ClientAnalytics?
-  swapRequestsSent     TimeSwapRequest[] @relation("SwapRequester")
-  swapRequestsReceived TimeSwapRequest[] @relation("SwapTarget")
 
   @@map("clients")
 }
 
 model LibraryResource {
-  id          String            @id @default(cuid())
-  title       String
-  description String?
-  category    String
-  type        String
-  url         String
-  duration    String?
-  thumbnail   String?
-  rating      Float             @default(0)
-  views       Int               @default(0)
-  coachId     String
-  youtubeId   String?
-  playlistId  String?
-  isYoutube   Boolean           @default(false)
-  onformId    String?           // OnForm video ID for embedding
-  isOnForm    Boolean           @default(false) // True if this is an OnForm video
-  isMasterLibrary Boolean       @default(false) // True if this is part of the master library (admin-controlled)
-  isActive    Boolean           @default(true)  // Can be deactivated by admin
-  isFeatured  Boolean           @default(false) // Can be featured by admin
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  filename    String?
-  channelId   String?
-  contentType String?            // MIME type of the file
-  size        Int?               // File size in bytes
-  coach       User              @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  assignments VideoAssignment[]
+  id              String            @id @default(cuid())
+  title           String
+  description     String?
+  category        String
+  type            String
+  url             String
+  duration        String?
+  thumbnail       String?
+  rating          Float             @default(0)
+  views           Int               @default(0)
+  coachId         String
+  youtubeId       String?
+  playlistId      String?
+  isYoutube       Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  filename        String?
+  channelId       String?
+  isActive        Boolean           @default(true)
+  isFeatured      Boolean           @default(false)
+  isMasterLibrary Boolean           @default(false)
+  contentType     String?
+  size            Int?
+  isOnForm        Boolean           @default(false)
+  onformId        String?
+  coach           User              @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  assignments     VideoAssignment[]
 
   @@map("library_resources")
 }
 
-
-
 model Conversation {
-  id        String    @id @default(cuid())
-  type      ConversationType @default(COACH_CLIENT)
+  id        String           @id @default(cuid())
   coachId   String?
   clientId  String?
-  client1Id String?   // For client-to-client conversations
-  client2Id String?   // For client-to-client conversations
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  
-  // Coach-Client relationship
-  client    User?     @relation("ClientConversations", fields: [clientId], references: [id], onDelete: Cascade)
-  coach     User?     @relation("CoachConversations", fields: [coachId], references: [id], onDelete: Cascade)
-  
-  // Client-Client relationship
-  client1   User?     @relation("Client1Conversations", fields: [client1Id], references: [id], onDelete: Cascade)
-  client2   User?     @relation("Client2Conversations", fields: [client2Id], references: [id], onDelete: Cascade)
-  
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  client1Id String?
+  client2Id String?
+  type      ConversationType @default(COACH_CLIENT)
+  client1   User?            @relation("Client1Conversations", fields: [client1Id], references: [id], onDelete: Cascade)
+  client2   User?            @relation("Client2Conversations", fields: [client2Id], references: [id], onDelete: Cascade)
+  client    User?            @relation("ClientConversations", fields: [clientId], references: [id], onDelete: Cascade)
+  coach     User?            @relation("CoachConversations", fields: [coachId], references: [id], onDelete: Cascade)
   messages  Message[]
 
   @@unique([coachId, clientId])
@@ -172,30 +162,23 @@ model Conversation {
 }
 
 model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  senderId       String
-  content        String
-  isRead         Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  
-  // File attachment support
-  attachmentUrl  String?
-  attachmentType String? // "image", "video", "document", "audio"
-  attachmentName String?
-  attachmentSize Int? // in bytes
-  
-  // Acknowledgment support
-  requiresAcknowledgment Boolean @default(false)
-  isAcknowledged        Boolean @default(false)
+  id                     String       @id @default(cuid())
+  conversationId         String
+  senderId               String
+  content                String
+  isRead                 Boolean      @default(false)
+  createdAt              DateTime     @default(now())
+  attachmentName         String?
+  attachmentSize         Int?
+  attachmentType         String?
+  attachmentUrl          String?
   acknowledgedAt         DateTime?
-  acknowledgedBy         String? // User ID who acknowledged
-  
-  // Additional data for special message types (like swap requests)
-  data          Json?            // Additional data like swapRequestId, etc.
-  
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  acknowledgedBy         String?
+  isAcknowledged         Boolean      @default(false)
+  requiresAcknowledgment Boolean      @default(false)
+  data                   Json?
+  conversation           Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender                 User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
   @@index([senderId])
@@ -221,19 +204,19 @@ model Workout {
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  date        DateTime
-  status      EventStatus @default(PENDING)
-  clientId    String?
-  coachId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  coach       User     @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
+  id                      String            @id @default(cuid())
+  title                   String
+  description             String?
+  date                    DateTime
+  clientId                String?
+  coachId                 String
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  status                  EventStatus       @default(PENDING)
+  client                  Client?           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach                   User              @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
   swapRequestsAsRequester TimeSwapRequest[] @relation("SwapRequesterEvent")
-  swapRequestsAsTarget   TimeSwapRequest[] @relation("SwapTargetEvent")
+  swapRequestsAsTarget    TimeSwapRequest[] @relation("SwapTargetEvent")
 
   @@map("events")
 }
@@ -346,211 +329,156 @@ model ScheduledDay {
   @@map("scheduled_days")
 }
 
-// Program Models
 model Program {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  sport       String?  // e.g., "Softball", "Baseball", "General"
-  level       String   // "Beginner", "Intermediate", "Advanced"
-  status      ProgramStatus @default(DRAFT)
-  duration    Int      // Number of weeks
-  coachId     String
-  coach       User     @relation("CoachPrograms", fields: [coachId], references: [id], onDelete: Cascade)
-  
-  // Program structure
-  weeks       ProgramWeek[]
-  
-  // Program assignments
-  assignments ProgramAssignment[]
+  id           String                  @id @default(cuid())
+  title        String
+  description  String?
+  sport        String?
+  level        String
+  status       ProgramStatus           @default(DRAFT)
+  duration     Int
+  coachId      String
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  assignments  ProgramAssignment[]
   replacements ProgramDayReplacement[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  weeks        ProgramWeek[]
+  coach        User                    @relation("CoachPrograms", fields: [coachId], references: [id], onDelete: Cascade)
 
   @@map("programs")
 }
 
 model ProgramWeek {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   weekNumber  Int
   title       String
   description String?
   programId   String
-  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  
-  // Week structure
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   days        ProgramDay[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  program     Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   @@map("program_weeks")
 }
 
 model ProgramDay {
-  id          String   @id @default(cuid())
-  dayNumber   Int
-  title       String
-  description String?
-  weekId      String
-  week        ProgramWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  
-  // Rest day functionality
-  isRestDay   Boolean  @default(false)
-  
-  // Warmup functionality
+  id                String         @id @default(cuid())
+  dayNumber         Int
+  title             String
+  description       String?
+  weekId            String
+  isRestDay         Boolean        @default(false)
   warmupTitle       String?
   warmupDescription String?
-  
-  // Day structure
-  drills      ProgramDrill[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  week              ProgramWeek    @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  drills            ProgramDrill[]
 
   @@map("program_days")
 }
 
 model ProgramDrill {
-  id          String   @id @default(cuid())
-  order       Int
-  title       String
-  description String?
-  duration    String?
-  videoUrl    String?
-  notes       String?
-  dayId       String
-  day         ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  
-  // Exercise details
-  sets        Int?
-  reps        Int?
-  tempo       String? // e.g., "2-0-2" for tempo training
-  
-  // Item type
-  type        String? // "exercise", "drill", or "video"
-  
-  // Superset functionality
-  supersetId    String? // ID of the superset group
-  supersetOrder Int?    // Order within the superset (1 or 2)
-  
-  // Video library integration
-  videoId        String?
-  videoTitle     String?
-  videoThumbnail String?
-  
-  // Routine functionality
-  routineId String? // ID of the routine this drill belongs to
-  
-  // Completion tracking
-  completions DrillCompletion[]
+  id                     String                  @id @default(cuid())
+  order                  Int
+  title                  String
+  description            String?
+  duration               String?
+  videoUrl               String?
+  notes                  String?
+  dayId                  String
+  sets                   Int?
+  reps                   Int?
+  tempo                  String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  videoId                String?
+  videoThumbnail         String?
+  videoTitle             String?
+  type                   String?
+  routineId              String?
+  supersetId             String?
+  supersetOrder          Int?
   clientVideoSubmissions ClientVideoSubmission[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  completions            DrillCompletion[]
+  day                    ProgramDay              @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
   @@map("program_drills")
 }
 
 model DrillCompletion {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   drillId     String
   clientId    String
-  completedAt DateTime @default(now())
+  completedAt DateTime     @default(now())
   notes       String?
-  
-  drill       ProgramDrill @relation(fields: [drillId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  drill       ProgramDrill @relation(fields: [drillId], references: [id], onDelete: Cascade)
 
   @@unique([drillId, clientId, completedAt])
   @@map("drill_completions")
 }
 
 model ClientAnalytics {
-  id                    String   @id @default(cuid())
-  clientId              String   @unique
-  coachId               String
-  
-  // Engagement metrics
-  totalDrillsCompleted  Int      @default(0)
-  totalWorkoutsCompleted Int     @default(0)
-  totalProgramsCompleted Int     @default(0)
-  averageCompletionRate Float    @default(0.0)
-  
-  // Activity metrics
-  lastActivityDate      DateTime?
-  streakDays            Int      @default(0)
-  longestStreak         Int      @default(0)
-  totalActiveDays       Int      @default(0)
-  
-  // Retention metrics
-  firstWorkoutDate      DateTime?
-  daysSinceFirstWorkout Int      @default(0)
-  isActive              Boolean  @default(true)
-  lastLoginDate         DateTime?
-  
-  // Performance metrics
-  averageWorkoutTime    Float?   // in minutes
-  preferredWorkoutTime  String?  // time of day
-  mostActiveDay         String?  // day of week
-  
-  // Program progress
-  currentProgramId      String?
-  programStartDate      DateTime?
-  programProgress       Float    @default(0.0)
-  
-  client                Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  coach                 User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                     String    @id @default(cuid())
+  clientId               String    @unique
+  coachId                String
+  totalDrillsCompleted   Int       @default(0)
+  totalWorkoutsCompleted Int       @default(0)
+  totalProgramsCompleted Int       @default(0)
+  averageCompletionRate  Float     @default(0.0)
+  lastActivityDate       DateTime?
+  streakDays             Int       @default(0)
+  longestStreak          Int       @default(0)
+  totalActiveDays        Int       @default(0)
+  firstWorkoutDate       DateTime?
+  daysSinceFirstWorkout  Int       @default(0)
+  isActive               Boolean   @default(true)
+  lastLoginDate          DateTime?
+  averageWorkoutTime     Float?
+  preferredWorkoutTime   String?
+  mostActiveDay          String?
+  currentProgramId       String?
+  programStartDate       DateTime?
+  programProgress        Float     @default(0.0)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  client                 Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach                  User      @relation(fields: [coachId], references: [id], onDelete: Cascade)
 
   @@map("client_analytics")
 }
 
 model CoachAnalytics {
-  id                    String   @id @default(cuid())
-  coachId               String   @unique
-  
-  // Client metrics
-  totalClients          Int      @default(0)
-  activeClients         Int      @default(0)
-  newClientsThisMonth   Int      @default(0)
-  churnedClients        Int      @default(0)
-  
-  // Engagement metrics
-  averageClientEngagement Float  @default(0.0)
-  totalDrillsAssigned    Int     @default(0)
-  totalDrillsCompleted   Int     @default(0)
-  overallCompletionRate  Float   @default(0.0)
-  
-  // Retention metrics
-  averageClientRetention Float   @default(0.0)
-  clientRetentionRate    Float   @default(0.0)
-  
-  // Activity metrics
-  totalProgramsCreated   Int     @default(0)
-  totalWorkoutsAssigned  Int     @default(0)
-  averageProgramDuration Float   @default(0.0)
-  
-  // Revenue metrics (if applicable)
-  monthlyRecurringRevenue Float? @default(0.0)
-  averageClientValue      Float? @default(0.0)
-  
-  coach                  User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  coachId                 String   @unique
+  totalClients            Int      @default(0)
+  activeClients           Int      @default(0)
+  newClientsThisMonth     Int      @default(0)
+  churnedClients          Int      @default(0)
+  averageClientEngagement Float    @default(0.0)
+  totalDrillsAssigned     Int      @default(0)
+  totalDrillsCompleted    Int      @default(0)
+  overallCompletionRate   Float    @default(0.0)
+  averageClientRetention  Float    @default(0.0)
+  clientRetentionRate     Float    @default(0.0)
+  totalProgramsCreated    Int      @default(0)
+  totalWorkoutsAssigned   Int      @default(0)
+  averageProgramDuration  Float    @default(0.0)
+  monthlyRecurringRevenue Float?   @default(0.0)
+  averageClientValue      Float?   @default(0.0)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  coach                   User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
 
   @@map("coach_analytics")
 }
 
 model ClientVideoSubmission {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   clientId    String
   coachId     String
   drillId     String?
@@ -560,99 +488,311 @@ model ClientVideoSubmission {
   thumbnail   String?
   category    String?
   difficulty  String?
-  isPublic    Boolean  @default(false) // Whether to show in coach's library
-  comment     String?  // Client comment/feedback on the video
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  coach       User     @relation("CoachVideoSubmissions", fields: [coachId], references: [id], onDelete: Cascade)
-  drill       ProgramDrill? @relation(fields: [drillId], references: [id], onDelete: SetNull)
+  isPublic    Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  comment     String?
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach       User          @relation("CoachVideoSubmissions", fields: [coachId], references: [id], onDelete: Cascade)
+  drill       ProgramDrill? @relation(fields: [drillId], references: [id])
 
   @@map("client_video_submissions")
 }
 
 model ProgramAssignment {
-  id          String   @id @default(cuid())
-  programId   String
-  clientId    String
-  assignedAt  DateTime @default(now())
-  startDate   DateTime?
-  completedAt DateTime?
-  progress    Int      @default(0) // percentage
-  repetitions Int      @default(1) // number of times to repeat the program
-  currentCycle Int     @default(1) // which cycle/iteration this assignment represents
-  
-  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id           String                  @id @default(cuid())
+  programId    String
+  clientId     String
+  assignedAt   DateTime                @default(now())
+  startDate    DateTime?
+  completedAt  DateTime?
+  progress     Int                     @default(0)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  currentCycle Int                     @default(1)
+  repetitions  Int                     @default(1)
+  client       Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  program      Program                 @relation(fields: [programId], references: [id], onDelete: Cascade)
   replacements ProgramDayReplacement[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
   @@unique([programId, clientId, currentCycle])
   @@map("program_assignments")
 }
 
-// Routine Models
 model Routine {
-  id          String   @id @default(cuid())
+  id          String              @id @default(cuid())
   name        String
   description String?
   coachId     String
-  coach       User     @relation("CoachRoutines", fields: [coachId], references: [id], onDelete: Cascade)
-  
-  // Routine structure
-  exercises   RoutineExercise[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
   assignments RoutineAssignment[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  exercises   RoutineExercise[]
+  coach       User                @relation("CoachRoutines", fields: [coachId], references: [id], onDelete: Cascade)
 
   @@map("routines")
 }
 
 model RoutineExercise {
-  id          String   @id @default(cuid())
-  order       Int
-  title       String
-  description String?
-  type        String?  // "exercise", "drill", "video", "routine"
-  notes       String?
-  sets        Int?
-  reps        Int?
-  tempo       String?  // e.g., "2-0-2" for tempo training
-  duration    String?
-  routineId   String
-  routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  
-  // Video library integration
+  id             String   @id @default(cuid())
+  order          Int
+  title          String
+  description    String?
+  type           String?
+  notes          String?
+  sets           Int?
+  reps           Int?
+  tempo          String?
+  duration       String?
+  routineId      String
   videoId        String?
   videoTitle     String?
   videoThumbnail String?
   videoUrl       String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  routine        Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
   @@map("routine_exercises")
 }
 
 model RoutineAssignment {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   routineId   String
   clientId    String
-  assignedAt  DateTime @default(now())
+  assignedAt  DateTime  @default(now())
   startDate   DateTime?
   completedAt DateTime?
-  progress    Int      @default(0) // percentage
-  
-  routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  progress    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  routine     Routine   @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
   @@map("routine_assignments")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model UserInbox {
+  userId             String   @id
+  totalUnread        Int      @default(0)
+  totalNotifications Int      @default(0)
+  updatedAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("UserInbox")
+}
+
+model UserSettings {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  phone                  String?
+  location               String?
+  bio                    String?
+  avatarUrl              String?
+  emailNotifications     Boolean  @default(true)
+  pushNotifications      Boolean  @default(true)
+  soundNotifications     Boolean  @default(false)
+  newClientNotifications Boolean  @default(true)
+  messageNotifications   Boolean  @default(true)
+  scheduleNotifications  Boolean  @default(true)
+  defaultWelcomeMessage  String?
+  messageRetentionDays   Int      @default(90)
+  maxFileSizeMB          Int      @default(50)
+  defaultLessonDuration  Int      @default(60)
+  autoArchiveDays        Int      @default(90)
+  requireClientEmail     Boolean  @default(false)
+  timezone               String   @default("UTC-5")
+  workingDays            Json     @default("[\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\"]")
+  twoFactorEnabled       Boolean  @default(false)
+  theme                  String   @default("dark")
+  compactSidebar         Boolean  @default(false)
+  showAnimations         Boolean  @default(true)
+  analyticsGoals         Json?    @default("{\"activeClients\": 20, \"clientRetention\": 90, \"programProgress\": 75, \"workoutCompletion\": 85}")
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model Video {
+  id               String            @id @default(cuid())
+  title            String
+  description      String?
+  url              String
+  thumbnail        String?
+  duration         Int?
+  fileSize         Int?
+  uploadedBy       String
+  clientId         String?
+  category         VideoCategory     @default(BULLPEN)
+  status           VideoStatus       @default(PENDING_REVIEW)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  screenRecordings ScreenRecording[]
+  annotations      VideoAnnotation[]
+  audioNotes       VideoAudioNote[]
+  feedback         VideoFeedback[]
+  client           Client?           @relation(fields: [clientId], references: [id])
+  uploader         User              @relation("UserVideos", fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@index([uploadedBy])
+  @@index([clientId])
+  @@index([status])
+  @@index([category])
+  @@map("videos")
+}
+
+model VideoFeedback {
+  id        String   @id @default(cuid())
+  videoId   String
+  coachId   String
+  feedback  String
+  rating    Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  coach     User     @relation("CoachVideoFeedback", fields: [coachId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([coachId])
+  @@map("video_feedback")
+}
+
+model VideoAnnotation {
+  id        String         @id @default(cuid())
+  videoId   String
+  coachId   String
+  type      AnnotationType
+  data      Json
+  timestamp Float
+  duration  Float?
+  createdAt DateTime       @default(now())
+  coach     User           @relation("CoachVideoAnnotations", fields: [coachId], references: [id], onDelete: Cascade)
+  video     Video          @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([coachId])
+  @@map("video_annotations")
+}
+
+model VideoAudioNote {
+  id        String   @id @default(cuid())
+  videoId   String
+  coachId   String
+  url       String
+  duration  Float
+  timestamp Float
+  title     String?
+  createdAt DateTime @default(now())
+  coach     User     @relation("CoachVideoAudioNotes", fields: [coachId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([coachId])
+  @@map("video_audio_notes")
+}
+
+model ScreenRecording {
+  id          String          @id @default(cuid())
+  videoId     String
+  coachId     String
+  title       String
+  description String?
+  videoUrl    String
+  audioUrl    String
+  duration    Float
+  maxDuration Float
+  annotations Json?
+  status      RecordingStatus @default(PROCESSING)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  coach       User            @relation("CoachScreenRecordings", fields: [coachId], references: [id], onDelete: Cascade)
+  video       Video           @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([coachId])
+  @@map("screen_recordings")
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  action    String
+  details   String
+  timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_audit_logs")
+}
+
+model ProgramDayReplacement {
+  id                String            @id @default(cuid())
+  assignmentId      String
+  programId         String
+  clientId          String
+  coachId           String
+  replacedDate      DateTime
+  lessonId          String
+  replacementReason String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  assignment        ProgramAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  client            Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach             User              @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  program           Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, replacedDate])
+  @@map("program_day_replacements")
+}
+
+model TimeSwapRequest {
+  id               String     @id @default(cuid())
+  requesterId      String
+  targetId         String
+  requesterEventId String
+  targetEventId    String
+  status           SwapStatus @default(PENDING)
+  message          String     @default("Hey, could we switch times this week?")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  approvedAt       DateTime?
+  requesterEvent   Event      @relation("SwapRequesterEvent", fields: [requesterEventId], references: [id], onDelete: Cascade)
+  requester        Client     @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetEvent      Event      @relation("SwapTargetEvent", fields: [targetEventId], references: [id], onDelete: Cascade)
+  target           Client     @relation("SwapTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, targetId, requesterEventId, targetEventId])
+  @@map("time_swap_requests")
+}
+
+model AccountDeletionLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userEmail String
+  reason    String?
+  deletedAt DateTime @default(now())
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("account_deletion_logs")
 }
 
 enum UserRole {
@@ -668,9 +808,9 @@ enum NotificationType {
   LESSON_CANCELLED
   PROGRAM_ASSIGNED
   PROGRESS_UPDATE
+  SYSTEM
   CLIENT_JOIN_REQUEST
   SCHEDULE_REQUEST
-  SYSTEM
 }
 
 enum ProgramStatus {
@@ -706,194 +846,6 @@ enum ReachingAbility {
   NON_REACHER
 }
 
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType
-  title     String
-  message   String
-  isRead    Boolean          @default(false)
-  data      Json?            // Additional data like workoutId, lessonId, etc.
-  createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([isRead])
-  @@index([createdAt])
-  @@map("notifications")
-}
-
-model UserInbox {
-  userId             String   @id
-  totalUnread        Int      @default(0)
-  totalNotifications Int      @default(0)
-  updatedAt          DateTime @default(now())
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("UserInbox")
-}
-
-model UserSettings {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
-  // Profile settings
-  phone                 String?
-  location              String?
-  bio                   String?
-  avatarUrl             String?
-  
-  // Notification preferences
-  emailNotifications    Boolean  @default(true)
-  pushNotifications     Boolean  @default(true)
-  soundNotifications    Boolean  @default(false)
-  newClientNotifications Boolean @default(true)
-  messageNotifications  Boolean  @default(true)
-  scheduleNotifications Boolean  @default(true)
-  
-  // Messaging settings
-  defaultWelcomeMessage String?
-  messageRetentionDays  Int      @default(90)
-  maxFileSizeMB         Int      @default(50)
-  
-  // Client management settings
-  defaultLessonDuration Int      @default(60) // minutes
-  autoArchiveDays       Int      @default(90)
-  requireClientEmail    Boolean  @default(false)
-  
-  // Schedule settings
-  timezone              String   @default("UTC-5") // Eastern Time
-  workingDays           Json     @default("[\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\"]") // Array of days
-  
-  // Privacy & Security
-  twoFactorEnabled      Boolean  @default(false)
-  
-  // Appearance settings
-  theme                 String   @default("dark") // dark, light, auto
-  compactSidebar        Boolean  @default(false)
-  showAnimations        Boolean  @default(true)
-  
-  // Analytics goals
-  analyticsGoals        Json?    @default("{\"activeClients\":20,\"workoutCompletion\":85,\"programProgress\":75,\"clientRetention\":90}")
-  
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_settings")
-}
-
-// Video Feedback System Models
-model Video {
-  id          String         @id @default(cuid())
-  title       String
-  description String?
-  url         String         // UploadThing URL
-  thumbnail   String?        // Optional thumbnail URL
-  duration    Int?           // Duration in seconds
-  fileSize    Int?           // File size in bytes
-  uploadedBy  String         // User ID who uploaded
-  clientId    String?        // Associated client (if uploaded by coach for client)
-  category    VideoCategory  @default(BULLPEN)
-  status      VideoStatus    @default(PENDING_REVIEW)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  // Relations
-  uploader    User           @relation("UserVideos", fields: [uploadedBy], references: [id], onDelete: Cascade)
-  client      Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  feedback    VideoFeedback[]
-  annotations VideoAnnotation[]
-  audioNotes  VideoAudioNote[]
-  screenRecordings ScreenRecording[]
-  
-  @@index([uploadedBy])
-  @@index([clientId])
-  @@index([status])
-  @@index([category])
-  @@map("videos")
-}
-
-model VideoFeedback {
-  id          String   @id @default(cuid())
-  videoId     String
-  coachId     String
-  feedback    String   // Text feedback
-  rating      Int?     // 1-5 rating
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  coach       User     @relation("CoachVideoFeedback", fields: [coachId], references: [id], onDelete: Cascade)
-  
-  @@index([videoId])
-  @@index([coachId])
-  @@map("video_feedback")
-}
-
-model VideoAnnotation {
-  id        String   @id @default(cuid())
-  videoId   String
-  coachId   String
-  type      AnnotationType
-  data      Json     // Canvas drawing data (paths, shapes, etc.)
-  timestamp Float    // Video timestamp in seconds
-  duration  Float?   // Duration of annotation (for timed annotations)
-  createdAt DateTime @default(now())
-  
-  // Relations
-  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  coach     User     @relation("CoachVideoAnnotations", fields: [coachId], references: [id], onDelete: Cascade)
-  
-  @@index([videoId])
-  @@index([coachId])
-  @@map("video_annotations")
-}
-
-model VideoAudioNote {
-  id        String   @id @default(cuid())
-  videoId   String
-  coachId   String
-  url       String   // Audio file URL
-  duration  Float    // Audio duration in seconds
-  timestamp Float    // Video timestamp where note starts
-  title     String?  // Optional title for the audio note
-  createdAt DateTime @default(now())
-  
-  // Relations
-  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  coach     User     @relation("CoachVideoAudioNotes", fields: [coachId], references: [id], onDelete: Cascade)
-  
-  @@index([videoId])
-  @@index([coachId])
-  @@map("video_audio_notes")
-}
-
-model ScreenRecording {
-  id          String   @id @default(cuid())
-  videoId     String
-  coachId     String
-  title       String
-  description String?
-  videoUrl    String   // Combined video with audio overlay
-  audioUrl    String   // Audio track
-  duration    Float    // Duration in seconds
-  maxDuration Float    // Maximum allowed duration (e.g., 300 for 5 minutes)
-  annotations Json?    // Canvas annotations data
-  status      RecordingStatus @default(PROCESSING)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  coach       User     @relation("CoachScreenRecordings", fields: [coachId], references: [id], onDelete: Cascade)
-  
-  @@index([videoId])
-  @@index([coachId])
-  @@map("screen_recordings")
-}
-
 enum VideoCategory {
   BULLPEN
   PRACTICE
@@ -924,81 +876,9 @@ enum RecordingStatus {
   FAILED
 }
 
-// Admin audit logging for security monitoring
-model AdminAuditLog {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  action    String   // The action performed (e.g., "user_created", "resource_deleted")
-  details   String   // JSON string of additional details
-  timestamp DateTime @default(now())
-  
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("admin_audit_logs")
-}
-
-model ProgramDayReplacement {
-  id                String   @id @default(cuid())
-  assignmentId      String   // Reference to the program assignment
-  programId         String   // Reference to the program
-  clientId          String   // Reference to the client
-  coachId           String   // Reference to the coach
-  replacedDate      DateTime // The date when the program day was replaced
-  lessonId          String   // Reference to the lesson that replaced it
-  replacementReason String   // Why it was replaced
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  // Relations
-  assignment        ProgramAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  program           Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
-  client            Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  coach             User             @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  
-  @@unique([assignmentId, replacedDate]) // One replacement per assignment per date
-  @@map("program_day_replacements")
-}
-
-// Time Swap Request System
-model TimeSwapRequest {
-  id                String   @id @default(cuid())
-  requesterId       String   // Client who wants to swap
-  targetId          String   // Client they want to swap with
-  requesterEventId  String   // Event ID of the requester
-  targetEventId     String   // Event ID of the target
-  status            SwapStatus @default(PENDING)
-  message           String   @default("Hey, could we switch times this week?")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  approvedAt        DateTime?
-  
-  // Relations
-  requester         Client   @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  target            Client   @relation("SwapTarget", fields: [targetId], references: [id], onDelete: Cascade)
-  requesterEvent    Event    @relation("SwapRequesterEvent", fields: [requesterEventId], references: [id], onDelete: Cascade)
-  targetEvent       Event    @relation("SwapTargetEvent", fields: [targetEventId], references: [id], onDelete: Cascade)
-  
-  @@unique([requesterId, targetId, requesterEventId, targetEventId])
-  @@map("time_swap_requests")
-}
-
 enum SwapStatus {
   PENDING
   APPROVED
   DECLINED
   EXPIRED
-}
-
-// Account deletion analytics
-model AccountDeletionLog {
-  id        String   @id @default(cuid())
-  userId    String   // User ID before deletion (for analytics)
-  userEmail String   // User email before deletion (for analytics)
-  reason    String?  // Reason for deletion
-  deletedAt DateTime @default(now())
-  userAgent String?  // User agent for analytics
-  createdAt DateTime @default(now())
-
-  @@map("account_deletion_logs")
 }

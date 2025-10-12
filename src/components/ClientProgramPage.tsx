@@ -142,32 +142,13 @@ function ClientProgramPage() {
     if (selectedDay?.programs) {
       const serverCompletedDrills = new Set<string>();
       selectedDay.programs.forEach(program => {
-        console.log(
-          "🔍 Processing program:",
-          program.programTitle,
-          "with drills:",
-          program.drills.length
-        );
         program.drills.forEach(drill => {
-          console.log(
-            "🔍 Drill:",
-            drill.title,
-            "completed:",
-            drill.completed,
-            "id:",
-            drill.id
-          );
           if (drill.completed) {
             serverCompletedDrills.add(drill.id);
           }
         });
       });
       setCompletedProgramDrills(serverCompletedDrills);
-      console.log("📝 Initialized program drill completion from server:", {
-        totalDrills: serverCompletedDrills.size,
-        drillIds: Array.from(serverCompletedDrills),
-        selectedDayPrograms: selectedDay.programs.length,
-      });
     }
   }, [selectedDay]);
 

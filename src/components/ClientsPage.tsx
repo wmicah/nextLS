@@ -30,6 +30,9 @@ import {
   AlertCircle,
   Check,
   Download,
+  Key,
+  Copy,
+  XCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import AddClientModal from "./AddClientModal";
@@ -37,6 +40,283 @@ import Sidebar from "./Sidebar";
 
 import ClientProfileModal from "./ClientProfileModal";
 import ProfilePictureUploader from "./ProfilePictureUploader";
+
+// Small Invite Code Button Component
+function InviteCodeButton() {
+  const [copied, setCopied] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const generateInviteCode = trpc.user.generateInviteCode.useMutation();
+
+  const handleGenerateInviteCode = () => {
+    generateInviteCode.mutate();
+  };
+
+  const handleCopyInviteCode = () => {
+    if (generateInviteCode.data?.inviteCode) {
+      navigator.clipboard.writeText(generateInviteCode.data.inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowDropdown(!showDropdown)}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+        style={{
+          backgroundColor: "#4A5A70",
+          color: "#C3BCC2",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.backgroundColor = "#606364";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.backgroundColor = "#4A5A70";
+        }}
+      >
+        <Key className="h-4 w-4" />
+        Invite Code
+      </button>
+
+      {showDropdown && (
+        <div className="absolute top-full right-0 mt-2 w-80 bg-[#2B3038] border border-[#4A5A70] rounded-lg p-4 shadow-xl z-50">
+          <div className="flex items-center gap-2 mb-3">
+            <Key className="h-5 w-5 text-[#4A5A70]" />
+            <h3 className="font-semibold text-white">Coach Invite Code</h3>
+          </div>
+
+          {!generateInviteCode.data?.inviteCode ? (
+            <div className="space-y-3">
+              <p className="text-sm text-[#C3BCC2]">
+                Generate a unique invite code to share with your athletes
+              </p>
+              <button
+                onClick={handleGenerateInviteCode}
+                disabled={generateInviteCode.isPending}
+                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {generateInviteCode.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Key className="h-4 w-4" />
+                    Generate Invite Code
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-[#C3BCC2]">
+                Share this code with your athletes
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type={isVisible ? "text" : "password"}
+                  value={generateInviteCode.data.inviteCode}
+                  readOnly
+                  className="flex-1 px-3 py-2 bg-[#2A3133] border border-[#606364] rounded-lg text-white font-mono text-sm"
+                />
+                <button
+                  onClick={() => setIsVisible(!isVisible)}
+                  className="p-2 text-[#ABA4AA] hover:text-white transition-colors"
+                  title={isVisible ? "Hide code" : "Show code"}
+                >
+                  {isVisible ? "👁️" : "👁️‍🗨️"}
+                </button>
+                <button
+                  onClick={handleCopyInviteCode}
+                  className="p-2 bg-[#4A5A70] hover:bg-[#606364] text-white rounded-lg transition-colors"
+                  title="Copy invite code"
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {copied && (
+                <p className="text-xs text-green-400 flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  Copied to clipboard!
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Requests Button Component
+function RequestsButton({ onOpenModal }: { onOpenModal: () => void }) {
+  // Get pending client requests
+  const { data: pendingRequests = [] } =
+    trpc.notifications.getNotifications.useQuery({
+      unreadOnly: true,
+      limit: 50,
+    });
+
+  const clientRequests = pendingRequests.filter(
+    (req: any) =>
+      req.type === "CLIENT_JOIN_REQUEST" && req.data?.requiresApproval
+  );
+
+  return (
+    <button
+      onClick={onOpenModal}
+      className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+      style={{
+        backgroundColor: "#4A5A70",
+        color: "#C3BCC2",
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.backgroundColor = "#606364";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.backgroundColor = "#4A5A70";
+      }}
+    >
+      <Mail className="h-4 w-4" />
+      Requests
+      {clientRequests.length > 0 && (
+        <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
+          {clientRequests.length}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// Client Requests Modal Component
+function ClientRequestsModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+
+  // Get pending client requests
+  const { data: pendingRequests = [], refetch } =
+    trpc.notifications.getNotifications.useQuery({
+      unreadOnly: true,
+      limit: 50,
+    });
+
+  const clientRequests = pendingRequests.filter(
+    (req: any) =>
+      req.type === "CLIENT_JOIN_REQUEST" && req.data?.requiresApproval
+  );
+
+  const acceptRequest = trpc.user.acceptClientRequest.useMutation({
+    onSuccess: () => {
+      refetch();
+      utils.clients.list.invalidate();
+    },
+  });
+
+  const rejectRequest = trpc.user.rejectClientRequest.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-[#2B3038] rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-white">
+            Client Join Requests
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <XCircle className="h-6 w-6" />
+          </button>
+        </div>
+
+        {clientRequests.length === 0 ? (
+          <div className="text-center py-8">
+            <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-400">No pending requests</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {clientRequests.map((request: any) => (
+              <div
+                key={request.id}
+                className="bg-[#353A3A] rounded-lg p-4 border border-[#4A5A70]"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-white">
+                      {request.data?.clientName || "Unknown Client"}
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      {request.data?.clientEmail || "No email provided"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Requested{" "}
+                      {new Date(request.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        acceptRequest.mutate({ notificationId: request.id });
+                      }}
+                      disabled={
+                        acceptRequest.isPending || rejectRequest.isPending
+                      }
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <Check className="h-4 w-4" />
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => {
+                        rejectRequest.mutate({ notificationId: request.id });
+                      }}
+                      disabled={
+                        acceptRequest.isPending || rejectRequest.isPending
+                      }
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={onClose}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface Client {
   id: string;
@@ -105,6 +385,7 @@ function ClientsPage() {
   const [feedbackText, setFeedbackText] = useState("");
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
   const [selectedClientForProfile, setSelectedClientForProfile] =
     useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -616,6 +897,15 @@ function ClientsPage() {
                 <Users className="h-4 w-4" />
                 {isBulkMode ? "Exit Bulk Mode" : "Bulk Select"}
               </button>
+
+              {/* Invite Code Button */}
+              <InviteCodeButton />
+
+              {/* Requests Button */}
+              <RequestsButton
+                onOpenModal={() => setIsRequestsModalOpen(true)}
+              />
+
               <button
                 onClick={() => setIsAddModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
@@ -1525,6 +1815,11 @@ function ClientsPage() {
             clientAvatar={selectedClientForProfile.avatar}
           />
         )}
+
+        <ClientRequestsModal
+          isOpen={isRequestsModalOpen}
+          onClose={() => setIsRequestsModalOpen(false)}
+        />
 
         {/* Feedback Modal */}
         {isFeedbackOpen && feedbackClient && (

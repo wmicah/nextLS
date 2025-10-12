@@ -94,6 +94,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                 </div>
+
                 <div className="text-left md:text-right">
                   <div
                     className="text-xl md:text-2xl font-bold"

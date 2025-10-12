@@ -19,170 +19,181 @@ import { ensureUserId, sendWelcomeMessage } from "./_helpers";
  * Settings Router
  */
 export const settingsRouter = router({
-    getSettings: publicProcedure.query(async () => {
-      try {
-        const { getUser } = getKindeServerSession();
-        const user = await getUser();
+  getSettings: publicProcedure.query(async () => {
+    try {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
 
-        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+      if (!user?.id) {
+        // Return null instead of throwing error for unauthenticated users
+        return null;
+      }
 
-        // Get user settings from database
-        const settings = await db.userSettings.findUnique({
+      // First, ensure the user exists in the database
+      const existingUser = await db.user.findUnique({
+        where: { id: user.id },
+      });
+
+      if (!existingUser) {
+        // Return null instead of throwing error for users who haven't completed setup
+        return null;
+      }
+
+      // Get user settings from database
+      const settings = await db.userSettings.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (!settings) {
+        // Create default settings if they don't exist
+        const defaultSettings = await db.userSettings.create({
+          data: {
+            userId: user.id,
+          },
+        });
+        return defaultSettings;
+      }
+
+      return settings;
+    } catch (error) {
+      console.error("Error in getSettings:", error);
+      // Return null instead of throwing error to prevent crashes
+      return null;
+    }
+  }),
+
+  updateSettings: publicProcedure
+    .input(
+      z.object({
+        // Profile settings
+        phone: z.string().optional(),
+        location: z.string().optional(),
+        bio: z.string().optional(),
+        avatarUrl: z.string().optional(),
+
+        // Notification preferences
+        emailNotifications: z.boolean().optional(),
+        pushNotifications: z.boolean().optional(),
+        soundNotifications: z.boolean().optional(),
+        newClientNotifications: z.boolean().optional(),
+        messageNotifications: z.boolean().optional(),
+        scheduleNotifications: z.boolean().optional(),
+
+        // Messaging settings
+        defaultWelcomeMessage: z.string().optional(),
+        messageRetentionDays: z.number().optional(),
+        maxFileSizeMB: z.number().optional(),
+
+        // Client management settings
+        defaultLessonDuration: z.number().optional(),
+        autoArchiveDays: z.number().optional(),
+        requireClientEmail: z.boolean().optional(),
+
+        // Schedule settings
+        timezone: z.string().optional(),
+        workingDays: z.array(z.string()).optional(),
+
+        // Privacy & Security
+        twoFactorEnabled: z.boolean().optional(),
+
+        // Appearance settings
+        compactSidebar: z.boolean().optional(),
+        showAnimations: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Check if settings exist
+      const existingSettings = await db.userSettings.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (existingSettings) {
+        // Update existing settings
+        const updatedSettings = await db.userSettings.update({
           where: { userId: user.id },
+          data: {
+            ...input,
+            workingDays: input.workingDays
+              ? (JSON.stringify(input.workingDays) as any)
+              : undefined,
+          },
         });
-
-        if (!settings) {
-          // Create default settings if they don't exist
-          const defaultSettings = await db.userSettings.create({
-            data: {
-              userId: user.id,
-            },
-          });
-          return defaultSettings;
-        }
-
-        return settings;
-      } catch (error) {
-        console.error("Error in getSettings:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch user settings",
+        return updatedSettings;
+      } else {
+        // Create new settings
+        const newSettings = await db.userSettings.create({
+          data: {
+            userId: user.id,
+            ...input,
+            workingDays: input.workingDays
+              ? (JSON.stringify(input.workingDays) as any)
+              : undefined,
+          },
         });
+        return newSettings;
       }
     }),
 
-    updateSettings: publicProcedure
-      .input(
-        z.object({
-          // Profile settings
-          phone: z.string().optional(),
-          location: z.string().optional(),
-          bio: z.string().optional(),
-          avatarUrl: z.string().optional(),
+  updateProfile: publicProcedure
+    .input(
+      z.object({
+        name: z.string().optional(),
+        phone: z.string().optional(),
+        location: z.string().optional(),
+        bio: z.string().optional(),
+        avatarUrl: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
 
-          // Notification preferences
-          emailNotifications: z.boolean().optional(),
-          pushNotifications: z.boolean().optional(),
-          soundNotifications: z.boolean().optional(),
-          newClientNotifications: z.boolean().optional(),
-          messageNotifications: z.boolean().optional(),
-          scheduleNotifications: z.boolean().optional(),
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-          // Messaging settings
-          defaultWelcomeMessage: z.string().optional(),
-          messageRetentionDays: z.number().optional(),
-          maxFileSizeMB: z.number().optional(),
+      // Update user profile
+      const updatedUser = await db.user.update({
+        where: { id: user.id },
+        data: {
+          name: input.name,
+        },
+      });
 
-          // Client management settings
-          defaultLessonDuration: z.number().optional(),
-          autoArchiveDays: z.number().optional(),
-          requireClientEmail: z.boolean().optional(),
+      // Update or create settings
+      const existingSettings = await db.userSettings.findUnique({
+        where: { userId: user.id },
+      });
 
-          // Schedule settings
-          timezone: z.string().optional(),
-          workingDays: z.array(z.string()).optional(),
-
-          // Privacy & Security
-          twoFactorEnabled: z.boolean().optional(),
-
-          // Appearance settings
-          compactSidebar: z.boolean().optional(),
-          showAnimations: z.boolean().optional(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const { getUser } = getKindeServerSession();
-        const user = await getUser();
-
-        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
-
-        // Check if settings exist
-        const existingSettings = await db.userSettings.findUnique({
+      if (existingSettings) {
+        await db.userSettings.update({
           where: { userId: user.id },
-        });
-
-        if (existingSettings) {
-          // Update existing settings
-          const updatedSettings = await db.userSettings.update({
-            where: { userId: user.id },
-            data: {
-              ...input,
-              workingDays: input.workingDays
-                ? (JSON.stringify(input.workingDays) as any)
-                : undefined,
-            },
-          });
-          return updatedSettings;
-        } else {
-          // Create new settings
-          const newSettings = await db.userSettings.create({
-            data: {
-              userId: user.id,
-              ...input,
-              workingDays: input.workingDays
-                ? (JSON.stringify(input.workingDays) as any)
-                : undefined,
-            },
-          });
-          return newSettings;
-        }
-      }),
-
-    updateProfile: publicProcedure
-      .input(
-        z.object({
-          name: z.string().optional(),
-          phone: z.string().optional(),
-          location: z.string().optional(),
-          bio: z.string().optional(),
-          avatarUrl: z.string().optional(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        const { getUser } = getKindeServerSession();
-        const user = await getUser();
-
-        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
-
-        // Update user profile
-        const updatedUser = await db.user.update({
-          where: { id: user.id },
           data: {
-            name: input.name,
+            phone: input.phone,
+            location: input.location,
+            bio: input.bio,
+            avatarUrl: input.avatarUrl,
           },
         });
-
-        // Update or create settings
-        const existingSettings = await db.userSettings.findUnique({
-          where: { userId: user.id },
+      } else {
+        await db.userSettings.create({
+          data: {
+            userId: user.id,
+            phone: input.phone,
+            location: input.location,
+            bio: input.bio,
+            avatarUrl: input.avatarUrl,
+          },
         });
+      }
 
-        if (existingSettings) {
-          await db.userSettings.update({
-            where: { userId: user.id },
-            data: {
-              phone: input.phone,
-              location: input.location,
-              bio: input.bio,
-              avatarUrl: input.avatarUrl,
-            },
-          });
-        } else {
-          await db.userSettings.create({
-            data: {
-              userId: user.id,
-              phone: input.phone,
-              location: input.location,
-              bio: input.bio,
-              avatarUrl: input.avatarUrl,
-            },
-          });
-        }
+      return updatedUser;
+    }),
 
-        return updatedUser;
-      }),
-
-    exportData: publicProcedure.mutation(async () => {
+  exportData: publicProcedure.mutation(async () => {
     const { getUser } = getKindeServerSession();
     const user = await getUser();
 

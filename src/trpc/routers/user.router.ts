@@ -15,6 +15,8 @@ export const userRouter = router({
       z.object({
         role: z.enum(["COACH", "CLIENT"]),
         coachId: z.string().optional(),
+        inviteCode: z.string().optional(),
+        coachEmail: z.string().email().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -60,69 +62,148 @@ export const userRouter = router({
         });
       }
 
-      // If client is joining a coach, create notification and client record
-      if (input.role === "CLIENT" && input.coachId) {
-        // Verify the coach exists
-        const coach = await db.user.findFirst({
-          where: { id: input.coachId, role: "COACH" },
-        });
+      // Handle client joining a coach
+      if (input.role === "CLIENT") {
+        let coachId = input.coachId;
 
-        if (!coach) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Coach not found",
+        // If invite code is provided, find the coach by invite code
+        if (input.inviteCode && !coachId) {
+          const coach = await db.user.findFirst({
+            where: {
+              role: "COACH",
+              inviteCode: input.inviteCode,
+            },
           });
+
+          if (!coach) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message:
+                "Invalid invite code. Please check with your coach and try again.",
+            });
+          }
+
+          coachId = coach.id;
         }
 
-        // Create or update client record
-        await db.client.upsert({
-          where: { userId: user.id },
-          update: {
-            coachId: input.coachId,
-            name: updatedUser.name || "New Client",
-            email: updatedUser.email,
-          },
-          create: {
-            userId: user.id,
-            coachId: input.coachId,
-            name: updatedUser.name || "New Client",
-            email: updatedUser.email,
-          },
-        });
-
-        // Create notification for the coach
-        await db.notification.create({
-          data: {
-            userId: input.coachId,
-            type: "CLIENT_JOIN_REQUEST",
-            title: "New Client Request",
-            message: `${
-              updatedUser.name || "A new client"
-            } wants to join your coaching program.`,
-            data: {
-              clientId: ensureUserId(user.id),
-              clientName: updatedUser.name,
-              clientEmail: updatedUser.email,
+        // If coach email is provided (and no invite code), find the coach and send approval request
+        if (input.coachEmail && !input.inviteCode && !coachId) {
+          const coach = await db.user.findFirst({
+            where: {
+              role: "COACH",
+              email: input.coachEmail,
             },
-          },
-        });
+          });
 
-        // Send welcome message from coach to client
-        await sendWelcomeMessage(input.coachId, user.id);
-      } else if (input.role === "CLIENT" && !input.coachId) {
-        // Client without coach - create a placeholder client record
-        await db.client.upsert({
-          where: { userId: user.id },
-          update: {
-            name: updatedUser.name || "New Client",
-            email: updatedUser.email,
-          },
-          create: {
-            userId: user.id,
-            name: updatedUser.name || "New Client",
-            email: updatedUser.email,
-          },
-        });
+          if (!coach) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message:
+                "No coach found with that email address. Please verify the email and try again.",
+            });
+          }
+
+          // Create notification for coach to approve
+          await db.notification.create({
+            data: {
+              userId: coach.id,
+              type: "CLIENT_JOIN_REQUEST",
+              title: "New Athlete Join Request",
+              message: `${updatedUser.name || "A new athlete"} (${
+                updatedUser.email
+              }) has requested to join your coaching program.`,
+              data: {
+                clientUserId: ensureUserId(user.id),
+                clientName: updatedUser.name,
+                clientEmail: updatedUser.email,
+                requiresApproval: true,
+              },
+            },
+          });
+
+          // Create client record WITHOUT coach assignment (pending approval)
+          await db.client.upsert({
+            where: { userId: user.id },
+            update: {
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+              coachId: null, // No coach until approved
+            },
+            create: {
+              userId: user.id,
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+              coachId: null, // No coach until approved
+            },
+          });
+
+          return updatedUser;
+        }
+
+        // If we have a coachId (from invite code), set up the relationship
+        if (coachId) {
+          // Verify the coach exists
+          const coach = await db.user.findFirst({
+            where: { id: coachId, role: "COACH" },
+          });
+
+          if (!coach) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Coach not found",
+            });
+          }
+
+          // Create or update client record with coach
+          await db.client.upsert({
+            where: { userId: user.id },
+            update: {
+              coachId: coachId,
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+            },
+            create: {
+              userId: user.id,
+              coachId: coachId,
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+            },
+          });
+
+          // Create notification for the coach
+          await db.notification.create({
+            data: {
+              userId: coachId,
+              type: "CLIENT_JOIN_REQUEST",
+              title: "New Athlete Joined",
+              message: `${
+                updatedUser.name || "A new athlete"
+              } has joined your coaching program using your invite code!`,
+              data: {
+                clientId: ensureUserId(user.id),
+                clientName: updatedUser.name,
+                clientEmail: updatedUser.email,
+              },
+            },
+          });
+
+          // Send welcome message from coach to client
+          await sendWelcomeMessage(coachId, user.id);
+        } else {
+          // Client without coach - create a placeholder client record
+          await db.client.upsert({
+            where: { userId: user.id },
+            update: {
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+            },
+            create: {
+              userId: user.id,
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+            },
+          });
+        }
       }
 
       return updatedUser;
@@ -320,6 +401,179 @@ export const userRouter = router({
       },
     });
   }),
+
+  // Check if a coach exists by email
+  checkCoachExists: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .query(async ({ input }) => {
+      const coach = await db.user.findFirst({
+        where: {
+          email: input.email,
+          role: "COACH",
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          inviteCode: true,
+        },
+      });
+
+      return {
+        exists: !!coach,
+        coach: coach || null,
+      };
+    }),
+
+  // Check if an invite code is valid and get coach info
+  validateInviteCode: publicProcedure
+    .input(z.object({ inviteCode: z.string() }))
+    .query(async ({ input }) => {
+      const coach = await db.user.findFirst({
+        where: {
+          inviteCode: input.inviteCode,
+          role: "COACH",
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          inviteCode: true,
+        },
+      });
+
+      return {
+        valid: !!coach,
+        coach: coach || null,
+      };
+    }),
+
+  // Generate or get existing invite code for coach
+  generateInviteCode: publicProcedure.mutation(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    const dbUser = await db.user.findFirst({
+      where: { id: user.id },
+    });
+
+    if (!dbUser || dbUser.role !== "COACH") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only coaches can generate invite codes",
+      });
+    }
+
+    // If coach already has an invite code, return it
+    if (dbUser.inviteCode) {
+      return {
+        inviteCode: dbUser.inviteCode,
+        isNew: false,
+      };
+    }
+
+    // Generate new invite code
+    const inviteCode = `NLS-${Math.random()
+      .toString(36)
+      .substring(2, 8)
+      .toUpperCase()}-${Date.now().toString(36).substring(2, 6).toUpperCase()}`;
+
+    const updatedUser = await db.user.update({
+      where: { id: user.id },
+      data: { inviteCode },
+    });
+
+    return {
+      inviteCode: updatedUser.inviteCode!,
+      isNew: true,
+    };
+  }),
+
+  // Accept a client join request
+  acceptClientRequest: publicProcedure
+    .input(z.object({ notificationId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const notification = await db.notification.findFirst({
+        where: {
+          id: input.notificationId,
+          userId: user.id,
+          type: "CLIENT_JOIN_REQUEST",
+        },
+      });
+
+      if (!notification || !(notification.data as any)?.clientUserId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client request not found",
+        });
+      }
+
+      const clientUserId = (notification.data as any).clientUserId as string;
+
+      // Update the client record to assign the coach
+      await db.client.update({
+        where: { userId: clientUserId },
+        data: { coachId: user.id },
+      });
+
+      // Mark notification as read
+      await db.notification.update({
+        where: { id: input.notificationId },
+        data: { isRead: true },
+      });
+
+      // Send welcome message to the client
+      await sendWelcomeMessage(user.id, clientUserId);
+
+      return { success: true };
+    }),
+
+  // Reject a client join request
+  rejectClientRequest: publicProcedure
+    .input(z.object({ notificationId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const notification = await db.notification.findFirst({
+        where: {
+          id: input.notificationId,
+          userId: user.id,
+          type: "CLIENT_JOIN_REQUEST",
+        },
+      });
+
+      if (!notification || !(notification.data as any)?.clientUserId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client request not found",
+        });
+      }
+
+      const clientUserId = (notification.data as any).clientUserId as string;
+
+      // Delete the client record since they're rejected
+      await db.client.delete({
+        where: { userId: clientUserId },
+      });
+
+      // Mark notification as read
+      await db.notification.update({
+        where: { id: input.notificationId },
+        data: { isRead: true },
+      });
+
+      return { success: true };
+    }),
 
   getProfile: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession();
