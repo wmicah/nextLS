@@ -18,12 +18,15 @@ import {
 } from "lucide-react";
 import Sidebar from "./Sidebar";
 import WeekAtAGlance from "@/components/WeekAtAGlance";
+import { LoadingState, DataLoadingState } from "@/components/LoadingState";
+import { SkeletonStats } from "@/components/SkeletonLoader";
 
 export default function Dashboard() {
   const router = useRouter();
 
   // Get user profile to check role
-  const { data: userProfile } = trpc.user.getProfile.useQuery();
+  const { data: userProfile, isLoading: profileLoading } =
+    trpc.user.getProfile.useQuery();
 
   // Redirect to client dashboard if user is a client
   useEffect(() => {
@@ -31,6 +34,19 @@ export default function Dashboard() {
       router.push("/client-dashboard");
     }
   }, [userProfile?.role, router]);
+
+  // Show loading state while fetching user profile
+  if (profileLoading) {
+    return (
+      <Sidebar>
+        <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+          <div className="p-6">
+            <SkeletonStats />
+          </div>
+        </div>
+      </Sidebar>
+    );
+  }
 
   // If user is not a coach, show loading while redirecting
   if (userProfile?.role === "CLIENT") {
@@ -115,7 +131,7 @@ export default function Dashboard() {
 
 // Recent Notifications Section Component
 function RecentNotificationsSection() {
-  const { data: notifications = [] } =
+  const { data: notifications = [], isLoading: notificationsLoading } =
     trpc.notifications.getNotifications.useQuery({
       limit: 3,
       unreadOnly: false,
@@ -130,6 +146,30 @@ function RecentNotificationsSection() {
       refetchOnReconnect: true,
     }
   );
+
+  if (notificationsLoading) {
+    return (
+      <div
+        className="rounded-2xl shadow-xl border mb-8 relative overflow-hidden group"
+        style={{
+          backgroundColor: "#353A3A",
+          borderColor: "#606364",
+          minHeight: "320px",
+        }}
+      >
+        <div className="p-6">
+          <div className="animate-pulse">
+            <div className="h-6 w-32 bg-gray-600 rounded mb-4"></div>
+            <div className="space-y-3">
+              <div className="h-4 w-full bg-gray-600 rounded"></div>
+              <div className="h-4 w-3/4 bg-gray-600 rounded"></div>
+              <div className="h-4 w-1/2 bg-gray-600 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (notifications.length === 0) {
     return null; // Don't show section if no notifications
@@ -240,14 +280,40 @@ function RecentNotificationsSection() {
 // Today's Schedule Section Component
 function TodaysScheduleSection() {
   const today = new Date();
-  const { data: todaysLessons = [] } =
+  const { data: todaysLessons = [], isLoading: lessonsLoading } =
     trpc.scheduling.getCoachSchedule.useQuery({
       month: today.getMonth(),
       year: today.getFullYear(),
     });
 
   // Fetch events (which includes reminders)
-  const { data: events = [] } = trpc.events.getUpcoming.useQuery();
+  const { data: events = [], isLoading: eventsLoading } =
+    trpc.events.getUpcoming.useQuery();
+
+  // Show loading state
+  if (lessonsLoading || eventsLoading) {
+    return (
+      <div
+        className="rounded-2xl shadow-xl border mb-8 relative overflow-hidden group"
+        style={{
+          backgroundColor: "#353A3A",
+          borderColor: "#606364",
+          minHeight: "320px",
+        }}
+      >
+        <div className="p-6">
+          <div className="animate-pulse">
+            <div className="h-6 w-32 bg-gray-600 rounded mb-4"></div>
+            <div className="space-y-3">
+              <div className="h-4 w-full bg-gray-600 rounded"></div>
+              <div className="h-4 w-3/4 bg-gray-600 rounded"></div>
+              <div className="h-4 w-1/2 bg-gray-600 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Filter lessons for today
   const todaysLessonsFiltered = todaysLessons.filter((lesson: any) => {

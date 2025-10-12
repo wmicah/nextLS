@@ -1,0 +1,775 @@
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { publicProcedure, router } from "../trpc";
+import { TRPCError } from "@trpc/server";
+import { db } from "@/db";
+import { z } from "zod";
+import { format, addDays, addMonths } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
+import {
+  extractYouTubeVideoId,
+  extractPlaylistId,
+  getYouTubeThumbnail,
+  fetchYouTubeVideoInfo,
+  fetchPlaylistVideos,
+} from "@/lib/youtube";
+import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
+import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+
+/**
+ * Scheduling Router
+ */
+export const schedulingRouter = router({
+    // Schedule a lesson for a client
+    scheduleLesson: publicProcedure
+      .input(
+        z.object({
+          clientId: z.string(), // This is Client.id
+          lessonDate: z.string(), // Changed from z.date() to z.string()
+          sendEmail: z.boolean().optional(),
+          timeZone: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can schedule lessons",
+          });
+        }
+
+        // Verify the client belongs to this coach
+        const client = await db.client.findFirst({
+          where: {
+            id: input.clientId,
+            coachId: ensureUserId(user.id),
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found or not assigned to you",
+          });
+        }
+
+        // Convert string to Date object (this is local time from client)
+        const localLessonDate = new Date(input.lessonDate);
+
+        // Convert local time to UTC using the user's timezone
+        const timeZone = input.timeZone || "America/New_York";
+        const utcLessonDate = fromZonedTime(localLessonDate, timeZone);
+
+        // Validate the date
+        if (isNaN(utcLessonDate.getTime())) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid date format",
+          });
+        }
+
+        // Check if the lesson is in the past
+        const now = new Date();
+        if (utcLessonDate <= now) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot schedule lessons in the past",
+          });
+        }
+
+        // Check if the requested date is on a working day
+        if (coach.workingDays) {
+          const dayName = format(localLessonDate, "EEEE");
+          if (!coach.workingDays.includes(dayName)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `You are not available on ${dayName}s`,
+            });
+          }
+        }
+
+        // Create the lesson (using Event model) - automatically CONFIRMED when coach schedules
+        const lesson = await db.event.create({
+          data: {
+            title: `Lesson with ${client.name || client.email || "Client"}`,
+            description: "Scheduled lesson",
+            date: utcLessonDate,
+            status: "CONFIRMED", // Coach-scheduled lessons are automatically confirmed
+            clientId: input.clientId, // Use Client.id directly
+            coachId: ensureUserId(user.id),
+          },
+        });
+
+        // Update client's next lesson date
+        await db.client.update({
+          where: { id: input.clientId },
+          data: { nextLessonDate: utcLessonDate },
+        });
+
+        // Create notification for the client
+        if (client.userId) {
+          await db.notification.create({
+            data: {
+              userId: client.userId,
+              type: "LESSON_SCHEDULED",
+              title: "New Lesson Scheduled",
+              message: `Your coach has scheduled a lesson for ${format(
+                utcLessonDate,
+                "MMM d, yyyy 'at' h:mm a"
+              )}`,
+            },
+          });
+        }
+
+        // TODO: Send email notification if requested
+        if (input.sendEmail && client.email) {
+          // This would integrate with your email service
+          // For now, we'll just log it
+          console.log(
+            `Email notification would be sent to ${client.email} for lesson on ${utcLessonDate}`
+          );
+        }
+
+        return lesson;
+      }),
+
+    // Schedule recurring lessons for a client
+    scheduleRecurringLessons: publicProcedure
+      .input(
+        z.object({
+          clientId: z.string(),
+          startDate: z.string(), // Full datetime string (YYYY-MM-DDTHH:mm:ss)
+          endDate: z.string(),
+          recurrencePattern: z.enum([
+            "weekly",
+            "biweekly",
+            "triweekly",
+            "monthly",
+          ]),
+          recurrenceInterval: z.number().min(1).max(6), // 1-6 weeks
+          sendEmail: z.boolean().optional(),
+          timeZone: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can schedule lessons",
+          });
+        }
+
+        // Verify the client belongs to this coach
+        const client = await db.client.findFirst({
+          where: {
+            id: input.clientId,
+            coachId: ensureUserId(user.id),
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found or not assigned to you",
+          });
+        }
+
+        // Convert string to Date object (this is local time from client)
+        const localStartDate = new Date(input.startDate);
+        const endDate = new Date(input.endDate);
+
+        // Validate dates
+        if (isNaN(localStartDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid date format",
+          });
+        }
+
+        if (localStartDate >= endDate) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "End date must be after start date",
+          });
+        }
+
+        const now = new Date();
+        if (localStartDate <= now) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot schedule lessons in the past",
+          });
+        }
+
+        // Convert local time to UTC using the user's timezone
+        const timeZone = input.timeZone || "America/New_York";
+        const utcStartDate = fromZonedTime(localStartDate, timeZone);
+
+        // Extract time components from the UTC start date to preserve the time for all recurring lessons
+        const startTime = utcStartDate.getHours();
+        const startMinutes = utcStartDate.getMinutes();
+        const startSeconds = utcStartDate.getSeconds();
+
+        // Calculate lesson dates based on recurrence pattern
+        const lessonDates: Date[] = [];
+        let currentDate = new Date(utcStartDate);
+
+        while (currentDate <= endDate) {
+          // Check if the date is on a working day
+          if (coach.workingDays) {
+            const dayName = format(currentDate, "EEEE");
+            if (coach.workingDays.includes(dayName)) {
+              // Create a new date with the same time as the original start date
+              const lessonDate = new Date(currentDate);
+              lessonDate.setHours(startTime, startMinutes, startSeconds, 0);
+              lessonDates.push(lessonDate);
+            }
+          } else {
+            // Create a new date with the same time as the original start date
+            const lessonDate = new Date(currentDate);
+            lessonDate.setHours(startTime, startMinutes, startSeconds, 0);
+            lessonDates.push(lessonDate);
+          }
+
+          // Calculate next lesson date based on recurrence pattern
+          switch (input.recurrencePattern) {
+            case "weekly":
+              currentDate = addDays(currentDate, 7 * input.recurrenceInterval);
+              break;
+            case "biweekly":
+              currentDate = addDays(currentDate, 14 * input.recurrenceInterval);
+              break;
+            case "triweekly":
+              currentDate = addDays(currentDate, 21 * input.recurrenceInterval);
+              break;
+            case "monthly":
+              currentDate = addMonths(currentDate, input.recurrenceInterval);
+              break;
+          }
+        }
+
+        if (lessonDates.length === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No valid lesson dates found within the specified range",
+          });
+        }
+
+        // Create all lessons in a transaction
+        const lessons = await db.$transaction(
+          lessonDates.map(lessonDate =>
+            db.event.create({
+              data: {
+                title: `Lesson with ${client.name || client.email || "Client"}`,
+                description: `Recurring lesson (${input.recurrencePattern})`,
+                date: lessonDate,
+                status: "CONFIRMED",
+                clientId: input.clientId,
+                coachId: ensureUserId(user.id),
+              },
+            })
+          )
+        );
+
+        // Update client's next lesson date to the first scheduled lesson
+        if (lessonDates.length > 0) {
+          await db.client.update({
+            where: { id: input.clientId },
+            data: { nextLessonDate: lessonDates[0] },
+          });
+        }
+
+        // Create notifications for the client
+        if (client.userId) {
+          await db.notification.create({
+            data: {
+              userId: client.userId,
+              type: "LESSON_SCHEDULED",
+              title: "Recurring Lessons Scheduled",
+              message: `Your coach has scheduled ${
+                lessonDates.length
+              } recurring lessons from ${format(
+                localStartDate,
+                "MMM d, yyyy"
+              )} to ${format(endDate, "MMM d, yyyy")}`,
+            },
+          });
+        }
+
+        // TODO: Send email notification if requested
+        if (input.sendEmail && client.email) {
+          console.log(
+            `Email notification would be sent to ${client.email} for ${lessonDates.length} recurring lessons`
+          );
+        }
+
+        return {
+          lessons,
+          totalLessons: lessonDates.length,
+          dateRange: {
+            start: localStartDate,
+            end: endDate,
+          },
+        };
+      }),
+
+    // Get weekly schedule for a client
+    getWeeklySchedule: publicProcedure
+      .input(
+        z.object({
+          clientId: z.string(),
+          weekStart: z.date(),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can view schedules",
+          });
+        }
+
+        const weekEnd = new Date(input.weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+
+        return await db.weeklySchedule.findFirst({
+          where: {
+            clientId: input.clientId,
+            coachId: ensureUserId(user.id),
+            weekStart: input.weekStart,
+            weekEnd: weekEnd,
+          },
+          include: {
+            days: {
+              include: {
+                workoutTemplate: true,
+                videoAssignments: {
+                  include: {
+                    video: true,
+                  },
+                },
+              },
+              orderBy: { dayOfWeek: "asc" },
+            },
+          },
+        });
+      }),
+
+    // Create or update weekly schedule
+    updateWeeklySchedule: publicProcedure
+      .input(
+        z.object({
+          clientId: z.string(),
+          weekStart: z.date(),
+          days: z.array(
+            z.object({
+              dayOfWeek: z.number(),
+              workoutTemplateId: z.string().optional(),
+              title: z.string(),
+              description: z.string().optional(),
+              exercises: z
+                .array(
+                  z.object({
+                    name: z.string(),
+                    sets: z.number(),
+                    reps: z.string(),
+                    weight: z.string().optional(),
+                    notes: z.string().optional(),
+                  })
+                )
+                .optional(),
+              duration: z.string().optional(),
+              videoIds: z.array(z.string()).optional(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can update schedules",
+          });
+        }
+
+        const weekEnd = new Date(input.weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+
+        // Use transaction to ensure data consistency
+        return await db.$transaction(async tx => {
+          // Create or update weekly schedule
+          const weeklySchedule = await tx.weeklySchedule.upsert({
+            where: {
+              clientId_coachId_weekStart: {
+                clientId: input.clientId,
+                coachId: ensureUserId(user.id),
+                weekStart: input.weekStart,
+              },
+            },
+            update: {},
+            create: {
+              clientId: input.clientId,
+              coachId: ensureUserId(user.id),
+              weekStart: input.weekStart,
+              weekEnd: weekEnd,
+            },
+          });
+
+          // Delete existing days
+          await tx.scheduledDay.deleteMany({
+            where: { weeklyScheduleId: weeklySchedule.id },
+          });
+
+          // Create new days
+          const createdDays = await Promise.all(
+            input.days.map(async day => {
+              const createdDay = await tx.scheduledDay.create({
+                data: {
+                  weeklyScheduleId: weeklySchedule.id,
+                  dayOfWeek: day.dayOfWeek,
+                  workoutTemplateId: day.workoutTemplateId,
+                  title: day.title,
+                  description: day.description,
+                  exercises: day.exercises as any,
+                  duration: day.duration,
+                },
+              });
+
+              // Assign videos if provided
+              if (day.videoIds && day.videoIds.length > 0) {
+                await Promise.all(
+                  day.videoIds.map(videoId =>
+                    tx.videoAssignment.upsert({
+                      where: {
+                        videoId_clientId: {
+                          videoId: videoId,
+                          clientId: input.clientId,
+                        },
+                      },
+                      update: {
+                        scheduledDayId: createdDay.id,
+                      },
+                      create: {
+                        videoId: videoId,
+                        clientId: input.clientId,
+                        scheduledDayId: createdDay.id,
+                        assignedAt: new Date(),
+                      },
+                    })
+                  )
+                );
+              }
+
+              return createdDay;
+            })
+          );
+
+          return {
+            weeklySchedule,
+            days: createdDays,
+          };
+        });
+      }),
+
+    // Copy previous week's schedule to current week
+    copyPreviousWeek: publicProcedure
+      .input(
+        z.object({
+          clientId: z.string(),
+          currentWeekStart: z.date(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Calculate previous week start
+        const previousWeekStart = new Date(input.currentWeekStart);
+        previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+
+        const previousWeekEnd = new Date(previousWeekStart);
+        previousWeekEnd.setDate(previousWeekEnd.getDate() + 6);
+
+        // Get previous week's schedule
+        const previousSchedule = await db.weeklySchedule.findFirst({
+          where: {
+            clientId: input.clientId,
+            coachId: ensureUserId(user.id),
+            weekStart: previousWeekStart,
+            weekEnd: previousWeekEnd,
+          },
+          include: {
+            days: {
+              include: {
+                videoAssignments: true,
+              },
+            },
+          },
+        });
+
+        if (!previousSchedule) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No previous week schedule found to copy",
+          });
+        }
+
+        // Copy to current week
+        const currentWeekEnd = new Date(input.currentWeekStart);
+        currentWeekEnd.setDate(currentWeekEnd.getDate() + 6);
+
+        return await db.$transaction(async tx => {
+          const newSchedule = await tx.weeklySchedule.create({
+            data: {
+              clientId: input.clientId,
+              coachId: ensureUserId(user.id),
+              weekStart: input.currentWeekStart,
+              weekEnd: currentWeekEnd,
+            },
+          });
+
+          const copiedDays = await Promise.all(
+            previousSchedule.days.map(async day => {
+              const newDay = await tx.scheduledDay.create({
+                data: {
+                  weeklyScheduleId: newSchedule.id,
+                  dayOfWeek: day.dayOfWeek,
+                  workoutTemplateId: day.workoutTemplateId,
+                  title: day.title,
+                  description: day.description,
+                  exercises: day.exercises as any,
+                  duration: day.duration,
+                },
+              });
+
+              // Copy video assignments
+              if (day.videoAssignments.length > 0) {
+                await Promise.all(
+                  day.videoAssignments.map(assignment =>
+                    tx.videoAssignment.create({
+                      data: {
+                        videoId: assignment.videoId,
+                        clientId: assignment.clientId,
+                        scheduledDayId: newDay.id,
+                        assignedAt: new Date(),
+                        dueDate: assignment.dueDate,
+                        notes: assignment.notes,
+                      },
+                    })
+                  )
+                );
+              }
+
+              return newDay;
+            })
+          );
+
+          return {
+            weeklySchedule: newSchedule,
+            days: copiedDays,
+          };
+        });
+      }),
+
+    // Get coach's schedule for a specific month
+    getCoachSchedule: publicProcedure
+      .input(
+        z.object({
+          month: z.number(),
+          year: z.number(),
+        })
+      )
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can view their schedule",
+          });
+        }
+
+        // Calculate month start and end dates
+        const monthStart = new Date(input.year, input.month, 1);
+        const monthEnd = new Date(input.year, input.month + 1, 0, 23, 59, 59);
+        const now = new Date();
+
+        // Get all CONFIRMED events (lessons) for the coach in the specified month
+        // Only include lessons for active (non-archived) clients
+        const events = await db.event.findMany({
+          where: {
+            coachId: ensureUserId(user.id),
+            status: "CONFIRMED", // Only return confirmed lessons
+            date: {
+              gte: monthStart,
+              lte: monthEnd,
+              gt: now, // Only return future lessons
+            },
+            client: {
+              archived: false, // Only include lessons for active clients
+            },
+          },
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            date: "asc",
+          },
+        });
+
+        return events;
+      }),
+
+    // Delete a lesson
+    deleteLesson: publicProcedure
+      .input(
+        z.object({
+          lessonId: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can delete lessons",
+          });
+        }
+
+        // Find the lesson and verify it belongs to this coach
+        const lesson = await db.event.findFirst({
+          where: {
+            id: input.lessonId,
+            coachId: ensureUserId(user.id),
+          },
+        });
+
+        if (!lesson) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message:
+              "Lesson not found or you don't have permission to delete it",
+          });
+        }
+
+        // Delete the lesson
+        await db.event.delete({
+          where: {
+            id: input.lessonId,
+          },
+        });
+
+        return { success: true };
+      }),
+
+    // Get upcoming lessons for the coach
+    getCoachUpcomingLessons: publicProcedure.query(async () => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view their lessons",
+        });
+      }
+
+      const now = new Date();
+
+      // Get upcoming lessons for this coach
+      const upcomingLessons = await db.event.findMany({
+        where: {
+          coachId: ensureUserId(user.id),
+          date: {
+            gte: now.toISOString(),
+          },
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          date: "asc",
+        },
+        take: 10, // Limit to next 10 lessons
+      });
+
+      return upcomingLessons;
+    }),
+});

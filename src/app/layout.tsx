@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import ErrorBoundary from "@/components/ErrorBoundary";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PageErrorFallback } from "@/components/ErrorFallback";
 import CustomAnalytics from "@/components/Analytics";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import Toast from "@/components/common/Toast";
@@ -15,6 +16,7 @@ import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import PWAProvider from "@/components/PWAProvider";
 import SessionManager from "@/components/SessionManager";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -201,7 +203,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} text-slate-100 antialiased`}>
-        <ErrorBoundary>
+        <ErrorBoundary fallback={<PageErrorFallback />}>
           <Providers>
             <ThemeProvider>
               <ChatbotProvider>
@@ -221,6 +223,7 @@ export default function RootLayout({
           </Providers>
         </ErrorBoundary>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

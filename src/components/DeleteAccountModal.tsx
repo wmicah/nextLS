@@ -27,7 +27,7 @@ export default function DeleteAccountModal({
       window.location.href =
         "/api/auth/logout?post_logout_redirect_url=/?accountDeleted=true";
     },
-    onError: error => {
+    onError: (error: any) => {
       console.error("Error deleting account:", error);
       setIsDeleting(false);
     },

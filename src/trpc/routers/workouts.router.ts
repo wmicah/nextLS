@@ -1,0 +1,312 @@
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { publicProcedure, router } from "../trpc";
+import { TRPCError } from "@trpc/server";
+import { db } from "@/db";
+import { z } from "zod";
+import { format, addDays, addMonths } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
+import {
+  extractYouTubeVideoId,
+  extractPlaylistId,
+  getYouTubeThumbnail,
+  fetchYouTubeVideoInfo,
+  fetchPlaylistVideos,
+} from "@/lib/youtube";
+import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
+import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+
+/**
+ * Workouts Router
+ */
+export const workoutsRouter = router({
+    getTodaysWorkouts: publicProcedure.query(async () => {
+      try {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        console.log("Getting today's program for user:", user.id);
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          console.log("User is not a CLIENT");
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // First, find the client record for this user
+        const client = await db.client.findFirst({
+          where: { userId: user.id },
+          include: {
+            coach: true,
+          },
+        });
+
+        console.log(
+          "Client found:",
+          client?.id,
+          client?.name,
+          "Coach:",
+          client?.coach?.name
+        );
+
+        if (!client) {
+          console.log("No client record found for user:", user.id);
+          return [];
+        }
+
+        // Get the client's assigned program
+        const programAssignment = await db.programAssignment.findFirst({
+          where: {
+            clientId: client.id,
+          },
+          include: {
+            program: {
+              include: {
+                weeks: {
+                  include: {
+                    days: {
+                      include: {
+                        drills: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        console.log(
+          "Program assignment found:",
+          programAssignment?.id,
+          programAssignment?.program?.title
+        );
+
+        if (!programAssignment) {
+          console.log("No program assigned to client");
+          return [];
+        }
+
+        // Calculate which week and day we're on based on start date
+        const startDate =
+          programAssignment.startDate || programAssignment.assignedAt;
+        const today = new Date();
+        const daysSinceStart = Math.floor(
+          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const currentWeek = Math.floor(daysSinceStart / 7) + 1;
+        const currentDay = (daysSinceStart % 7) + 1;
+
+        console.log("Program progress:", {
+          daysSinceStart,
+          currentWeek,
+          currentDay,
+        });
+
+        // Get today's program day
+        const currentWeekData = programAssignment.program.weeks.find(
+          w => w.weekNumber === currentWeek
+        );
+        if (!currentWeekData) {
+          console.log("No week data found for week:", currentWeek);
+          return [];
+        }
+
+        const todayProgramDay = currentWeekData.days.find(
+          d => d.dayNumber === currentDay
+        );
+        if (!todayProgramDay) {
+          console.log("No day data found for day:", currentDay);
+          return [];
+        }
+
+        console.log(
+          "Today's program day:",
+          todayProgramDay.title,
+          "Drills:",
+          todayProgramDay.drills.length
+        );
+
+        // Return the drills for today as "workouts"
+        return todayProgramDay.drills.map(drill => ({
+          id: drill.id,
+          title: drill.title,
+          description: drill.description,
+          duration: drill.duration,
+          completed: false, // We'll track this separately
+          template: null, // Not using workout templates for program drills
+        }));
+      } catch (error) {
+        console.error("Get today's program error:", error);
+        return [];
+      }
+    }),
+
+    // Debug endpoint to see what's in the database
+    debugWorkouts: publicProcedure.query(async () => {
+      try {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Get all clients
+        const allClients = await db.client.findMany({
+          include: {
+            coach: true,
+          },
+        });
+
+        // Get all program assignments
+        const allProgramAssignments = await db.programAssignment.findMany({
+          include: {
+            client: true,
+            program: true,
+          },
+        });
+
+        // Get all assigned workouts
+        const allWorkouts = await db.assignedWorkout.findMany({
+          include: {
+            client: true,
+            coach: true,
+            template: true,
+          },
+        });
+
+        return {
+          user: { id: user.id, email: user.email },
+          clients: allClients,
+          programAssignments: allProgramAssignments,
+          workouts: allWorkouts,
+        };
+      } catch (error) {
+        console.error("Debug endpoint error:", error);
+        return {
+          user: { id: "error", email: "error" },
+          clients: [],
+          programAssignments: [],
+          workouts: [],
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    }),
+
+    getClientWorkouts: publicProcedure
+      .input(z.object({ clientId: z.string() }))
+      .query(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a COACH
+        const coach = await db.user.findFirst({
+          where: { id: user.id, role: "COACH" },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches can view client workouts",
+          });
+        }
+
+        // Verify the client belongs to this coach and get the userId
+        const client = await db.client.findFirst({
+          where: {
+            id: input.clientId,
+            coachId: ensureUserId(user.id),
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found",
+          });
+        }
+
+        // If client has a userId, use that for workouts, otherwise return empty array
+        if (!client.userId) {
+          return [];
+        }
+
+        return await db.workout.findMany({
+          where: {
+            clientId: client.userId,
+          },
+          orderBy: { date: "desc" },
+        });
+      }),
+
+    markComplete: publicProcedure
+      .input(
+        z.object({
+          workoutId: z.string(),
+          completed: z.boolean(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can mark workouts as complete",
+          });
+        }
+
+        // Find the client record for this user
+        const client = await db.client.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client record not found",
+          });
+        }
+
+        // Find the assigned workout
+        const assignedWorkout = await db.assignedWorkout.findFirst({
+          where: {
+            id: input.workoutId,
+            clientId: client.id,
+          },
+        });
+
+        if (!assignedWorkout) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Workout not found or not assigned to you",
+          });
+        }
+
+        // Update the workout completion status
+        const updatedWorkout = await db.assignedWorkout.update({
+          where: { id: input.workoutId },
+          data: {
+            completed: input.completed,
+            completedAt: input.completed ? new Date() : null,
+          },
+        });
+
+        return updatedWorkout;
+      }),
+});

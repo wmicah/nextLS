@@ -23,6 +23,8 @@ import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileMessagesPage from "./MobileMessagesPage";
+import { LoadingState, DataLoadingState } from "@/components/LoadingState";
+import { SkeletonMessageList, SkeletonCard } from "@/components/SkeletonLoader";
 // Removed complex SSE hooks - using simple polling instead
 
 interface MessagesPageProps {
@@ -90,14 +92,17 @@ function MessagesPage({}: MessagesPageProps) {
   );
 
   // Get conversations with aggressive caching
-  const { data: conversations = [], refetch: refetchConversations } =
-    trpc.messaging.getConversations.useQuery(undefined, {
-      refetchInterval: 60000, // Poll every minute
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      staleTime: 30 * 1000, // Cache for 30 seconds
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    });
+  const {
+    data: conversations = [],
+    refetch: refetchConversations,
+    isLoading: conversationsLoading,
+  } = trpc.messaging.getConversations.useQuery(undefined, {
+    refetchInterval: 60000, // Poll every minute
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 30 * 1000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+  });
 
   // Get unread counts separately for better performance
   const { data: unreadCountsObj = {} } =
@@ -108,16 +113,19 @@ function MessagesPage({}: MessagesPageProps) {
       staleTime: 10 * 1000, // Cache for 10 seconds
     });
 
-  const { data: messages = [], refetch: refetchMessages } =
-    trpc.messaging.getMessages.useQuery(
-      { conversationId: selectedConversation! },
-      {
-        enabled: !!selectedConversation,
-        refetchInterval: 15000, // Poll every 15 seconds when viewing messages
-        refetchOnWindowFocus: true,
-        refetchOnReconnect: true,
-      }
-    );
+  const {
+    data: messages = [],
+    refetch: refetchMessages,
+    isLoading: messagesLoading,
+  } = trpc.messaging.getMessages.useQuery(
+    { conversationId: selectedConversation! },
+    {
+      enabled: !!selectedConversation,
+      refetchInterval: 15000, // Poll every 15 seconds when viewing messages
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
 
   // Get clients for conversation creation
   const { data: clients = [] } = trpc.clients.list.useQuery({
@@ -437,21 +445,25 @@ function MessagesPage({}: MessagesPageProps) {
 
             {/* Conversations List - No Scroll */}
             <div className="flex-1">
-              {filteredConversations.length === 0 ? (
-                <div className="p-4 text-center">
-                  <div
-                    className="h-8 w-8 mx-auto mb-2 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: "#374151", color: "#ABA4AA" }}
-                  >
-                    <File className="h-4 w-4" />
+              <DataLoadingState
+                isLoading={conversationsLoading}
+                data={filteredConversations}
+                emptyState={
+                  <div className="p-4 text-center">
+                    <div
+                      className="h-8 w-8 mx-auto mb-2 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: "#374151", color: "#ABA4AA" }}
+                    >
+                      <File className="h-4 w-4" />
+                    </div>
+                    <p className="text-xs" style={{ color: "#ABA4AA" }}>
+                      {searchTerm
+                        ? "No conversations found"
+                        : "No conversations yet"}
+                    </p>
                   </div>
-                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                    {searchTerm
-                      ? "No conversations found"
-                      : "No conversations yet"}
-                  </p>
-                </div>
-              ) : (
+                }
+              >
                 <div className="space-y-1">
                   {filteredConversations.slice(0, 8).map(conversation => {
                     const otherUser = getOtherUser(conversation);
@@ -543,7 +555,7 @@ function MessagesPage({}: MessagesPageProps) {
                     </div>
                   )}
                 </div>
-              )}
+              </DataLoadingState>
             </div>
           </div>
 
@@ -604,19 +616,23 @@ function MessagesPage({}: MessagesPageProps) {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div
-                        className="h-8 w-8 mx-auto mb-3 opacity-50"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        <File className="h-8 w-8" />
+                  <DataLoadingState
+                    isLoading={messagesLoading}
+                    data={messages}
+                    emptyState={
+                      <div className="text-center py-8">
+                        <div
+                          className="h-8 w-8 mx-auto mb-3 opacity-50"
+                          style={{ color: "#ABA4AA" }}
+                        >
+                          <File className="h-8 w-8" />
+                        </div>
+                        <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                          No messages yet. Start the conversation!
+                        </p>
                       </div>
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                        No messages yet. Start the conversation!
-                      </p>
-                    </div>
-                  ) : (
+                    }
+                  >
                     <>
                       {messages.map((message: any) => {
                         // Check if this is a workout note message
@@ -933,7 +949,7 @@ function MessagesPage({}: MessagesPageProps) {
                         </div>
                       ))}
                     </>
-                  )}
+                  </DataLoadingState>
                   <div ref={messagesEndRef} />
                 </div>
 

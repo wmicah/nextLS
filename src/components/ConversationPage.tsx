@@ -66,20 +66,20 @@ export default function ConversationPage({
     trpc.messaging.getMessages.useQuery(
       { conversationId },
       { refetchInterval: 3000 }
-    );
+    ) as { data: any[]; refetch: any };
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation({
-    onSuccess: data => {
+    onSuccess: (data: any) => {
       console.log("Message sent successfully:", data);
       setMessageText("");
       setSelectedFile(null);
       refetchMessages();
     },
-    onError: error => {
+    onError: (error: any) => {
       console.error("Failed to send message:", error);
     },
-  });
+  }) as any;
 
   const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
     onSuccess: () => {

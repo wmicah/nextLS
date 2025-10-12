@@ -52,10 +52,9 @@ function ClientTopNav({ children }: ClientTopNavProps) {
     });
 
   // Calculate total unread messages across all conversations
-  const unreadMessages = Object.values(unreadCountsObj).reduce(
-    (total: number, count: number) => total + count,
-    0
-  );
+  const unreadMessages = Object.values(
+    unreadCountsObj as Record<string, number>
+  ).reduce((total: number, count: number) => total + count, 0);
 
   const handleLogout = () => {
     window.location.href = "/api/auth/logout";

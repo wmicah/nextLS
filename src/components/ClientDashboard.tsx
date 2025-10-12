@@ -16,11 +16,14 @@ import {
   Loader2,
   BarChart3,
   FileText,
+  Video,
 } from "lucide-react";
 
 import ClientSidebar from "@/components/ClientSidebar";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientDashboard from "@/components/MobileClientDashboard";
+import { LoadingState, DataLoadingState } from "@/components/LoadingState";
+import { SkeletonStats, SkeletonCard } from "@/components/SkeletonLoader";
 
 function ClientDashboard() {
   const {
@@ -112,16 +115,13 @@ function ClientDashboard() {
         className="min-h-screen flex items-center justify-center"
         style={{ backgroundColor: "#2B3038" }}
       >
-        <div
-          className="flex items-center space-x-3"
-          style={{ color: "#C3BCC2" }}
+        <LoadingState
+          isLoading={true}
+          skeleton={<SkeletonStats />}
+          className="p-8"
         >
-          <Loader2
-            className="h-8 w-8 animate-spin"
-            style={{ color: "#4A5A70" }}
-          />
-          <span className="text-lg">Loading your dashboard...</span>
-        </div>
+          <div />
+        </LoadingState>
       </div>
     );
   }
@@ -544,17 +544,24 @@ function ClientDashboard() {
                       </h3>
                     </div>
 
-                    {workoutsLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2
-                          className="h-6 w-6 animate-spin"
-                          style={{ color: "#4A5A70" }}
-                        />
-                        <span className="ml-2" style={{ color: "#ABA4AA" }}>
-                          Loading workouts...
-                        </span>
-                      </div>
-                    ) : (
+                    <DataLoadingState
+                      isLoading={workoutsLoading}
+                      data={todaysWorkouts}
+                      emptyState={
+                        <div
+                          className="text-center py-8"
+                          style={{ color: "#ABA4AA" }}
+                        >
+                          <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p className="text-lg font-medium mb-2">
+                            No workouts today
+                          </p>
+                          <p className="text-sm">
+                            Check back tomorrow for your next session!
+                          </p>
+                        </div>
+                      }
+                    >
                       <div className="space-y-3">
                         {todaysWorkouts.map((workout: any, index: number) => (
                           <div
@@ -616,7 +623,7 @@ function ClientDashboard() {
                           </div>
                         ))}
                       </div>
-                    )}
+                    </DataLoadingState>
 
                     <div className="mt-6 text-center">
                       <a
@@ -709,14 +716,27 @@ function ClientDashboard() {
                 </button>
               </div>
 
-              {videosLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2
-                    className="h-8 w-8 animate-spin"
-                    style={{ color: "#4A5A70" }}
-                  />
-                </div>
-              ) : assignedVideos.length > 0 ? (
+              <DataLoadingState
+                isLoading={videosLoading}
+                data={assignedVideos}
+                emptyState={
+                  <div className="text-center py-16">
+                    <Video
+                      className="h-16 w-16 mx-auto mb-4 opacity-50"
+                      style={{ color: "#ABA4AA" }}
+                    />
+                    <h3
+                      className="text-lg font-medium mb-2"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      No videos assigned
+                    </h3>
+                    <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                      Your coach will assign training videos soon
+                    </p>
+                  </div>
+                }
+              >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {assignedVideos.map((video: any) => (
                     <div
@@ -774,23 +794,7 @@ function ClientDashboard() {
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-16">
-                  <PlayCircle
-                    className="w-16 h-16 mx-auto mb-6"
-                    style={{ color: "#606364" }}
-                  />
-                  <h3
-                    className="text-xl font-semibold mb-3"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    No videos assigned yet
-                  </h3>
-                  <p className="text-base" style={{ color: "#ABA4AA" }}>
-                    Your coach will assign training videos soon
-                  </p>
-                </div>
-              )}
+              </DataLoadingState>
             </div>
           </div>
 
@@ -954,17 +958,24 @@ function ClientDashboard() {
                 </a>
               </div>
 
-              {notificationsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2
-                    className="h-6 w-6 animate-spin"
-                    style={{ color: "#4A5A70" }}
-                  />
-                  <span className="ml-2" style={{ color: "#ABA4AA" }}>
-                    Loading notifications...
-                  </span>
-                </div>
-              ) : recentNotifications.length > 0 ? (
+              <DataLoadingState
+                isLoading={notificationsLoading}
+                data={recentNotifications}
+                emptyState={
+                  <div
+                    className="text-center py-8"
+                    style={{ color: "#ABA4AA" }}
+                  >
+                    <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">
+                      No notifications yet
+                    </p>
+                    <p className="text-sm">
+                      You'll see updates from your coach here
+                    </p>
+                  </div>
+                }
+              >
                 <div className="space-y-4">
                   {recentNotifications.slice(0, 3).map((notification: any) => (
                     <div
@@ -1043,23 +1054,7 @@ function ClientDashboard() {
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <MessageCircle
-                    className="w-12 h-12 mx-auto mb-4"
-                    style={{ color: "#606364" }}
-                  />
-                  <h3
-                    className="text-lg font-semibold mb-2"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    No recent updates
-                  </h3>
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                    You'll see notifications here when your coach sends updates
-                  </p>
-                </div>
-              )}
+              </DataLoadingState>
             </div>
           </div>
         </div>

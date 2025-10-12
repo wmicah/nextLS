@@ -3,6 +3,8 @@
 import { useMobileDetection } from "@/lib/mobile-detection";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ComponentErrorFallback } from "@/components/ErrorFallback";
 
 // Import all the mobile and desktop components
 import Dashboard from "./Dashboard";
@@ -50,56 +52,100 @@ export default function ClientSideMobileWrapper({
 
   // Determine which component to render based on pathname and mobile detection
   if (pathname === "/dashboard") {
-    return isMobile ? <MobileDashboard /> : <Dashboard />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileDashboard /> : <Dashboard />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/clients") {
-    return isMobile ? <MobileClientsPage /> : <ClientsPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileClientsPage /> : <ClientsPage />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/library") {
-    return isMobile ? <MobileLibraryPage /> : <LibraryPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileLibraryPage /> : <LibraryPage />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/programs") {
-    return isMobile ? <MobileProgramsPage /> : <ProgramsPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileProgramsPage /> : <ProgramsPage />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/schedule") {
-    return isMobile ? <MobileSchedulePage /> : <SchedulePageClient />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileSchedulePage /> : <SchedulePageClient />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/notifications") {
-    return isMobile ? <MobileNotificationsPage /> : <NotificationsPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileNotificationsPage /> : <NotificationsPage />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/messages") {
-    return isMobile ? <MobileMessagesPage /> : <MessagesPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileMessagesPage /> : <MessagesPage />}
+      </ErrorBoundary>
+    );
   }
 
   // Client pages
   if (pathname === "/client-dashboard") {
-    return isMobile ? <MobileClientProgramPage /> : <ClientProgramPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileClientProgramPage /> : <ClientProgramPage />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/client-schedule") {
-    return isMobile ? (
-      <MobileClientSchedulePage />
-    ) : (
-      <ClientSchedulePageClient />
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileClientSchedulePage /> : <ClientSchedulePageClient />}
+      </ErrorBoundary>
     );
   }
 
   if (pathname === "/client-messages") {
-    return isMobile ? <MobileClientMessagesPage /> : <ClientMessagesPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileClientMessagesPage /> : <ClientMessagesPage />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/client-settings") {
-    return isMobile ? <MobileClientSettingsPage /> : <ClientSettingsPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileClientSettingsPage /> : <ClientSettingsPage />}
+      </ErrorBoundary>
+    );
   }
 
   if (pathname === "/client-notifications") {
-    return isMobile ? <MobileNotificationsPage /> : <NotificationsPage />;
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        {isMobile ? <MobileNotificationsPage /> : <NotificationsPage />}
+      </ErrorBoundary>
+    );
   }
 
   // For other pages, render the children as-is

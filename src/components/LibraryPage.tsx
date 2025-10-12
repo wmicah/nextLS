@@ -28,6 +28,8 @@ import { VideoThumbnail } from "./VideoThumbnail";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileLibraryPage from "./MobileLibraryPage";
 import CategoryDropdown from "./ui/CategoryDropdown";
+import { LoadingState, DataLoadingState } from "@/components/LoadingState";
+import { SkeletonVideoGrid, SkeletonCard } from "@/components/SkeletonLoader";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -229,10 +231,13 @@ function LibraryPage() {
     return (
       <Sidebar>
         <div className="flex items-center justify-center h-64">
-          <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2"
-            style={{ borderColor: "#4A5A70" }}
-          />
+          <LoadingState
+            isLoading={true}
+            skeleton={<SkeletonVideoGrid />}
+            className="p-8"
+          >
+            <div />
+          </LoadingState>
         </div>
       </Sidebar>
     );

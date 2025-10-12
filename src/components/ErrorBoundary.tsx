@@ -1,43 +1,107 @@
 "use client";
 
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import React, { Component, ReactNode } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 
-interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
-}
-
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;
+  errorInfo?: React.ErrorInfo;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  resetOnPropsChange?: boolean;
+  resetKeys?: Array<string | number>;
+}
+
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  private resetTimeoutId: number | null = null;
+
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     // Update state so the next render will show the fallback UI
-    return { hasError: true, error };
+    return {
+      hasError: true,
+      error,
+    };
   }
 
-  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to console in development
-    if (process.env.NODE_ENV === "development") {
-      console.error("ErrorBoundary caught an error:", error, errorInfo);
-    }
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log the error
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+
+    // Update state with error info
+    this.setState({
+      error,
+      errorInfo,
+    });
 
     // Call custom error handler if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
 
-    // In production, you might want to send this to an error reporting service
-    // Example: Sentry.captureException(error);
+    // Prevent Next.js error overlay from showing
+    if (typeof window !== "undefined") {
+      const nextErrorOverlay = document.querySelector("nextjs-portal");
+      if (nextErrorOverlay) {
+        nextErrorOverlay.remove();
+      }
+    }
+
+    // You can also log the error to an error reporting service here
+    // Example: logErrorToService(error, errorInfo);
   }
+
+  override componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    const { resetKeys, resetOnPropsChange } = this.props;
+    const { hasError } = this.state;
+
+    // Reset error boundary when resetKeys change
+    if (hasError && prevProps.resetKeys !== resetKeys) {
+      if (resetKeys && prevProps.resetKeys) {
+        const hasResetKeyChanged = resetKeys.some(
+          (key, index) => key !== prevProps.resetKeys?.[index]
+        );
+        if (hasResetKeyChanged) {
+          this.resetErrorBoundary();
+        }
+      }
+    }
+
+    // Reset error boundary when props change (if enabled)
+    if (
+      hasError &&
+      resetOnPropsChange &&
+      prevProps.children !== this.props.children
+    ) {
+      this.resetErrorBoundary();
+    }
+  }
+
+  override componentWillUnmount() {
+    if (this.resetTimeoutId) {
+      clearTimeout(this.resetTimeoutId);
+    }
+  }
+
+  resetErrorBoundary = () => {
+    if (this.resetTimeoutId) {
+      clearTimeout(this.resetTimeoutId);
+    }
+
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+  };
 
   override render() {
     if (this.state.hasError) {
@@ -48,61 +112,99 @@ class ErrorBoundary extends Component<Props, State> {
 
       // Default fallback UI
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
-            <div className="flex items-center mb-4">
-              <div className="flex-shrink-0">
-                <svg
-                  className="h-8 w-8 text-red-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Something went wrong
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  We're sorry, but something unexpected happened.
-                </p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <button
-                onClick={() => {
-                  this.setState({ hasError: false, error: undefined });
-                  window.location.reload();
-                }}
-                className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-            {process.env.NODE_ENV === "development" && this.state.error && (
-              <details className="mt-4">
-                <summary className="text-sm text-gray-600 cursor-pointer">
-                  Error Details (Development)
-                </summary>
-                <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded overflow-auto">
-                  {this.state.error.toString()}
-                </pre>
-              </details>
-            )}
-          </div>
-        </div>
+        <DefaultErrorFallback
+          error={this.state.error}
+          resetErrorBoundary={this.resetErrorBoundary}
+        />
       );
     }
 
     return this.props.children;
   }
+}
+
+interface DefaultErrorFallbackProps {
+  error?: Error;
+  resetErrorBoundary: () => void;
+}
+
+function DefaultErrorFallback({
+  error,
+  resetErrorBoundary,
+}: DefaultErrorFallbackProps) {
+  return (
+    <div className="min-h-[400px] flex items-center justify-center p-8">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-red-200 dark:border-red-800 p-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <AlertTriangle className="h-8 w-8 text-red-500" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Something went wrong
+          </h2>
+        </div>
+
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          We encountered an unexpected error. Don't worry, this has been logged
+          and we're looking into it.
+        </p>
+
+        {process.env.NODE_ENV === "development" && error && (
+          <details className="mb-6">
+            <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Error Details (Development Only)
+            </summary>
+            <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded overflow-auto max-h-32">
+              {error.message}
+              {error.stack && `\n\n${error.stack}`}
+            </pre>
+          </details>
+        )}
+
+        <div className="flex space-x-3">
+          <button
+            onClick={resetErrorBoundary}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Try Again</span>
+          </button>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Hook for functional components to trigger error boundaries
+export function useErrorHandler() {
+  return (error: Error, errorInfo?: React.ErrorInfo) => {
+    console.error("Error caught by useErrorHandler:", error, errorInfo);
+    // This will trigger the nearest error boundary
+    throw error;
+  };
+}
+
+// Higher-order component for easier wrapping
+export function withErrorBoundary<P extends object>(
+  Component: React.ComponentType<P>,
+  errorBoundaryProps?: Omit<ErrorBoundaryProps, "children">
+) {
+  const WrappedComponent = (props: P) => (
+    <ErrorBoundary {...errorBoundaryProps}>
+      <Component {...props} />
+    </ErrorBoundary>
+  );
+
+  WrappedComponent.displayName = `withErrorBoundary(${
+    Component.displayName || Component.name
+  })`;
+
+  return WrappedComponent;
 }
 
 export default ErrorBoundary;

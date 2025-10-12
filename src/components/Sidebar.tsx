@@ -88,10 +88,9 @@ export default function Sidebar({ user, children }: SidebarProps) {
     });
 
   // Calculate total unread count - using smart polling
-  const unreadCount = Object.values(unreadCountsObj).reduce(
-    (sum, count) => sum + count,
-    0
-  );
+  const unreadCount = Object.values(
+    unreadCountsObj as Record<string, number>
+  ).reduce((sum: number, count: number) => sum + count, 0);
 
   // Keep notifications polling for now (can be upgraded to WebSocket later)
   const { data: unreadNotificationCount = 0 } =

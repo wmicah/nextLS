@@ -19,11 +19,15 @@ export default function ExerciseLibraryModal({
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
 
-  // Fetch library resources
+  // Fetch library resources - only when modal is open
   const { data: libraryItems = [], isLoading } =
-    trpc.libraryResources.getAll.useQuery();
+    trpc.libraryResources.getAll.useQuery(undefined, {
+      enabled: isOpen,
+    });
   const { data: categories = [] } =
-    trpc.libraryResources.getCategories.useQuery();
+    trpc.libraryResources.getCategories.useQuery(undefined, {
+      enabled: isOpen,
+    });
 
   // Default categories
   const DEFAULT_CATEGORIES = [

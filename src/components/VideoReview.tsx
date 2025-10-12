@@ -31,7 +31,7 @@ import AudioRecorder from "./AudioRecorder";
 import ScreenRecording from "./ScreenRecording";
 import ErrorBoundary from "./ErrorBoundary";
 import LoadingSpinner from "./LoadingSpinner";
-import SkeletonLoader from "./SkeletonLoader";
+import { Skeleton } from "./SkeletonLoader";
 
 interface VideoReviewProps {
   videoId: string;
@@ -438,14 +438,14 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
       <div className="min-h-screen" style={{ backgroundColor: "#1a1a1a" }}>
         <div className="p-6 border-b" style={{ borderColor: "#2a2a2a" }}>
           <div className="max-w-7xl mx-auto">
-            <SkeletonLoader lines={3} height="h-8" className="mb-4" />
-            <SkeletonLoader lines={1} height="h-4" className="w-1/2" />
+            <Skeleton className="h-8 w-full mb-4" />
+            <Skeleton className="h-4 w-1/2" />
           </div>
         </div>
         <div className="max-w-7xl mx-auto p-6">
           <div className="space-y-6">
             <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl aspect-video">
-              <SkeletonLoader className="w-full h-full" />
+              <Skeleton className="w-full h-full" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -454,8 +454,12 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                   className="p-6 rounded-2xl"
                   style={{ backgroundColor: "#2a2a2a" }}
                 >
-                  <SkeletonLoader lines={2} height="h-6" className="mb-4" />
-                  <SkeletonLoader lines={3} height="h-4" />
+                  <Skeleton className="h-6 w-full mb-4" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -905,7 +909,11 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                     title={isSaving ? "Saving..." : "Save Annotation"}
                   >
                     {isSaving ? (
-                      <LoadingSpinner size="sm" color="white" />
+                      <LoadingSpinner
+                        size="sm"
+                        variant="default"
+                        className="text-white"
+                      />
                     ) : (
                       <Save className="w-5 h-5" style={{ color: "#ffffff" }} />
                     )}
@@ -1130,7 +1138,11 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
               >
                 {createFeedbackMutation.isPending ? (
                   <>
-                    <LoadingSpinner size="sm" color="white" />
+                    <LoadingSpinner
+                      size="sm"
+                      variant="default"
+                      className="text-white"
+                    />
                     Saving...
                   </>
                 ) : (

@@ -60,24 +60,16 @@ export const adminRouter = {
     console.log("Database user data:", dbUser);
 
     // All authenticated users (coaches and admins) can view master library
-    // For debugging, let's also check what resources exist
-    const allResources = await db.libraryResource.findMany({
+    // Filter at database level for security and performance
+    const resources = await db.libraryResource.findMany({
+      where: {
+        isMasterLibrary: true,
+        isActive: true,
+      },
       orderBy: {
         createdAt: "desc",
       },
     });
-
-    console.log(
-      "All resources:",
-      allResources.map(r => ({
-        id: r.id,
-        title: r.title,
-        isMasterLibrary: r.isMasterLibrary,
-        isActive: r.isActive,
-      }))
-    );
-
-    const resources = allResources.filter(r => r.isMasterLibrary && r.isActive);
 
     console.log("Found", resources.length, "master library resources");
     return resources;

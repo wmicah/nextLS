@@ -139,3 +139,4 @@ If you still experience auto-login issues:
    - Follow `ACCOUNT_DELETION_SETUP.md` to set up Management API
    - Completely removes users from Kinde (not just database)
    - Prevents any possibility of auto-login after deletion
+

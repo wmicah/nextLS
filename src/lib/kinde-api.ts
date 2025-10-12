@@ -70,3 +70,4 @@ export async function deleteKindeUser(userId: string): Promise<{
 export function isKindeManagementApiConfigured(): boolean {
   return !!config.auth.kinde.managementApiToken;
 }
+
