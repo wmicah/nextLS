@@ -18,9 +18,11 @@ export default function ChatbotWrapper() {
     pathname.startsWith("/client-messages") ||
     pathname.includes("/messages/");
 
-  // Hide chatbot on all client pages (clients don't need AI chatbot)
+  // Hide chatbot on all client-facing pages (actual client portal pages)
+  // Note: /clients (plural) is for coaches, /client- or /client/ is for actual clients
   const isClientPage =
-    pathname.startsWith("/client-") || pathname.startsWith("/client/");
+    pathname.startsWith("/client-") ||
+    (pathname.startsWith("/client/") && !pathname.startsWith("/clients/"));
 
   // Only show chatbot for coaches, not clients
   const shouldShowChatbot =

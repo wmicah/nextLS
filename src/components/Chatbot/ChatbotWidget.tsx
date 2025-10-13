@@ -24,6 +24,7 @@ export default function ChatbotWidget() {
     useChatbot();
   const { isMobile } = useMobileDetection();
   const chatRef = useRef<HTMLDivElement>(null);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -150,15 +151,16 @@ export default function ChatbotWidget() {
   };
 
   // Hide floating button on mobile since AI chat is now in bottom navigation
-  if (isMobile) {
-    return null;
-  }
+  // Allow chatbot to work on both mobile and desktop
+  // if (isMobile) {
+  //   return null;
+  // }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {/* Floating Chat Button */}
       <AnimatePresence>
-        {!isOpen && (
+        {!isOpen && !isMobile && (
           <motion.div
             initial={{ scale: 0, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}

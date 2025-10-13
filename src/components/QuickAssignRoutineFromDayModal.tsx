@@ -23,6 +23,7 @@ export default function QuickAssignRoutineFromDayModal({
   const [searchTerm, setSearchTerm] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const { toast } = useToast();
+  const utils = trpc.useUtils();
 
   // Get all routines
   const { data: routines = [] } = trpc.routines.list.useQuery();
@@ -34,6 +35,15 @@ export default function QuickAssignRoutineFromDayModal({
         title: "Routine Assigned!",
         description: `Routine has been assigned to ${clientName}.`,
       });
+      // Invalidate relevant queries to refresh the UI
+      utils.clients.list.invalidate();
+      utils.clients.getById.invalidate({ id: clientId });
+      utils.clients.getAssignedPrograms.invalidate({ clientId });
+      utils.library.getClientAssignments.invalidate({ clientId });
+      utils.scheduling.getCoachSchedule.invalidate();
+      utils.scheduling.getCoachUpcomingLessons.invalidate();
+      utils.events.getUpcoming.invalidate();
+      utils.routines.list.invalidate();
       onClose();
     },
     onError: error => {
@@ -79,7 +89,7 @@ export default function QuickAssignRoutineFromDayModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className="rounded-2xl shadow-xl border w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="rounded-2xl shadow-xl border w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
         style={{
           backgroundColor: "#353A3A",
           borderColor: "#606364",
@@ -131,7 +141,7 @@ export default function QuickAssignRoutineFromDayModal({
           </div>
 
           {/* Routines List */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filteredRoutines.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-lg font-semibold text-white mb-2">
@@ -148,10 +158,10 @@ export default function QuickAssignRoutineFromDayModal({
                 <div
                   key={routine.id}
                   onClick={() => handleRoutineSelect(routine)}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
+                  className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                     isAssigning
                       ? "opacity-50 cursor-not-allowed"
-                      : "hover:scale-[1.02] hover:shadow-lg"
+                      : "hover:scale-[1.01] hover:shadow-md"
                   }`}
                   style={{
                     backgroundColor: "#2A3133",
@@ -159,26 +169,17 @@ export default function QuickAssignRoutineFromDayModal({
                   }}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-green-500/10">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="p-2 rounded-lg bg-green-500/10 flex-shrink-0">
                         <Target className="h-5 w-5 text-green-400" />
                       </div>
-                      <div>
-                        <div className="font-medium text-white">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white truncate">
                           {routine.name}
                         </div>
-                        <div className="text-sm text-gray-400">
-                          {routine.exercises?.length || 0} exercise
-                          {(routine.exercises?.length || 0) !== 1 ? "s" : ""}
-                        </div>
-                        {routine.description && (
-                          <div className="text-sm text-gray-500 mt-1">
-                            {routine.description}
-                          </div>
-                        )}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="ml-3 flex-shrink-0">
                       <div className="text-sm font-medium text-green-400">
                         {isAssigning ? "Assigning..." : "Click to Assign"}
                       </div>
@@ -193,4 +194,3 @@ export default function QuickAssignRoutineFromDayModal({
     </div>
   );
 }
-

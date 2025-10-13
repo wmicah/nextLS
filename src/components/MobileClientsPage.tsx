@@ -29,6 +29,10 @@ import {
   Download,
   Grid3X3,
   List,
+  Key,
+  Copy,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import AddClientModal from "./AddClientModal";
@@ -89,6 +93,272 @@ interface Client {
   }[];
 }
 
+// Mobile Invite Code Button Component
+function MobileInviteCodeButton() {
+  const [copied, setCopied] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const generateInviteCode = trpc.user.generateInviteCode.useMutation();
+
+  const handleGenerateInviteCode = () => {
+    generateInviteCode.mutate();
+  };
+
+  const handleCopyInviteCode = () => {
+    if (generateInviteCode.data?.inviteCode) {
+      navigator.clipboard.writeText(generateInviteCode.data.inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setShowModal(true)}
+        className="p-2 rounded-lg bg-[#4A5A70] text-white"
+      >
+        <Key className="h-4 w-4" />
+      </button>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setShowModal(false)}
+          />
+          <div className="relative w-full max-w-md bg-[#2B3038] border border-[#4A5A70] rounded-lg p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Key className="h-5 w-5 text-[#4A5A70]" />
+                <h3 className="font-semibold text-white">Coach Invite Code</h3>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            {!generateInviteCode.data?.inviteCode ? (
+              <div className="space-y-3">
+                <p className="text-sm text-[#C3BCC2]">
+                  Generate a unique invite code to share with your athletes
+                </p>
+                <button
+                  onClick={handleGenerateInviteCode}
+                  disabled={generateInviteCode.isPending}
+                  className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {generateInviteCode.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="h-4 w-4" />
+                      Generate Invite Code
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-[#C3BCC2]">
+                  Share this code with your athletes
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type={isVisible ? "text" : "password"}
+                    value={generateInviteCode.data.inviteCode}
+                    readOnly
+                    className="flex-1 px-3 py-2 bg-[#2A3133] border border-[#606364] rounded-lg text-white font-mono text-sm"
+                  />
+                  <button
+                    onClick={() => setIsVisible(!isVisible)}
+                    className="p-2 text-[#ABA4AA] hover:text-white transition-colors"
+                    title={isVisible ? "Hide code" : "Show code"}
+                  >
+                    {isVisible ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                  <button
+                    onClick={handleCopyInviteCode}
+                    className="p-2 bg-[#4A5A70] hover:bg-[#606364] text-white rounded-lg transition-colors"
+                    title="Copy invite code"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {copied && (
+                  <p className="text-xs text-green-400 flex items-center gap-1">
+                    <Check className="h-3 w-3" />
+                    Copied to clipboard!
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Mobile Requests Button Component
+function MobileRequestsButton({ onOpenModal }: { onOpenModal: () => void }) {
+  const { data: pendingRequests = [] } =
+    trpc.notifications.getNotifications.useQuery({
+      unreadOnly: true,
+      limit: 50,
+    });
+
+  const clientRequests = pendingRequests.filter(
+    (req: any) =>
+      req.type === "CLIENT_JOIN_REQUEST" && req.data?.requiresApproval
+  );
+
+  return (
+    <button
+      onClick={onOpenModal}
+      className="relative p-2 rounded-lg bg-[#4A5A70] text-white"
+    >
+      <Mail className="h-4 w-4" />
+      {clientRequests.length > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+          {clientRequests.length}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// Mobile Client Requests Modal Component
+function MobileClientRequestsModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+
+  const { data: pendingRequests = [], refetch } =
+    trpc.notifications.getNotifications.useQuery({
+      unreadOnly: true,
+      limit: 50,
+    });
+
+  const clientRequests = pendingRequests.filter(
+    (req: any) =>
+      req.type === "CLIENT_JOIN_REQUEST" && req.data?.requiresApproval
+  );
+
+  const acceptRequest = trpc.user.acceptClientRequest.useMutation({
+    onSuccess: () => {
+      refetch();
+      utils.clients.list.invalidate();
+    },
+  });
+
+  const rejectRequest = trpc.user.rejectClientRequest.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-[#2B3038] rounded-lg p-6 max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-white">Client Join Requests</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <XCircle className="h-6 w-6" />
+          </button>
+        </div>
+
+        {clientRequests.length === 0 ? (
+          <div className="text-center py-8">
+            <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-400">No pending requests</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {clientRequests.map((request: any) => (
+              <div
+                key={request.id}
+                className="bg-[#353A3A] rounded-lg p-4 border border-[#4A5A70]"
+              >
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-white">
+                      {request.data?.clientName || "Unknown Client"}
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      {request.data?.clientEmail || "No email provided"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Requested{" "}
+                      {new Date(request.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        acceptRequest.mutate({ notificationId: request.id });
+                      }}
+                      disabled={
+                        acceptRequest.isPending || rejectRequest.isPending
+                      }
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <Check className="h-4 w-4" />
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => {
+                        rejectRequest.mutate({ notificationId: request.id });
+                      }}
+                      disabled={
+                        acceptRequest.isPending || rejectRequest.isPending
+                      }
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={onClose}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MobileClientsPage() {
   const router = useRouter();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -100,6 +370,7 @@ export default function MobileClientsPage() {
   const [feedbackClient, setFeedbackClient] = useState<Client | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
   const [selectedClientForProfile, setSelectedClientForProfile] =
     useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -463,6 +734,10 @@ export default function MobileClientsPage() {
             >
               <Users className="h-4 w-4 text-white" />
             </button>
+            <MobileInviteCodeButton />
+            <MobileRequestsButton
+              onOpenModal={() => setIsRequestsModalOpen(true)}
+            />
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="p-2 rounded-lg bg-[#4A5A70] text-white"
@@ -1009,6 +1284,12 @@ export default function MobileClientsPage() {
           </div>
         </div>
       )}
+
+      {/* Client Requests Modal */}
+      <MobileClientRequestsModal
+        isOpen={isRequestsModalOpen}
+        onClose={() => setIsRequestsModalOpen(false)}
+      />
 
       {/* Bottom Navigation */}
       <MobileBottomNavigation />
