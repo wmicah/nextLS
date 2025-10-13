@@ -158,6 +158,45 @@ export default function MobileClientDetailPage({
   // Fetch coach's working hours
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
 
+  const utils = trpc.useUtils();
+
+  // Remove program mutation
+  const removeProgramMutation = trpc.programs.unassignFromClients.useMutation({
+    onSuccess: () => {
+      utils.clients.getAssignedPrograms.invalidate({ clientId });
+      utils.library.getClientAssignments.invalidate({ clientId });
+      setShowDayOverviewModal(false);
+    },
+    onError: error => {
+      console.error("Failed to remove program:", error);
+    },
+  });
+
+  // Remove routine mutation
+  const unassignRoutineMutation = trpc.routines.unassign.useMutation({
+    onSuccess: () => {
+      utils.routines.getClientRoutineAssignments.invalidate({ clientId });
+      utils.library.getClientAssignments.invalidate({ clientId });
+      setShowDayOverviewModal(false);
+    },
+    onError: error => {
+      console.error("Failed to remove routine:", error);
+    },
+  });
+
+  // Delete lesson mutation
+  const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
+    onSuccess: () => {
+      utils.scheduling.getCoachSchedule.invalidate();
+      utils.scheduling.getCoachUpcomingLessons.invalidate();
+      utils.events.getUpcoming.invalidate();
+      setShowDayOverviewModal(false);
+    },
+    onError: error => {
+      console.error("Failed to remove lesson:", error);
+    },
+  });
+
   // Loading state
   if (clientLoading || lessonsLoading) {
     return (
@@ -326,6 +365,60 @@ export default function MobileClientDetailPage({
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setShowDayOverviewModal(true);
+  };
+
+  // Remove handlers
+  const handleRemoveProgram = (programData: any) => {
+    const programTitle =
+      programData.title || programData.program?.title || "Program";
+    const programId =
+      programData.assignment?.programId ||
+      programData.programId ||
+      programData.id;
+
+    if (
+      confirm(
+        `Are you sure you want to remove "${programTitle}" from this client?`
+      )
+    ) {
+      removeProgramMutation.mutate({
+        programId: programId,
+        clientIds: [clientId],
+      });
+    }
+  };
+
+  const handleRemoveRoutine = (routineData: any) => {
+    const routineName =
+      routineData.routine?.name || routineData.name || "Routine";
+    const routineId =
+      routineData.assignment?.routineId ||
+      routineData.routineId ||
+      routineData.id;
+
+    if (
+      confirm(
+        `Are you sure you want to remove "${routineName}" from this client?`
+      )
+    ) {
+      unassignRoutineMutation.mutate({
+        routineId: routineId,
+        clientIds: [clientId],
+      });
+    }
+  };
+
+  const handleRemoveLesson = (lessonData: any) => {
+    const lessonTitle = lessonData.title || "Lesson";
+    const lessonId = lessonData.id;
+
+    if (
+      confirm(`Are you sure you want to remove the lesson "${lessonTitle}"?`)
+    ) {
+      deleteLessonMutation.mutate({
+        lessonId: lessonId,
+      });
+    }
   };
 
   // Generate calendar days based on view mode (same as desktop)
@@ -926,6 +1019,13 @@ export default function MobileClientDetailPage({
                                     {lesson.title}
                                   </div>
                                 </div>
+                                <button
+                                  onClick={() => handleRemoveLesson(lesson)}
+                                  className="p-2 text-emerald-400 hover:text-red-400 transition-colors"
+                                  title="Remove lesson"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -942,7 +1042,7 @@ export default function MobileClientDetailPage({
                             {dayPrograms.map((program: any, index: number) => (
                               <div
                                 key={`day-program-${program.id || index}`}
-                                className={`flex items-center justify-between p-4 rounded-lg border ${
+                                className={`flex items-center justify-between p-4 rounded-lg border group ${
                                   program.type === "rest"
                                     ? "bg-orange-500/10 border-orange-500/20"
                                     : "bg-blue-500/10 border-blue-500/20"
@@ -968,6 +1068,17 @@ export default function MobileClientDetailPage({
                                     {program.description}
                                   </div>
                                 </div>
+                                <button
+                                  onClick={() => handleRemoveProgram(program)}
+                                  className={`p-2 transition-colors ${
+                                    program.type === "rest"
+                                      ? "text-orange-400 hover:text-red-400"
+                                      : "text-blue-400 hover:text-red-400"
+                                  }`}
+                                  title="Remove program"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -984,7 +1095,7 @@ export default function MobileClientDetailPage({
                             {dayRoutines.map((routine: any, index: number) => (
                               <div
                                 key={`day-routine-${routine.id || index}`}
-                                className="flex items-center justify-between p-4 rounded-lg border bg-green-500/10 border-green-500/20"
+                                className="flex items-center justify-between p-4 rounded-lg border group bg-green-500/10 border-green-500/20"
                               >
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
@@ -1000,6 +1111,13 @@ export default function MobileClientDetailPage({
                                     </div>
                                   </div>
                                 </div>
+                                <button
+                                  onClick={() => handleRemoveRoutine(routine)}
+                                  className="p-2 text-green-400 hover:text-red-400 transition-colors"
+                                  title="Remove routine"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
                               </div>
                             ))}
                           </div>

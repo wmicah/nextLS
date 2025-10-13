@@ -182,10 +182,11 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   }, [assignedRoutines]);
 
   // Fetch client's video assignments
-  const { data: videoAssignments = [] } =
-    trpc.library.getClientAssignments.useQuery({
-      clientId,
-    });
+  const { data: assignmentsData } = trpc.library.getClientAssignments.useQuery({
+    clientId,
+  });
+
+  const videoAssignments = assignmentsData?.videoAssignments || [];
 
   // Fetch coach's working hours for time slot generation
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
