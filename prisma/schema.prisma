@@ -24,6 +24,7 @@ model User {
   workingHoursEnd          String?                 @map("working_hours_end")
   isAdmin                  Boolean                 @default(false)
   inviteCode               String?                 @unique @map("invite_code")
+  organizationId           String?                 @map("organization_id")
   workingDays              String[]                @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) @map("working_days")
   timeSlotInterval         Int                     @default(60) @map("time_slot_interval")
   lastLoginAt              DateTime?               @map("last_login_at")
@@ -61,6 +62,16 @@ model User {
   workoutTemplates         WorkoutTemplate[]
   clientWorkouts           Workout[]               @relation("ClientWorkouts")
   assignedWorkouts         Workout[]               @relation("CoachWorkouts")
+  
+  // Organization relationships
+  ownedOrganization        Organization?           @relation("OrganizationOwner")
+  organization             Organization?           @relation("OrganizationCoaches", fields: [organizationId], references: [id])
+  coachOrganizations       CoachOrganization[]     @relation("CoachOrganizations")
+  createdPrograms          Program[]               @relation("CreatedPrograms")
+  createdRoutines          Routine[]               @relation("CreatedRoutines")
+  primaryCoachClients      Client[]                @relation("PrimaryCoachClients")
+  coachClientAssignments   ClientCoachAssignment[] @relation("CoachClientAssignments")
+  assignedByMe             ClientCoachAssignment[] @relation("AssignedBy")
 
   @@map("users")
 }
@@ -72,6 +83,8 @@ model Client {
   phone                String?
   notes                String?
   coachId              String?
+  organizationId       String?                 @map("organization_id")
+  primaryCoachId       String?                 @map("primary_coach_id")
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
   nextLessonDate       DateTime?
@@ -106,6 +119,11 @@ model Client {
   swapRequestsSent     TimeSwapRequest[]       @relation("SwapRequester")
   swapRequestsReceived TimeSwapRequest[]       @relation("SwapTarget")
   videos               Video[]
+  
+  // Organization relationships
+  organization         Organization?           @relation("OrganizationClients", fields: [organizationId], references: [id])
+  primaryCoach         User?                   @relation("PrimaryCoachClients", fields: [primaryCoachId], references: [id])
+  assignedCoaches      ClientCoachAssignment[] @relation("ClientCoachAssignments")
 
   @@map("clients")
 }
@@ -204,17 +222,22 @@ model Workout {
 }
 
 model Event {
-  id                      String            @id @default(cuid())
-  title                   String
-  description             String?
-  date                    DateTime
-  clientId                String?
-  coachId                 String
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
-  status                  EventStatus       @default(PENDING)
-  client                  Client?           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  coach                   User              @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
+  id             String            @id @default(cuid())
+  title          String
+  description    String?
+  date           DateTime
+  clientId       String?
+  coachId        String
+  organizationId String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  status         EventStatus       @default(PENDING)
+  startTime      DateTime?
+  endTime        DateTime?
+  type           String?
+  client         Client?           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach          User              @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
+  organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   swapRequestsAsRequester TimeSwapRequest[] @relation("SwapRequesterEvent")
   swapRequestsAsTarget    TimeSwapRequest[] @relation("SwapTargetEvent")
 
@@ -338,12 +361,17 @@ model Program {
   status       ProgramStatus           @default(DRAFT)
   duration     Int
   coachId      String
+  organizationId String?              @map("organization_id")
+  sharedWithOrg Boolean               @default(false) @map("shared_with_org")
+  createdByCoachId String?            @map("created_by_coach_id")
   createdAt    DateTime                @default(now())
   updatedAt    DateTime                @updatedAt
   assignments  ProgramAssignment[]
   replacements ProgramDayReplacement[]
   weeks        ProgramWeek[]
   coach        User                    @relation("CoachPrograms", fields: [coachId], references: [id], onDelete: Cascade)
+  organization Organization?           @relation("SharedPrograms", fields: [organizationId], references: [id])
+  createdByCoach User?                 @relation("CreatedPrograms", fields: [createdByCoachId], references: [id])
 
   @@map("programs")
 }
@@ -524,11 +552,16 @@ model Routine {
   name        String
   description String?
   coachId     String
+  organizationId String?         @map("organization_id")
+  sharedWithOrg Boolean          @default(false) @map("shared_with_org")
+  createdByCoachId String?       @map("created_by_coach_id")
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   assignments RoutineAssignment[]
   exercises   RoutineExercise[]
   coach       User                @relation("CoachRoutines", fields: [coachId], references: [id], onDelete: Cascade)
+  organization Organization?      @relation("SharedRoutines", fields: [organizationId], references: [id])
+  createdByCoach User?            @relation("CreatedRoutines", fields: [createdByCoachId], references: [id])
 
   @@map("routines")
 }
@@ -811,6 +844,7 @@ enum NotificationType {
   SYSTEM
   CLIENT_JOIN_REQUEST
   SCHEDULE_REQUEST
+  ORGANIZATION_INVITATION
 }
 
 enum ProgramStatus {
@@ -881,4 +915,82 @@ enum SwapStatus {
   APPROVED
   DECLINED
   EXPIRED
+}
+
+// Organization Models
+model Organization {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  tier              OrganizationTier @default(SOLO)
+  coachLimit        Int      @default(1) @map("coach_limit")
+  clientLimit       Int      @default(50) @map("client_limit")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  ownerId           String   @unique @map("owner_id")
+  
+  // Relationships
+  owner             User     @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  coaches           User[]   @relation("OrganizationCoaches")
+  clients           Client[] @relation("OrganizationClients")
+  sharedPrograms    Program[] @relation("SharedPrograms")
+  sharedRoutines    Routine[] @relation("SharedRoutines")
+  coachOrganizations CoachOrganization[] @relation("CoachOrganizationMembers")
+  events            Event[]
+  
+  @@map("organizations")
+}
+
+model CoachOrganization {
+  id             String   @id @default(cuid())
+  coachId        String   @map("coach_id")
+  organizationId String   @map("organization_id")
+  role           CoachRole @default(COACH)
+  joinedAt       DateTime @default(now())
+  isActive       Boolean  @default(true)
+  
+  // Relationships
+  coach          User         @relation("CoachOrganizations", fields: [coachId], references: [id])
+  organization   Organization @relation("CoachOrganizationMembers", fields: [organizationId], references: [id])
+  
+  @@unique([coachId, organizationId])
+  @@map("coach_organizations")
+}
+
+model ClientCoachAssignment {
+  id             String   @id @default(cuid())
+  clientId       String   @map("client_id")
+  coachId        String   @map("coach_id")
+  assignedBy     String   @map("assigned_by")
+  assignedAt     DateTime @default(now())
+  isActive       Boolean  @default(true)
+  role           AssignmentRole @default(ASSISTANT)
+  
+  // Relationships
+  client         Client   @relation("ClientCoachAssignments", fields: [clientId], references: [id])
+  coach          User     @relation("CoachClientAssignments", fields: [coachId], references: [id])
+  assigner       User     @relation("AssignedBy", fields: [assignedBy], references: [id])
+  
+  @@unique([clientId, coachId])
+  @@map("client_coach_assignments")
+}
+
+// Organization Enums
+enum OrganizationTier {
+  SOLO    // 1 coach, 50 clients
+  TEAM    // 5 coaches, 250 clients  
+  CLUB    // 10 coaches, 500 clients
+  ACADEMY // 20 coaches, 1000 clients
+}
+
+enum CoachRole {
+  OWNER   // Can manage organization, invite coaches, see all data
+  ADMIN   // Can manage coaches and clients, see all data
+  COACH   // Can manage assigned clients, see shared resources
+}
+
+enum AssignmentRole {
+  PRIMARY    // Main coach responsible for client
+  ASSISTANT  // Secondary coach helping with client
+  OBSERVER   // Coach who can view but not modify client data
 }

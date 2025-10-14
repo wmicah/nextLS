@@ -115,6 +115,7 @@ interface ClientProgramDayModalProps {
   selectedDate?: Date | null; // New prop for the actual clicked date
   programs?: ProgramData[]; // Changed from single programInfo to array of programs
   routineAssignments?: RoutineAssignment[];
+  lessonsForDate?: any[]; // Lessons scheduled for this date
   onMarkDrillComplete: (drillId: string, completed: boolean) => void;
   onMarkAllComplete: () => void;
   onOpenVideo: (videoUrl: string, drill: Drill) => void;
@@ -157,6 +158,7 @@ export default function ClientProgramDayModal({
   selectedDate,
   programs = [],
   routineAssignments = [],
+  lessonsForDate = [],
   onMarkDrillComplete,
   onMarkAllComplete,
   onOpenVideo,
@@ -297,7 +299,7 @@ export default function ClientProgramDayModal({
   const currentTab = tabs.find(tab => tab.id === activeTab);
   const unviewedCount = tabs.filter(tab => !viewedTabs.has(tab.id)).length;
 
-  if (!isOpen || !selectedDay) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -395,7 +397,99 @@ export default function ClientProgramDayModal({
 
         {/* Content */}
         <div className="p-6 pb-8 overflow-y-auto flex-1">
-          {currentTab?.type === "program" ? (
+          {tabs.length === 0 && lessonsForDate.length > 0 ? (
+            // Show lessons when there are no programs/routines but there are lessons
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Scheduled Lessons
+              </h3>
+              {lessonsForDate.map((lesson: any, index: number) => {
+                const isScheduleRequest = lesson.title
+                  ?.toLowerCase()
+                  .includes("schedule request");
+
+                return (
+                  <div
+                    key={lesson.id || index}
+                    className={`p-4 rounded-xl border-2 ${
+                      isScheduleRequest
+                        ? "bg-blue-500/20 border-blue-400/50"
+                        : "bg-green-600/40 border-green-400/50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Clock
+                            className={`h-5 w-5 ${
+                              isScheduleRequest
+                                ? "text-blue-300"
+                                : "text-green-300"
+                            }`}
+                          />
+                          <span
+                            className={`font-semibold ${
+                              isScheduleRequest
+                                ? "text-blue-200"
+                                : "text-green-200"
+                            }`}
+                          >
+                            {new Date(lesson.date).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        <h4
+                          className={`text-lg font-bold mb-1 ${
+                            isScheduleRequest
+                              ? "text-blue-100"
+                              : "text-green-100"
+                          }`}
+                        >
+                          {lesson.title || "Lesson"}
+                        </h4>
+                        {lesson.description && (
+                          <p
+                            className={`text-sm ${
+                              isScheduleRequest
+                                ? "text-blue-200/80"
+                                : "text-green-200/80"
+                            }`}
+                          >
+                            {lesson.description}
+                          </p>
+                        )}
+                        {(lesson as any).coach && (
+                          <p
+                            className={`text-sm mt-2 ${
+                              isScheduleRequest
+                                ? "text-blue-200"
+                                : "text-green-200"
+                            }`}
+                          >
+                            Coach: {(lesson as any).coach.name}
+                          </p>
+                        )}
+                      </div>
+                      <Badge
+                        variant={
+                          lesson.status === "CONFIRMED"
+                            ? "default"
+                            : "secondary"
+                        }
+                        className={
+                          lesson.status === "CONFIRMED" ? "bg-green-600" : ""
+                        }
+                      >
+                        {lesson.status}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : currentTab?.type === "program" ? (
             (() => {
               // Find the specific program for this tab
               const programId = currentTab.id.replace("program-", "");
@@ -430,7 +524,13 @@ export default function ClientProgramDayModal({
             />
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-400">No content available</p>
+              <Calendar className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg mb-2">
+                Nothing scheduled for this day
+              </p>
+              <p className="text-gray-500 text-sm">
+                Check back later for updates from your coach
+              </p>
             </div>
           )}
         </div>
@@ -456,29 +556,31 @@ export default function ClientProgramDayModal({
               </Button>
             )}
 
-            {/* Note to Coach */}
-            <div className="space-y-3">
-              <h4 className="font-semibold text-white text-lg flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-blue-400" />
-                Note to Coach
-              </h4>
-              <Textarea
-                placeholder="Add a note about your workout..."
-                value={noteToCoach}
-                onChange={e => setNoteToCoach(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl"
-                rows={3}
-              />
-              <Button
-                onClick={() => onSendNote(noteToCoach)}
-                disabled={!noteToCoach.trim() || isSubmittingNote}
-                className="w-full py-3 rounded-xl"
-                style={{ backgroundColor: "#10B981" }}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {isSubmittingNote ? "Sending..." : "Send Note"}
-              </Button>
-            </div>
+            {/* Note to Coach - Only show if there are programs/routines */}
+            {tabs.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-white text-lg flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-blue-400" />
+                  Note to Coach
+                </h4>
+                <Textarea
+                  placeholder="Add a note about your workout..."
+                  value={noteToCoach}
+                  onChange={e => setNoteToCoach(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl"
+                  rows={3}
+                />
+                <Button
+                  onClick={() => onSendNote(noteToCoach)}
+                  disabled={!noteToCoach.trim() || isSubmittingNote}
+                  className="w-full py-3 rounded-xl"
+                  style={{ backgroundColor: "#10B981" }}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {isSubmittingNote ? "Sending..." : "Send Note"}
+                </Button>
+              </div>
+            )}
 
             {/* Progress Footer */}
             {tabs.length > 1 && (

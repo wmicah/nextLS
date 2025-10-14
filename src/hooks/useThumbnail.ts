@@ -21,11 +21,14 @@ export const useThumbnail = (
     if (!filename || !isVideo) return;
 
     // Skip thumbnail generation for YouTube videos - they have their own thumbnails
-    if (
+    const isYouTubeVideo =
       filename.includes("watch?v=") ||
       filename.includes("youtube.com") ||
-      filename.includes("youtu.be")
-    ) {
+      filename.includes("youtu.be") ||
+      videoUrl?.includes("youtube.com") ||
+      videoUrl?.includes("youtu.be");
+
+    if (isYouTubeVideo) {
       return;
     }
 

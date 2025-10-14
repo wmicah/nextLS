@@ -72,10 +72,14 @@ import MobileBottomNavigation from "./MobileBottomNavigation";
 
 interface MobileClientDetailPageProps {
   clientId: string;
+  backPath?: string; // Optional custom back path (e.g., for organization view)
+  noSidebar?: boolean; // Skip sidebar wrapper (e.g., when already in a layout with sidebar)
 }
 
 export default function MobileClientDetailPage({
   clientId,
+  backPath = "/clients",
+  noSidebar = false,
 }: MobileClientDetailPageProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
@@ -108,13 +112,13 @@ export default function MobileClientDetailPage({
   // Redirect to clients page if client is archived or not found
   useEffect(() => {
     if (clientError || (!clientLoading && !client)) {
-      router.push("/clients");
+      router.push(backPath);
     }
     // Also redirect if client is archived
     if (client && client.archived) {
-      router.push("/clients");
+      router.push(backPath);
     }
-  }, [clientError, clientLoading, client, router]);
+  }, [clientError, clientLoading, client, router, backPath]);
 
   // Fetch coach's schedule for the current month (includes all client lessons)
   const { data: coachSchedule = [], isLoading: lessonsLoading } =
@@ -237,7 +241,7 @@ export default function MobileClientDetailPage({
               access to it.
             </p>
             <button
-              onClick={() => router.push("/clients")}
+              onClick={() => router.push(backPath)}
               className="px-6 py-3 rounded-lg text-white transition-all duration-200"
               style={{ backgroundColor: "#4A5A70" }}
             >
@@ -455,7 +459,7 @@ export default function MobileClientDetailPage({
       >
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push("/clients")}
+            onClick={() => router.push(backPath)}
             className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
           >
             <ArrowLeft className="h-5 w-5 text-white" />

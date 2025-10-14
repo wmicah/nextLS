@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileSettingsPage from "@/components/MobileSettingsPage";
+import { Button } from "@/components/ui/button";
 import {
   User,
   Users,
@@ -12,20 +14,27 @@ import {
   Save,
   Settings as SettingsIcon,
   AlertTriangle,
+  Building2,
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
 import Sidebar from "@/components/Sidebar";
+import OrganizationUpgradeModal from "@/components/OrganizationUpgradeModal";
+import { toast } from "sonner";
+import Link from "next/link";
 
 interface SettingsPageClientProps {
   // Add props here if needed in the future
 }
 
 function SettingsPageClient({}: SettingsPageClientProps) {
-  const [activeTab, setActiveTab] = useState("profile");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "profile";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isLoading, setIsLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Form state for each tab
   const [profileData, setProfileData] = useState({
@@ -55,6 +64,50 @@ function SettingsPageClient({}: SettingsPageClientProps) {
   // Get user settings
   const { data: userSettings, refetch: refetchSettings } =
     trpc.settings.getSettings.useQuery();
+
+  // Get organization data
+  const { data: organization, refetch: refetchOrganization } =
+    trpc.organization.get.useQuery({});
+
+  // Get pending invitations
+  const { data: pendingInvitations = [], refetch: refetchInvitations } =
+    trpc.organization.getPendingInvitations.useQuery(undefined, {
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+    });
+
+  // Accept invitation mutation
+  const acceptInvitationMutation =
+    trpc.organization.acceptInvitation.useMutation({
+      onSuccess: async () => {
+        toast.success("Invitation accepted!");
+        await refetchOrganization();
+        await refetchInvitations();
+      },
+      onError: (error: { message?: string }) => {
+        toast.error(error.message || "Failed to accept invitation");
+      },
+    });
+
+  // Decline invitation mutation
+  const declineInvitationMutation =
+    trpc.organization.declineInvitation.useMutation({
+      onSuccess: async () => {
+        toast.success("Invitation declined");
+        await refetchInvitations();
+      },
+      onError: (error: { message?: string }) => {
+        toast.error(error.message || "Failed to decline invitation");
+      },
+    });
+
+  const handleAcceptInvitation = (organizationId: string) => {
+    acceptInvitationMutation.mutate({ organizationId });
+  };
+
+  const handleDeclineInvitation = (organizationId: string) => {
+    declineInvitationMutation.mutate({ organizationId });
+  };
 
   // Settings mutations
   const updateSettingsMutation = trpc.settings.updateSettings.useMutation({
@@ -121,6 +174,11 @@ function SettingsPageClient({}: SettingsPageClientProps) {
       id: "schedule",
       name: "Schedule",
       icon: <Calendar className="w-5 h-5" />,
+    },
+    {
+      id: "organization",
+      name: "Organization",
+      icon: <Building2 className="w-5 h-5" />,
     },
     {
       id: "billing",
@@ -789,6 +847,210 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                 </div>
               )}
 
+              {/* Organization Tab */}
+              {activeTab === "organization" && (
+                <div>
+                  <h3
+                    className="text-2xl font-bold mb-6"
+                    style={{ color: "#ffffff" }}
+                  >
+                    Organization Settings
+                  </h3>
+
+                  {/* Pending Invitations - Show at the top */}
+                  {pendingInvitations.length > 0 && (
+                    <div
+                      className="mb-6 p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: "#1a1a1a",
+                        borderColor: "#2a2a2a",
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4
+                            className="font-semibold text-lg mb-1"
+                            style={{ color: "#ffffff" }}
+                          >
+                            Pending Invitations
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            You have {pendingInvitations.length} pending
+                            invitation{pendingInvitations.length > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {pendingInvitations.map(invitation => (
+                          <div
+                            key={invitation.id}
+                            className="flex items-center justify-between p-3 rounded-lg"
+                            style={{ backgroundColor: "#0a0a0a" }}
+                          >
+                            <div>
+                              <h5
+                                className="font-medium"
+                                style={{ color: "#ffffff" }}
+                              >
+                                {invitation.organization.name}
+                              </h5>
+                              {invitation.organization.description && (
+                                <p className="text-sm text-muted-foreground">
+                                  {invitation.organization.description}
+                                </p>
+                              )}
+                              <span
+                                className="inline-block mt-2 px-2 py-1 text-xs rounded"
+                                style={{
+                                  backgroundColor: "#2a2a2a",
+                                  color: "#9ca3af",
+                                }}
+                              >
+                                {invitation.organization.tier}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  handleAcceptInvitation(
+                                    invitation.organization.id
+                                  )
+                                }
+                                disabled={
+                                  acceptInvitationMutation.isPending ||
+                                  declineInvitationMutation.isPending
+                                }
+                              >
+                                Accept
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handleDeclineInvitation(
+                                    invitation.organization.id
+                                  )
+                                }
+                                disabled={
+                                  acceptInvitationMutation.isPending ||
+                                  declineInvitationMutation.isPending
+                                }
+                              >
+                                Decline
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {organization ? (
+                    <div className="space-y-6">
+                      <div
+                        className="rounded-2xl border p-6"
+                        style={{
+                          backgroundColor: "#353A3A",
+                          borderColor: "#606364",
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-6">
+                          <div>
+                            <h4
+                              className="text-2xl font-bold mb-2"
+                              style={{ color: "#C3BCC2" }}
+                            >
+                              {organization.name}
+                            </h4>
+                            {organization.description && (
+                              <p style={{ color: "#ABA4AA" }}>
+                                {organization.description}
+                              </p>
+                            )}
+                          </div>
+                          <div
+                            className="px-3 py-1 rounded-lg text-sm font-semibold"
+                            style={{
+                              backgroundColor: "#606364",
+                              color: "#C3BCC2",
+                            }}
+                          >
+                            {organization.tier}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                          <div
+                            className="p-4 rounded-xl"
+                            style={{ backgroundColor: "#2A3133" }}
+                          >
+                            <div
+                              className="text-2xl font-bold"
+                              style={{ color: "#C3BCC2" }}
+                            >
+                              {organization._count.coaches}
+                            </div>
+                            <div
+                              className="text-sm"
+                              style={{ color: "#ABA4AA" }}
+                            >
+                              Coaches (Max: {organization.coachLimit})
+                            </div>
+                          </div>
+                          <div
+                            className="p-4 rounded-xl"
+                            style={{ backgroundColor: "#2A3133" }}
+                          >
+                            <div
+                              className="text-2xl font-bold"
+                              style={{ color: "#C3BCC2" }}
+                            >
+                              {organization._count.clients}
+                            </div>
+                            <div
+                              className="text-sm"
+                              style={{ color: "#ABA4AA" }}
+                            >
+                              Clients (Max: {organization.clientLimit})
+                            </div>
+                          </div>
+                        </div>
+
+                        <Link href="/organization">
+                          <Button size="lg" className="w-full">
+                            <Building2 className="mr-2 h-4 w-4" />
+                            Open Organization Dashboard
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                      <h4
+                        className="text-xl font-semibold mb-2"
+                        style={{ color: "#ffffff" }}
+                      >
+                        Join or Create an Organization
+                      </h4>
+                      <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                        Collaborate with other coaches, share resources, and
+                        manage clients together. Upgrade to access team
+                        features.
+                      </p>
+                      <Button
+                        onClick={() => setShowUpgradeModal(true)}
+                        size="lg"
+                      >
+                        <Building2 className="mr-2 h-4 w-4" />
+                        Upgrade to Organization
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Billing Tab */}
               {activeTab === "billing" && (
                 <div>
@@ -948,6 +1210,13 @@ function SettingsPageClient({}: SettingsPageClientProps) {
       <DeleteAccountModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+      />
+
+      {/* Organization Upgrade Modal */}
+      <OrganizationUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onSuccess={() => refetchOrganization()}
       />
     </Sidebar>
   );

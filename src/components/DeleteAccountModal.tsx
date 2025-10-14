@@ -22,10 +22,11 @@ export default function DeleteAccountModal({
 
   const deleteAccountMutation = trpc.user.deleteAccount.useMutation({
     onSuccess: () => {
-      // Account deleted successfully - we need to logout from Kinde
-      // This will clear the session and redirect to home page
-      window.location.href =
-        "/api/auth/logout?post_logout_redirect_url=/?accountDeleted=true";
+      // Build an absolute URL that Kinde accepts, then redirect to Kinde logout
+      const postLogout = `${window.location.origin}/?accountDeleted=true`;
+      window.location.href = `/api/auth/logout?post_logout_redirect_url=${encodeURIComponent(
+        postLogout
+      )}`;
     },
     onError: (error: any) => {
       console.error("Error deleting account:", error);

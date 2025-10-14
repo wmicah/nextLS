@@ -30,6 +30,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx scripts/seed.ts",
+    "db:health": "tsx scripts/db-health-check.ts",
     "build:analyze": "ANALYZE=true npm run build",
     "start:prod": "NODE_ENV=production npm run start",
     "health-check": "tsx scripts/health-check.ts"
@@ -81,6 +82,7 @@
     "react-icons": "^5.5.0",
     "react-query": "^3.39.3",
     "resend": "^6.0.1",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "uploadthing": "^7.7.3",
     "web-push": "^3.6.7",

@@ -390,8 +390,8 @@ function ClientProgramPage() {
   // Generate calendar days for the current month view
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   const calendarDays = eachDayOfInterval({
     start: calendarStart,
     end: calendarEnd,
@@ -1038,16 +1038,40 @@ function ClientProgramPage() {
             <div className="max-w-6xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
                 {/* Upcoming Lesson */}
-                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20 hover:border-emerald-400/40">
+                <div
+                  className={`group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl ${
+                    nextLesson?.status === "CONFIRMED"
+                      ? "bg-gradient-to-br from-green-600/20 via-green-700/10 to-green-800/20 border-green-500/40 hover:border-green-400/60"
+                      : "bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20 hover:border-emerald-400/40"
+                  }`}
+                >
                   {/* Background Pattern */}
                   <div className="absolute inset-0 opacity-5">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-300 rounded-full blur-2xl"></div>
+                    <div
+                      className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl ${
+                        nextLesson?.status === "CONFIRMED"
+                          ? "bg-green-400"
+                          : "bg-emerald-400"
+                      }`}
+                    ></div>
+                    <div
+                      className={`absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl ${
+                        nextLesson?.status === "CONFIRMED"
+                          ? "bg-green-300"
+                          : "bg-emerald-300"
+                      }`}
+                    ></div>
                   </div>
 
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
-                      <div className="p-2 md:p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+                      <div
+                        className={`p-2 md:p-3 rounded-2xl shadow-lg ${
+                          nextLesson?.status === "CONFIRMED"
+                            ? "bg-gradient-to-br from-green-500 to-green-600"
+                            : "bg-gradient-to-br from-emerald-500 to-emerald-600"
+                        }`}
+                      >
                         <CalendarCheck className="h-4 w-4 md:h-6 md:w-6 text-white" />
                       </div>
                       <h3 className="text-lg md:text-xl font-bold text-white">
@@ -1058,8 +1082,20 @@ function ClientProgramPage() {
                     {nextLesson ? (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                          <p className="text-sm md:text-lg font-semibold text-emerald-100">
+                          <div
+                            className={`w-2 h-2 rounded-full animate-pulse ${
+                              nextLesson.status === "CONFIRMED"
+                                ? "bg-green-400"
+                                : "bg-emerald-400"
+                            }`}
+                          ></div>
+                          <p
+                            className={`text-sm md:text-lg font-semibold ${
+                              nextLesson.status === "CONFIRMED"
+                                ? "text-green-100"
+                                : "text-emerald-100"
+                            }`}
+                          >
                             {new Date(nextLesson.date).toLocaleDateString(
                               "en-US",
                               {
@@ -1071,12 +1107,29 @@ function ClientProgramPage() {
                             )}
                           </p>
                         </div>
-                        <p className="text-xs md:text-sm text-emerald-200/80 font-medium">
+                        <p
+                          className={`text-xs md:text-sm font-medium ${
+                            nextLesson.status === "CONFIRMED"
+                              ? "text-green-200/80"
+                              : "text-emerald-200/80"
+                          }`}
+                        >
                           {new Date(nextLesson.date).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
                         </p>
+                        {(nextLesson as any).coach && (
+                          <p
+                            className={`text-xs font-medium ${
+                              nextLesson.status === "CONFIRMED"
+                                ? "text-green-300"
+                                : "text-emerald-300"
+                            }`}
+                          >
+                            Coach: {(nextLesson as any).coach.name}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
@@ -1343,11 +1396,18 @@ function ClientProgramPage() {
                             "ring-2 ring-blue-500/50 border-blue-400/50 bg-blue-500/10"
                         )}
                         onClick={() => {
-                          if (dayData || getRoutinesForDate(date).length > 0) {
-                            setSelectedDay(dayData);
-                            setSelectedDate(date);
-                            setIsDaySheetOpen(true);
-                          }
+                          // Allow clicking on any day to view what's scheduled
+                          console.log(
+                            "Day clicked:",
+                            date,
+                            "Day data:",
+                            dayData,
+                            "Lessons:",
+                            lessonsForDay
+                          );
+                          setSelectedDay(dayData);
+                          setSelectedDate(date);
+                          setIsDaySheetOpen(true);
                         }}
                       >
                         {/* Date Header */}
@@ -1462,19 +1522,30 @@ function ClientProgramPage() {
                                   status: string;
                                 },
                                 lessonIndex: number
-                              ) => (
-                                <div
-                                  key={lessonIndex}
-                                  className="p-1 rounded text-xs bg-blue-500/20 text-blue-400"
-                                >
-                                  <div className="font-medium">
-                                    {formatTimeInUserTimezone(lesson.date)}
+                              ) => {
+                                // Check if this is a schedule request
+                                const isScheduleRequest = lesson.title
+                                  ?.toLowerCase()
+                                  .includes("schedule request");
+
+                                return (
+                                  <div
+                                    key={lessonIndex}
+                                    className={`p-1 rounded text-xs ${
+                                      isScheduleRequest
+                                        ? "bg-blue-500/20 text-blue-400"
+                                        : "bg-green-600/40 text-green-300 border border-green-400/50"
+                                    }`}
+                                  >
+                                    <div className="font-medium">
+                                      {formatTimeInUserTimezone(lesson.date)}
+                                    </div>
+                                    <div className="truncate">
+                                      {lesson.title || "Lesson"}
+                                    </div>
                                   </div>
-                                  <div className="truncate">
-                                    {lesson.title || "Lesson"}
-                                  </div>
-                                </div>
-                              )
+                                );
+                              }
                             )}
                             {lessonsForDay.length > 1 && (
                               <div className="text-xs text-gray-400 text-center">
@@ -1850,7 +1921,7 @@ function ClientProgramPage() {
           )}
 
           {/* New Enhanced Day Modal */}
-          {isDaySheetOpen && selectedDay && (
+          {isDaySheetOpen && selectedDate && (
             <ClientProgramDayModal
               isOpen={isDaySheetOpen}
               onClose={() => setIsDaySheetOpen(false)}
@@ -1858,6 +1929,9 @@ function ClientProgramPage() {
               selectedDate={selectedDate}
               programs={selectedDay?.programs || []}
               routineAssignments={routineAssignments as any}
+              lessonsForDate={
+                selectedDate ? getLessonsForDate(selectedDate) : []
+              }
               onMarkDrillComplete={handleMarkDrillComplete}
               onMarkAllComplete={handleMarkAllComplete}
               onOpenVideo={handleOpenVideo}

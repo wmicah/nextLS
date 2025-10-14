@@ -1,13 +1,13 @@
 /**
  * Main tRPC Router (Refactored)
- * 
+ *
  * This file merges all domain-specific routers into a single appRouter.
- * 
+ *
  * MIGRATION COMPLETE:
  * - Extracted 21 routers from 14,324 lines into manageable domain files
  * - All existing API calls remain unchanged
  * - Type safety preserved
- * 
+ *
  * Original file backed up at: src/trpc/index.backup.ts
  */
 
@@ -15,7 +15,10 @@ import { router } from "./trpc";
 import { adminRouter } from "./admin";
 
 // Import all domain routers
-import { authCallbackRouter, authCallbackProcedure } from "./routers/auth.router";
+import {
+  authCallbackRouter,
+  authCallbackProcedure,
+} from "./routers/auth.router";
 import { userRouter } from "./routers/user.router";
 import { clientsRouter } from "./routers/clients.router";
 import { libraryRouter } from "./routers/library.router";
@@ -36,10 +39,11 @@ import { videosRouter } from "./routers/videos.router";
 import { clientRouterRouter } from "./routers/clientRouter.router";
 import { timeSwapRouter } from "./routers/timeSwap.router";
 import { utilsRouter } from "./routers/utils.router";
+import { organizationRouter } from "./routers/organization.router";
 
 /**
  * Merge all routers together
- * 
+ *
  * All existing tRPC calls remain unchanged:
  * - trpc.user.getProfile.useQuery()
  * - trpc.clients.list.useQuery()
@@ -49,7 +53,7 @@ import { utilsRouter } from "./routers/utils.router";
 export const appRouter = router({
   // Auth callback
   authCallback: authCallbackProcedure,
-  
+
   // Domain routers
   user: userRouter,
   clients: clientsRouter,
@@ -71,7 +75,8 @@ export const appRouter = router({
   clientRouter: clientRouterRouter,
   timeSwap: timeSwapRouter,
   utils: utilsRouter,
-  
+  organization: organizationRouter,
+
   // Admin router
   admin: adminRouter,
 });

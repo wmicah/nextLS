@@ -35,6 +35,7 @@ interface StreamlinedScheduleLessonModalProps {
   clientName: string;
   clientEmail?: string | null;
   selectedDate?: Date | null; // Pre-selected date from calendar click
+  overrideWorkingDays?: boolean; // Allow overriding working day restrictions (e.g., in organization view)
 }
 
 export default function StreamlinedScheduleLessonModal({
@@ -44,6 +45,7 @@ export default function StreamlinedScheduleLessonModal({
   clientName,
   clientEmail,
   selectedDate: propSelectedDate,
+  overrideWorkingDays = false,
 }: StreamlinedScheduleLessonModalProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(
     propSelectedDate || null
@@ -336,6 +338,7 @@ export default function StreamlinedScheduleLessonModal({
         recurrencePattern,
         recurrenceInterval,
         sendEmail: true,
+        overrideWorkingDays,
       });
     } else {
       // Schedule single lesson
@@ -343,6 +346,7 @@ export default function StreamlinedScheduleLessonModal({
         clientId,
         lessonDate: lessonDate.toISOString(),
         sendEmail: true,
+        overrideWorkingDays,
       });
     }
   };

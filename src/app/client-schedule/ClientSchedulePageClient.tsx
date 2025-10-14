@@ -837,15 +837,17 @@ function ClientSchedulePageClient() {
           <div className="flex items-center gap-6 mb-4 text-sm flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-400" />
+              <span className="text-white font-medium">My Lessons</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-green-600 border-2 border-green-400" />
               <span className="text-white font-medium">
-                My Confirmed Lessons
+                My Organization Lessons
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-sky-500 border-2 border-sky-400" />
-              <span className="text-white font-medium">
-                Coach&apos;s Lessons
-              </span>
+              <span className="text-white font-medium">Other Clients</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
@@ -902,9 +904,13 @@ function ClientSchedulePageClient() {
                 const isWorkingDay = workingDays.includes(dayName);
 
                 const hasCoachLessons = coachLessonsForDay.length > 0;
-                const hasMyLessons =
+                const hasMyPendingLessons =
                   myLessonsForDay.filter(
                     lesson => lesson.status !== "CONFIRMED"
+                  ).length > 0;
+                const hasMyConfirmedLessons =
+                  myLessonsForDay.filter(
+                    lesson => lesson.status === "CONFIRMED"
                   ).length > 0;
 
                 return (
@@ -945,23 +951,26 @@ function ClientSchedulePageClient() {
                     <div className="font-bold text-sm md:text-lg mb-1 md:mb-2 flex items-center justify-between">
                       <span>{format(day, "d")}</span>
                       <div className="flex items-center gap-1">
-                        {/* Coach lessons count badge */}
-                        {hasCoachLessons && (
+                        {/* Coach lessons count badge - Only count OTHER clients' lessons */}
+                        {coachLessonsForDay.filter(
+                          (lesson: any) => lesson.clientId !== currentClient?.id
+                        ).length > 0 && (
                           <div className="w-5 h-5 rounded-full bg-sky-500/20 border border-sky-400/30 flex items-center justify-center">
                             <span className="text-xs font-bold text-sky-400">
-                              {coachLessonsForDay.length}
+                              {
+                                coachLessonsForDay.filter(
+                                  (lesson: any) =>
+                                    lesson.clientId !== currentClient?.id
+                                ).length
+                              }
                             </span>
                           </div>
                         )}
                         {/* My lessons count badge */}
-                        {hasMyLessons && (
-                          <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
-                            <span className="text-xs font-bold text-blue-400">
-                              {
-                                myLessonsForDay.filter(
-                                  lesson => lesson.status !== "CONFIRMED"
-                                ).length
-                              }
+                        {(hasMyPendingLessons || hasMyConfirmedLessons) && (
+                          <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
+                            <span className="text-xs font-bold text-emerald-400">
+                              {myLessonsForDay.length}
                             </span>
                           </div>
                         )}
@@ -970,7 +979,8 @@ function ClientSchedulePageClient() {
                           isCurrentMonth &&
                           !isPast &&
                           !hasCoachLessons &&
-                          !hasMyLessons && (
+                          !hasMyPendingLessons &&
+                          !hasMyConfirmedLessons && (
                             <div
                               className="w-2 h-2 bg-orange-500 rounded-full"
                               title="Non-working day"
@@ -979,26 +989,31 @@ function ClientSchedulePageClient() {
                       </div>
                     </div>
 
-                    {/* My Confirmed Lessons - Only show PENDING and DECLINED lessons */}
-                    {hasMyLessons && (
+                    {/* My Lessons - Show ALL lessons with GREEN background (except schedule requests) */}
+                    {(hasMyPendingLessons || hasMyConfirmedLessons) && (
                       <div className="space-y-0.5 md:space-y-1 mb-1 md:mb-2">
-                        {myLessonsForDay
-                          .filter(lesson => lesson.status !== "CONFIRMED")
-                          .slice(0, 2)
-                          .map(
-                            (
-                              lesson: {
-                                status: string;
-                                date: string;
-                                title: string;
-                              },
-                              index: number
-                            ) => (
+                        {myLessonsForDay.slice(0, 2).map(
+                          (
+                            lesson: {
+                              status: string;
+                              date: string;
+                              title: string;
+                            },
+                            index: number
+                          ) => {
+                            // Check if this is a schedule request
+                            const isScheduleRequest = (lesson as any).title
+                              ?.toLowerCase()
+                              .includes("schedule request");
+
+                            return (
                               <div
                                 key={`my-${index}`}
-                                className={`text-xs p-1.5 md:p-2 rounded border-2 ${getStatusColor(
-                                  lesson.status
-                                )} shadow-md relative group overflow-hidden`}
+                                className={`text-xs p-1.5 md:p-2 rounded border-2 shadow-md relative group overflow-hidden ${
+                                  isScheduleRequest
+                                    ? getStatusColor(lesson.status)
+                                    : "bg-green-600/40 text-green-100 border-green-400"
+                                }`}
                               >
                                 <div className="flex items-start justify-between gap-1">
                                   <div className="flex-1 min-w-0">
@@ -1017,15 +1032,56 @@ function ClientSchedulePageClient() {
                                   </div>
                                 </div>
                               </div>
-                            )
-                          )}
-                        {myLessonsForDay.filter(
-                          lesson => lesson.status !== "CONFIRMED"
+                            );
+                          }
+                        )}
+                        {myLessonsForDay.length > 2 && (
+                          <div className="text-xs text-green-400 text-center py-1">
+                            +{myLessonsForDay.length - 2} more
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Coach's Lessons - Only show OTHER clients' lessons */}
+                    {hasCoachLessons && (
+                      <div className="space-y-0.5 md:space-y-1">
+                        {coachLessonsForDay
+                          .filter(
+                            (lesson: any) =>
+                              lesson.clientId !== currentClient?.id
+                          )
+                          .slice(0, 2)
+                          .map((lesson: any, index: number) => (
+                            <div
+                              key={`coach-${index}`}
+                              className="w-full text-xs p-1.5 md:p-2 rounded border-2 shadow-md overflow-hidden bg-sky-500/40 text-sky-100 border-sky-400"
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold text-xs leading-tight">
+                                    {formatTimeInUserTimezone(lesson.date)}
+                                  </div>
+                                  <div className="truncate font-medium text-xs leading-tight flex items-center justify-between gap-1">
+                                    <span className="text-sky-200">Client</span>
+                                    {lesson.coach && (
+                                      <span className="text-[10px] opacity-80 truncate text-sky-300">
+                                        {lesson.coach.name}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        {coachLessonsForDay.filter(
+                          (lesson: any) => lesson.clientId !== currentClient?.id
                         ).length > 2 && (
-                          <div className="text-xs text-emerald-400 text-center py-1">
+                          <div className="text-xs text-sky-400 text-center py-1">
                             +
-                            {myLessonsForDay.filter(
-                              lesson => lesson.status !== "CONFIRMED"
+                            {coachLessonsForDay.filter(
+                              (lesson: any) =>
+                                lesson.clientId !== currentClient?.id
                             ).length - 2}{" "}
                             more
                           </div>
@@ -1033,42 +1089,9 @@ function ClientSchedulePageClient() {
                       </div>
                     )}
 
-                    {/* Coach's Lessons */}
-                    {hasCoachLessons && (
-                      <div className="space-y-0.5 md:space-y-1">
-                        {coachLessonsForDay
-                          .slice(0, 2)
-                          .map((lesson: any, index: number) => (
-                            <div
-                              key={`coach-${index}`}
-                              className="w-full text-xs p-1.5 md:p-2 rounded bg-sky-500/40 text-sky-100 border-2 border-sky-400 shadow-md overflow-hidden"
-                            >
-                              <div className="flex items-start justify-between gap-1">
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-bold text-xs leading-tight">
-                                    {formatTimeInUserTimezone(lesson.date)}
-                                  </div>
-                                  <div className="truncate text-sky-200 font-medium text-xs leading-tight">
-                                    {lesson.clientId === currentClient?.id
-                                      ? lesson.client?.name ||
-                                        lesson.client?.email ||
-                                        "You"
-                                      : "Client"}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        {coachLessonsForDay.length > 2 && (
-                          <div className="text-xs text-sky-400 text-center py-1">
-                            +{coachLessonsForDay.length - 2} more
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                     {/* Minimalist approach: Only show essential info */}
-                    {!hasMyLessons &&
+                    {!hasMyPendingLessons &&
+                      !hasMyConfirmedLessons &&
                       !hasCoachLessons &&
                       isCurrentMonth &&
                       !isPast &&
@@ -1290,6 +1313,11 @@ function ClientSchedulePageClient() {
                                 <div className="text-xs opacity-60">
                                   {lesson.description}
                                 </div>
+                                {lesson.coach && (
+                                  <div className="text-xs opacity-60 mt-1">
+                                    Coach: {lesson.coach.name}
+                                  </div>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
                                 {getStatusIcon(lesson.status)}

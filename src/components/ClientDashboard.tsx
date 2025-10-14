@@ -859,8 +859,14 @@ function ClientDashboard() {
                   <div
                     className="rounded-xl p-4 border transition-all duration-200 shadow-lg"
                     style={{
-                      backgroundColor: "#2B3038",
-                      borderColor: "#606364",
+                      backgroundColor:
+                        nextLesson.status === "CONFIRMED"
+                          ? "#065F46"
+                          : "#2B3038",
+                      borderColor:
+                        nextLesson.status === "CONFIRMED"
+                          ? "#10B981"
+                          : "#606364",
                       borderWidth: "1px",
                     }}
                   >
@@ -869,9 +875,18 @@ function ClientDashboard() {
                         <div
                           className="text-base font-semibold px-3 py-2 rounded-lg border"
                           style={{
-                            color: "#C3BCC2",
-                            backgroundColor: "#606364",
-                            borderColor: "#ABA4AA",
+                            color:
+                              nextLesson.status === "CONFIRMED"
+                                ? "#D1FAE5"
+                                : "#C3BCC2",
+                            backgroundColor:
+                              nextLesson.status === "CONFIRMED"
+                                ? "#10B981"
+                                : "#606364",
+                            borderColor:
+                              nextLesson.status === "CONFIRMED"
+                                ? "#10B981"
+                                : "#ABA4AA",
                           }}
                         >
                           {new Date(nextLesson.date).toLocaleDateString(
@@ -885,11 +900,24 @@ function ClientDashboard() {
                         <div>
                           <div
                             className="text-base font-semibold"
-                            style={{ color: "#C3BCC2" }}
+                            style={{
+                              color:
+                                nextLesson.status === "CONFIRMED"
+                                  ? "#D1FAE5"
+                                  : "#C3BCC2",
+                            }}
                           >
                             {nextLesson.title}
                           </div>
-                          <div className="text-sm" style={{ color: "#ABA4AA" }}>
+                          <div
+                            className="text-sm"
+                            style={{
+                              color:
+                                nextLesson.status === "CONFIRMED"
+                                  ? "#86EFAC"
+                                  : "#ABA4AA",
+                            }}
+                          >
                             {new Date(nextLesson.date).toLocaleTimeString(
                               "en-US",
                               {
@@ -898,9 +926,30 @@ function ClientDashboard() {
                               }
                             )}
                           </div>
+                          {(nextLesson as any).coach && (
+                            <div
+                              className="text-xs mt-1"
+                              style={{
+                                color:
+                                  nextLesson.status === "CONFIRMED"
+                                    ? "#86EFAC"
+                                    : "#ABA4AA",
+                              }}
+                            >
+                              Coach: {(nextLesson as any).coach.name}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <Clock className="w-5 h-5" style={{ color: "#ABA4AA" }} />
+                      <Clock
+                        className="w-5 h-5"
+                        style={{
+                          color:
+                            nextLesson.status === "CONFIRMED"
+                              ? "#86EFAC"
+                              : "#ABA4AA",
+                        }}
+                      />
                     </div>
                   </div>
                 </div>

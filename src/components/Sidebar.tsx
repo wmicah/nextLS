@@ -24,6 +24,7 @@ import {
   FiChevronRight,
   FiVideo,
   FiTrendingUp,
+  FiBriefcase,
 } from "react-icons/fi";
 import { LogOut, Settings, UserIcon, MessageCircle } from "lucide-react";
 // Removed complex SSE hooks - using simple polling instead
@@ -131,6 +132,9 @@ export default function Sidebar({ user, children }: SidebarProps) {
   // Get user settings for avatar
   const { data: userSettings } = trpc.settings.getSettings.useQuery();
 
+  // Get organization data to conditionally show Organization link
+  const { data: organization } = trpc.organization.get.useQuery({});
+
   // Define navLinks inside component to access unreadCount
   const navLinks = [
     {
@@ -159,7 +163,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
       gradient: "from-purple-500 to-pink-500",
     },
     {
-      name: "Programs",
+      name: "Resources",
       icon: <FiClipboard />,
       href: "/programs",
       description: "Workout plans",
@@ -182,6 +186,19 @@ export default function Sidebar({ user, children }: SidebarProps) {
       badge: null,
       gradient: "from-red-500 to-pink-500",
     },
+    // Organization link - only show if user is in an organization
+    ...(organization
+      ? [
+          {
+            name: "Organization",
+            icon: <FiBriefcase />,
+            href: "/organization",
+            description: "Team collaboration",
+            badge: null,
+            gradient: "from-teal-500 to-cyan-500",
+          },
+        ]
+      : []),
     // Admin-only links
     ...(authData?.user?.isAdmin
       ? [

@@ -369,8 +369,42 @@ export const messagingRouter = router({
         });
       }
 
-      const client = await db.client.findUnique({
-        where: { id: input.clientId },
+      // Check if coach is in an organization
+      const coachOrganization = await db.coachOrganization.findFirst({
+        where: {
+          coachId: ensureUserId(user.id),
+          isActive: true,
+        },
+      });
+
+      // Build the where clause
+      let whereClause: any = {
+        id: input.clientId,
+      };
+
+      if (coachOrganization?.organizationId) {
+        // Get all coaches in the organization
+        const orgCoaches = await db.coachOrganization.findMany({
+          where: {
+            organizationId: coachOrganization.organizationId,
+            isActive: true,
+          },
+          select: {
+            coachId: true,
+          },
+        });
+
+        const orgCoachIds = orgCoaches.map(c => c.coachId);
+
+        // Allow access if client belongs to any coach in the organization
+        whereClause.coachId = { in: orgCoachIds };
+      } else {
+        // Not in an organization, only allow access to own clients
+        whereClause.coachId = ensureUserId(user.id);
+      }
+
+      const client = await db.client.findFirst({
+        where: whereClause,
         select: {
           id: true,
           name: true,
@@ -383,14 +417,7 @@ export const messagingRouter = router({
       if (!client) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Client not found",
-        });
-      }
-
-      if (client.coachId !== ensureUserId(user.id)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Client not found",
+          message: "Client not found or not accessible",
         });
       }
 
@@ -577,4 +604,3 @@ export const messagingRouter = router({
       return updatedMessage;
     }),
 });
-

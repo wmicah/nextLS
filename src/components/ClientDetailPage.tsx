@@ -77,9 +77,15 @@ import MobileClientDetailPage from "@/components/MobileClientDetailPage";
 
 interface ClientDetailPageProps {
   clientId: string;
+  backPath?: string; // Optional custom back path (e.g., for organization view)
+  noSidebar?: boolean; // Skip sidebar wrapper (e.g., when already in a layout with sidebar)
 }
 
-function ClientDetailPage({ clientId }: ClientDetailPageProps) {
+function ClientDetailPage({
+  clientId,
+  backPath = "/clients",
+  noSidebar = false,
+}: ClientDetailPageProps) {
   const router = useRouter();
   const { addToast } = useUIStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -125,13 +131,13 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
   // Redirect to clients page if client is archived or not found
   useEffect(() => {
     if (clientError || (!clientLoading && !client)) {
-      router.push("/clients");
+      router.push(backPath);
     }
     // Also redirect if client is archived
     if (client && client.archived) {
-      router.push("/clients");
+      router.push(backPath);
     }
-  }, [clientError, clientLoading, client, router]);
+  }, [clientError, clientLoading, client, router, backPath]);
 
   // Fetch coach's schedule for the current month (includes all client lessons)
   const { data: coachSchedule = [] } =
@@ -514,9 +520,20 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
     });
   };
 
+  // Wrapper component that conditionally includes Sidebar
+  const SidebarWrapper = ({ children }: { children: React.ReactNode }) => {
+    console.log("🔍 SidebarWrapper - noSidebar:", noSidebar);
+    if (noSidebar) {
+      console.log("🔍 Rendering without Sidebar wrapper");
+      return <>{children}</>;
+    }
+    console.log("🔍 Rendering with Sidebar wrapper");
+    return <Sidebar>{children}</Sidebar>;
+  };
+
   if (clientLoading) {
     return (
-      <Sidebar>
+      <SidebarWrapper>
         <div
           className="min-h-screen flex items-center justify-center"
           style={{ backgroundColor: "#2A3133" }}
@@ -532,13 +549,13 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             <span className="text-lg">Loading client details...</span>
           </div>
         </div>
-      </Sidebar>
+      </SidebarWrapper>
     );
   }
 
   if (!client) {
     return (
-      <Sidebar>
+      <SidebarWrapper>
         <div
           className="min-h-screen flex items-center justify-center"
           style={{ backgroundColor: "#2A3133" }}
@@ -554,7 +571,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               The requested client could not be found.
             </p>
             <button
-              onClick={() => router.push("/clients")}
+              onClick={() => router.push(backPath)}
               className="mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
               style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
             >
@@ -562,12 +579,12 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             </button>
           </div>
         </div>
-      </Sidebar>
+      </SidebarWrapper>
     );
   }
 
   return (
-    <Sidebar>
+    <SidebarWrapper>
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
         <div className="max-w-7xl mx-auto p-6">
           {/* Header */}
@@ -575,7 +592,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
             {/* Client Info */}
             <div className="flex items-center gap-6">
               <button
-                onClick={() => router.push("/clients")}
+                onClick={() => router.push(backPath)}
                 className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
                 style={{ color: "#C3BCC2" }}
               >
@@ -1082,6 +1099,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
               clientName={client.name}
               clientEmail={client.user?.email}
               selectedDate={selectedDate}
+              overrideWorkingDays={noSidebar} // Override working days in organization context
             />
           )}
 
@@ -1120,7 +1138,7 @@ function ClientDetailPage({ clientId }: ClientDetailPageProps) {
           />
         </div>
       </div>
-    </Sidebar>
+    </SidebarWrapper>
   );
 }
 
