@@ -6,12 +6,17 @@ declare global {
 
 let prisma: PrismaClient;
 
-// Add connection pool settings via connection string
-// These settings help prevent connection exhaustion and timeouts
+// For production (Vercel), use the DATABASE_URL as-is (it should already have pgbouncer=true)
+// For development, add connection pool settings if not present
 const connectionUrl = process.env.DATABASE_URL || "";
-const enhancedConnectionUrl = connectionUrl.includes("?")
+const isPgBouncer = connectionUrl.includes("pgbouncer=true");
+
+// Only add connection settings if not using pgbouncer
+const enhancedConnectionUrl = isPgBouncer
+  ? connectionUrl // Use as-is for pgbouncer (Vercel)
+  : connectionUrl.includes("?")
   ? connectionUrl
-  : `${connectionUrl}?connection_limit=10&pool_timeout=20&connect_timeout=10`;
+  : `${connectionUrl}?connection_limit=20&pool_timeout=30&connect_timeout=15`;
 
 if (process.env.NODE_ENV === "production") {
   prisma = new PrismaClient({
@@ -25,7 +30,7 @@ if (process.env.NODE_ENV === "production") {
 } else {
   if (!global.cachedPrisma) {
     global.cachedPrisma = new PrismaClient({
-      log: ["query", "error", "warn"],
+      log: ["error", "warn"],
       datasources: {
         db: {
           url: enhancedConnectionUrl,
@@ -36,21 +41,17 @@ if (process.env.NODE_ENV === "production") {
   prisma = global.cachedPrisma;
 }
 
-// Graceful shutdown handling
-const gracefulShutdown = async () => {
-  console.log("Shutting down database connections...");
-  await prisma.$disconnect();
-  process.exit(0);
-};
+// Only add graceful shutdown in production
+// In development, Next.js handles this and we don't want to disconnect prematurely
+if (process.env.NODE_ENV === "production") {
+  const gracefulShutdown = async () => {
+    console.log("Shutting down database connections...");
+    await prisma.$disconnect();
+    process.exit(0);
+  };
 
-process.on("SIGINT", gracefulShutdown);
-process.on("SIGTERM", gracefulShutdown);
-
-// Handle uncaught exceptions
-process.on("uncaughtException", async error => {
-  console.error("Uncaught exception:", error);
-  await prisma.$disconnect();
-  process.exit(1);
-});
+  process.on("SIGINT", gracefulShutdown);
+  process.on("SIGTERM", gracefulShutdown);
+}
 
 export const db = prisma;
