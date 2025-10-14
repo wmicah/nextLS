@@ -52,20 +52,22 @@ async function checkDatabaseConnection(): Promise<HealthCheck> {
 
 async function checkConnectionPool(): Promise<HealthCheck> {
   try {
-    // Get connection pool metrics
-    const metrics = await prisma.$metrics.json();
+    // Check if connection pool is working by executing a simple query
+    await prisma.$queryRaw`SELECT 1`;
 
     return {
       name: "Connection Pool",
       status: "healthy",
-      message: "Connection pool metrics retrieved",
-      details: metrics,
+      message: "Connection pool is operational",
+      details: {
+        note: "Connection pool metrics require Prisma metrics extension",
+      },
     };
   } catch (error) {
     return {
       name: "Connection Pool",
       status: "warning",
-      message: "Could not retrieve connection pool metrics",
+      message: "Could not verify connection pool",
       details: { error: String(error) },
     };
   }

@@ -275,6 +275,19 @@ export const organizationRouter = router({
         });
       }
 
+      // Get the current user's details from database
+      const currentUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: { name: true, email: true },
+      });
+
+      if (!currentUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
       // Check if user has permission to invite coaches
       const organization = await db.organization.findUnique({
         where: { id: input.organizationId },
@@ -370,7 +383,7 @@ export const organizationRouter = router({
           data: {
             organizationId: input.organizationId,
             organizationName: organization.name,
-            invitedBy: user.name || user.email,
+            invitedBy: currentUser.name || currentUser.email,
           },
         },
       });
@@ -425,7 +438,10 @@ export const organizationRouter = router({
         where: {
           userId: user.id,
           type: "ORGANIZATION_INVITATION",
-          data: { organizationId: input.organizationId },
+          data: {
+            path: ["organizationId"],
+            equals: input.organizationId,
+          },
         },
         data: { isRead: true },
       });
@@ -473,7 +489,10 @@ export const organizationRouter = router({
         where: {
           userId: user.id,
           type: "ORGANIZATION_INVITATION",
-          data: { organizationId: input.organizationId },
+          data: {
+            path: ["organizationId"],
+            equals: input.organizationId,
+          },
         },
         data: { isRead: true },
       });
@@ -492,6 +511,19 @@ export const organizationRouter = router({
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "You must be logged in",
+        });
+      }
+
+      // Get the current user's details from database
+      const currentUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: { organizationId: true },
+      });
+
+      if (!currentUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
         });
       }
 
@@ -529,7 +561,7 @@ export const organizationRouter = router({
       });
 
       // Clear user's organizationId if it matches
-      if (user.organizationId === input.organizationId) {
+      if (currentUser.organizationId === input.organizationId) {
         await db.user.update({
           where: { id: user.id },
           data: { organizationId: null },
@@ -711,6 +743,19 @@ export const organizationRouter = router({
         });
       }
 
+      // Get the current user's details from database
+      const currentUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: { name: true, email: true },
+      });
+
+      if (!currentUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
       // Get the invitation
       const invitation = await db.coachOrganization.findUnique({
         where: { id: input.invitationId },
@@ -754,7 +799,7 @@ export const organizationRouter = router({
           data: {
             organizationId: invitation.organizationId,
             organizationName: invitation.organization.name,
-            invitedBy: user.name || user.email,
+            invitedBy: currentUser.name || currentUser.email,
           },
         },
       });
@@ -1676,70 +1721,6 @@ export const organizationRouter = router({
       return lessons;
     }),
 
-  // Leave organization (coach keeps their clients, but clients are removed from org)
-  leaveOrganization: publicProcedure.mutation(async () => {
-    const { getUser } = getKindeServerSession();
-    const user = await getUser();
-
-    if (!user?.id) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "You must be logged in",
-      });
-    }
-
-    // Get the coach's organization membership
-    const coachOrganization = await db.coachOrganization.findFirst({
-      where: {
-        coachId: user.id,
-        isActive: true,
-      },
-      include: {
-        organization: true,
-      },
-    });
-
-    if (!coachOrganization) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "You are not part of an organization",
-      });
-    }
-
-    // Check if user is the owner
-    if (coachOrganization.organization.ownerId === user.id) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message:
-          "Organization owners cannot leave. Please delete the organization or transfer ownership first.",
-      });
-    }
-
-    // Remove the coach from the organization
-    await db.coachOrganization.update({
-      where: { id: coachOrganization.id },
-      data: { isActive: false },
-    });
-
-    // Remove organizationId from the coach's clients
-    await db.client.updateMany({
-      where: {
-        coachId: user.id,
-      },
-      data: {
-        organizationId: null,
-      },
-    });
-
-    // Clear the coach's organizationId
-    await db.user.update({
-      where: { id: user.id },
-      data: { organizationId: null },
-    });
-
-    return { success: true };
-  }),
-
   // Delete organization (owner only, all coaches keep their clients)
   deleteOrganization: publicProcedure.mutation(async () => {
     const { getUser } = getKindeServerSession();
@@ -1757,11 +1738,6 @@ export const organizationRouter = router({
       where: {
         ownerId: user.id,
       },
-      include: {
-        coaches: {
-          where: { isActive: true },
-        },
-      },
     });
 
     if (!organization) {
@@ -1770,6 +1746,17 @@ export const organizationRouter = router({
         message: "You do not own an organization",
       });
     }
+
+    // Get all active coaches in the organization
+    const activeCoaches = await db.coachOrganization.findMany({
+      where: {
+        organizationId: organization.id,
+        isActive: true,
+      },
+      select: {
+        coachId: true,
+      },
+    });
 
     // Remove organizationId from all clients in the organization
     await db.client.updateMany({
@@ -1782,7 +1769,7 @@ export const organizationRouter = router({
     });
 
     // Clear organizationId from all coaches
-    const coachIds = organization.coaches.map(c => c.coachId);
+    const coachIds = activeCoaches.map(c => c.coachId);
     await db.user.updateMany({
       where: {
         id: { in: coachIds },
@@ -1794,13 +1781,6 @@ export const organizationRouter = router({
 
     // Delete all coach organization relationships
     await db.coachOrganization.deleteMany({
-      where: {
-        organizationId: organization.id,
-      },
-    });
-
-    // Delete all shared resources
-    await db.sharedResource.deleteMany({
       where: {
         organizationId: organization.id,
       },

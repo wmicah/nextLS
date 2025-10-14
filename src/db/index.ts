@@ -6,19 +6,6 @@ declare global {
 
 let prisma: PrismaClient;
 
-// Connection pool configuration
-const prismaConfig = {
-  log:
-    process.env.NODE_ENV === "production"
-      ? ["error"]
-      : ["query", "error", "warn"],
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-};
-
 // Add connection pool settings via connection string
 // These settings help prevent connection exhaustion and timeouts
 const connectionUrl = process.env.DATABASE_URL || "";
@@ -28,7 +15,7 @@ const enhancedConnectionUrl = connectionUrl.includes("?")
 
 if (process.env.NODE_ENV === "production") {
   prisma = new PrismaClient({
-    ...prismaConfig,
+    log: ["error"],
     datasources: {
       db: {
         url: enhancedConnectionUrl,
@@ -38,7 +25,7 @@ if (process.env.NODE_ENV === "production") {
 } else {
   if (!global.cachedPrisma) {
     global.cachedPrisma = new PrismaClient({
-      ...prismaConfig,
+      log: ["query", "error", "warn"],
       datasources: {
         db: {
           url: enhancedConnectionUrl,

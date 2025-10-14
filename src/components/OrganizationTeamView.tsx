@@ -72,7 +72,8 @@ export default function OrganizationTeamView() {
     });
 
   const handleLeaveOrganization = () => {
-    leaveOrganizationMutation.mutate();
+    if (!organization?.id) return;
+    leaveOrganizationMutation.mutate({ organizationId: organization.id });
   };
 
   const handleDeleteOrganization = () => {
