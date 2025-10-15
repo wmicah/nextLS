@@ -139,8 +139,8 @@ export default function SimpleAssignProgramModal({
     },
   });
 
-  const unassignProgramMutation = trpc.programs.unassignFromClients.useMutation(
-    {
+  const unassignProgramMutation =
+    trpc.programs.unassignSpecificProgram.useMutation({
       onSuccess: () => {
         addToast({
           type: "success",
@@ -160,8 +160,7 @@ export default function SimpleAssignProgramModal({
           message: error.message || "Failed to remove program.",
         });
       },
-    }
-  );
+    });
 
   const resetForm = () => {
     setSelectedProgram("");
@@ -231,8 +230,7 @@ export default function SimpleAssignProgramModal({
       confirm("Are you sure you want to remove this program from the client?")
     ) {
       unassignProgramMutation.mutate({
-        programId: assignment.programId,
-        clientIds: [assignment.clientId],
+        assignmentId: assignment.id,
       });
     }
   };
@@ -293,8 +291,7 @@ export default function SimpleAssignProgramModal({
       confirm("Are you sure you want to remove this program from the client?")
     ) {
       unassignProgramMutation.mutate({
-        programId: assignment.programId,
-        clientIds: [assignment.clientId],
+        assignmentId: assignment.id,
       });
     }
   };

@@ -162,8 +162,8 @@ AssignProgramModalProps) {
     },
   });
 
-  const unassignProgramMutation = trpc.programs.unassignFromClients.useMutation(
-    {
+  const unassignProgramMutation =
+    trpc.programs.unassignMultiplePrograms.useMutation({
       onSuccess: data => {
         addToast({
           type: "success",
@@ -187,8 +187,7 @@ AssignProgramModalProps) {
           message: error.message || "Failed to unassign program from clients.",
         });
       },
-    }
-  );
+    });
 
   const handleAssign = async () => {
     if (!selectedProgram) {
@@ -233,30 +232,21 @@ AssignProgramModalProps) {
     assignProgramMutation.mutate(requestData);
   };
 
-  const handleUnassign = (clientIds: string[]) => {
+  const handleUnassign = (assignmentIds: string[]) => {
     console.log("=== UNASSIGN FRONTEND DEBUG ===");
-    console.log("selectedProgram:", selectedProgram);
-    console.log("clientIds:", clientIds);
-    console.log("programId prop:", programId);
-
-    if (!selectedProgram) {
-      console.log("No selectedProgram - cannot unassign");
-      return;
-    }
+    console.log("assignmentIds:", assignmentIds);
 
     if (
       confirm(
-        `Are you sure you want to unassign this program from ${clientIds.length} client(s)?`
+        `Are you sure you want to unassign this program from ${assignmentIds.length} client(s)?`
       )
     ) {
       console.log("Sending unassign request:", {
-        programId: selectedProgram,
-        clientIds,
+        assignmentIds,
       });
 
       unassignProgramMutation.mutate({
-        programId: selectedProgram,
-        clientIds,
+        assignmentIds,
       });
     }
   };
@@ -580,9 +570,7 @@ AssignProgramModalProps) {
                                 </div>
                               </div>
                               <button
-                                onClick={() =>
-                                  handleUnassign([assignment.clientId])
-                                }
+                                onClick={() => handleUnassign([assignment.id])}
                                 className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all duration-200"
                               >
                                 <X className="h-4 w-4" />
@@ -601,7 +589,7 @@ AssignProgramModalProps) {
                 <div className="flex items-center justify-between pt-6 border-t border-gray-600/50">
                   <button
                     onClick={() =>
-                      handleUnassign(programAssignments.map(a => a.clientId))
+                      handleUnassign(programAssignments.map(a => a.id))
                     }
                     className="px-6 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all duration-200"
                   >

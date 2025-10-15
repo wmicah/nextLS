@@ -4,6 +4,19 @@
       "maxDuration": 30
     }
   },
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "next-ls-nine.vercel.app"
+        }
+      ],
+      "destination": "https://nxlvlcoach.com/$1",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/api/trpc/(.*)",
