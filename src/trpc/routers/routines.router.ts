@@ -423,11 +423,13 @@ export const routinesRouter = router({
       // Create routine assignments
       console.log("Server: Received startDate:", input.startDate);
 
-      // Parse the date string correctly to avoid timezone issues - use local time
+      // Parse the date string correctly to avoid timezone issues
+      // Use UTC to prevent day shifting when stored in database
       const [year, month, day] = input.startDate.split("-").map(Number);
-      const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+      const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
 
-      console.log("Server: Parsed startDate:", startDate);
+      console.log("Server: Parsed startDate (UTC):", startDate);
+      console.log("Server: Local date string:", startDate.toLocaleDateString());
 
       const assignments = await Promise.all(
         input.clientIds.map(clientId =>

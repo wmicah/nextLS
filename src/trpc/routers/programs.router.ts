@@ -1479,9 +1479,9 @@ export const programsRouter = router({
       const assignments = [];
 
       for (const client of clients) {
-        // Parse the date string and create a local date at midnight to avoid timezone issues
+        // Parse the date string and create a UTC date at midnight to avoid timezone issues
         const [year, month, day] = input.startDate.split("-").map(Number);
-        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+        const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
 
         // Create the assignments (one for each repetition)
         for (let cycle = 1; cycle <= input.repetitions; cycle++) {
