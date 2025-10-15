@@ -1479,12 +1479,34 @@ export const programsRouter = router({
       const assignments = [];
 
       for (const client of clients) {
-        // Parse the date string and create a UTC date at midnight to avoid timezone issues
+        // Parse the date string and create local date, then convert to UTC properly
         const [year, month, day] = input.startDate.split("-").map(Number);
-        const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+        const localDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+
+        // Use the same timezone approach as lessons - convert local to UTC
+        const timeZone = "America/New_York"; // Default timezone
+        const startDate = fromZonedTime(localDate, timeZone);
+
+        // Check for existing assignments for this program and client
+        const existingAssignments = await db.programAssignment.findMany({
+          where: {
+            programId: input.programId,
+            clientId: client.id,
+          },
+          orderBy: {
+            currentCycle: "desc",
+          },
+        });
+
+        // Find the next available cycle number
+        const maxCycle =
+          existingAssignments.length > 0
+            ? Math.max(...existingAssignments.map(a => a.currentCycle))
+            : 0;
 
         // Create the assignments (one for each repetition)
         for (let cycle = 1; cycle <= input.repetitions; cycle++) {
+          const cycleNumber = maxCycle + cycle;
           const cycleStartDate = new Date(
             startDate.getTime() +
               (cycle - 1) * program.duration * 7 * 24 * 60 * 60 * 1000
@@ -1496,7 +1518,7 @@ export const programsRouter = router({
               clientId: client.id,
               startDate: cycleStartDate,
               repetitions: input.repetitions,
-              currentCycle: cycle,
+              currentCycle: cycleNumber,
             },
           });
           assignments.push(assignment);

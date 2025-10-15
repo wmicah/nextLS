@@ -234,13 +234,26 @@ AssignProgramModalProps) {
   };
 
   const handleUnassign = (clientIds: string[]) => {
-    if (!selectedProgram) return;
+    console.log("=== UNASSIGN FRONTEND DEBUG ===");
+    console.log("selectedProgram:", selectedProgram);
+    console.log("clientIds:", clientIds);
+    console.log("programId prop:", programId);
+
+    if (!selectedProgram) {
+      console.log("No selectedProgram - cannot unassign");
+      return;
+    }
 
     if (
       confirm(
         `Are you sure you want to unassign this program from ${clientIds.length} client(s)?`
       )
     ) {
+      console.log("Sending unassign request:", {
+        programId: selectedProgram,
+        clientIds,
+      });
+
       unassignProgramMutation.mutate({
         programId: selectedProgram,
         clientIds,

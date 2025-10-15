@@ -423,12 +423,16 @@ export const routinesRouter = router({
       // Create routine assignments
       console.log("Server: Received startDate:", input.startDate);
 
-      // Parse the date string correctly to avoid timezone issues
-      // Use UTC to prevent day shifting when stored in database
+      // Parse the date string and create local date, then convert to UTC properly
       const [year, month, day] = input.startDate.split("-").map(Number);
-      const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      const localDate = new Date(year, month - 1, day, 0, 0, 0, 0);
 
-      console.log("Server: Parsed startDate (UTC):", startDate);
+      // Use the same timezone approach as lessons - convert local to UTC
+      const timeZone = "America/New_York"; // Default timezone
+      const startDate = fromZonedTime(localDate, timeZone);
+
+      console.log("Server: Local date:", localDate);
+      console.log("Server: UTC date:", startDate);
       console.log("Server: Local date string:", startDate.toLocaleDateString());
 
       const assignments = await Promise.all(

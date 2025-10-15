@@ -443,7 +443,7 @@ function ClientDetailPage({
       )
     ) {
       removeProgramMutation.mutate({
-        programId: programData.id,
+        programId: programData.programId,
         clientIds: [clientId],
       });
     }
