@@ -227,13 +227,21 @@ export const programsRouter = router({
         console.error("Program validation failed:", validation.errors);
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Validation failed: ${validation.errors
-            .map(e => e.message)
-            .join(", ")}`,
+          message: `Validation failed: ${
+            validation.errors?.map(e => e.message).join(", ") ||
+            "Unknown validation error"
+          }`,
         });
       }
 
       const cleanedData = validation.data;
+
+      if (!cleanedData) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process program data",
+        });
+      }
 
       try {
         // Create the program with all its structure
