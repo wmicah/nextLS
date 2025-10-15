@@ -14,6 +14,10 @@ import {
 } from "@/lib/youtube";
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+import {
+  validateAndCleanProgramData,
+  logProgramCreation,
+} from "@/lib/program-debug-utils";
 
 /**
  * Programs Router
@@ -187,6 +191,8 @@ export const programsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      console.log("=== PROGRAM CREATE MUTATION STARTED ===");
+
       const { getUser } = getKindeServerSession();
       const user = await getUser();
 
@@ -204,65 +210,122 @@ export const programsRouter = router({
         });
       }
 
-      // Create the program with all its structure
-      const program = await db.program.create({
-        data: {
-          title: input.title,
-          description: input.description || "",
-          sport: "General", // Default value since sport field is removed from UI
-          level: input.level,
-          duration: input.duration,
-          coachId: ensureUserId(user.id),
-          weeks: {
-            create: input.weeks.map(week => ({
-              weekNumber: week.weekNumber,
-              title: week.title,
-              description: week.description || "",
-              days: {
-                create: week.days.map(day => {
-                  // Check if this is a rest day (has no drills)
-                  const isRestDay = day.drills.length === 0;
+      // Debug and validate the input data
+      const payloadCheck = logProgramCreation(input, "program-create");
 
-                  return {
-                    dayNumber: day.dayNumber,
-                    title: day.title,
-                    description: day.description || "",
-                    isRestDay: isRestDay,
-                    drills: {
-                      create: day.drills.map(drill => ({
-                        order: drill.order,
-                        title: drill.title,
-                        description: drill.description || "",
-                        duration: drill.duration || "",
-                        videoUrl: drill.videoUrl || "",
-                        notes: drill.notes || "",
-                        sets: drill.sets || null, // Optional field, set to null if not provided
-                        reps: drill.reps || null, // Optional field, set to null if not provided
-                        tempo: drill.tempo || null, // Optional field, set to null if not provided
-                        supersetId: drill.supersetId || null,
-                        supersetOrder: drill.supersetOrder || null,
-                      })),
-                    },
-                  };
-                }),
-              },
-            })),
+      if (payloadCheck.isTooLarge) {
+        throw new TRPCError({
+          code: "PAYLOAD_TOO_LARGE",
+          message:
+            "Program data is too large. Please reduce the number of weeks, days, or drills.",
+        });
+      }
+
+      // Validate and clean the data
+      const validation = validateAndCleanProgramData(input);
+      if (!validation.success) {
+        console.error("Program validation failed:", validation.errors);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Validation failed: ${validation.errors
+            .map(e => e.message)
+            .join(", ")}`,
+        });
+      }
+
+      const cleanedData = validation.data;
+
+      try {
+        // Create the program with all its structure
+        const program = await db.program.create({
+          data: {
+            title: cleanedData.title,
+            description: cleanedData.description || "",
+            sport: "General", // Default value since sport field is removed from UI
+            level: cleanedData.level,
+            duration: cleanedData.duration,
+            coachId: ensureUserId(user.id),
+            weeks: {
+              create: cleanedData.weeks.map(week => ({
+                weekNumber: week.weekNumber,
+                title: week.title,
+                description: week.description || "",
+                days: {
+                  create: week.days.map(day => {
+                    // Check if this is a rest day (has no drills)
+                    const isRestDay = day.drills.length === 0;
+
+                    return {
+                      dayNumber: day.dayNumber,
+                      title: day.title,
+                      description: day.description || "",
+                      isRestDay: isRestDay,
+                      drills: {
+                        create: day.drills.map(drill => ({
+                          order: drill.order,
+                          title: drill.title,
+                          description: drill.description || "",
+                          duration: drill.duration || "",
+                          videoUrl: drill.videoUrl || "",
+                          notes: drill.notes || "",
+                          sets: drill.sets || null, // Optional field, set to null if not provided
+                          reps: drill.reps || null, // Optional field, set to null if not provided
+                          tempo: drill.tempo || null, // Optional field, set to null if not provided
+                          supersetId: drill.supersetId || null,
+                          supersetOrder: drill.supersetOrder || null,
+                        })),
+                      },
+                    };
+                  }),
+                },
+              })),
+            },
           },
-        },
-        include: {
-          weeks: {
-            include: {
-              days: {
-                include: {
-                  drills: true,
+          include: {
+            weeks: {
+              include: {
+                days: {
+                  include: {
+                    drills: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      return program;
+        console.log("=== PROGRAM CREATE COMPLETED SUCCESSFULLY ===");
+        return program;
+      } catch (error) {
+        console.error("=== PROGRAM CREATE FAILED ===");
+        console.error("Error details:", error);
+
+        // Provide more specific error messages
+        if (error instanceof Error) {
+          if (error.message.includes("timeout")) {
+            throw new TRPCError({
+              code: "TIMEOUT",
+              message:
+                "Program creation timed out. Please try with fewer weeks or drills.",
+            });
+          }
+          if (
+            error.message.includes("too large") ||
+            error.message.includes("size")
+          ) {
+            throw new TRPCError({
+              code: "PAYLOAD_TOO_LARGE",
+              message: "Program data is too large. Please reduce complexity.",
+            });
+          }
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            "Failed to create program. Please try again with simpler data.",
+        });
+      }
     }),
 
   // Get a specific program

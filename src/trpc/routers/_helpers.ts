@@ -3,6 +3,7 @@
  */
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
+import { emailService } from "@/lib/email-service";
 
 /**
  * Helper function to ensure user.id is not null
@@ -59,7 +60,7 @@ export async function sendWelcomeMessage(
       where: {
         conversationId,
         content: {
-          contains: "Welcome to Next Level Softball!",
+          contains: "Welcome to NextLevel Coaching!",
         },
       },
     });
@@ -86,7 +87,7 @@ export async function sendWelcomeMessage(
     // Use custom welcome message if set, otherwise use default
     const welcomeContent = coachSettings?.defaultWelcomeMessage
       ? coachSettings.defaultWelcomeMessage
-      : `Welcome to Next Level Softball! Hi there, I'm ${coachName}, your softball coach. I'm excited to work with you and help you reach your goals. Feel free to message me anytime with questions, concerns, or just to chat about your progress.`;
+      : `Welcome to NextLevel Coaching! Hi there, I'm ${coachName}, your coach. I'm excited to work with you and help you reach your goals. Feel free to message me anytime with questions, concerns, or just to chat about your progress.`;
 
     // Create welcome message
     const welcomeMessage = await db.message.create({
@@ -121,5 +122,3 @@ export async function sendWelcomeMessage(
     return null;
   }
 }
-
-

@@ -91,7 +91,7 @@ function HomeContent() {
         <MaxWidthWrapper className="text-center px-4 sm:px-6">
           <div data-reveal>
             <h1 className="mx-auto max-w-4xl text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight text-white leading-tight">
-              NextLevel: Scale Your
+              NextLevel Coaching: Scale Your
               <br className="hidden sm:block" />
               <span className="block sm:inline"> </span>
               <span className="text-sky-400">Coaching Business</span>
@@ -234,7 +234,7 @@ function HomeContent() {
               Real Results from Real Coaches
             </h2>
             <p className="text-lg text-zinc-400">
-              See how NextLevel transforms coaching businesses
+              See how NextLevel Coaching transforms coaching businesses
             </p>
           </div>
 
@@ -248,7 +248,7 @@ function HomeContent() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white">
-                    Without NextLevel
+                    Without NextLevel Coaching
                   </h3>
                   <p className="text-sm text-zinc-400">The old way</p>
                 </div>
@@ -269,7 +269,7 @@ function HomeContent() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white">
-                    With NextLevel
+                    With NextLevel Coaching
                   </h3>
                   <p className="text-sm text-zinc-400">The scalable way</p>
                 </div>

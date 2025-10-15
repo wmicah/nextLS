@@ -26,30 +26,30 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Next Level Softball - Professional Coaching Platform",
-    template: "%s | Next Level Softball",
+    default: "NextLevel Coaching - Professional Coaching Platform",
+    template: "%s | NextLevel Coaching",
   },
   description:
-    "Coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
+    "Professional coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
   keywords: [
-    "softball coaching",
-    "softball training",
-    "personalized programs",
-    "softball lessons",
     "coaching platform",
+    "athletic training",
+    "personalized programs",
+    "coaching lessons",
+    "sports coaching",
     "athletic development",
     "sports technology",
   ],
-  authors: [{ name: "Next Level Softball Team" }],
-  creator: "Next Level Softball",
-  publisher: "Next Level Softball",
+  authors: [{ name: "NextLevel Coaching Team" }],
+  creator: "NextLevel Coaching",
+  publisher: "NextLevel Coaching",
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    process.env.NEXT_PUBLIC_APP_URL || "https://nxlvlcoach.com"
   ),
   alternates: {
     canonical: "/",
@@ -58,26 +58,26 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "Next Level Softball - Professional Coaching Platform",
+    title: "NextLevel Coaching - Professional Coaching Platform",
     description:
-      "Coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
-    siteName: "Next Level Softball",
+      "Professional coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
+    siteName: "NextLevel Coaching",
     images: [
       {
         url: "/dashboard-preview.jpg",
         width: 1200,
         height: 630,
-        alt: "Next Level Softball Dashboard Preview",
+        alt: "NextLevel Coaching Dashboard Preview",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Next Level Softball - Professional Coaching Platform",
+    title: "NextLevel Coaching - Professional Coaching Platform",
     description:
-      "Coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
+      "Professional coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
     images: ["/dashboard-preview.jpg"],
-    creator: "@nextlevelsoftball",
+    creator: "@nextlevelcoaching",
   },
   robots: {
     index: true,
@@ -145,10 +145,10 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
 
         {/* PWA meta tags */}
-        <meta name="application-name" content="Next Level Softball" />
+        <meta name="application-name" content="NextLevel Coaching" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Next Level Softball" />
+        <meta name="apple-mobile-web-app-title" content="NextLevel Coaching" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
@@ -173,14 +173,14 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SportsOrganization",
-              name: "Next Level Softball",
-              description: "Professional softball coaching platform",
-              url: "https://nextlevelsoftball.com",
-              logo: "https://nextlevelsoftball.com/logo2.png",
+              name: "NextLevel Coaching",
+              description: "Professional coaching platform",
+              url: "https://nxlvlcoach.com",
+              logo: "https://nxlvlcoach.com/logo2.png",
               sameAs: [
-                "https://twitter.com/nextlevelsoftball",
-                "https://facebook.com/nextlevelsoftball",
-                "https://instagram.com/nextlevelsoftball",
+                "https://twitter.com/nextlevelcoaching",
+                "https://facebook.com/nextlevelcoaching",
+                "https://instagram.com/nextlevelcoaching",
               ],
               contactPoint: {
                 "@type": "ContactPoint",
@@ -193,10 +193,10 @@ export default function RootLayout({
                 "@type": "Country",
                 name: "United States",
               },
-              serviceType: "Softball Coaching",
+              serviceType: "Professional Coaching",
               offers: {
                 "@type": "Offer",
-                description: "Professional softball coaching platform",
+                description: "Professional coaching platform",
               },
             }),
           }}
