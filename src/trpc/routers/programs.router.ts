@@ -1580,6 +1580,65 @@ export const programsRouter = router({
       return { deletedCount: result.count };
     }),
 
+  // Unassign specific program assignment (by assignment ID)
+  unassignSpecificProgram: publicProcedure
+    .input(
+      z.object({
+        assignmentId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can unassign programs",
+        });
+      }
+
+      // Verify the assignment exists and belongs to the coach
+      const assignment = await db.programAssignment.findFirst({
+        where: {
+          id: input.assignmentId,
+          program: {
+            coachId: ensureUserId(user.id),
+          },
+        },
+        include: {
+          program: true,
+        },
+      });
+
+      if (!assignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Program assignment not found",
+        });
+      }
+
+      // Delete only this specific assignment
+      const result = await db.programAssignment.delete({
+        where: {
+          id: input.assignmentId,
+        },
+      });
+
+      return {
+        success: true,
+        unassignedCount: 1,
+        assignment,
+      };
+    }),
+
   // Update assignment progress
   updateAssignmentProgress: publicProcedure
     .input(

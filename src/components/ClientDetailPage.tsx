@@ -206,43 +206,45 @@ function ClientDetailPage({
 
   const utils = trpc.useUtils();
 
-  // Remove program mutation
-  const removeProgramMutation = trpc.programs.unassignFromClients.useMutation({
-    onSuccess: () => {
-      addToast({
-        type: "success",
-        title: "Program Removed!",
-        message: "Program has been removed from the client.",
-      });
-      refreshAllData();
-    },
-    onError: error => {
-      addToast({
-        type: "error",
-        title: "Removal Failed",
-        message: error.message || "Failed to remove program.",
-      });
-    },
-  });
+  // Remove program mutation - using specific assignment ID
+  const removeProgramMutation =
+    trpc.programs.unassignSpecificProgram.useMutation({
+      onSuccess: () => {
+        addToast({
+          type: "success",
+          title: "Program Removed!",
+          message: "Program has been removed from the client.",
+        });
+        refreshAllData();
+      },
+      onError: error => {
+        addToast({
+          type: "error",
+          title: "Removal Failed",
+          message: error.message || "Failed to remove program.",
+        });
+      },
+    });
 
-  // Remove routine mutation
-  const unassignRoutineMutation = trpc.routines.unassign.useMutation({
-    onSuccess: () => {
-      addToast({
-        type: "success",
-        title: "Routine Removed!",
-        message: "Routine has been removed from the client.",
-      });
-      refreshAllData();
-    },
-    onError: error => {
-      addToast({
-        type: "error",
-        title: "Removal Failed",
-        message: error.message || "Failed to remove routine.",
-      });
-    },
-  });
+  // Remove routine mutation - using specific assignment ID
+  const unassignRoutineMutation =
+    trpc.routines.unassignSpecificRoutine.useMutation({
+      onSuccess: () => {
+        addToast({
+          type: "success",
+          title: "Routine Removed!",
+          message: "Routine has been removed from the client.",
+        });
+        refreshAllData();
+      },
+      onError: error => {
+        addToast({
+          type: "error",
+          title: "Removal Failed",
+          message: error.message || "Failed to remove routine.",
+        });
+      },
+    });
 
   // Delete lesson mutation
   const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
@@ -443,8 +445,7 @@ function ClientDetailPage({
       )
     ) {
       removeProgramMutation.mutate({
-        programId: programData.programId,
-        clientIds: [clientId],
+        assignmentId: programData.assignmentId,
       });
     }
   };
@@ -456,8 +457,7 @@ function ClientDetailPage({
       )
     ) {
       unassignRoutineMutation.mutate({
-        routineId: routineData.routineId,
-        clientIds: [clientId],
+        assignmentId: routineData.assignmentId,
       });
     }
   };
@@ -501,23 +501,30 @@ function ClientDetailPage({
   };
 
   const getRoutineAssignmentsForDate = (date: Date) => {
-    return assignedRoutines.filter((assignment: any) => {
-      const assignmentDate = new Date(
-        assignment.startDate || assignment.assignedAt
-      );
-      const isMatch = isSameDay(assignmentDate, date);
-      if (isMatch) {
-        console.log("Calendar: Found routine assignment for date:", {
-          targetDate: date.toISOString().split("T")[0],
-          assignmentDate: assignmentDate.toISOString().split("T")[0],
-          startDate: assignment.startDate,
-          assignedAt: assignment.assignedAt,
-          targetDateLocal: date.toLocaleDateString(),
-          assignmentDateLocal: assignmentDate.toLocaleDateString(),
-        });
-      }
-      return isMatch;
-    });
+    return assignedRoutines
+      .filter((assignment: any) => {
+        const assignmentDate = new Date(
+          assignment.startDate || assignment.assignedAt
+        );
+        const isMatch = isSameDay(assignmentDate, date);
+        if (isMatch) {
+          console.log("Calendar: Found routine assignment for date:", {
+            targetDate: date.toISOString().split("T")[0],
+            assignmentDate: assignmentDate.toISOString().split("T")[0],
+            startDate: assignment.startDate,
+            assignedAt: assignment.assignedAt,
+            targetDateLocal: date.toLocaleDateString(),
+            assignmentDateLocal: assignmentDate.toLocaleDateString(),
+          });
+        }
+        return isMatch;
+      })
+      .sort((a: any, b: any) => {
+        // Sort by assignedAt date - oldest first (most recent at bottom)
+        const dateA = new Date(a.assignedAt).getTime();
+        const dateB = new Date(b.assignedAt).getTime();
+        return dateA - dateB; // Ascending order (oldest to newest)
+      });
   };
 
   // Wrapper component that conditionally includes Sidebar

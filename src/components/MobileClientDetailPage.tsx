@@ -164,29 +164,31 @@ export default function MobileClientDetailPage({
 
   const utils = trpc.useUtils();
 
-  // Remove program mutation
-  const removeProgramMutation = trpc.programs.unassignFromClients.useMutation({
-    onSuccess: () => {
-      utils.clients.getAssignedPrograms.invalidate({ clientId });
-      utils.library.getClientAssignments.invalidate({ clientId });
-      setShowDayOverviewModal(false);
-    },
-    onError: error => {
-      console.error("Failed to remove program:", error);
-    },
-  });
+  // Remove program mutation - using specific assignment ID
+  const removeProgramMutation =
+    trpc.programs.unassignSpecificProgram.useMutation({
+      onSuccess: () => {
+        utils.clients.getAssignedPrograms.invalidate({ clientId });
+        utils.library.getClientAssignments.invalidate({ clientId });
+        setShowDayOverviewModal(false);
+      },
+      onError: error => {
+        console.error("Failed to remove program:", error);
+      },
+    });
 
-  // Remove routine mutation
-  const unassignRoutineMutation = trpc.routines.unassign.useMutation({
-    onSuccess: () => {
-      utils.routines.getClientRoutineAssignments.invalidate({ clientId });
-      utils.library.getClientAssignments.invalidate({ clientId });
-      setShowDayOverviewModal(false);
-    },
-    onError: error => {
-      console.error("Failed to remove routine:", error);
-    },
-  });
+  // Remove routine mutation - using specific assignment ID
+  const unassignRoutineMutation =
+    trpc.routines.unassignSpecificRoutine.useMutation({
+      onSuccess: () => {
+        utils.routines.getClientRoutineAssignments.invalidate({ clientId });
+        utils.library.getClientAssignments.invalidate({ clientId });
+        setShowDayOverviewModal(false);
+      },
+      onError: error => {
+        console.error("Failed to remove routine:", error);
+      },
+    });
 
   // Delete lesson mutation
   const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
@@ -329,23 +331,30 @@ export default function MobileClientDetailPage({
   };
 
   const getRoutineAssignmentsForDate = (date: Date) => {
-    return routineAssignments.filter((assignment: any) => {
-      const assignmentDate = new Date(
-        assignment.startDate || assignment.assignedAt
-      );
-      const isMatch = isSameDay(assignmentDate, date);
-      if (isMatch) {
-        console.log("Calendar: Found routine assignment for date:", {
-          targetDate: date.toISOString().split("T")[0],
-          assignmentDate: assignmentDate.toISOString().split("T")[0],
-          startDate: assignment.startDate,
-          assignedAt: assignment.assignedAt,
-          targetDateLocal: date.toLocaleDateString(),
-          assignmentDateLocal: assignmentDate.toLocaleDateString(),
-        });
-      }
-      return isMatch;
-    });
+    return routineAssignments
+      .filter((assignment: any) => {
+        const assignmentDate = new Date(
+          assignment.startDate || assignment.assignedAt
+        );
+        const isMatch = isSameDay(assignmentDate, date);
+        if (isMatch) {
+          console.log("Calendar: Found routine assignment for date:", {
+            targetDate: date.toISOString().split("T")[0],
+            assignmentDate: assignmentDate.toISOString().split("T")[0],
+            startDate: assignment.startDate,
+            assignedAt: assignment.assignedAt,
+            targetDateLocal: date.toLocaleDateString(),
+            assignmentDateLocal: assignmentDate.toLocaleDateString(),
+          });
+        }
+        return isMatch;
+      })
+      .sort((a: any, b: any) => {
+        // Sort by assignedAt date - oldest first (most recent at bottom)
+        const dateA = new Date(a.assignedAt).getTime();
+        const dateB = new Date(b.assignedAt).getTime();
+        return dateA - dateB; // Ascending order (oldest to newest)
+      });
   };
 
   const navigateDate = (direction: "prev" | "next") => {
@@ -375,10 +384,6 @@ export default function MobileClientDetailPage({
   const handleRemoveProgram = (programData: any) => {
     const programTitle =
       programData.title || programData.program?.title || "Program";
-    const programId =
-      programData.assignment?.programId ||
-      programData.programId ||
-      programData.id;
 
     if (
       confirm(
@@ -386,8 +391,7 @@ export default function MobileClientDetailPage({
       )
     ) {
       removeProgramMutation.mutate({
-        programId: programId,
-        clientIds: [clientId],
+        assignmentId: programData.assignmentId,
       });
     }
   };
@@ -395,10 +399,6 @@ export default function MobileClientDetailPage({
   const handleRemoveRoutine = (routineData: any) => {
     const routineName =
       routineData.routine?.name || routineData.name || "Routine";
-    const routineId =
-      routineData.assignment?.routineId ||
-      routineData.routineId ||
-      routineData.id;
 
     if (
       confirm(
@@ -406,8 +406,7 @@ export default function MobileClientDetailPage({
       )
     ) {
       unassignRoutineMutation.mutate({
-        routineId: routineId,
-        clientIds: [clientId],
+        assignmentId: routineData.assignmentId,
       });
     }
   };

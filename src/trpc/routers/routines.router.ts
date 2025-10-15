@@ -510,6 +510,65 @@ export const routinesRouter = router({
       };
     }),
 
+  // Unassign specific routine assignment (by assignment ID)
+  unassignSpecificRoutine: publicProcedure
+    .input(
+      z.object({
+        assignmentId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can unassign routines",
+        });
+      }
+
+      // Verify the assignment exists and belongs to the coach
+      const assignment = await db.routineAssignment.findFirst({
+        where: {
+          id: input.assignmentId,
+          routine: {
+            coachId: ensureUserId(user.id),
+          },
+        },
+        include: {
+          routine: true,
+        },
+      });
+
+      if (!assignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Routine assignment not found",
+        });
+      }
+
+      // Delete only this specific assignment
+      const result = await db.routineAssignment.delete({
+        where: {
+          id: input.assignmentId,
+        },
+      });
+
+      return {
+        success: true,
+        unassignedCount: 1,
+        assignment,
+      };
+    }),
+
   // Get routine assignments
   getRoutineAssignments: publicProcedure
     .input(z.object({ routineId: z.string() }))
