@@ -431,6 +431,7 @@ model ProgramDrill {
   clientVideoSubmissions ClientVideoSubmission[]
   completions            DrillCompletion[]
   day                    ProgramDay              @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  routine                Routine?                 @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
   @@map("program_drills")
 }
@@ -559,6 +560,7 @@ model Routine {
   updatedAt   DateTime            @updatedAt
   assignments RoutineAssignment[]
   exercises   RoutineExercise[]
+  programDrills ProgramDrill[]
   coach       User                @relation("CoachRoutines", fields: [coachId], references: [id], onDelete: Cascade)
   organization Organization?      @relation("SharedRoutines", fields: [organizationId], references: [id])
   createdByCoach User?            @relation("CreatedRoutines", fields: [createdByCoachId], references: [id])

@@ -425,6 +425,14 @@ export const clientRouterRouter = router({
         routineName: assignment.routine.name,
         assignedAt: assignment.assignedAt,
         startDate: assignment.startDate,
+        exerciseCount: assignment.routine.exercises.length,
+        exercises: assignment.routine.exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          sets: ex.sets,
+          reps: ex.reps,
+          order: ex.order,
+        })),
       })),
     });
 
@@ -840,7 +848,17 @@ export const clientRouterRouter = router({
                     include: {
                       days: {
                         include: {
-                          drills: true,
+                          drills: {
+                            include: {
+                              routine: {
+                                include: {
+                                  exercises: {
+                                    orderBy: { order: "asc" },
+                                  },
+                                },
+                              },
+                            },
+                          },
                         },
                       },
                     },

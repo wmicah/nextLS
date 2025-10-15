@@ -217,14 +217,6 @@ function ClientProgramPage() {
     .toString()
     .padStart(2, "0")}-${currentWeekEnd.getDate().toString().padStart(2, "0")}`;
 
-  // Debug logging
-  console.log("📅 Week Calendar Debug:", {
-    currentWeekStart: currentWeekStart.toLocaleDateString(),
-    currentWeekEnd: currentWeekEnd.toLocaleDateString(),
-    startDateString,
-    endDateString,
-  });
-
   const { data: weekCalendarData } =
     trpc.clientRouter.getProgramWeekCalendar.useQuery({
       startDate: startDateString,
@@ -249,28 +241,13 @@ function ClientProgramPage() {
     trpc.clientRouter.getRoutineAssignments.useQuery();
 
   // Debug logging for routine assignments
-  console.log("🔍 Routine Assignments Debug:", {
-    routineAssignments,
-    count: routineAssignments.length,
-    assignments: routineAssignments.map(assignment => ({
-      id: assignment.id,
-      routineName: (assignment as any).routine?.name || "Unknown Routine",
-      assignedAt: assignment.assignedAt,
-      startDate: assignment.startDate,
-    })),
-  });
 
   // Initialize routine exercise completion state from server data when selectedDate changes
   React.useEffect(() => {
     if (selectedDate && routineAssignments) {
       const serverCompletedRoutineExercises = new Set<string>();
 
-      console.log("🔍 DEBUG: Starting routine exercise initialization");
-      console.log("🔍 DEBUG: selectedDate:", selectedDate.toLocaleDateString());
-      console.log("🔍 DEBUG: routineAssignments:", routineAssignments.length);
-
       const routinesForDate = getRoutinesForDate(selectedDate);
-      console.log("🔍 DEBUG: routinesForDate:", routinesForDate.length);
 
       // Load routine exercise completions from the routine assignments
       routinesForDate.forEach(routineAssignment => {
@@ -278,13 +255,6 @@ function ClientProgramPage() {
           (routineAssignment as any).completions.forEach((completion: any) => {
             const routineExerciseKey = `${routineAssignment.id}-${completion.exerciseId}`;
             serverCompletedRoutineExercises.add(routineExerciseKey);
-            console.log(
-              "✅ Added completed routine exercise from completions:",
-              {
-                routineExerciseKey,
-                completionId: completion.id,
-              }
-            );
           });
         }
       });
@@ -301,13 +271,7 @@ function ClientProgramPage() {
           return prev; // Return same reference to prevent re-render
         });
       }
-
-      console.log("📝 Initialized routine exercise completion from server:", {
-        totalExercises: serverCompletedRoutineExercises.size,
-        exerciseIds: Array.from(serverCompletedRoutineExercises),
-      });
     } else {
-      console.log("🔍 DEBUG: No selectedDate or routineAssignments found");
     }
   }, [selectedDate, routineAssignments]);
 
@@ -320,20 +284,6 @@ function ClientProgramPage() {
 
   // Get library items for video lookup
   const { data: libraryItems = [] } = trpc.library.list.useQuery({});
-
-  // Consolidated debug (after data declarations)
-  console.log("[ClientProgramPage]", {
-    programInfo,
-    weekCalendarData,
-    calendarData,
-    calendarError,
-    calendarLoading,
-    nextLesson,
-    clientLessons,
-    pitchingData,
-    videoAssignments,
-    currentDate,
-  });
 
   const utils = trpc.useUtils();
 
@@ -428,19 +378,25 @@ function ClientProgramPage() {
 
   // Get routine assignments for a specific date
   const getRoutinesForDate = (date: Date) => {
-    if (!routineAssignments || routineAssignments.length === 0) return [];
+    if (!routineAssignments || routineAssignments.length === 0) {
+      return [];
+    }
 
     // Convert date to YYYY-MM-DD format for comparison
     const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
       .toString()
       .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
 
-    // Filter routines that are scheduled for this specific date
-    return routineAssignments.filter((assignment: any) => {
-      if (!assignment.startDate) return false;
+    // Filter routines that are available for this date
+    const filteredRoutines = routineAssignments.filter((assignment: any) => {
+      // If no startDate, use assignedAt as the start date
+      const startDate = assignment.startDate || assignment.assignedAt;
+      if (!startDate) {
+        return false;
+      }
 
       // Convert assignment start date to YYYY-MM-DD format
-      const assignmentDate = new Date(assignment.startDate);
+      const assignmentDate = new Date(startDate);
       const assignmentDateString = `${assignmentDate.getFullYear()}-${(
         assignmentDate.getMonth() + 1
       )
@@ -450,10 +406,21 @@ function ClientProgramPage() {
         .toString()
         .padStart(2, "0")}`;
 
-      // For now, only show routines on their start date
-      // This could be enhanced to support recurring routines or date ranges
-      return assignmentDateString === dateString;
+      // Show routines only on their exact assigned date
+      const selectedDate = new Date(date);
+      const routineStartDate = new Date(assignmentDate);
+
+      // Set time to start of day for accurate comparison
+      selectedDate.setHours(0, 0, 0, 0);
+      routineStartDate.setHours(0, 0, 0, 0);
+
+      const isAvailable = selectedDate.getTime() === routineStartDate.getTime();
+
+      // Show routine only on its exact assigned date
+      return isAvailable;
     });
+
+    return filteredRoutines;
   };
 
   // Get day data from calendar data
@@ -585,12 +552,6 @@ function ClientProgramPage() {
     routineAssignmentId: string,
     completed: boolean
   ) => {
-    console.log("🎯 handleMarkRoutineExerciseComplete called with:", {
-      exerciseId,
-      routineAssignmentId,
-      completed,
-    });
-
     // Use exercise ID directly for routine exercises
     const routineExerciseKey = `${routineAssignmentId}-${exerciseId}`;
 
@@ -602,37 +563,20 @@ function ClientProgramPage() {
       } else {
         newSet.delete(routineExerciseKey);
       }
-      console.log("📝 Updated routine exercise completion:", {
-        routineExerciseKey,
-        completed,
-        totalCompleted: newSet.size,
-      });
       return newSet;
     });
 
     // Call the backend mutation for routine exercise completion
     try {
-      console.log("🚀 Calling markRoutineExerciseCompleteMutation with:", {
-        exerciseId,
-        routineAssignmentId,
-        completed,
-      });
-
       await markRoutineExerciseCompleteMutation.mutateAsync({
         exerciseId,
         routineAssignmentId,
         completed,
       });
 
-      console.log("✅ Routine exercise completion mutation succeeded");
-
       // Refresh calendar data to sync with server
       await refetchCalendar();
-      console.log(
-        "✅ Calendar data refreshed after routine exercise completion"
-      );
     } catch (error) {
-      console.log("❌ Routine exercise completion mutation failed:", error);
       // Revert optimistic update on error
       setCompletedProgramDrills(prev => {
         const newSet = new Set(prev);
@@ -651,11 +595,6 @@ function ClientProgramPage() {
     drillId: string,
     completed: boolean
   ) => {
-    console.log("🎯 handleMarkDrillComplete called with:", {
-      drillId,
-      completed,
-    });
-
     // Update the completion state immediately for real-time UI updates
     setCompletedProgramDrills(prev => {
       const newSet = new Set(prev);
@@ -664,11 +603,6 @@ function ClientProgramPage() {
       } else {
         newSet.delete(drillId);
       }
-      console.log("📝 Updated program drill completion:", {
-        drillId,
-        completed,
-        totalCompleted: newSet.size,
-      });
       return newSet;
     });
 
@@ -686,24 +620,14 @@ function ClientProgramPage() {
 
     // Then perform the actual mutation
     try {
-      console.log("🚀 Calling markDrillCompleteMutation with:", {
-        drillId,
-        completed,
-      });
       await markDrillCompleteMutation.mutateAsync({
         drillId: drillId,
         completed,
       });
-      console.log(
-        "✅ markDrillCompleteMutation succeeded - data saved to backend"
-      );
 
       // Subtle refetch to ensure UI stays in sync
-      console.log("🔄 Refreshing calendar data...");
       await refetchCalendar();
-      console.log("✅ Calendar data refreshed");
     } catch (error) {
-      console.log("❌ markDrillCompleteMutation failed:", error);
       // Revert optimistic update on error
       setCompletedProgramDrills(prev => {
         const newSet = new Set(prev);
@@ -766,25 +690,11 @@ function ClientProgramPage() {
 
   // Handle opening video player
   const handleOpenVideo = async (videoUrl: string, drillData?: any) => {
-    console.log("🎬 Opening video with URL:", videoUrl);
-    console.log("📋 Drill data:", drillData);
-    console.log("🔍 YouTube metadata check:", {
-      isYoutube: drillData?.isYoutube,
-      youtubeId: drillData?.youtubeId,
-      videoId: drillData?.videoId,
-      videoTitle: drillData?.videoTitle,
-      videoThumbnail: drillData?.videoThumbnail,
-    });
-
     // Clear any previous video errors
     setVideoError(null);
 
     // If drill data has YouTube information, use it directly (this is the simple approach!)
     if (drillData?.isYoutube && drillData?.youtubeId) {
-      console.log(
-        "✅ Using YouTube metadata from drill data:",
-        drillData.youtubeId
-      );
       setSelectedVideo({
         id: "youtube-" + drillData.youtubeId,
         isYoutube: true,
@@ -799,12 +709,6 @@ function ClientProgramPage() {
 
     // Fallback: If we have an UploadThing URL but no YouTube metadata, search library for matching video
     if (videoUrl && videoUrl.includes("utfs.io") && drillData?.title) {
-      console.log(
-        "⚠️ UploadThing URL detected, searching library for YouTube video:",
-        drillData.title
-      );
-      console.log("Available library items:", libraryItems);
-
       // Try multiple matching strategies
       let matchingVideo = libraryItems?.find(
         item =>
@@ -837,10 +741,6 @@ function ClientProgramPage() {
       // AGGRESSIVE FALLBACK: Look for videos with UploadThing URLs that might be YouTube videos
       // This handles the case where YouTube videos were incorrectly stored with UploadThing URLs
       if (!matchingVideo) {
-        console.log(
-          "🔍 Searching for videos with UploadThing URLs that might be YouTube videos..."
-        );
-
         matchingVideo = libraryItems?.find(
           item =>
             item.title &&
@@ -856,11 +756,6 @@ function ClientProgramPage() {
         );
 
         if (matchingVideo) {
-          console.log(
-            "✅ Found potential YouTube video with UploadThing URL:",
-            matchingVideo
-          );
-
           // Try to extract YouTube ID from the original URL or use stored youtubeId
           let youtubeId = matchingVideo.youtubeId;
 
@@ -875,7 +770,6 @@ function ClientProgramPage() {
           }
 
           if (youtubeId) {
-            console.log("✅ Extracted YouTube ID:", youtubeId);
             setSelectedVideo({
               id: "youtube-" + youtubeId,
               isYoutube: true,
@@ -891,10 +785,6 @@ function ClientProgramPage() {
       }
 
       if (matchingVideo) {
-        console.log(
-          "✅ Found matching YouTube video in library:",
-          matchingVideo
-        );
         setSelectedVideo({
           id: "youtube-" + matchingVideo.youtubeId,
           isYoutube: true,
@@ -906,11 +796,6 @@ function ClientProgramPage() {
         setIsVideoPlayerOpen(true);
         return;
       } else {
-        console.log("❌ No matching YouTube video found in library");
-        console.log(
-          "All YouTube items in library:",
-          libraryItems?.filter(item => item.isYoutube)
-        );
         setVideoError(
           `YouTube video "${drillData.title}" could not be found. Please contact your coach.`
         );
@@ -985,8 +870,6 @@ function ClientProgramPage() {
         drillId: selectedDrillForComment.id,
         comment: commentText,
       });
-
-      console.log("Comment submission result:", result);
     } catch (error) {
       console.error("Failed to submit comment:", error);
     } finally {
@@ -1397,14 +1280,6 @@ function ClientProgramPage() {
                         )}
                         onClick={() => {
                           // Allow clicking on any day to view what's scheduled
-                          console.log(
-                            "Day clicked:",
-                            date,
-                            "Day data:",
-                            dayData,
-                            "Lessons:",
-                            lessonsForDay
-                          );
                           setSelectedDay(dayData);
                           setSelectedDate(date);
                           setIsDaySheetOpen(true);
@@ -1928,7 +1803,9 @@ function ClientProgramPage() {
               selectedDay={selectedDay}
               selectedDate={selectedDate}
               programs={selectedDay?.programs || []}
-              routineAssignments={routineAssignments as any}
+              routineAssignments={
+                selectedDate ? getRoutinesForDate(selectedDate) : []
+              }
               lessonsForDate={
                 selectedDate ? getLessonsForDate(selectedDate) : []
               }
@@ -2026,17 +1903,6 @@ function ClientProgramPage() {
                     ) : selectedVideo && selectedVideo.url ? (
                       // Custom uploaded video
                       (() => {
-                        console.log(
-                          "Rendering video with URL:",
-                          selectedVideo.url
-                        );
-                        console.log("Video type:", selectedVideo.type);
-                        console.log("Is YouTube:", selectedVideo.isYoutube);
-                        console.log(
-                          "URL is valid:",
-                          selectedVideo.url.startsWith("http")
-                        );
-                        console.log("URL length:", selectedVideo.url.length);
                         return (
                           <video
                             key={`video-${selectedVideo.id}-${retryCount}`}
@@ -2046,31 +1912,13 @@ function ClientProgramPage() {
                             className="w-full h-full object-contain"
                             style={{ backgroundColor: "#000" }}
                             onContextMenu={e => e.preventDefault()}
-                            onLoad={() => {
-                              console.log(
-                                "Video loaded successfully:",
-                                selectedVideo?.url
-                              );
-                            }}
+                            onLoad={() => {}}
                             onLoadStart={() => {
-                              console.log(
-                                "Video load started:",
-                                selectedVideo?.url
-                              );
                               // Test if URL is accessible
                               fetch(selectedVideo?.url || "", {
                                 method: "HEAD",
                               })
-                                .then(response => {
-                                  console.log("Video URL fetch test:", {
-                                    url: selectedVideo?.url,
-                                    status: response.status,
-                                    statusText: response.statusText,
-                                    headers: Object.fromEntries(
-                                      response.headers.entries()
-                                    ),
-                                  });
-                                })
+                                .then(response => {})
                                 .catch(error => {
                                   console.error(
                                     "Video URL fetch test failed:",
@@ -2079,10 +1927,6 @@ function ClientProgramPage() {
                                 });
                             }}
                             onCanPlay={() => {
-                              console.log(
-                                "Video can play:",
-                                selectedVideo?.url
-                              );
                               setVideoError(null);
                             }}
                             onError={e => {

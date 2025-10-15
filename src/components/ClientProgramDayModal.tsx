@@ -47,6 +47,22 @@ interface Drill {
   videoUrl?: string;
   supersetId?: string;
   description?: string;
+  // Routine exercise properties
+  isRoutineExercise?: boolean;
+  routineAssignmentId?: string;
+  originalExerciseId?: string;
+  isProgramRoutineExercise?: boolean;
+  programDrillId?: string;
+  // Program drill routine property
+  routine?: {
+    id: string;
+    name: string;
+    exercises: any[];
+  };
+  // Backend properties
+  routineId?: string;
+  videoId?: string;
+  originalDrillId?: string;
 }
 
 interface DayData {
@@ -188,61 +204,35 @@ export default function ClientProgramDayModal({
 
   // Generate tabs for the selected day
   const generateTabs = (): Tab[] => {
-    if (!selectedDay) return [];
-
     const tabs: Tab[] = [];
 
     // Add program tabs for each program
-    programs.forEach((program, index) => {
-      tabs.push({
-        id: `program-${program.programId}`,
-        title: program.programTitle,
-        type: "program",
-        icon: <BookOpen className="h-4 w-4" />,
-        color: "text-blue-400",
-        bgColor: "bg-blue-500/20",
-        borderColor: "border-blue-400/30",
+    if (programs && programs.length > 0) {
+      programs.forEach((program, index) => {
+        tabs.push({
+          id: `program-${program.programId}`,
+          title: program.programTitle,
+          type: "program",
+          icon: <BookOpen className="h-4 w-4" />,
+          color: "text-blue-400",
+          bgColor: "bg-blue-500/20",
+          borderColor: "border-blue-400/30",
+        });
       });
-    });
+    }
 
-    // Add routine tabs for routines scheduled on the selected day
-    if (selectedDate) {
-      // Convert selected date to YYYY-MM-DD format for comparison
-      const dateString = `${selectedDate.getFullYear()}-${(
-        selectedDate.getMonth() + 1
-      )
-        .toString()
-        .padStart(2, "0")}-${selectedDate
-        .getDate()
-        .toString()
-        .padStart(2, "0")}`;
-
+    // Add routine tabs for standalone routines (not integrated into programs)
+    if (routineAssignments && routineAssignments.length > 0) {
       routineAssignments.forEach((assignment: any) => {
-        if (assignment.startDate) {
-          // Convert assignment start date to YYYY-MM-DD format
-          const assignmentDate = new Date(assignment.startDate);
-          const assignmentDateString = `${assignmentDate.getFullYear()}-${(
-            assignmentDate.getMonth() + 1
-          )
-            .toString()
-            .padStart(2, "0")}-${assignmentDate
-            .getDate()
-            .toString()
-            .padStart(2, "0")}`;
-
-          // Only add routine tab if it's scheduled for this day
-          if (assignmentDateString === dateString) {
-            tabs.push({
-              id: `routine-${assignment.id}`,
-              title: assignment.routine.name,
-              type: "routine",
-              icon: <BookOpen className="h-4 w-4" />,
-              color: "text-blue-400",
-              bgColor: "bg-blue-500/20",
-              borderColor: "border-blue-400/30",
-            });
-          }
-        }
+        tabs.push({
+          id: `routine-${assignment.id}`,
+          title: assignment.routine.name,
+          type: "routine",
+          icon: <BookOpen className="h-4 w-4" />,
+          color: "text-blue-400",
+          bgColor: "bg-blue-500/20",
+          borderColor: "border-blue-400/30",
+        });
       });
     }
 
@@ -250,32 +240,6 @@ export default function ClientProgramDayModal({
   };
 
   const tabs = generateTabs();
-
-  // Debug logging for tabs
-  console.log("🔍 Modal Tabs Debug:", {
-    tabs,
-    routineAssignments,
-    programs,
-    selectedDay,
-    tabCount: tabs.length,
-    tabDetails: tabs.map(tab => ({
-      id: tab.id,
-      title: tab.title,
-      type: tab.type,
-    })),
-    programCount: programs.length,
-    programDetails: programs.map(program => ({
-      id: program.programId,
-      title: program.programTitle,
-      drillCount: program.drills.length,
-    })),
-    routineCount: routineAssignments.length,
-    routineDetails: routineAssignments.map(assignment => ({
-      id: assignment.id,
-      routineName: assignment.routine.name,
-      assignedAt: assignment.assignedAt,
-    })),
-  });
 
   // Set active tab to first unviewed tab, or first tab if all viewed
   React.useEffect(() => {
@@ -322,14 +286,6 @@ export default function ClientProgramDayModal({
                       ? new Date(selectedDay.date)
                       : new Date());
                   const formattedDate = format(dateToUse, "EEEE, MMMM d, yyyy");
-
-                  // Debug logging
-                  console.log("🗓️ Modal Date Debug:", {
-                    selectedDate: selectedDate?.toLocaleDateString(),
-                    selectedDayDate: selectedDay?.date,
-                    dateToUse: dateToUse.toLocaleDateString(),
-                    formattedDate,
-                  });
 
                   return formattedDate;
                 })()}
@@ -507,6 +463,8 @@ export default function ClientProgramDayModal({
                   onOpenCommentModal={onOpenCommentModal}
                   onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
                   completedProgramDrills={completedProgramDrills}
+                  routineAssignments={routineAssignments}
+                  onMarkRoutineExerciseComplete={onMarkRoutineExerciseComplete}
                 />
               );
             })()
@@ -522,7 +480,7 @@ export default function ClientProgramDayModal({
               onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
               completedProgramDrills={completedProgramDrills}
             />
-          ) : (
+          ) : tabs.length === 0 && lessonsForDate.length === 0 ? (
             <div className="text-center py-8">
               <Calendar className="h-12 w-12 text-gray-600 mx-auto mb-4" />
               <p className="text-gray-400 text-lg mb-2">
@@ -532,7 +490,7 @@ export default function ClientProgramDayModal({
                 Check back later for updates from your coach
               </p>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Actions Footer */}
@@ -635,6 +593,8 @@ function ProgramContent({
   onOpenCommentModal,
   onOpenVideoSubmissionModal,
   completedProgramDrills,
+  routineAssignments = [],
+  onMarkRoutineExerciseComplete,
 }: {
   program: ProgramData;
   onMarkDrillComplete: (drillId: string, completed: boolean) => void;
@@ -642,8 +602,109 @@ function ProgramContent({
   onOpenCommentModal: (drill: Drill) => void;
   onOpenVideoSubmissionModal: (drillId: string, drillTitle: string) => void;
   completedProgramDrills: Set<string>;
+  routineAssignments?: any[];
+  onMarkRoutineExerciseComplete?: (
+    exerciseId: string,
+    routineAssignmentId: string,
+    completed: boolean
+  ) => void;
 }) {
-  if (program.drills.length === 0) {
+  // Combine program drills with routine exercises
+  const allExercises = [...program.drills];
+
+  // Add routine exercises from standalone routine assignments
+  routineAssignments.forEach((assignment: any) => {
+    if (assignment.routine && assignment.routine.exercises) {
+      assignment.routine.exercises.forEach((exercise: any) => {
+        const routineExerciseKey = `${assignment.id}-${exercise.id}`;
+        const drillLikeExercise: Drill = {
+          id: routineExerciseKey,
+          title: exercise.title,
+          description: exercise.description || undefined,
+          sets: exercise.sets || undefined,
+          reps: exercise.reps || undefined,
+          tempo: exercise.tempo || undefined,
+          tags: exercise.type ? [exercise.type] : undefined,
+          completed: completedProgramDrills.has(routineExerciseKey),
+          videoUrl: exercise.videoId
+            ? `https://utfs.io/f/${exercise.videoId}`
+            : undefined,
+        };
+
+        allExercises.push(drillLikeExercise);
+      });
+    }
+  });
+
+  // Check if backend expanded routine exercises, if not, do it in frontend
+  console.log("🔍 ProgramContent Debug - program.drills:", program.drills);
+  console.log("🔍 Program drills length:", program.drills.length);
+
+  // Check if any drill has routineId (indicating it needs expansion)
+  const drillsNeedingExpansion = program.drills.filter(
+    drill => drill.routineId
+  );
+  console.log("🔍 Drills needing expansion:", drillsNeedingExpansion.length);
+
+  if (drillsNeedingExpansion.length > 0) {
+    console.log("🔍 Backend didn't expand routines, doing it in frontend");
+    // The backend didn't expand routines, so we need to do it here
+    // For now, we'll show a message that routines need to be expanded
+    console.log(
+      "⚠️ Routines need to be expanded by backend - this is a backend issue"
+    );
+  } else {
+    // Check if any drill has a routine property (from the relation we added)
+    const drillsWithRoutines = program.drills.filter(
+      (drill: any) => drill.routine && drill.routine.exercises
+    );
+    console.log("🔍 Drills with routine property:", drillsWithRoutines.length);
+
+    if (drillsWithRoutines.length > 0) {
+      console.log("🔍 Found drills with routine data, expanding in frontend");
+      drillsWithRoutines.forEach((drill: any) => {
+        console.log(
+          "🔍 Expanding routine:",
+          drill.routine.name,
+          "with",
+          drill.routine.exercises.length,
+          "exercises"
+        );
+        drill.routine.exercises.forEach((exercise: any) => {
+          const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
+          const drillLikeExercise: Drill = {
+            id: routineExerciseKey,
+            title: exercise.title,
+            description: exercise.description || undefined,
+            sets: exercise.sets || undefined,
+            reps: exercise.reps || undefined,
+            tempo: exercise.tempo || undefined,
+            tags: exercise.type ? [exercise.type] : undefined,
+            completed: completedProgramDrills.has(routineExerciseKey),
+            videoUrl: exercise.videoId
+              ? `https://utfs.io/f/${exercise.videoId}`
+              : undefined,
+          };
+          allExercises.push(drillLikeExercise);
+        });
+      });
+    }
+  }
+
+  program.drills.forEach((drill, index) => {
+    console.log(`🔍 Drill ${index}:`, {
+      id: drill.id,
+      title: drill.title,
+      hasVideoUrl: !!drill.videoUrl,
+      hasVideoId: !!drill.videoId,
+      isRoutineExercise: drill.id.includes("-routine-"),
+      routineId: drill.routineId,
+      originalDrillId: drill.originalDrillId,
+    });
+  });
+  console.log("🔍 Final allExercises:", allExercises);
+
+  if (allExercises.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -669,7 +730,7 @@ function ProgramContent({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {program.drills.map((drill, index) => {
+        {allExercises.map((drill, index) => {
           // Create a drill object with the current completion state
           const drillWithCompletion: Drill = {
             ...drill,
@@ -681,9 +742,21 @@ function ProgramContent({
               key={drill.id}
               drill={drillWithCompletion}
               index={index}
-              onMarkComplete={completed =>
-                onMarkDrillComplete(drill.id, completed)
-              }
+              onMarkComplete={completed => {
+                // All program drills (including expanded routine exercises) use the same handler
+                if (drill.id.includes("-") && onMarkRoutineExerciseComplete) {
+                  // This is a standalone routine exercise
+                  const [assignmentId, exerciseId] = drill.id.split("-");
+                  onMarkRoutineExerciseComplete(
+                    exerciseId,
+                    assignmentId,
+                    completed
+                  );
+                } else {
+                  // This is a regular program drill or expanded routine exercise
+                  onMarkDrillComplete(drill.id, completed);
+                }
+              }}
               onOpenVideo={() =>
                 drill.videoUrl && onOpenVideo(drill.videoUrl, drill)
               }
@@ -754,48 +827,62 @@ function RoutineContent({
 
       {/* Routine Exercises */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {routine.exercises.map((exercise, index) => {
-          // Convert routine exercise to drill-like format for compatibility
-          // Use the key format for routine exercises: ${routineAssignmentId}-${exerciseId}
-          const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
+        {routine.exercises && routine.exercises.length > 0 ? (
+          routine.exercises.map((exercise, index) => {
+            // Convert routine exercise to drill-like format for compatibility
+            // Use the key format for routine exercises: ${routineAssignmentId}-${exerciseId}
+            const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
 
-          const drillLikeExercise: Drill = {
-            id: routineExerciseKey,
-            title: exercise.title,
-            description: exercise.description || undefined,
-            sets: exercise.sets || undefined,
-            reps: exercise.reps || undefined,
-            tempo: exercise.tempo || undefined,
-            tags: exercise.type ? [exercise.type] : undefined,
-            completed: completedProgramDrills.has(routineExerciseKey),
-            videoUrl: exercise.videoId
-              ? `https://utfs.io/f/${exercise.videoId}`
-              : undefined,
-          };
+            const drillLikeExercise: Drill = {
+              id: routineExerciseKey,
+              title: exercise.title,
+              description: exercise.description || undefined,
+              sets: exercise.sets || undefined,
+              reps: exercise.reps || undefined,
+              tempo: exercise.tempo || undefined,
+              tags: exercise.type ? [exercise.type] : undefined,
+              completed: completedProgramDrills.has(routineExerciseKey),
+              videoUrl: exercise.videoId
+                ? `https://utfs.io/f/${exercise.videoId}`
+                : undefined,
+            };
 
-          return (
-            <DrillCard
-              key={exercise.id}
-              drill={drillLikeExercise}
-              index={index}
-              onMarkComplete={completed =>
-                onMarkRoutineExerciseComplete(
-                  exercise.id,
-                  routineAssignment.id,
-                  completed
-                )
-              }
-              onOpenVideo={() =>
-                drillLikeExercise.videoUrl &&
-                onOpenVideo(drillLikeExercise.videoUrl, drillLikeExercise)
-              }
-              onOpenComment={() => onOpenCommentModal(drillLikeExercise)}
-              onOpenVideoSubmission={() =>
-                onOpenVideoSubmissionModal(exercise.id, exercise.title)
-              }
-            />
-          );
-        })}
+            return (
+              <DrillCard
+                key={exercise.id}
+                drill={drillLikeExercise}
+                index={index}
+                onMarkComplete={completed =>
+                  onMarkRoutineExerciseComplete(
+                    exercise.id,
+                    routineAssignment.id,
+                    completed
+                  )
+                }
+                onOpenVideo={() =>
+                  drillLikeExercise.videoUrl &&
+                  onOpenVideo(drillLikeExercise.videoUrl, drillLikeExercise)
+                }
+                onOpenComment={() => onOpenCommentModal(drillLikeExercise)}
+                onOpenVideoSubmission={() =>
+                  onOpenVideoSubmissionModal(exercise.id, exercise.title)
+                }
+              />
+            );
+          })
+        ) : (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="h-8 w-8 text-gray-400" />
+            </div>
+            <h4 className="text-lg font-semibold text-white mb-2">
+              No Exercises
+            </h4>
+            <p className="text-gray-400">
+              This routine doesn't have any exercises assigned yet.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
