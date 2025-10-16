@@ -368,6 +368,7 @@ AssignProgramModalProps) {
                   type="date"
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
                   required
                   className="w-full p-4 rounded-xl border border-gray-600/50 text-white bg-[#2B3038] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
                 />

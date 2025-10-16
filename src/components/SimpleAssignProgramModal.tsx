@@ -200,18 +200,18 @@ export default function SimpleAssignProgramModal({
       return;
     }
 
-    // Validate that start date is not in the future
+    // Validate that start date is not in the past (allow today and future)
     const selectedDate = new Date(startDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     selectedDate.setHours(0, 0, 0, 0);
 
-    if (selectedDate > today) {
+    if (selectedDate < today) {
       addToast({
         type: "error",
         title: "Invalid Start Date",
         message:
-          "Programs cannot start in the future. Please select today or an earlier date.",
+          "Programs cannot start in the past. Please select today or a future date.",
       });
       return;
     }
@@ -615,18 +615,10 @@ export default function SimpleAssignProgramModal({
                     <input
                       type="date"
                       value={startDate}
-                      max={new Date().toISOString().split("T")[0]} // Prevent future dates
+                      min={new Date().toISOString().split("T")[0]} // Allow today and future dates
                       onChange={e => {
                         const selectedDate = e.target.value;
-                        const today = new Date().toISOString().split("T")[0];
-
-                        // Only allow today or earlier dates
-                        if (selectedDate <= today) {
-                          setStartDate(selectedDate);
-                        } else {
-                          // Reset to today if future date is selected
-                          setStartDate(today);
-                        }
+                        setStartDate(selectedDate);
                       }}
                       className="w-full p-3 rounded-lg border text-white  focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
                       style={{
@@ -636,7 +628,7 @@ export default function SimpleAssignProgramModal({
                     />
                     <p className="text-gray-400 text-sm mt-2">
                       When should this program start for the selected clients?
-                      (Cannot be in the future)
+                      (Can be today or in the future)
                     </p>
                   </div>
                 </div>
