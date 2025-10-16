@@ -149,7 +149,10 @@ export const programsRouter = router({
   create: publicProcedure
     .input(
       z.object({
-        title: z.string().min(1, "Program title is required"),
+        title: z
+          .string()
+          .min(1, "Program title is required")
+          .max(60, "Title must be 60 characters or less"),
         description: z.string().optional(),
         level: z.enum([
           "Drive",
@@ -401,7 +404,10 @@ export const programsRouter = router({
     .input(
       z.object({
         id: z.string(),
-        title: z.string().optional(),
+        title: z
+          .string()
+          .max(60, "Title must be 60 characters or less")
+          .optional(),
         description: z.string().optional(),
         weeks: z
           .array(

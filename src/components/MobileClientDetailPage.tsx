@@ -67,8 +67,8 @@ import StreamlinedScheduleLessonModal from "./StreamlinedScheduleLessonModal";
 import QuickAssignProgramModal from "./QuickAssignProgramModal";
 import QuickAssignRoutineFromDayModal from "./QuickAssignRoutineFromDayModal";
 import AssignRoutineModal from "./AssignRoutineModal";
-import MobileNavigation from "./MobileNavigation";
-import MobileBottomNavigation from "./MobileBottomNavigation";
+import MobileClientNavigation from "./MobileClientNavigation";
+import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 
 interface MobileClientDetailPageProps {
   clientId: string;
@@ -147,11 +147,11 @@ export default function MobileClientDetailPage({
       clientId,
     });
 
-  // Fetch client's video assignments
-  const { data: videoAssignments = [] } =
-    trpc.library.getClientAssignments.useQuery({
-      clientId,
-    });
+  // Note: Removed videoAssignments query as it was causing 404 errors
+  // const { data: videoAssignments = [] } =
+  //   trpc.library.getClientAssignments.useQuery({
+  //     clientId,
+  //   });
 
   // Fetch client's routine assignments
   const { data: routineAssignments = [] } =
@@ -159,30 +159,77 @@ export default function MobileClientDetailPage({
       clientId,
     });
 
+  // Fetch client compliance data
+  const [compliancePeriod, setCompliancePeriod] = useState<
+    "4" | "6" | "8" | "all"
+  >("4");
+  const { data: complianceData, isLoading: complianceLoading } =
+    trpc.clients.getComplianceData.useQuery({
+      clientId,
+      period: compliancePeriod,
+    });
+
   // Fetch coach's working hours
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
 
   const utils = trpc.useUtils();
 
+  // Function to refresh client data after assignments
+  const refreshClientData = async () => {
+    await Promise.all([
+      utils.clients.getById.invalidate({ id: clientId }),
+      utils.clients.getAssignedPrograms.invalidate({ clientId }),
+      utils.routines.getClientRoutineAssignments.invalidate({ clientId }),
+      utils.clients.getComplianceData.invalidate({
+        clientId,
+        period: compliancePeriod,
+      }),
+    ]);
+  };
+
+  // Auto-refresh when modals close (indicating potential assignments)
+  useEffect(() => {
+    if (
+      !showQuickAssignProgramModal &&
+      !showAssignRoutineModal &&
+      !showQuickAssignRoutineFromDayModal
+    ) {
+      // Small delay to ensure backend has processed the assignment
+      const timeoutId = setTimeout(() => {
+        refreshClientData();
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
+    }
+    return undefined;
+  }, [
+    showQuickAssignProgramModal,
+    showAssignRoutineModal,
+    showQuickAssignRoutineFromDayModal,
+  ]);
+
   // Remove program mutation - using specific assignment ID
   const removeProgramMutation =
     trpc.programs.unassignSpecificProgram.useMutation({
-      onSuccess: () => {
-        utils.clients.getAssignedPrograms.invalidate({ clientId });
-        utils.library.getClientAssignments.invalidate({ clientId });
+      onSuccess: async () => {
+        await refreshClientData();
         setShowDayOverviewModal(false);
       },
       onError: error => {
         console.error("Failed to remove program:", error);
+        console.error("Error details:", {
+          message: error.message,
+          data: error.data,
+          shape: error.shape,
+        });
       },
     });
 
   // Remove routine mutation - using specific assignment ID
   const unassignRoutineMutation =
     trpc.routines.unassignSpecificRoutine.useMutation({
-      onSuccess: () => {
-        utils.routines.getClientRoutineAssignments.invalidate({ clientId });
-        utils.library.getClientAssignments.invalidate({ clientId });
+      onSuccess: async () => {
+        await refreshClientData();
         setShowDayOverviewModal(false);
       },
       onError: error => {
@@ -382,12 +429,9 @@ export default function MobileClientDetailPage({
 
   // Remove handlers
   const handleRemoveProgram = (programData: any) => {
-    const programTitle =
-      programData.title || programData.program?.title || "Program";
-
     if (
       confirm(
-        `Are you sure you want to remove "${programTitle}" from this client?`
+        `Are you sure you want to remove "${programData.programTitle}" from this client?`
       )
     ) {
       removeProgramMutation.mutate({
@@ -406,7 +450,7 @@ export default function MobileClientDetailPage({
       )
     ) {
       unassignRoutineMutation.mutate({
-        assignmentId: routineData.assignmentId,
+        assignmentId: routineData.id,
       });
     }
   };
@@ -492,7 +536,7 @@ export default function MobileClientDetailPage({
             >
               <Target className="w-5 h-5 text-white" />
             </button>
-            <MobileNavigation currentPage="clients" />
+            <MobileClientNavigation currentPage="clients" />
           </div>
         </div>
       </div>
@@ -537,6 +581,94 @@ export default function MobileClientDetailPage({
           )}
         </div>
 
+        {/* Compliance Rate */}
+        <div
+          className="p-4 rounded-lg border-2"
+          style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Target className="h-5 w-5 text-emerald-400" />
+              <h2 className="text-lg font-semibold text-white">
+                Compliance Rate
+              </h2>
+            </div>
+            <div className="flex gap-1">
+              {["4", "6", "8", "all"].map(period => (
+                <button
+                  key={period}
+                  onClick={() =>
+                    setCompliancePeriod(period as "4" | "6" | "8" | "all")
+                  }
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                    compliancePeriod === period
+                      ? "text-white"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      compliancePeriod === period ? "#4A5A70" : "transparent",
+                  }}
+                >
+                  {period === "all" ? "All" : `${period}w`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-medium" style={{ color: "#ABA4AA" }}>
+                Completion Rate
+              </p>
+              <p className="text-2xl font-bold text-white">
+                {complianceLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  `${Math.min(
+                    100,
+                    Math.max(0, complianceData?.completionRate || 0)
+                  )}%`
+                )}
+              </p>
+            </div>
+            <Target className="h-8 w-8" style={{ color: "#10B981" }} />
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-3">
+            <div
+              className="h-2 rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(100, complianceData?.completionRate || 0)}%`,
+                backgroundColor:
+                  Math.min(100, complianceData?.completionRate || 0) >= 80
+                    ? "#10B981"
+                    : Math.min(100, complianceData?.completionRate || 0) >= 60
+                    ? "#F59E0B"
+                    : "#EF4444",
+              }}
+            />
+          </div>
+
+          {/* Stats */}
+          {complianceData && (
+            <div
+              className="flex justify-between text-xs"
+              style={{ color: "#ABA4AA" }}
+            >
+              <span>
+                {Math.min(
+                  complianceData.completed || 0,
+                  complianceData.total || 0
+                )}{" "}
+                completed
+              </span>
+              <span>{complianceData.total || 0} total</span>
+            </div>
+          )}
+        </div>
+
         {/* Upcoming Lessons */}
         {displayUpcomingLessons.length > 0 && (
           <div
@@ -565,51 +697,6 @@ export default function MobileClientDetailPage({
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Video Assignments */}
-        {Array.isArray(videoAssignments) && videoAssignments.length > 0 && (
-          <div
-            className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <Video className="w-5 h-5 text-purple-400" />
-              <h2 className="text-lg font-semibold text-white">
-                Video Assignments (
-                {Array.isArray(videoAssignments) ? videoAssignments.length : 0})
-              </h2>
-            </div>
-            <div className="space-y-2">
-              {Array.isArray(videoAssignments) &&
-                videoAssignments
-                  .slice(0, 3)
-                  .map((assignment: any, index: number) => (
-                    <div
-                      key={`video-assignment-${assignment.id || index}`}
-                      className="flex items-center justify-between p-3 rounded bg-purple-500/10 border border-purple-500/20"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium text-purple-300">
-                          {assignment.title}
-                        </div>
-                        <div className="text-sm text-purple-200">
-                          {assignment.description || "No description"}
-                        </div>
-                      </div>
-                      <div className="text-xs text-purple-400">
-                        {assignment.type || "Video"}
-                      </div>
-                    </div>
-                  ))}
-              {Array.isArray(videoAssignments) &&
-                videoAssignments.length > 3 && (
-                  <div className="text-center text-sm text-gray-400 py-2">
-                    +{videoAssignments.length - 3} more videos
-                  </div>
-                )}
             </div>
           </div>
         )}
@@ -1072,7 +1159,23 @@ export default function MobileClientDetailPage({
                                   </div>
                                 </div>
                                 <button
-                                  onClick={() => handleRemoveProgram(program)}
+                                  onClick={() => {
+                                    // Create programData object like desktop version
+                                    const programData = {
+                                      assignmentId:
+                                        program.assignment?.id || program.id,
+                                      programId:
+                                        program.assignment?.programId ||
+                                        program.programId,
+                                      programTitle: program.title,
+                                      dayDate:
+                                        selectedDate
+                                          ?.toISOString()
+                                          .split("T")[0] ||
+                                        new Date().toISOString().split("T")[0],
+                                    };
+                                    handleRemoveProgram(programData);
+                                  }}
                                   className={`p-2 transition-colors ${
                                     program.type === "rest"
                                       ? "text-orange-400 hover:text-red-400"
@@ -1146,7 +1249,7 @@ export default function MobileClientDetailPage({
       </div>
 
       {/* Bottom Navigation */}
-      <MobileBottomNavigation />
+      <MobileClientBottomNavigation />
     </div>
   );
 }

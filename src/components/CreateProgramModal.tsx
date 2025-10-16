@@ -39,7 +39,10 @@ import ProgramBuilder from "./ProgramBuilder";
 import VideoLibraryDialog from "./VideoLibraryDialog";
 
 const programSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(60, "Title must be 60 characters or less"),
   description: z.string().optional(),
   level: z.enum(["Drive", "Whip", "Separation", "Stability", "Extension"]),
   duration: z.number().min(1, "Duration must be at least 1 week"),
@@ -219,6 +222,13 @@ function CreateProgramModalContent({
       initializedRef.current = true;
     }
   }, [weeks.length]);
+
+  // Auto-update duration based on number of weeks
+  useEffect(() => {
+    if (weeks.length > 0) {
+      setValue("duration", weeks.length);
+    }
+  }, [weeks.length, setValue]);
 
   const addWeek = () => {
     const newWeekNumber = weeks.length + 1;
@@ -428,7 +438,14 @@ function CreateProgramModalContent({
   const handleProgramBuilderSave = (builderWeeks: ProgramBuilderWeek[]) => {
     console.log("ProgramBuilder save called with weeks:", builderWeeks);
     setProgramBuilderWeeks(builderWeeks);
-    console.log("ProgramBuilder weeks state updated");
+
+    // Update duration based on ProgramBuilder weeks
+    setValue("duration", builderWeeks.length);
+
+    console.log(
+      "ProgramBuilder weeks state updated, duration set to:",
+      builderWeeks.length
+    );
   };
 
   const handleFormSubmit = (data: ProgramFormData) => {
@@ -628,12 +645,18 @@ function CreateProgramModalContent({
                     {...register("title")}
                     className="bg-[#3A4245] border-gray-600 text-white w-full"
                     placeholder="e.g., Advanced Training Program"
+                    maxLength={60}
                   />
-                  {errors.title && (
-                    <p className="text-red-400 text-sm mt-1">
-                      {errors.title.message}
+                  <div className="flex justify-between items-center mt-1">
+                    {errors.title && (
+                      <p className="text-red-400 text-sm">
+                        {errors.title.message}
+                      </p>
+                    )}
+                    <p className="text-gray-400 text-sm ml-auto">
+                      {watch("title")?.length || 0}/60 characters
                     </p>
-                  )}
+                  </div>
                 </div>
 
                 <div>
@@ -689,21 +712,20 @@ function CreateProgramModalContent({
 
                 <div>
                   <Label htmlFor="duration" className="text-white">
-                    Duration (weeks)
+                    Duration (weeks) - Auto-calculated
                   </Label>
                   <Input
                     id="duration"
                     type="number"
                     {...register("duration", { valueAsNumber: true })}
-                    className="bg-[#3A4245] border-gray-600 text-white w-full"
-                    placeholder="e.g., 8"
+                    className="bg-[#3A4245] border-gray-600 text-white w-full cursor-not-allowed opacity-75"
+                    placeholder="Auto-calculated from weeks"
                     min={1}
+                    readOnly
                   />
-                  {errors.duration && (
-                    <p className="text-red-400 text-sm mt-1">
-                      {errors.duration.message}
-                    </p>
-                  )}
+                  <p className="text-gray-400 text-sm mt-1">
+                    Duration automatically updates based on number of weeks
+                  </p>
                 </div>
               </div>
 

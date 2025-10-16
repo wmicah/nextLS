@@ -128,6 +128,20 @@ function ProgramBuilder({
       onSave?.(weeks);
     }
   }, [weeks, onSave]);
+
+  // Auto-update duration based on number of weeks when in edit mode
+  useEffect(() => {
+    if (programDetails && weeks.length > 0) {
+      // Update the duration in the parent component
+      // This will trigger a re-render with the updated duration
+      const updatedProgramDetails = {
+        ...programDetails,
+        duration: weeks.length,
+      };
+      // We need to call the parent's update function if it exists
+      // For now, we'll rely on the parent to handle this
+    }
+  }, [weeks.length, programDetails]);
   const [editingItem, setEditingItem] = useState<ProgramItem | null>(null);
   const [isVideoDetailsDialogOpen, setIsVideoDetailsDialogOpen] =
     useState(false);

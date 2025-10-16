@@ -41,7 +41,10 @@ const DEFAULT_PROGRAM_CATEGORIES = [
 ];
 
 const programSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(60, "Title must be 60 characters or less"),
   description: z.string().optional(),
   level: z.string().min(1, "Focus area is required"),
   duration: z.number().min(1, "Duration must be at least 1 week"),
@@ -248,8 +251,10 @@ export default function SeamlessProgramModal({
   const handleProgramBuilderSave = useCallback(
     (weeks: ProgramBuilderWeek[]) => {
       setProgramBuilderWeeks(weeks);
+      // Auto-update duration based on number of weeks
+      setValue("duration", weeks.length);
     },
-    []
+    [setValue]
   );
 
   const canProceedToStructure =
@@ -474,12 +479,18 @@ export default function SeamlessProgramModal({
                       {...register("title")}
                       placeholder="e.g., Advanced Hitting Program, Beginner Pitching Development"
                       className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12 text-lg"
+                      maxLength={60}
                     />
-                    {errors.title && (
-                      <p className="text-red-400 text-sm mt-1">
-                        {errors.title.message}
+                    <div className="flex justify-between items-center mt-1">
+                      {errors.title && (
+                        <p className="text-red-400 text-sm">
+                          {errors.title.message}
+                        </p>
+                      )}
+                      <p className="text-gray-400 text-sm ml-auto">
+                        {watch("title")?.length || 0}/60 characters
                       </p>
-                    )}
+                    </div>
                   </div>
 
                   <div>
@@ -661,21 +672,20 @@ export default function SeamlessProgramModal({
                         htmlFor="program-duration"
                         className="text-white text-sm font-medium"
                       >
-                        Duration (Weeks) *
+                        Duration (Weeks) - Auto-calculated *
                       </Label>
                       <Input
                         id="program-duration"
                         type="number"
                         min="1"
                         {...register("duration", { valueAsNumber: true })}
-                        placeholder="4"
-                        className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12"
+                        placeholder="Auto-calculated from weeks"
+                        className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12 cursor-not-allowed opacity-75"
+                        readOnly
                       />
-                      {errors.duration && (
-                        <p className="text-red-400 text-sm mt-1">
-                          {errors.duration.message}
-                        </p>
-                      )}
+                      <p className="text-gray-400 text-sm mt-1">
+                        Duration automatically updates based on number of weeks
+                      </p>
                     </div>
                   </div>
                 </div>

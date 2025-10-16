@@ -1239,13 +1239,11 @@ export const clientsRouter = router({
         },
       });
 
-      // Get all assigned programs for this client
+      // Get all assigned programs for this client (regardless of when assigned)
       const programAssignments = await db.programAssignment.findMany({
         where: {
           clientId: client.id,
-          assignedAt: {
-            gte: startDate,
-          },
+          completedAt: null, // Only active assignments
         },
         include: {
           program: {
@@ -1269,10 +1267,26 @@ export const clientsRouter = router({
         },
       });
 
+      // Get routine assignments for this client
+      const routineAssignments = await db.routineAssignment.findMany({
+        where: {
+          clientId: client.id,
+          completedAt: null, // Only active assignments
+        },
+        include: {
+          routine: {
+            include: {
+              exercises: true,
+            },
+          },
+        },
+      });
+
       // Calculate total drills assigned and completed
       let totalDrills = 0;
       let completedDrills = 0;
 
+      // Count program drills
       programAssignments.forEach(assignment => {
         if (!assignment.startDate) return;
 
@@ -1282,7 +1296,7 @@ export const clientsRouter = router({
           week.days.forEach((day, dayIndex) => {
             // Calculate the actual date this day should be completed
             const dayDate = new Date(assignmentStartDate);
-            dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex);
+            dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex - 1);
 
             // Check if this day has been replaced with a lesson
             const hasReplacement = assignment.replacements?.some(
@@ -1302,12 +1316,25 @@ export const clientsRouter = router({
               }
             );
 
-            // Only count drills from days that have already passed and haven't been replaced
-            if (dayDate <= now && !hasReplacement) {
+            // Only count drills from days that were due within the time period and haven't been replaced
+            if (dayDate >= startDate && dayDate <= now && !hasReplacement) {
               totalDrills += day.drills.length;
             }
           });
         });
+      });
+
+      // Count routine exercises
+      routineAssignments.forEach(assignment => {
+        if (!assignment.startDate) return;
+
+        const assignmentStartDate = new Date(assignment.startDate);
+
+        // For routines, we count each exercise as a drill
+        // Check if the routine was assigned within the time period
+        if (assignmentStartDate >= startDate && assignmentStartDate <= now) {
+          totalDrills += assignment.routine.exercises.length;
+        }
       });
 
       // Count completed drills (this already filters by date range)
@@ -1316,6 +1343,20 @@ export const clientsRouter = router({
       // Calculate completion rate
       const completionRate =
         totalDrills > 0 ? Math.round((completedDrills / totalDrills) * 100) : 0;
+
+      // Debug logging
+      console.log("Compliance calculation debug:", {
+        clientId: input.clientId,
+        period: input.period,
+        startDate: startDate.toISOString(),
+        now: now.toISOString(),
+        totalDrills,
+        completedDrills,
+        completionRate,
+        programAssignmentsCount: programAssignments.length,
+        routineAssignmentsCount: routineAssignments.length,
+        completionsCount: completions.length,
+      });
 
       return {
         completionRate,

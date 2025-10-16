@@ -419,7 +419,8 @@ function ProgramEditorPageContent() {
               title: program.title || "Untitled Program",
               description: program.description || "",
               level: program.level || "Drive",
-              duration: program.weeks?.length || 1,
+              duration:
+                programBuilderWeeks.length || program.weeks?.length || 1,
               onBack: () => router.back(),
               onSave: handleSave,
               isSaving: localIsSaving,
