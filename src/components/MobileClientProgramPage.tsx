@@ -92,6 +92,8 @@ export default function MobileClientProgramPage() {
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
+  const [selectedDayRoutineAssignments, setSelectedDayRoutineAssignments] =
+    useState<any[]>([]);
   const [completedProgramDrills, setCompletedProgramDrills] = useState<
     Set<string>
   >(new Set());
@@ -141,11 +143,22 @@ export default function MobileClientProgramPage() {
     viewMode: "month",
   });
 
+  // Fetch routine assignments for mobile program page
+  const { data: routineAssignments = [] } =
+    trpc.clientRouter.getRoutineAssignments.useQuery(undefined, {
+      staleTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 15 * 60 * 1000, // 15 minutes
+    });
+
   // Debug logging
   console.log("MobileClientProgramPage - programInfo:", programInfo);
   console.log("MobileClientProgramPage - programLoading:", programLoading);
   console.log("MobileClientProgramPage - programError:", programError);
   console.log("MobileClientProgramPage - calendarData:", calendarData);
+  console.log(
+    "MobileClientProgramPage - routineAssignments:",
+    routineAssignments
+  );
   console.log(
     "MobileClientProgramPage - calendarData type:",
     typeof calendarData,
@@ -198,21 +211,66 @@ export default function MobileClientProgramPage() {
   };
 
   const handleDateClick = (day: Date) => {
-    if (!calendarData) return;
-
     const dayString = format(day, "yyyy-MM-dd");
     let dayData: DayData | undefined;
 
-    if (Array.isArray(calendarData)) {
-      dayData = calendarData.find((d: DayData) => d.date === dayString);
-    } else if (typeof calendarData === "object") {
-      dayData = (calendarData as any)[dayString];
+    // First, try to get program data from calendarData
+    if (calendarData) {
+      if (Array.isArray(calendarData)) {
+        dayData = calendarData.find((d: DayData) => d.date === dayString);
+      } else if (typeof calendarData === "object") {
+        dayData = (calendarData as any)[dayString];
+      }
     }
 
-    if (dayData) {
-      setSelectedDay(dayData);
-      setSelectedDate(day);
-      setIsDayModalOpen(true);
+    // Check for routine assignments for this day
+    const dayRoutineAssignments = routineAssignments.filter(
+      (assignment: any) => {
+        if (!assignment.startDate) return false;
+        const assignmentDate = new Date(assignment.startDate);
+        const dayDate = new Date(day);
+
+        // Set time to start of day for accurate comparison
+        assignmentDate.setHours(0, 0, 0, 0);
+        dayDate.setHours(0, 0, 0, 0);
+
+        const isMatch = assignmentDate.getTime() === dayDate.getTime();
+        if (isMatch) {
+          console.log("Found routine assignment for", dayString, assignment);
+        }
+        return isMatch;
+      }
+    );
+
+    console.log(
+      "Day routine assignments for",
+      dayString,
+      ":",
+      dayRoutineAssignments
+    );
+
+    // If we have either program data or routine assignments, open the modal
+    if (dayData || dayRoutineAssignments.length > 0) {
+      // If we don't have program data but have routine assignments, create a minimal dayData
+      if (!dayData && dayRoutineAssignments.length > 0) {
+        dayData = {
+          date: dayString,
+          drills: [],
+          programs: [],
+          isRestDay: false,
+          expectedTime: 0,
+          completedDrills: 0,
+          totalDrills: 0,
+        };
+      }
+
+      // At this point, dayData should never be undefined
+      if (dayData) {
+        setSelectedDay(dayData);
+        setSelectedDate(day);
+        setSelectedDayRoutineAssignments(dayRoutineAssignments);
+        setIsDayModalOpen(true);
+      }
     }
   };
 
@@ -285,6 +343,16 @@ export default function MobileClientProgramPage() {
   };
 
   const handleOpenVideo = (videoUrl: string, drill: any) => {
+    console.log("Opening video for routine exercise:", {
+      videoUrl,
+      drill,
+      isYoutube: drill.isYoutube,
+      youtubeId: drill.youtubeId,
+      fullDrillData: drill,
+    });
+
+    // Note: utfs.io URLs are failing to load - likely CORS or URL format issue
+
     setSelectedVideo({
       id: drill.id,
       title: drill.title,
@@ -489,6 +557,43 @@ export default function MobileClientProgramPage() {
                   }
                 ) || [];
 
+              // Get routine indicators for this day
+              const routineIndicators = routineAssignments
+                .filter((assignment: any) => {
+                  if (!assignment.startDate) return false;
+                  const assignmentDate = new Date(assignment.startDate);
+                  const dayDate = new Date(day);
+
+                  // Set time to start of day for accurate comparison
+                  assignmentDate.setHours(0, 0, 0, 0);
+                  dayDate.setHours(0, 0, 0, 0);
+
+                  const isMatch =
+                    assignmentDate.getTime() === dayDate.getTime();
+                  if (isMatch) {
+                    console.log(
+                      "Found routine assignment for",
+                      dayString,
+                      assignment
+                    );
+                  }
+                  return isMatch;
+                })
+                .map((assignment: any, index: number) => ({
+                  id: `routine-${assignment.id}`,
+                  title: assignment.routine?.name || "Routine",
+                  remaining: assignment.routine?.exercises?.length || 0,
+                  isRestDay: false,
+                  color: "green", // Green for standalone routines
+                  type: "routine",
+                }));
+
+              // Combine all indicators (programs and routines)
+              const allIndicators = [
+                ...programIndicators,
+                ...routineIndicators,
+              ];
+
               return (
                 <div
                   key={day.toISOString()}
@@ -499,7 +604,7 @@ export default function MobileClientProgramPage() {
                         isToday
                           ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-400 shadow-blue-500/30 font-bold"
                           : isCurrentMonth
-                          ? programIndicators.length > 0
+                          ? allIndicators.length > 0
                             ? "text-white bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70] hover:from-[#606364] hover:to-[#4A5A70]"
                             : "text-[#ABA4AA] bg-gradient-to-br from-[#353A3A] to-[#40454A] border-[#606364] hover:from-[#4A5A70] hover:to-[#606364]"
                           : "text-gray-600 bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-700"
@@ -509,9 +614,9 @@ export default function MobileClientProgramPage() {
                   <div className="font-bold text-xs leading-none">
                     {format(day, "d")}
                   </div>
-                  {programIndicators.length > 0 && (
+                  {allIndicators.length > 0 && (
                     <div className="flex justify-center items-center gap-0.5 mt-0.5">
-                      {programIndicators
+                      {allIndicators
                         .slice(0, 2)
                         .map((indicator: any, idx: number) => (
                           <div
@@ -532,7 +637,7 @@ export default function MobileClientProgramPage() {
                             {indicator.isRestDay ? "R" : indicator.remaining}
                           </div>
                         ))}
-                      {programIndicators.length > 2 && (
+                      {allIndicators.length > 2 && (
                         <div className="w-2 h-2 rounded-full bg-gray-500 text-white border border-gray-400 flex items-center justify-center text-[6px] font-bold">
                           +
                         </div>
@@ -554,6 +659,7 @@ export default function MobileClientProgramPage() {
           selectedDay={selectedDay}
           selectedDate={selectedDate}
           programs={selectedDay?.programs || []}
+          routineAssignments={selectedDayRoutineAssignments}
           onMarkDrillComplete={handleMarkDrillComplete}
           onMarkAllComplete={handleMarkAllComplete}
           onOpenVideo={handleOpenVideo}
@@ -643,6 +749,17 @@ export default function MobileClientProgramPage() {
                   controls
                   className="w-full rounded-lg"
                   src={selectedVideo.url}
+                  onLoadStart={() =>
+                    console.log("Video load started:", selectedVideo.url)
+                  }
+                  onCanPlay={() =>
+                    console.log("Video can play:", selectedVideo.url)
+                  }
+                  onError={e => {
+                    console.error("Video load error:", e);
+                    console.error("Video URL:", selectedVideo.url);
+                    console.error("Video element:", e.target);
+                  }}
                 >
                   Your browser does not support the video tag.
                 </video>

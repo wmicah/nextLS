@@ -171,8 +171,6 @@ function ClientProgramPage() {
     type?: string;
   } | null>(null);
   const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   const [selectedDrillForComment, setSelectedDrillForComment] = useState<{
     id: string;
     title: string;
@@ -688,152 +686,21 @@ function ClientProgramPage() {
     setIsVideoSubmissionModalOpen(true);
   };
 
-  // Handle opening video player
-  const handleOpenVideo = async (videoUrl: string, drillData?: any) => {
-    // Clear any previous video errors
-    setVideoError(null);
+  // Handle opening video player - simplified to match mobile version
+  const handleOpenVideo = (videoUrl: string, drill: any) => {
+    console.log("Opening video:", {
+      videoUrl,
+      drill,
+      isYoutube: drill.isYoutube,
+      youtubeId: drill.youtubeId,
+    });
 
-    // If drill data has YouTube information, use it directly (this is the simple approach!)
-    if (drillData?.isYoutube && drillData?.youtubeId) {
-      setSelectedVideo({
-        id: "youtube-" + drillData.youtubeId,
-        isYoutube: true,
-        youtubeId: drillData.youtubeId || undefined,
-        title: drillData?.title || "YouTube Video",
-        url: `https://www.youtube.com/watch?v=${drillData.youtubeId}`, // Generate proper YouTube URL
-        type: "video",
-      });
-      setIsVideoPlayerOpen(true);
-      return;
-    }
-
-    // Fallback: If we have an UploadThing URL but no YouTube metadata, search library for matching video
-    if (videoUrl && videoUrl.includes("utfs.io") && drillData?.title) {
-      // Try multiple matching strategies
-      let matchingVideo = libraryItems?.find(
-        item =>
-          item.isYoutube &&
-          item.title &&
-          item.title.toLowerCase().trim() ===
-            drillData.title.toLowerCase().trim()
-      );
-
-      // If exact match fails, try partial match
-      if (!matchingVideo) {
-        matchingVideo = libraryItems?.find(
-          item =>
-            item.isYoutube &&
-            item.title &&
-            item.title.toLowerCase().includes(drillData.title.toLowerCase())
-        );
-      }
-
-      // If still no match, try reverse partial match
-      if (!matchingVideo) {
-        matchingVideo = libraryItems?.find(
-          item =>
-            item.isYoutube &&
-            item.title &&
-            drillData.title.toLowerCase().includes(item.title.toLowerCase())
-        );
-      }
-
-      // AGGRESSIVE FALLBACK: Look for videos with UploadThing URLs that might be YouTube videos
-      // This handles the case where YouTube videos were incorrectly stored with UploadThing URLs
-      if (!matchingVideo) {
-        matchingVideo = libraryItems?.find(
-          item =>
-            item.title &&
-            item.title.toLowerCase().trim() ===
-              drillData.title.toLowerCase().trim() &&
-            item.url &&
-            item.url.includes("utfs.io") &&
-            // Check if the original URL field has YouTube info
-            (item.youtubeId ||
-              (item.url &&
-                (item.url.includes("youtube.com") ||
-                  item.url.includes("youtu.be"))))
-        );
-
-        if (matchingVideo) {
-          // Try to extract YouTube ID from the original URL or use stored youtubeId
-          let youtubeId = matchingVideo.youtubeId;
-
-          if (!youtubeId && matchingVideo.url) {
-            // Try to extract from the original URL field
-            const youtubeMatch = matchingVideo.url.match(
-              /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
-            );
-            if (youtubeMatch) {
-              youtubeId = youtubeMatch[1];
-            }
-          }
-
-          if (youtubeId) {
-            setSelectedVideo({
-              id: "youtube-" + youtubeId,
-              isYoutube: true,
-              youtubeId: youtubeId,
-              title: matchingVideo.title,
-              url: `https://www.youtube.com/watch?v=${youtubeId}`,
-              type: "video",
-            });
-            setIsVideoPlayerOpen(true);
-            return;
-          }
-        }
-      }
-
-      if (matchingVideo) {
-        setSelectedVideo({
-          id: "youtube-" + matchingVideo.youtubeId,
-          isYoutube: true,
-          youtubeId: matchingVideo.youtubeId || undefined,
-          title: matchingVideo.title,
-          url: `https://www.youtube.com/watch?v=${matchingVideo.youtubeId}`,
-          type: "video",
-        });
-        setIsVideoPlayerOpen(true);
-        return;
-      } else {
-        setVideoError(
-          `YouTube video "${drillData.title}" could not be found. Please contact your coach.`
-        );
-        return;
-      }
-    }
-
-    // Fallback: Try to detect YouTube from URL
-    if (
-      videoUrl &&
-      (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"))
-    ) {
-      const youtubeIdMatch = videoUrl.match(
-        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
-      );
-
-      if (youtubeIdMatch) {
-        const youtubeId = youtubeIdMatch[1];
-        setSelectedVideo({
-          id: "youtube-" + youtubeId,
-          isYoutube: true,
-          youtubeId: youtubeId,
-          title: drillData?.title || "YouTube Video",
-          url: videoUrl,
-          type: "video",
-        });
-        setIsVideoPlayerOpen(true);
-        return;
-      }
-    }
-
-    // For non-YouTube videos, treat as regular video
     setSelectedVideo({
-      id: "video-" + Date.now(),
+      id: drill.id,
+      title: drill.title,
       url: videoUrl,
-      type: "video",
-      title: drillData?.title || "Video",
-      isYoutube: false,
+      isYoutube: drill.isYoutube,
+      youtubeId: drill.youtubeId,
     });
     setIsVideoPlayerOpen(true);
   };
@@ -842,8 +709,6 @@ function ClientProgramPage() {
   const handleCloseVideo = () => {
     setIsVideoPlayerOpen(false);
     setSelectedVideo(null);
-    setVideoError(null);
-    setRetryCount(0);
   };
 
   // Handle opening comment modal
@@ -1859,32 +1724,6 @@ function ClientProgramPage() {
 
                 {/* Video Player Content */}
                 <div className="p-4">
-                  {/* Video Error Display */}
-                  {videoError && (
-                    <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <p className="text-red-300 text-sm">{videoError}</p>
-                        </div>
-                        {retryCount < 3 && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setVideoError(null);
-                              setRetryCount(prev => prev + 1);
-                              // The key change will force the video element to re-render
-                            }}
-                            className="text-red-300 border-red-500/30 hover:bg-red-500/10"
-                          >
-                            Retry ({retryCount + 1}/3)
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
                   <div className="aspect-video bg-black rounded-xl overflow-hidden">
                     {selectedVideo &&
                     selectedVideo.isYoutube &&
@@ -1901,74 +1740,26 @@ function ClientProgramPage() {
                         onContextMenu={e => e.preventDefault()}
                       />
                     ) : selectedVideo && selectedVideo.url ? (
-                      // Custom uploaded video
-                      (() => {
-                        return (
-                          <video
-                            key={`video-${selectedVideo.id}-${retryCount}`}
-                            controls
-                            controlsList="nodownload nofullscreen"
-                            disablePictureInPicture
-                            className="w-full h-full object-contain"
-                            style={{ backgroundColor: "#000" }}
-                            onContextMenu={e => e.preventDefault()}
-                            onLoad={() => {}}
-                            onLoadStart={() => {}}
-                            onCanPlay={() => {
-                              setVideoError(null);
-                            }}
-                            onError={e => {
-                              const videoElement = e.target as HTMLVideoElement;
-                              const error = videoElement.error;
-                              const errorInfo = {
-                                code: error?.code,
-                                message: error?.message,
-                                networkState: videoElement.networkState,
-                                readyState: videoElement.readyState,
-                                videoUrl: selectedVideo?.url,
-                                videoTitle: selectedVideo?.title,
-                                timestamp: new Date().toISOString(),
-                              };
-
-                              console.error("Video load error:", errorInfo);
-                              console.error(
-                                "Video element src:",
-                                videoElement.src
-                              );
-                              console.error(
-                                "Video element currentSrc:",
-                                videoElement.currentSrc
-                              );
-
-                              let errorMessage = "Failed to load video.";
-                              if (error?.code === 4) {
-                                errorMessage =
-                                  "Video format not supported or corrupted.";
-                              } else if (error?.code === 3) {
-                                errorMessage = "Video decoding error.";
-                              } else if (error?.code === 2) {
-                                errorMessage =
-                                  "Network error while loading video.";
-                              } else if (error?.code === 1) {
-                                errorMessage = "Video loading aborted.";
-                              }
-
-                              // Add URL to error message for debugging
-                              errorMessage += ` (URL: ${selectedVideo?.url?.substring(
-                                0,
-                                50
-                              )}...)`;
-
-                              setVideoError(errorMessage);
-                            }}
-                          >
-                            <source src={selectedVideo.url} type="video/mp4" />
-                            <source src={selectedVideo.url} type="video/webm" />
-                            <source src={selectedVideo.url} type="video/ogg" />
-                            Your browser does not support the video tag.
-                          </video>
-                        );
-                      })()
+                      // Custom uploaded video - simplified to match mobile version
+                      <video
+                        controls
+                        className="w-full h-full object-contain"
+                        style={{ backgroundColor: "#000" }}
+                        src={selectedVideo.url}
+                        onError={e => {
+                          const videoElement = e.target as HTMLVideoElement;
+                          console.error("Video load error:", {
+                            error: videoElement.error,
+                            src: videoElement.src,
+                            currentSrc: videoElement.currentSrc,
+                            networkState: videoElement.networkState,
+                            readyState: videoElement.readyState,
+                            videoUrl: selectedVideo?.url,
+                          });
+                        }}
+                      >
+                        Your browser does not support the video tag.
+                      </video>
                     ) : (
                       // Fallback: show error message
                       <div className="flex items-center justify-center h-full">

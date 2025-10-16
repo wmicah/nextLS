@@ -20,8 +20,10 @@ import {
   Activity,
   Award,
   Zap,
+  BookOpen,
 } from "lucide-react";
 import ClientTopNav from "@/components/ClientTopNav";
+import { isSameDay } from "date-fns";
 
 export default function MobileClientDashboard() {
   const {
@@ -74,6 +76,13 @@ export default function MobileClientDashboard() {
 
   const { data: videoAssignments = [] } =
     trpc.clientRouter.getVideoAssignments.useQuery(undefined, {
+      staleTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 15 * 60 * 1000, // 15 minutes
+    });
+
+  // Fetch routine assignments for mobile dashboard
+  const { data: routineAssignments = [] } =
+    trpc.clientRouter.getRoutineAssignments.useQuery(undefined, {
       staleTime: 10 * 60 * 1000, // 10 minutes
       gcTime: 15 * 60 * 1000, // 15 minutes
     });
@@ -238,6 +247,17 @@ export default function MobileClientDashboard() {
                 <div className="text-xs text-gray-400">Assignments</div>
               </div>
             </div>
+            <div
+              className="flex-shrink-0 w-24 rounded-lg border p-2"
+              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+            >
+              <div className="text-center">
+                <div className="text-lg font-bold text-white">
+                  {routineAssignments.length}
+                </div>
+                <div className="text-xs text-gray-400">Routines</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -388,6 +408,105 @@ export default function MobileClientDashboard() {
                     View All Programs
                   </a>
                 </div>
+
+                {/* Today's Routines Section */}
+                {routineAssignments.length > 0 && (
+                  <div className="mt-6">
+                    <div className="mb-3">
+                      <h3
+                        className="text-base font-semibold"
+                        style={{ color: "#C3BCC2" }}
+                      >
+                        Today's Routines ({routineAssignments.length})
+                      </h3>
+                    </div>
+                    <div className="space-y-2">
+                      {routineAssignments
+                        .filter((routine: any) => {
+                          const today = new Date();
+                          const routineDate = new Date(routine.startDate);
+                          return isSameDay(today, routineDate);
+                        })
+                        .slice(0, 2)
+                        .map((routine: any, index: number) => (
+                          <div
+                            key={routine.id}
+                            className="p-3 rounded-lg border"
+                            style={{
+                              backgroundColor: "#353A3A",
+                              borderColor: "#606364",
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-6 h-6 rounded-full flex items-center justify-center"
+                                  style={{ backgroundColor: "#8B5CF6" }}
+                                >
+                                  <span
+                                    className="text-xs font-bold"
+                                    style={{ color: "#FFFFFF" }}
+                                  >
+                                    R
+                                  </span>
+                                </div>
+                                <div>
+                                  <h4
+                                    className="font-medium text-sm"
+                                    style={{ color: "#C3BCC2" }}
+                                  >
+                                    {routine.routine?.name || "Routine"}
+                                  </h4>
+                                  <p
+                                    className="text-xs"
+                                    style={{ color: "#ABA4AA" }}
+                                  >
+                                    {routine.routine?.exercises?.length || 0}{" "}
+                                    exercises
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <BookOpen
+                                  className="h-3 w-3"
+                                  style={{ color: "#ABA4AA" }}
+                                />
+                                <span
+                                  className="text-xs"
+                                  style={{ color: "#ABA4AA" }}
+                                >
+                                  Routine
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      {routineAssignments.filter((routine: any) => {
+                        const today = new Date();
+                        const routineDate = new Date(routine.startDate);
+                        return isSameDay(today, routineDate);
+                      }).length > 2 && (
+                        <div className="text-center">
+                          <button
+                            className="text-sm px-3 py-1 rounded-lg"
+                            style={{
+                              backgroundColor: "#8B5CF6",
+                              color: "#FFFFFF",
+                            }}
+                          >
+                            +
+                            {routineAssignments.filter((routine: any) => {
+                              const today = new Date();
+                              const routineDate = new Date(routine.startDate);
+                              return isSameDay(today, routineDate);
+                            }).length - 2}{" "}
+                            more routines
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-6">

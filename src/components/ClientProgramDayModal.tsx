@@ -63,6 +63,9 @@ interface Drill {
   routineId?: string;
   videoId?: string;
   originalDrillId?: string;
+  // Video properties
+  isYoutube?: boolean;
+  youtubeId?: string;
 }
 
 interface DayData {
@@ -119,6 +122,9 @@ interface RoutineAssignment {
       updatedAt: string;
       notes?: string | null;
       videoId?: string | null;
+      videoUrl?: string | null;
+      videoTitle?: string | null;
+      videoThumbnail?: string | null;
     }[];
   };
   routineId: string;
@@ -626,9 +632,9 @@ function ProgramContent({
           tempo: exercise.tempo || undefined,
           tags: exercise.type ? [exercise.type] : undefined,
           completed: completedProgramDrills.has(routineExerciseKey),
-          videoUrl: exercise.videoId
-            ? `https://utfs.io/f/${exercise.videoId}`
-            : undefined,
+          videoUrl: exercise.videoUrl || undefined,
+          isYoutube: false, // Routine exercises are custom uploaded videos
+          youtubeId: undefined,
         };
 
         allExercises.push(drillLikeExercise);
@@ -663,9 +669,9 @@ function ProgramContent({
             tempo: exercise.tempo || undefined,
             tags: exercise.type ? [exercise.type] : undefined,
             completed: completedProgramDrills.has(routineExerciseKey),
-            videoUrl: exercise.videoId
-              ? `https://utfs.io/f/${exercise.videoId}`
-              : undefined,
+            videoUrl: exercise.videoUrl || undefined,
+            isYoutube: false, // Routine exercises are custom uploaded videos
+            youtubeId: undefined,
           };
           allExercises.push(drillLikeExercise);
         });
@@ -817,9 +823,9 @@ function RoutineContent({
               tempo: exercise.tempo || undefined,
               tags: exercise.type ? [exercise.type] : undefined,
               completed: completedProgramDrills.has(routineExerciseKey),
-              videoUrl: exercise.videoId
-                ? `https://utfs.io/f/${exercise.videoId}`
-                : undefined,
+              videoUrl: exercise.videoUrl || undefined,
+              isYoutube: false, // Routine exercises are custom uploaded videos
+              youtubeId: undefined,
             };
 
             return (
