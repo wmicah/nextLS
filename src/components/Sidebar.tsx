@@ -27,6 +27,7 @@ import {
   FiBriefcase,
 } from "react-icons/fi";
 import { LogOut, Settings, UserIcon, MessageCircle } from "lucide-react";
+import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs";
 // Removed complex SSE hooks - using simple polling instead
 import MessagePopup from "./MessagePopup";
 import NotificationPopup from "./NotificationPopup";
@@ -163,7 +164,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
       gradient: "from-purple-500 to-pink-500",
     },
     {
-      name: "Resources",
+      name: "Programs/Routines",
       icon: <FiClipboard />,
       href: "/programs",
       description: "Workout plans",
@@ -352,12 +353,8 @@ export default function Sidebar({ user, children }: SidebarProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     setUserDropdownOpen(false);
-    try {
-      window.location.href = "/api/auth/logout";
-    } catch (error) {
-      console.error("Logout failed:", error);
-      setIsLoggingOut(false);
-    }
+    // Use Kinde's LogoutLink instead of custom logout endpoint
+    window.location.href = "/api/auth/logout";
   };
 
   const formatTime = (date: string) => {
@@ -425,47 +422,17 @@ export default function Sidebar({ user, children }: SidebarProps) {
 
       {/* Mobile logout button - only visible when sidebar is open */}
       {isMobileOpen && (
-        <button
-          onClick={handleMobileLogoutClick}
-          disabled={isLoggingOut}
-          className={`fixed top-4 right-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl text-white border backdrop-blur-sm ${
-            mobileLogoutConfirm
-              ? "bg-gradient-to-br from-green-600 to-green-700 border-green-500"
-              : "bg-gradient-to-br from-red-600 to-red-700 border-red-500"
-          }`}
-          aria-label={mobileLogoutConfirm ? "Confirm logout" : "Logout"}
+        <LogoutLink
+          className={`fixed top-4 right-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl text-white border backdrop-blur-sm bg-gradient-to-br from-red-600 to-red-700 border-red-500`}
+          aria-label="Logout"
           style={{
-            boxShadow: mobileLogoutConfirm
-              ? "0 8px 32px rgba(34, 197, 94, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)"
-              : "0 8px 32px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+            boxShadow:
+              "0 8px 32px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
             animation: "slideInRight 0.3s ease-out",
           }}
         >
-          {isLoggingOut ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-          ) : mobileLogoutConfirm ? (
-            <div className="relative">
-              <svg
-                className="w-5 h-5 text-white transition-all duration-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                style={{
-                  animation: "checkmark 0.5s ease-out",
-                }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={3}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-          ) : (
-            <LogOut size={20} />
-          )}
-        </button>
+          <LogOut size={20} />
+        </LogoutLink>
       )}
 
       {/* Mobile overlay - improved with better blur and animation */}

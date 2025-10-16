@@ -3,7 +3,6 @@
 import MaxWidthWrapper from "@/components/MaxWidthWrapper";
 import Link from "next/link";
 import Image from "next/image";
-import { RegisterLink } from "@kinde-oss/kinde-auth-nextjs";
 import {
   ArrowRight,
   Check,
@@ -28,11 +27,35 @@ import {
   Library,
 } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useKindeAuth();
   const accountDeleted = searchParams.get("accountDeleted");
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-950 to-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+      </div>
+    );
+  }
+
+  // Don't render landing page if user is authenticated (they'll be redirected)
+  if (isAuthenticated) {
+    return null;
+  }
 
   // Scroll reveal
   useEffect(() => {
@@ -110,10 +133,13 @@ function HomeContent() {
 
             {/* Primary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-center px-4 sm:px-0">
-              <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-white transition-all hover:bg-sky-600 hover:scale-[1.02] w-full sm:w-auto justify-center">
+              <Link
+                href="/auth/signup"
+                className="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-white transition-all hover:bg-sky-600 hover:scale-[1.02] w-full sm:w-auto justify-center"
+              >
                 Get Started
                 <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />
-              </RegisterLink>
+              </Link>
               <button className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-white transition-all hover:bg-white/10 hover:border-white/30 w-full sm:w-auto justify-center">
                 <PlayCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                 Watch Demo
@@ -339,10 +365,13 @@ function HomeContent() {
               Join now to transform your coaching business with NextLevel.
             </p>
 
-            <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-sky-600 hover:scale-[1.02] mb-8">
+            <Link
+              href="/auth/signup"
+              className="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-sky-600 hover:scale-[1.02] mb-8"
+            >
               Get Started
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-            </RegisterLink>
+            </Link>
           </div>
         </MaxWidthWrapper>
       </section>

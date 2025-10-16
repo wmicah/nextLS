@@ -2,7 +2,11 @@
 
 import MaxWidthWrapper from "./MaxWidthWrapper";
 import Link from "next/link";
-import { LoginLink, RegisterLink } from "@kinde-oss/kinde-auth-nextjs/server";
+import {
+  LoginLink,
+  RegisterLink,
+  useKindeAuth,
+} from "@kinde-oss/kinde-auth-nextjs";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated } = useKindeAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -82,12 +87,18 @@ const Navbar = () => {
               Pricing
             </Link>
 
-            <LoginLink
-              authUrlParams={{ prompt: "login" }}
-              className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors duration-200 rounded-lg hover:bg-white/5"
-            >
-              Sign In
-            </LoginLink>
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors duration-200 rounded-lg hover:bg-white/5"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <LoginLink className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors duration-200 rounded-lg hover:bg-white/5">
+                Sign In
+              </LoginLink>
+            )}
 
             <RegisterLink>
               <span className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-sky-500 rounded-lg hover:bg-sky-600 transition-all duration-200">
@@ -161,12 +172,22 @@ const Navbar = () => {
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <LoginLink
-                      className="flex items-center px-4 py-3 text-base font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Sign In
-                    </LoginLink>
+                    {isAuthenticated ? (
+                      <Link
+                        href="/dashboard"
+                        className="flex items-center px-4 py-3 text-base font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                    ) : (
+                      <LoginLink
+                        className="flex items-center px-4 py-3 text-base font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Sign In
+                      </LoginLink>
+                    )}
                   </motion.div>
 
                   <motion.div
