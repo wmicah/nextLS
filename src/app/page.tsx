@@ -27,35 +27,11 @@ import {
   Library,
 } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useKindeAuth } from "@kinde-oss/kinde-auth-nextjs";
+import { useSearchParams } from "next/navigation";
 
 function HomeContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const { isAuthenticated, isLoading } = useKindeAuth();
   const accountDeleted = searchParams.get("accountDeleted");
-
-  // Redirect authenticated users to dashboard
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push("/dashboard");
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-950 to-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
-      </div>
-    );
-  }
-
-  // Don't render landing page if user is authenticated (they'll be redirected)
-  if (isAuthenticated) {
-    return null;
-  }
 
   // Scroll reveal
   useEffect(() => {

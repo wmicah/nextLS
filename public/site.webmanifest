@@ -2,7 +2,7 @@
   "name": "Next Level Softball - Pitching Coach Platform",
   "short_name": "Next Level Softball",
   "description": "Complete platform for softball pitching coaches to manage students, create programs, and track progress.",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#2A3133",
   "theme_color": "#4A5A70",
