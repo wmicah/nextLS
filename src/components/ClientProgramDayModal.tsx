@@ -637,39 +637,21 @@ function ProgramContent({
   });
 
   // Check if backend expanded routine exercises, if not, do it in frontend
-  console.log("🔍 ProgramContent Debug - program.drills:", program.drills);
-  console.log("🔍 Program drills length:", program.drills.length);
 
   // Check if any drill has routineId (indicating it needs expansion)
   const drillsNeedingExpansion = program.drills.filter(
     drill => drill.routineId
   );
-  console.log("🔍 Drills needing expansion:", drillsNeedingExpansion.length);
 
   if (drillsNeedingExpansion.length > 0) {
-    console.log("🔍 Backend didn't expand routines, doing it in frontend");
-    // The backend didn't expand routines, so we need to do it here
-    // For now, we'll show a message that routines need to be expanded
-    console.log(
-      "⚠️ Routines need to be expanded by backend - this is a backend issue"
-    );
   } else {
     // Check if any drill has a routine property (from the relation we added)
     const drillsWithRoutines = program.drills.filter(
       (drill: any) => drill.routine && drill.routine.exercises
     );
-    console.log("🔍 Drills with routine property:", drillsWithRoutines.length);
 
     if (drillsWithRoutines.length > 0) {
-      console.log("🔍 Found drills with routine data, expanding in frontend");
       drillsWithRoutines.forEach((drill: any) => {
-        console.log(
-          "🔍 Expanding routine:",
-          drill.routine.name,
-          "with",
-          drill.routine.exercises.length,
-          "exercises"
-        );
         drill.routine.exercises.forEach((exercise: any) => {
           const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
           const drillLikeExercise: Drill = {
@@ -688,21 +670,14 @@ function ProgramContent({
           allExercises.push(drillLikeExercise);
         });
       });
+    } else {
+      // Backend didn't expand routines, but we might have drills that ARE routines
+      // Check if any drill should be treated as a routine (has routineId but no routine data)
+      const drillsThatShouldBeRoutines = program.drills.filter(
+        (drill: any) => drill.routineId && !drill.routine
+      );
     }
   }
-
-  program.drills.forEach((drill, index) => {
-    console.log(`🔍 Drill ${index}:`, {
-      id: drill.id,
-      title: drill.title,
-      hasVideoUrl: !!drill.videoUrl,
-      hasVideoId: !!drill.videoId,
-      isRoutineExercise: drill.id.includes("-routine-"),
-      routineId: drill.routineId,
-      originalDrillId: drill.originalDrillId,
-    });
-  });
-  console.log("🔍 Final allExercises:", allExercises);
 
   if (allExercises.length === 0) {
     return (

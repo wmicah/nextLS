@@ -1913,19 +1913,7 @@ function ClientProgramPage() {
                             style={{ backgroundColor: "#000" }}
                             onContextMenu={e => e.preventDefault()}
                             onLoad={() => {}}
-                            onLoadStart={() => {
-                              // Test if URL is accessible
-                              fetch(selectedVideo?.url || "", {
-                                method: "HEAD",
-                              })
-                                .then(response => {})
-                                .catch(error => {
-                                  console.error(
-                                    "Video URL fetch test failed:",
-                                    error
-                                  );
-                                });
-                            }}
+                            onLoadStart={() => {}}
                             onCanPlay={() => {
                               setVideoError(null);
                             }}
