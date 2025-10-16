@@ -85,13 +85,6 @@ export default function Dashboard() {
                     >
                       Welcome back, Coach
                     </h1>
-                    <p
-                      className="flex items-center gap-2 text-sm md:text-lg"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      <TrendingUpIcon className="h-4 w-4 md:h-5 md:w-5 text-yellow-400" />
-                      Ready to build your coaching empire
-                    </p>
                   </div>
                 </div>
 

@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
         },
         organization: {
           select: {
-            timezone: true,
+            id: true,
+            name: true,
           },
         },
       },
@@ -149,8 +150,8 @@ export async function GET(request: NextRequest) {
           (lesson.date.getTime() - now.getTime()) / (1000 * 60 * 60)
         );
 
-        // Format the lesson time using organization's timezone
-        const timezone = lesson.organization?.timezone || "America/New_York";
+        // Format the lesson time using default timezone
+        const timezone = "America/New_York"; // Default timezone
         const localDate = toZonedTime(lesson.date, timezone);
 
         const lessonTime = format(localDate, "h:mm a");

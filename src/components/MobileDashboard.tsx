@@ -75,9 +75,6 @@ export default function MobileDashboard() {
             <h2 className="text-xl font-bold text-white mb-1">
               Welcome back, Coach
             </h2>
-            <p className="text-sm text-gray-300 mb-3">
-              Ready to build your coaching empire
-            </p>
             <div className="text-sm text-gray-400">
               {new Date().toLocaleDateString("en-US", {
                 weekday: "long",

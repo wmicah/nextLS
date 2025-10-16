@@ -217,7 +217,7 @@ Hi ${lesson.client?.name || "there"}!
 
 This is a friendly reminder that you have a lesson scheduled for **${lessonDate}** at **${lessonTime}** (in ${hoursUntilLesson} hours).
 
-Let me know if you need to reschedule
+Please make sure to arrive 5-10 minutes early.
 
 Looking forward to seeing you!
 
