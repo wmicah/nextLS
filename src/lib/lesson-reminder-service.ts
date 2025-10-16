@@ -1,5 +1,7 @@
 import { db } from "@/db";
 import { addHours, subHours } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns";
 
 // In-memory tracking to prevent duplicate reminders
 const sentReminders = new Set<string>();
@@ -105,6 +107,12 @@ class LessonReminderService {
               name: true,
             },
           },
+          organization: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       });
 
@@ -195,17 +203,12 @@ class LessonReminderService {
             (lesson.date.getTime() - now.getTime()) / (1000 * 60 * 60)
           );
 
-          // Format the lesson time
-          const lessonTime = lesson.date.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
+          // Format the lesson time using default timezone
+          const timezone = "America/New_York"; // Default timezone
+          const localDate = toZonedTime(lesson.date, timezone);
 
-          const lessonDate = lesson.date.toLocaleDateString([], {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          });
+          const lessonTime = format(localDate, "h:mm a");
+          const lessonDate = format(localDate, "EEEE, MMMM d");
 
           // Create the reminder message with improved formatting
           const reminderMessage = `🔔 **Lesson Reminder**
@@ -214,11 +217,7 @@ Hi ${lesson.client?.name || "there"}!
 
 This is a friendly reminder that you have a lesson scheduled for **${lessonDate}** at **${lessonTime}** (in ${hoursUntilLesson} hours).
 
-Please make sure to:
-
-• Arrive 5-10 minutes early
-• Bring any equipment you need  
-• Let me know if you need to reschedule
+Let me know if you need to reschedule
 
 Looking forward to seeing you!
 

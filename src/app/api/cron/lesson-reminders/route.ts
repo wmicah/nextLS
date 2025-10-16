@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { addHours, subHours } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns";
 
 // In-memory tracking to prevent duplicate reminders
 const sentReminders = new Set<string>();
@@ -43,6 +45,11 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+          },
+        },
+        organization: {
+          select: {
+            timezone: true,
           },
         },
       },
@@ -142,17 +149,12 @@ export async function GET(request: NextRequest) {
           (lesson.date.getTime() - now.getTime()) / (1000 * 60 * 60)
         );
 
-        // Format the lesson time
-        const lessonTime = lesson.date.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        // Format the lesson time using organization's timezone
+        const timezone = lesson.organization?.timezone || "America/New_York";
+        const localDate = toZonedTime(lesson.date, timezone);
 
-        const lessonDate = lesson.date.toLocaleDateString([], {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        });
+        const lessonTime = format(localDate, "h:mm a");
+        const lessonDate = format(localDate, "EEEE, MMMM d");
 
         // Create the reminder message with improved formatting
         const reminderMessage = `🔔 **Lesson Reminder**

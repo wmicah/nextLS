@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { addDays, startOfDay, endOfDay } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns";
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,6 +74,11 @@ export async function POST(request: NextRequest) {
                 name: true,
               },
             },
+            organization: {
+              select: {
+                timezone: true,
+              },
+            },
           },
         });
         lessonsToProcess = testLessons;
@@ -104,6 +111,11 @@ export async function POST(request: NextRequest) {
             select: {
               id: true,
               name: true,
+            },
+          },
+          organization: {
+            select: {
+              timezone: true,
             },
           },
         },
@@ -151,12 +163,7 @@ export async function POST(request: NextRequest) {
           where: {
             conversationId: conversation.id,
             content: {
-              contains: `Reminder: Your lesson is tomorrow at ${new Date(
-                lesson.date
-              ).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}`,
+              contains: `🔔 **Lesson Reminder**`,
             },
             createdAt: {
               gte: startOfDay(now), // Check if reminder was sent today
@@ -174,17 +181,12 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Format the lesson time
-        const lessonTime = new Date(lesson.date).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        // Format the lesson time using organization's timezone
+        const timezone = lesson.organization?.timezone || "America/New_York";
+        const localDate = toZonedTime(lesson.date, timezone);
 
-        const lessonDate = new Date(lesson.date).toLocaleDateString([], {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        });
+        const lessonTime = format(localDate, "h:mm a");
+        const lessonDate = format(localDate, "EEEE, MMMM d");
 
         // Create the reminder message with improved formatting
         const reminderMessage = `🔔 **Lesson Reminder**
