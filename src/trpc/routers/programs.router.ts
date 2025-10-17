@@ -412,6 +412,34 @@ export const programsRouter = router({
               days: {
                 include: {
                   drills: {
+                    select: {
+                      id: true,
+                      order: true,
+                      title: true,
+                      description: true,
+                      duration: true,
+                      videoUrl: true,
+                      notes: true,
+                      sets: true,
+                      reps: true,
+                      tempo: true,
+                      type: true,
+                      routineId: true,
+                      supersetId: true,
+                      supersetOrder: true,
+                      videoId: true,
+                      videoThumbnail: true,
+                      videoTitle: true,
+                      // Coach Instructions
+                      coachInstructionsWhatToDo: true,
+                      coachInstructionsHowToDoIt: true,
+                      coachInstructionsKeyPoints: true,
+                      coachInstructionsCommonMistakes: true,
+                      coachInstructionsEasier: true,
+                      coachInstructionsHarder: true,
+                      coachInstructionsEquipment: true,
+                      coachInstructionsSetup: true,
+                    },
                     orderBy: {
                       order: "asc",
                     },
@@ -478,6 +506,30 @@ export const programsRouter = router({
                       routineId: z.string().optional(),
                       supersetId: z.string().optional(),
                       supersetOrder: z.number().optional(),
+                      // Coach Instructions
+                      coachInstructionsWhatToDo: z
+                        .string()
+                        .nullable()
+                        .optional(),
+                      coachInstructionsHowToDoIt: z
+                        .string()
+                        .nullable()
+                        .optional(),
+                      coachInstructionsKeyPoints: z
+                        .array(z.string())
+                        .nullable()
+                        .optional(),
+                      coachInstructionsCommonMistakes: z
+                        .array(z.string())
+                        .nullable()
+                        .optional(),
+                      coachInstructionsEasier: z.string().nullable().optional(),
+                      coachInstructionsHarder: z.string().nullable().optional(),
+                      coachInstructionsEquipment: z
+                        .string()
+                        .nullable()
+                        .optional(),
+                      coachInstructionsSetup: z.string().nullable().optional(),
                     })
                   ),
                 })

@@ -428,11 +428,6 @@ function ProgramBuilder({
       url?: string;
       thumbnail?: string;
     }) => {
-      console.log("ProgramBuilder handleVideoSelect called with:", video);
-      console.log("selectedWeekId:", selectedWeekId);
-      console.log("selectedDayKey:", selectedDayKey);
-      console.log("Current weeks state:", weeks);
-
       // Check if we're creating a routine
       if (selectedWeekId === "routine-creation") {
         // Add video directly to routine
@@ -455,11 +450,8 @@ function ProgramBuilder({
         setSelectedDayKey("sun");
       } else {
         // Normal video selection for program days
-        console.log("Setting selectedVideo and opening VideoDetailsDialog");
         setSelectedVideo(video);
-        console.log("About to set isVideoDetailsDialogOpen to true");
         setIsVideoDetailsDialogOpen(true);
-        console.log("VideoDetailsDialog should now be open");
       }
     },
     [selectedWeekId]
@@ -467,14 +459,7 @@ function ProgramBuilder({
 
   // Handle video selection from library
   useEffect(() => {
-    console.log(
-      "ProgramBuilder useEffect - selectedVideoFromLibrary:",
-      selectedVideoFromLibrary
-    );
-    console.log("ProgramBuilder useEffect - selectedWeekId:", selectedWeekId);
-    console.log("ProgramBuilder useEffect - selectedDayKey:", selectedDayKey);
     if (selectedVideoFromLibrary) {
-      console.log("Video selected from library:", selectedVideoFromLibrary);
       handleVideoSelect(selectedVideoFromLibrary);
       onVideoProcessed?.(); // Clear the selected video after processing
     }
@@ -499,22 +484,6 @@ function ProgramBuilder({
         setup?: string;
       };
     }) => {
-      console.log(
-        "ProgramBuilder handleVideoDetailsSubmit called with details:",
-        details
-      );
-      console.log("selectedVideo:", selectedVideo);
-      console.log("selectedWeekId:", selectedWeekId);
-      console.log("selectedDayKey:", selectedDayKey);
-
-      // Debug logging for coach instructions
-      if (details.coachInstructions) {
-        console.log(
-          "🔍 COACH INSTRUCTIONS DEBUG - Details received:",
-          details.coachInstructions
-        );
-      }
-
       if (!selectedVideo) return;
 
       // Create the video item
@@ -532,18 +501,6 @@ function ProgramBuilder({
         tempo: details.tempo || "",
         coachInstructions: details.coachInstructions,
       };
-
-      // Debug logging for the final videoItem
-      if (details.coachInstructions) {
-        console.log(
-          "🔍 COACH INSTRUCTIONS DEBUG - Final videoItem:",
-          videoItem
-        );
-        console.log(
-          "🔍 COACH INSTRUCTIONS DEBUG - Coach instructions in videoItem:",
-          videoItem.coachInstructions
-        );
-      }
 
       // Add the video item to the program
       if (editingItem) {
@@ -832,8 +789,6 @@ function ProgramBuilder({
             <div className="flex justify-end">
               <Button
                 onClick={() => {
-                  console.log("=== SAVE BUTTON CLICKED ===");
-                  console.log("Calling ProgramBuilder handleSave()");
                   handleSave();
                 }}
                 disabled={programDetails.isSaving}
@@ -956,7 +911,6 @@ function ProgramBuilder({
       <VideoDetailsDialogWithInstructions
         isOpen={isVideoDetailsDialogOpen}
         onClose={() => {
-          console.log("VideoDetailsDialog onClose called");
           setIsVideoDetailsDialogOpen(false);
           setSelectedVideo(null);
           setEditingItem(null);
@@ -2281,17 +2235,18 @@ function VideoDetailsDialog({
                     id="sets"
                     type="number"
                     value={formData.sets || ""}
-                    onChange={e =>
-                      setFormData(prev => ({
-                        ...prev,
-                        sets: e.target.value
-                          ? parseInt(e.target.value)
-                          : undefined,
-                      }))
-                    }
+                    onChange={e => {
+                      const value = parseInt(e.target.value);
+                      if (value >= 0) {
+                        setFormData(prev => ({
+                          ...prev,
+                          sets: value || undefined,
+                        }));
+                      }
+                    }}
                     className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
                     placeholder="3"
-                    min="1"
+                    min="0"
                   />
                 </div>
 
@@ -2400,6 +2355,19 @@ function VideoDetailsDialogWithInstructions({
   });
   const [showCoachInstructions, setShowCoachInstructions] = useState(false);
 
+  // Update formData when existingItem changes
+  useEffect(() => {
+    if (existingItem) {
+      setFormData({
+        notes: existingItem.notes || "",
+        sets: existingItem.sets || undefined,
+        reps: existingItem.reps || undefined,
+        tempo: existingItem.tempo || "",
+        coachInstructions: existingItem.coachInstructions || undefined,
+      });
+    }
+  }, [existingItem]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
@@ -2500,17 +2468,18 @@ function VideoDetailsDialogWithInstructions({
                       id="reps"
                       type="number"
                       value={formData.reps || ""}
-                      onChange={e =>
-                        setFormData(prev => ({
-                          ...prev,
-                          reps: e.target.value
-                            ? parseInt(e.target.value)
-                            : undefined,
-                        }))
-                      }
+                      onChange={e => {
+                        const value = parseInt(e.target.value);
+                        if (value >= 0) {
+                          setFormData(prev => ({
+                            ...prev,
+                            reps: value || undefined,
+                          }));
+                        }
+                      }}
                       className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
                       placeholder="10"
-                      min="1"
+                      min="0"
                     />
                   </div>
 

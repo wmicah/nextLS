@@ -201,28 +201,28 @@ function SortableExerciseItem({
           <div className="grid grid-cols-3 gap-2">
             <Input
               value={exercise.sets || ""}
-              onChange={e =>
-                onUpdate(
-                  index,
-                  "sets",
-                  e.target.value ? parseInt(e.target.value) : undefined
-                )
-              }
+              onChange={e => {
+                const value = parseInt(e.target.value);
+                if (value >= 0) {
+                  onUpdate(index, "sets", value || undefined);
+                }
+              }}
               placeholder="Sets"
               type="number"
+              min="0"
               className="bg-gray-600 border-gray-500 text-white text-xs h-7"
             />
             <Input
               value={exercise.reps || ""}
-              onChange={e =>
-                onUpdate(
-                  index,
-                  "reps",
-                  e.target.value ? parseInt(e.target.value) : undefined
-                )
-              }
+              onChange={e => {
+                const value = parseInt(e.target.value);
+                if (value >= 0) {
+                  onUpdate(index, "reps", value || undefined);
+                }
+              }}
               placeholder="Reps"
               type="number"
+              min="0"
               className="bg-gray-600 border-gray-500 text-white text-xs h-7"
             />
             <Input

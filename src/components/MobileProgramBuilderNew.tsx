@@ -724,14 +724,17 @@ export default function MobileProgramBuilderNew({
                   id="sets"
                   type="number"
                   value={newExercise.sets}
-                  onChange={e =>
-                    setNewExercise(prev => ({
-                      ...prev,
-                      sets: parseInt(e.target.value) || 1,
-                    }))
-                  }
+                  onChange={e => {
+                    const value = parseInt(e.target.value);
+                    if (value >= 0) {
+                      setNewExercise(prev => ({
+                        ...prev,
+                        sets: value || 0,
+                      }));
+                    }
+                  }}
                   className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
-                  min="1"
+                  min="0"
                 />
               </div>
               <div>
@@ -742,14 +745,17 @@ export default function MobileProgramBuilderNew({
                   id="reps"
                   type="number"
                   value={newExercise.reps}
-                  onChange={e =>
-                    setNewExercise(prev => ({
-                      ...prev,
-                      reps: parseInt(e.target.value) || 1,
-                    }))
-                  }
+                  onChange={e => {
+                    const value = parseInt(e.target.value);
+                    if (value >= 0) {
+                      setNewExercise(prev => ({
+                        ...prev,
+                        reps: value || 0,
+                      }));
+                    }
+                  }}
                   className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
-                  min="1"
+                  min="0"
                 />
               </div>
             </div>

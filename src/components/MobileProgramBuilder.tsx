@@ -1898,15 +1898,18 @@ function VideoDetailsDialog({
                 id="sets"
                 type="number"
                 value={formData.sets || ""}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    sets: e.target.value ? parseInt(e.target.value) : undefined,
-                  }))
-                }
+                onChange={e => {
+                  const value = parseInt(e.target.value);
+                  if (value >= 0) {
+                    setFormData(prev => ({
+                      ...prev,
+                      sets: value || undefined,
+                    }));
+                  }
+                }}
                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
                 placeholder="3"
-                min="1"
+                min="0"
               />
             </div>
 
@@ -1918,15 +1921,18 @@ function VideoDetailsDialog({
                 id="reps"
                 type="number"
                 value={formData.reps || ""}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    reps: e.target.value ? parseInt(e.target.value) : undefined,
-                  }))
-                }
+                onChange={e => {
+                  const value = parseInt(e.target.value);
+                  if (value >= 0) {
+                    setFormData(prev => ({
+                      ...prev,
+                      reps: value || undefined,
+                    }));
+                  }
+                }}
                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
                 placeholder="10"
-                min="1"
+                min="0"
               />
             </div>
 

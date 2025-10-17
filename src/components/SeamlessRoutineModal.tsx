@@ -308,15 +308,15 @@ function SortableExerciseItem({
               <Label className="text-gray-400 text-xs block mb-1">Sets</Label>
               <Input
                 value={exercise.sets || ""}
-                onChange={e =>
-                  onUpdate(
-                    index,
-                    "sets",
-                    e.target.value ? parseInt(e.target.value) : undefined
-                  )
-                }
+                onChange={e => {
+                  const value = parseInt(e.target.value);
+                  if (value >= 0) {
+                    onUpdate(index, "sets", value || undefined);
+                  }
+                }}
                 placeholder="Sets"
                 type="number"
+                min="0"
                 className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
               />
             </div>
@@ -324,15 +324,15 @@ function SortableExerciseItem({
               <Label className="text-gray-400 text-xs block mb-1">Reps</Label>
               <Input
                 value={exercise.reps || ""}
-                onChange={e =>
-                  onUpdate(
-                    index,
-                    "reps",
-                    e.target.value ? parseInt(e.target.value) : undefined
-                  )
-                }
+                onChange={e => {
+                  const value = parseInt(e.target.value);
+                  if (value >= 0) {
+                    onUpdate(index, "reps", value || undefined);
+                  }
+                }}
                 placeholder="Reps"
                 type="number"
+                min="0"
                 className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
               />
             </div>

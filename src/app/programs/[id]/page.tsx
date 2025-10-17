@@ -86,8 +86,6 @@ function ProgramEditorPageContent() {
   // Convert database program data to ProgramBuilder format
   useEffect(() => {
     if (program && program.weeks && !isRefetchingAfterSaveRef.current) {
-      console.log("=== CONVERTING DATABASE TO PROGRAMBUILDER ===");
-      console.log("Original program.weeks:", program.weeks);
       const convertedWeeks: ProgramBuilderWeek[] = program.weeks.map(
         (week, weekIndex) => ({
           id: `week-${week.weekNumber}`,
@@ -117,6 +115,26 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  // Coach Instructions - Map from database format to ProgramBuilder format
+                  coachInstructions: (() => {
+                    const hasInstructions =
+                      drill.coachInstructionsWhatToDo ||
+                      drill.coachInstructionsHowToDoIt ||
+                      drill.coachInstructionsKeyPoints?.length > 0 ||
+                      drill.coachInstructionsCommonMistakes?.length > 0 ||
+                      drill.coachInstructionsEquipment;
+
+                    return hasInstructions
+                      ? {
+                          whatToDo: drill.coachInstructionsWhatToDo || "",
+                          howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                          keyPoints: drill.coachInstructionsKeyPoints || [],
+                          commonMistakes:
+                            drill.coachInstructionsCommonMistakes || [],
+                          equipment: drill.coachInstructionsEquipment || "",
+                        }
+                      : undefined;
+                  })(),
                 })) || [],
             mon:
               week.days
@@ -141,6 +159,26 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  // Coach Instructions - Map from database format to ProgramBuilder format
+                  coachInstructions: (() => {
+                    const hasInstructions =
+                      drill.coachInstructionsWhatToDo ||
+                      drill.coachInstructionsHowToDoIt ||
+                      drill.coachInstructionsKeyPoints?.length > 0 ||
+                      drill.coachInstructionsCommonMistakes?.length > 0 ||
+                      drill.coachInstructionsEquipment;
+
+                    return hasInstructions
+                      ? {
+                          whatToDo: drill.coachInstructionsWhatToDo || "",
+                          howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                          keyPoints: drill.coachInstructionsKeyPoints || [],
+                          commonMistakes:
+                            drill.coachInstructionsCommonMistakes || [],
+                          equipment: drill.coachInstructionsEquipment || "",
+                        }
+                      : undefined;
+                  })(),
                 })) || [],
             tue:
               week.days
@@ -165,6 +203,26 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  // Coach Instructions - Map from database format to ProgramBuilder format
+                  coachInstructions: (() => {
+                    const hasInstructions =
+                      drill.coachInstructionsWhatToDo ||
+                      drill.coachInstructionsHowToDoIt ||
+                      drill.coachInstructionsKeyPoints?.length > 0 ||
+                      drill.coachInstructionsCommonMistakes?.length > 0 ||
+                      drill.coachInstructionsEquipment;
+
+                    return hasInstructions
+                      ? {
+                          whatToDo: drill.coachInstructionsWhatToDo || "",
+                          howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                          keyPoints: drill.coachInstructionsKeyPoints || [],
+                          commonMistakes:
+                            drill.coachInstructionsCommonMistakes || [],
+                          equipment: drill.coachInstructionsEquipment || "",
+                        }
+                      : undefined;
+                  })(),
                 })) || [],
             wed:
               week.days
@@ -189,6 +247,26 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  // Coach Instructions - Map from database format to ProgramBuilder format
+                  coachInstructions: (() => {
+                    const hasInstructions =
+                      drill.coachInstructionsWhatToDo ||
+                      drill.coachInstructionsHowToDoIt ||
+                      drill.coachInstructionsKeyPoints?.length > 0 ||
+                      drill.coachInstructionsCommonMistakes?.length > 0 ||
+                      drill.coachInstructionsEquipment;
+
+                    return hasInstructions
+                      ? {
+                          whatToDo: drill.coachInstructionsWhatToDo || "",
+                          howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                          keyPoints: drill.coachInstructionsKeyPoints || [],
+                          commonMistakes:
+                            drill.coachInstructionsCommonMistakes || [],
+                          equipment: drill.coachInstructionsEquipment || "",
+                        }
+                      : undefined;
+                  })(),
                 })) || [],
             thu:
               week.days
@@ -213,6 +291,26 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  // Coach Instructions - Map from database format to ProgramBuilder format
+                  coachInstructions: (() => {
+                    const hasInstructions =
+                      drill.coachInstructionsWhatToDo ||
+                      drill.coachInstructionsHowToDoIt ||
+                      drill.coachInstructionsKeyPoints?.length > 0 ||
+                      drill.coachInstructionsCommonMistakes?.length > 0 ||
+                      drill.coachInstructionsEquipment;
+
+                    return hasInstructions
+                      ? {
+                          whatToDo: drill.coachInstructionsWhatToDo || "",
+                          howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                          keyPoints: drill.coachInstructionsKeyPoints || [],
+                          commonMistakes:
+                            drill.coachInstructionsCommonMistakes || [],
+                          equipment: drill.coachInstructionsEquipment || "",
+                        }
+                      : undefined;
+                  })(),
                 })) || [],
             fri:
               week.days
@@ -237,6 +335,26 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  // Coach Instructions - Map from database format to ProgramBuilder format
+                  coachInstructions: (() => {
+                    const hasInstructions =
+                      drill.coachInstructionsWhatToDo ||
+                      drill.coachInstructionsHowToDoIt ||
+                      drill.coachInstructionsKeyPoints?.length > 0 ||
+                      drill.coachInstructionsCommonMistakes?.length > 0 ||
+                      drill.coachInstructionsEquipment;
+
+                    return hasInstructions
+                      ? {
+                          whatToDo: drill.coachInstructionsWhatToDo || "",
+                          howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                          keyPoints: drill.coachInstructionsKeyPoints || [],
+                          commonMistakes:
+                            drill.coachInstructionsCommonMistakes || [],
+                          equipment: drill.coachInstructionsEquipment || "",
+                        }
+                      : undefined;
+                  })(),
                 })) || [],
             sat:
               week.days
@@ -261,12 +379,31 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  // Coach Instructions - Map from database format to ProgramBuilder format
+                  coachInstructions: (() => {
+                    const hasInstructions =
+                      drill.coachInstructionsWhatToDo ||
+                      drill.coachInstructionsHowToDoIt ||
+                      drill.coachInstructionsKeyPoints?.length > 0 ||
+                      drill.coachInstructionsCommonMistakes?.length > 0 ||
+                      drill.coachInstructionsEquipment;
+
+                    return hasInstructions
+                      ? {
+                          whatToDo: drill.coachInstructionsWhatToDo || "",
+                          howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                          keyPoints: drill.coachInstructionsKeyPoints || [],
+                          commonMistakes:
+                            drill.coachInstructionsCommonMistakes || [],
+                          equipment: drill.coachInstructionsEquipment || "",
+                        }
+                      : undefined;
+                  })(),
                 })) || [],
           },
         })
       );
 
-      console.log("Converted weeks:", convertedWeeks);
       setProgramBuilderWeeks(convertedWeeks);
     }
   }, [program]);
@@ -355,12 +492,46 @@ function ProgramEditorPageContent() {
               videoThumbnail: item.videoThumbnail,
               routineId: item.routineId,
               supersetId: item.supersetId,
+              // Coach Instructions - Map from ProgramBuilder format to database format
+              coachInstructionsWhatToDo:
+                item.coachInstructions?.whatToDo || undefined,
+              coachInstructionsHowToDoIt:
+                item.coachInstructions?.howToDoIt || undefined,
+              coachInstructionsKeyPoints:
+                item.coachInstructions?.keyPoints || [],
+              coachInstructionsCommonMistakes:
+                item.coachInstructions?.commonMistakes || [],
+              coachInstructionsEquipment:
+                item.coachInstructions?.equipment || undefined,
             })),
           };
         }),
       }));
 
       console.log("Converted back to database format:", convertedWeeks);
+
+      // Debug: Check if any drills have coach instructions
+      const drillsWithCoachInstructions = convertedWeeks.flatMap(week =>
+        week.days.flatMap(day =>
+          day.drills.filter(
+            drill =>
+              drill.coachInstructionsWhatToDo ||
+              drill.coachInstructionsHowToDoIt ||
+              drill.coachInstructionsEquipment
+          )
+        )
+      );
+      console.log(
+        "🔍 Drills with coach instructions being saved:",
+        drillsWithCoachInstructions.length
+      );
+      if (drillsWithCoachInstructions.length > 0) {
+        console.log(
+          "🔍 First drill with coach instructions:",
+          drillsWithCoachInstructions[0]
+        );
+      }
+
       // Update the program with the new structure
       console.log("About to call updateProgramMutation with:", {
         id: programId,

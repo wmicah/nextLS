@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -40,15 +40,20 @@ export default function CoachInstructionsDialog({
   initialInstructions,
   exerciseTitle,
 }: CoachInstructionsDialogProps) {
-  const [instructions, setInstructions] = useState<CoachInstructions>(
-    initialInstructions || {
-      whatToDo: "",
-      howToDoIt: "",
-      keyPoints: [],
-      commonMistakes: [],
-      equipment: "",
+  const [instructions, setInstructions] = useState<CoachInstructions>({
+    whatToDo: "",
+    howToDoIt: "",
+    keyPoints: [],
+    commonMistakes: [],
+    equipment: "",
+  });
+
+  // Update instructions when initialInstructions changes
+  useEffect(() => {
+    if (initialInstructions) {
+      setInstructions(initialInstructions);
     }
-  );
+  }, [initialInstructions]);
 
   const [newKeyPoint, setNewKeyPoint] = useState("");
   const [newMistake, setNewMistake] = useState("");
