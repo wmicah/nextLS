@@ -432,28 +432,6 @@ export default function MobileClientProgramPage() {
     );
   }
 
-  if (!programInfo) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: "#2A3133" }}
-      >
-        <div className="text-center p-6">
-          <Target className="h-16 w-16 text-[#ABA4AA] mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">
-            No Program Assigned
-          </h2>
-          <p className="text-[#ABA4AA] mb-4">
-            Your coach hasn't assigned you a program yet.
-          </p>
-          <p className="text-sm text-[#606364]">
-            Contact your coach to get started!
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}

@@ -633,8 +633,23 @@ function ProgramContent({
           tags: exercise.type ? [exercise.type] : undefined,
           completed: completedProgramDrills.has(routineExerciseKey),
           videoUrl: exercise.videoUrl || undefined,
-          isYoutube: false, // Routine exercises are custom uploaded videos
-          youtubeId: undefined,
+          isYoutube: Boolean(
+            exercise.videoUrl && exercise.videoUrl.includes("youtube.com")
+          ),
+          youtubeId: (() => {
+            try {
+              if (
+                !exercise.videoUrl ||
+                !exercise.videoUrl.includes("youtube.com")
+              ) {
+                return undefined;
+              }
+              const url = new URL(exercise.videoUrl);
+              return url.searchParams.get("v") || undefined;
+            } catch {
+              return undefined;
+            }
+          })(),
         };
 
         allExercises.push(drillLikeExercise);
@@ -670,8 +685,23 @@ function ProgramContent({
             tags: exercise.type ? [exercise.type] : undefined,
             completed: completedProgramDrills.has(routineExerciseKey),
             videoUrl: exercise.videoUrl || undefined,
-            isYoutube: false, // Routine exercises are custom uploaded videos
-            youtubeId: undefined,
+            isYoutube: Boolean(
+              exercise.videoUrl && exercise.videoUrl.includes("youtube.com")
+            ),
+            youtubeId: (() => {
+              try {
+                if (
+                  !exercise.videoUrl ||
+                  !exercise.videoUrl.includes("youtube.com")
+                ) {
+                  return undefined;
+                }
+                const url = new URL(exercise.videoUrl);
+                return url.searchParams.get("v") || undefined;
+              } catch {
+                return undefined;
+              }
+            })(),
           };
           allExercises.push(drillLikeExercise);
         });
@@ -824,8 +854,23 @@ function RoutineContent({
               tags: exercise.type ? [exercise.type] : undefined,
               completed: completedProgramDrills.has(routineExerciseKey),
               videoUrl: exercise.videoUrl || undefined,
-              isYoutube: false, // Routine exercises are custom uploaded videos
-              youtubeId: undefined,
+              isYoutube: Boolean(
+                exercise.videoUrl && exercise.videoUrl.includes("youtube.com")
+              ),
+              youtubeId: (() => {
+                try {
+                  if (
+                    !exercise.videoUrl ||
+                    !exercise.videoUrl.includes("youtube.com")
+                  ) {
+                    return undefined;
+                  }
+                  const url = new URL(exercise.videoUrl);
+                  return url.searchParams.get("v") || undefined;
+                } catch {
+                  return undefined;
+                }
+              })(),
             };
 
             return (
