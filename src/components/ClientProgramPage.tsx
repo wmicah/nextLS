@@ -353,6 +353,35 @@ function ClientProgramPage() {
     );
   };
 
+  // Enhanced touch interactions for mobile
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      navigateMonth("next");
+    }
+    if (isRightSwipe) {
+      navigateMonth("prev");
+    }
+  };
+
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
     const lessons = clientLessons.filter((lesson: { date: string }) => {
@@ -1097,7 +1126,12 @@ function ClientProgramPage() {
               </div>
 
               {/* Modern Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1 md:gap-2">
+              <div
+                className="grid grid-cols-7 gap-1 md:gap-2"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+              >
                 {/* Day headers */}
                 {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
                   <div
@@ -1166,11 +1200,15 @@ function ClientProgramPage() {
                                 dayData.programs.length > 0) ||
                               getRoutinesForDate(date).length > 0) && (
                               <span
-                                className="text-xs px-2 py-1 rounded-full font-medium"
-                                style={{
-                                  backgroundColor: "#10B981",
-                                  color: "#FFFFFF",
-                                }}
+                                className={cn(
+                                  "text-xs px-2 py-1 rounded-full font-medium transition-all duration-200",
+                                  dayData.completedDrills ===
+                                    dayData.totalDrills
+                                    ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
+                                    : dayData.completedDrills > 0
+                                    ? "bg-yellow-500 text-white shadow-lg shadow-yellow-500/25"
+                                    : "bg-gray-500 text-white"
+                                )}
                               >
                                 {dayData.completedDrills}/{dayData.totalDrills}
                               </span>

@@ -144,7 +144,7 @@ export default function MobileClientProgramPage() {
   });
 
   // Fetch routine assignments for mobile program page
-  const { data: routineAssignments = [] } =
+  const { data: routineAssignments = [], refetch: refetchRoutineAssignments } =
     trpc.clientRouter.getRoutineAssignments.useQuery(undefined, {
       staleTime: 10 * 60 * 1000, // 10 minutes
       gcTime: 15 * 60 * 1000, // 15 minutes
@@ -208,6 +208,65 @@ export default function MobileClientProgramPage() {
     setCurrentDate(prev =>
       direction === "prev" ? subMonths(prev, 1) : addMonths(prev, 1)
     );
+  };
+
+  // Enhanced touch interactions for mobile
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsSwiping(false);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+
+    const currentTouch = e.targetTouches[0].clientX;
+    const distance = Math.abs(currentTouch - touchStart);
+
+    // Only start preventing default if we're moving horizontally enough
+    if (distance > 10) {
+      setIsSwiping(true);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    setTouchEnd(currentTouch);
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null || touchEnd === null) {
+      setTouchStart(null);
+      setTouchEnd(null);
+      setIsSwiping(false);
+      return;
+    }
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe || isRightSwipe) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (isLeftSwipe) {
+        navigateMonth("next");
+      }
+      if (isRightSwipe) {
+        navigateMonth("prev");
+      }
+    }
+
+    setTouchStart(null);
+    setTouchEnd(null);
+    setIsSwiping(false);
   };
 
   const handleDateClick = (day: Date) => {
@@ -294,6 +353,11 @@ export default function MobileClientProgramPage() {
         drillId,
         completed,
       });
+
+      // Refresh calendar data and routine assignments to update indicators in real-time
+      setIsRefreshingData(true);
+      await Promise.all([refetchCalendar(), refetchRoutineAssignments()]);
+      setIsRefreshingData(false);
     } catch (error) {
       console.error("Failed to update drill completion:", error);
       // Revert optimistic update on error
@@ -314,9 +378,14 @@ export default function MobileClientProgramPage() {
 
     if (confirm("Mark all drills for this day as complete?")) {
       const allDrillIds = selectedDay.drills.map(drill => drill.id);
-      allDrillIds.forEach(drillId => {
-        handleMarkDrillComplete(drillId, true);
-      });
+
+      // Mark all drills as complete
+      for (const drillId of allDrillIds) {
+        await handleMarkDrillComplete(drillId, true);
+      }
+
+      // Refresh calendar data and routine assignments to update all indicators
+      await Promise.all([refetchCalendar(), refetchRoutineAssignments()]);
     }
   };
 
@@ -453,7 +522,17 @@ export default function MobileClientProgramPage() {
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-6">
         {/* Calendar View */}
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
+        <div
+          className={`relative p-6 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl transition-all duration-200 ${
+            isSwiping ? "scale-[0.98] opacity-90" : ""
+          }`}
+          style={{
+            touchAction: "none",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
+          }}
+        >
           {/* Month Navigation */}
           <div className="flex items-center justify-between p-4 mb-6 rounded-xl bg-gradient-to-r from-[#353A3A] to-[#40454A] shadow-inner">
             <button
@@ -473,8 +552,106 @@ export default function MobileClientProgramPage() {
             </button>
           </div>
 
+          {/* Refreshing Indicator */}
+          {isRefreshingData && (
+            <div className="absolute top-4 right-4 z-50 bg-green-500/80 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2">
+              <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+              Updating...
+            </div>
+          )}
+
+          {/* Quick Stats Summary */}
+          <div className="mb-4 grid grid-cols-2 gap-3">
+            <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-blue-500/30">
+                  <CheckCircle2 className="h-4 w-4 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-blue-300">This Week</p>
+                  <p className="text-lg font-bold text-white">
+                    {(() => {
+                      const weekStart = startOfWeek(new Date(), {
+                        weekStartsOn: 1,
+                      });
+                      const weekEnd = addDays(weekStart, 6);
+                      // Handle both array and object formats for calendarData
+                      const calendarArray = Array.isArray(calendarData)
+                        ? calendarData
+                        : calendarData
+                        ? Object.values(calendarData as Record<string, DayData>)
+                        : [];
+
+                      const weekDrills = calendarArray.filter(
+                        (day: DayData) => {
+                          const dayDate = new Date(day.date);
+                          return dayDate >= weekStart && dayDate <= weekEnd;
+                        }
+                      );
+                      const weekCompleted = weekDrills.reduce(
+                        (sum: number, day: DayData) =>
+                          sum + day.completedDrills,
+                        0
+                      );
+                      const weekTotal = weekDrills.reduce(
+                        (sum: number, day: DayData) => sum + day.totalDrills,
+                        0
+                      );
+                      return `${weekCompleted}/${weekTotal}`;
+                    })()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-green-500/30">
+                  <Target className="h-4 w-4 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-green-300">Completion</p>
+                  <p className="text-lg font-bold text-white">
+                    {(() => {
+                      // Handle both array and object formats for calendarData
+                      const calendarArray = Array.isArray(calendarData)
+                        ? calendarData
+                        : calendarData
+                        ? Object.values(calendarData as Record<string, DayData>)
+                        : [];
+
+                      const totalDrills = calendarArray.reduce(
+                        (sum: number, day: DayData) => sum + day.totalDrills,
+                        0
+                      );
+                      const completedDrills = calendarArray.reduce(
+                        (sum: number, day: DayData) =>
+                          sum + day.completedDrills,
+                        0
+                      );
+                      return totalDrills > 0
+                        ? Math.round((completedDrills / totalDrills) * 100)
+                        : 0;
+                    })()}
+                    %
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Day Headers */}
-          <div className="grid grid-cols-7 gap-2 mb-4">
+          <div
+            className="grid grid-cols-7 gap-2 mb-4"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            style={{
+              touchAction: "none",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+            }}
+          >
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
               <div
                 key={day}
@@ -486,7 +663,17 @@ export default function MobileClientProgramPage() {
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2">
+          <div
+            className="grid grid-cols-7 gap-2"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            style={{
+              touchAction: "none",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+            }}
+          >
             {getCalendarDays().map(day => {
               const isToday = isSameDay(day, new Date());
               const isCurrentMonth = isSameMonth(day, currentDate);
@@ -599,9 +786,11 @@ export default function MobileClientProgramPage() {
                         .map((indicator: any, idx: number) => (
                           <div
                             key={indicator.id}
-                            className={`w-2 h-2 rounded-full flex items-center justify-center text-[6px] font-bold shadow-sm border ${
+                            className={`w-2 h-2 rounded-full flex items-center justify-center text-[6px] font-bold shadow-sm border transition-all duration-200 ${
                               indicator.isRestDay
                                 ? "bg-orange-500 text-white border-orange-400"
+                                : indicator.remaining === 0
+                                ? "bg-green-500 text-white border-green-400 shadow-lg shadow-green-500/50"
                                 : indicator.color === "blue"
                                 ? "bg-blue-500 text-white border-blue-400"
                                 : indicator.color === "green"
@@ -612,7 +801,11 @@ export default function MobileClientProgramPage() {
                             }`}
                             title={`${indicator.title}: ${indicator.remaining} exercises remaining`}
                           >
-                            {indicator.isRestDay ? "R" : indicator.remaining}
+                            {indicator.isRestDay
+                              ? "R"
+                              : indicator.remaining === 0
+                              ? "✓"
+                              : indicator.remaining}
                           </div>
                         ))}
                       {allIndicators.length > 2 && (
