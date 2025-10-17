@@ -86,6 +86,8 @@ interface ProgramDrill {
   duration: string | null;
   videoUrl: string | null;
   notes: string | null;
+  supersetId?: string | null;
+  supersetOrder?: number | null;
 }
 
 interface ProgramAssignment {

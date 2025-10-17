@@ -127,7 +127,29 @@ export default function MobileClientProgramPage() {
 
   // Mutations for day modal functionality
   const markDrillCompleteMutation =
-    trpc.clientRouter.markDrillComplete.useMutation();
+    trpc.clientRouter.markDrillComplete.useMutation({
+      onSuccess: data => {
+        console.log("✅ markDrillComplete SUCCESS:", data);
+      },
+      onError: error => {
+        console.error("❌ markDrillComplete ERROR:", error);
+        console.error("❌ Error message:", error.message);
+        console.error("❌ Error code:", error.data?.code);
+        console.error("❌ Full error:", error);
+      },
+    });
+  const markRoutineExerciseCompleteMutation =
+    trpc.clientRouter.markRoutineExerciseComplete.useMutation({
+      onSuccess: data => {
+        console.log("✅ markRoutineExerciseComplete SUCCESS:", data);
+      },
+      onError: error => {
+        console.error("❌ markRoutineExerciseComplete ERROR:", error);
+        console.error("❌ Error message:", error.message);
+        console.error("❌ Error code:", error.data?.code);
+        console.error("❌ Full error:", error);
+      },
+    });
   const sendNoteToCoachMutation =
     trpc.clientRouter.sendNoteToCoach.useMutation();
   const addCommentToDrillMutation =
@@ -190,8 +212,12 @@ export default function MobileClientProgramPage() {
       viewMode: "week",
     });
 
-  // Initialize completion state from server data
-  useEffect(() => {
+  // Initialize completion state from server data when selectedDay changes (exact replica of desktop)
+  React.useEffect(() => {
+    console.log(
+      "🔄 useEffect running - selectedDay changed:",
+      selectedDay?.date
+    );
     if (selectedDay?.programs) {
       const serverCompletedDrills = new Set<string>();
       selectedDay.programs.forEach(program => {
@@ -201,9 +227,102 @@ export default function MobileClientProgramPage() {
           }
         });
       });
-      setCompletedProgramDrills(serverCompletedDrills);
+      console.log(
+        "🔄 Setting completedProgramDrills from server:",
+        Array.from(serverCompletedDrills)
+      );
+
+      // Only reset if we don't have any optimistic updates
+      // This prevents overriding optimistic updates during refetch
+      setCompletedProgramDrills(prev => {
+        // If we have optimistic updates, merge with server data instead of replacing
+        if (prev.size > 0) {
+          console.log("🔄 Merging server data with optimistic updates");
+          const merged = new Set(prev);
+          serverCompletedDrills.forEach(id => merged.add(id));
+          return merged;
+        } else {
+          console.log("🔄 Setting fresh server data");
+          return serverCompletedDrills;
+        }
+      });
     }
   }, [selectedDay]);
+
+  // Initialize routine exercise completion state from server data when selectedDate changes (exact replica of desktop)
+  React.useEffect(() => {
+    if (selectedDate && routineAssignments) {
+      const serverCompletedRoutineExercises = new Set<string>();
+
+      const routinesForDate = getRoutinesForDate(selectedDate);
+
+      // Load routine exercise completions from the routine assignments
+      routinesForDate.forEach(routineAssignment => {
+        if ((routineAssignment as any).completions) {
+          (routineAssignment as any).completions.forEach((completion: any) => {
+            const routineExerciseKey = `${routineAssignment.id}-${completion.exerciseId}`;
+            serverCompletedRoutineExercises.add(routineExerciseKey);
+          });
+        }
+      });
+
+      // Only update if there are actually completions to add
+      if (serverCompletedRoutineExercises.size > 0) {
+        setCompletedProgramDrills(prev => {
+          const newSet = new Set(prev);
+          serverCompletedRoutineExercises.forEach(id => newSet.add(id));
+          return newSet;
+        });
+      }
+    }
+  }, [selectedDate, routineAssignments]);
+
+  // Get routine assignments for a specific date (exact replica of desktop)
+  const getRoutinesForDate = (date: Date) => {
+    if (!routineAssignments || routineAssignments.length === 0) {
+      return [];
+    }
+
+    // Convert date to YYYY-MM-DD format for comparison
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+
+    // Filter routines that are available for this date
+    const filteredRoutines = routineAssignments.filter((assignment: any) => {
+      // If no startDate, use assignedAt as the start date
+      const startDate = assignment.startDate || assignment.assignedAt;
+      if (!startDate) {
+        return false;
+      }
+
+      // Convert assignment start date to YYYY-MM-DD format
+      const assignmentDate = new Date(startDate);
+      const assignmentDateString = `${assignmentDate.getFullYear()}-${(
+        assignmentDate.getMonth() + 1
+      )
+        .toString()
+        .padStart(2, "0")}-${assignmentDate
+        .getDate()
+        .toString()
+        .padStart(2, "0")}`;
+
+      // Show routines only on their exact assigned date
+      const selectedDate = new Date(date);
+      const routineStartDate = new Date(assignmentDate);
+
+      // Set time to start of day for accurate comparison
+      selectedDate.setHours(0, 0, 0, 0);
+      routineStartDate.setHours(0, 0, 0, 0);
+
+      const isAvailable = selectedDate.getTime() === routineStartDate.getTime();
+
+      // Show routine only on its exact assigned date
+      return isAvailable;
+    });
+
+    return filteredRoutines;
+  };
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate(prev =>
@@ -215,7 +334,6 @@ export default function MobileClientProgramPage() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isSwiping, setIsSwiping] = useState(false);
-  const [isRefreshingData, setIsRefreshingData] = useState(false);
 
   const minSwipeDistance = 50;
 
@@ -270,18 +388,22 @@ export default function MobileClientProgramPage() {
     setIsSwiping(false);
   };
 
+  // Get day data from calendar data (exact replica of desktop)
+  const getDayData = (date: Date): DayData | null => {
+    if (!calendarData) return null;
+    // Use local date format to avoid timezone conversion issues
+    const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+    return (calendarData as any)[dateString] || null;
+  };
+
   const handleDateClick = (day: Date) => {
     const dayString = format(day, "yyyy-MM-dd");
     let dayData: DayData | undefined;
 
-    // First, try to get program data from calendarData
-    if (calendarData) {
-      if (Array.isArray(calendarData)) {
-        dayData = calendarData.find((d: DayData) => d.date === dayString);
-      } else if (typeof calendarData === "object") {
-        dayData = (calendarData as any)[dayString];
-      }
-    }
+    // Use the same getDayData function as desktop
+    dayData = getDayData(day) || undefined;
 
     // Check for routine assignments for this day
     const dayRoutineAssignments = routineAssignments.filter(
@@ -326,6 +448,7 @@ export default function MobileClientProgramPage() {
 
       // At this point, dayData should never be undefined
       if (dayData) {
+        console.log("🔄 Setting selectedDay:", dayData.date);
         setSelectedDay(dayData);
         setSelectedDate(day);
         setSelectedDayRoutineAssignments(dayRoutineAssignments);
@@ -334,11 +457,19 @@ export default function MobileClientProgramPage() {
     }
   };
 
-  // Handler functions for day modal
+  // Handler functions for day modal - exact replica of desktop version
   const handleMarkDrillComplete = async (
     drillId: string,
     completed: boolean
   ) => {
+    console.log(
+      "🔍 handleMarkDrillComplete called - drillId:",
+      drillId,
+      "completed:",
+      completed
+    );
+
+    // Update the completion state immediately for real-time UI updates
     setCompletedProgramDrills(prev => {
       const newSet = new Set(prev);
       if (completed) {
@@ -349,25 +480,81 @@ export default function MobileClientProgramPage() {
       return newSet;
     });
 
+    // Then perform the actual mutation
     try {
       await markDrillCompleteMutation.mutateAsync({
-        drillId,
+        drillId: drillId,
         completed,
       });
 
-      // Refresh calendar data and routine assignments to update indicators in real-time
-      setIsRefreshingData(true);
-      await Promise.all([refetchCalendar(), refetchRoutineAssignments()]);
-      setIsRefreshingData(false);
+      // Subtle refetch to ensure UI stays in sync - with delay to let server process
+      setTimeout(async () => {
+        await refetchCalendar();
+      }, 1000);
     } catch (error) {
-      console.error("Failed to update drill completion:", error);
       // Revert optimistic update on error
       setCompletedProgramDrills(prev => {
         const newSet = new Set(prev);
         if (completed) {
-          newSet.delete(drillId);
+          newSet.delete(drillId); // Remove if we were trying to mark complete
         } else {
-          newSet.add(drillId);
+          newSet.add(drillId); // Add if we were trying to mark incomplete
+        }
+        return newSet;
+      });
+      console.error("Failed to update drill completion:", error);
+    }
+  };
+
+  // Handle routine exercise completion - exact replica of desktop version
+  const handleMarkRoutineExerciseComplete = async (
+    exerciseId: string,
+    routineAssignmentId: string,
+    completed: boolean
+  ) => {
+    console.log(
+      "🔍 handleMarkRoutineExerciseComplete called - exerciseId:",
+      exerciseId,
+      "routineAssignmentId:",
+      routineAssignmentId,
+      "completed:",
+      completed
+    );
+
+    // Use exercise ID directly for routine exercises
+    const routineExerciseKey = `${routineAssignmentId}-${exerciseId}`;
+
+    // Update the completion state immediately for real-time UI updates
+    setCompletedProgramDrills(prev => {
+      const newSet = new Set(prev);
+      if (completed) {
+        newSet.add(routineExerciseKey);
+      } else {
+        newSet.delete(routineExerciseKey);
+      }
+      return newSet;
+    });
+
+    // Call the backend mutation for routine exercise completion
+    try {
+      await markRoutineExerciseCompleteMutation.mutateAsync({
+        exerciseId,
+        routineAssignmentId,
+        completed,
+      });
+
+      // Refresh calendar data to sync with server - with delay
+      setTimeout(async () => {
+        await refetchCalendar();
+      }, 1000);
+    } catch (error) {
+      // Revert optimistic update on error
+      setCompletedProgramDrills(prev => {
+        const newSet = new Set(prev);
+        if (completed) {
+          newSet.delete(routineExerciseKey); // Remove if we were trying to mark complete
+        } else {
+          newSet.add(routineExerciseKey); // Add if we were trying to mark incomplete
         }
         return newSet;
       });
@@ -384,9 +571,6 @@ export default function MobileClientProgramPage() {
       for (const drillId of allDrillIds) {
         await handleMarkDrillComplete(drillId, true);
       }
-
-      // Refresh calendar data and routine assignments to update all indicators
-      await Promise.all([refetchCalendar(), refetchRoutineAssignments()]);
     }
   };
 
@@ -553,14 +737,6 @@ export default function MobileClientProgramPage() {
               <ChevronRight className="h-5 w-5 text-white" />
             </button>
           </div>
-
-          {/* Refreshing Indicator */}
-          {isRefreshingData && (
-            <div className="absolute top-4 right-4 z-50 bg-green-500/80 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2">
-              <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-              Updating...
-            </div>
-          )}
 
           {/* Quick Stats Summary */}
           <div className="mb-4 grid grid-cols-2 gap-3">
@@ -858,19 +1034,7 @@ export default function MobileClientProgramPage() {
               completedAssignments: 0,
             };
           }}
-          onMarkRoutineExerciseComplete={(
-            exerciseId: string,
-            routineAssignmentId: string,
-            completed: boolean
-          ) => {
-            // Handle routine exercise completion if needed
-            console.log(
-              "Routine exercise completion:",
-              exerciseId,
-              routineAssignmentId,
-              completed
-            );
-          }}
+          onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
         />
       )}
 

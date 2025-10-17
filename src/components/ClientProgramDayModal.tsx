@@ -1128,6 +1128,12 @@ function DrillCard({
   onOpenComment: () => void;
   onOpenVideoSubmission: () => void;
 }) {
+  console.log(
+    "🔍 DrillCard render - drill.id:",
+    drill.id,
+    "drill.completed:",
+    drill.completed
+  );
   return (
     <div
       className={cn(
@@ -1227,15 +1233,29 @@ function DrillCard({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onMarkComplete(!drill.completed)}
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log(
+              "🔍 BUTTON CLICKED! - drill.completed:",
+              drill.completed
+            );
+            console.log("🔍 BUTTON CLICKED! - drill.id:", drill.id);
+            console.log(
+              "🔍 BUTTON CLICKED! - calling onMarkComplete with:",
+              !drill.completed
+            );
+            onMarkComplete(!drill.completed);
+          }}
           className={cn(
-            "h-12 w-12 p-0 rounded-lg transition-all duration-200",
+            "h-10 w-10 p-0 rounded-lg transition-all duration-200 sm:h-12 sm:w-12 cursor-pointer z-10",
             drill.completed
               ? "bg-green-500 text-white hover:bg-green-600"
               : "bg-gray-600 text-gray-300 hover:bg-gray-500"
           )}
+          style={{ pointerEvents: "auto", zIndex: 10 }}
         >
-          <Check className="h-5 w-5" />
+          <Check className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
       </div>
     </div>
