@@ -18,12 +18,14 @@ import {
   Check,
   Link,
   FileText,
+  Lightbulb,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { extractYouTubeId, isYouTubeUrl } from "@/lib/youtube-utils";
 
 interface ProgramData {
   programId: string;
@@ -47,6 +49,14 @@ interface Drill {
   videoUrl?: string;
   supersetId?: string;
   description?: string;
+  // Coach Instructions
+  coachInstructions?: {
+    whatToDo: string;
+    howToDoIt: string;
+    keyPoints: string[];
+    commonMistakes: string[];
+    equipment?: string;
+  };
   // Routine exercise properties
   isRoutineExercise?: boolean;
   routineAssignmentId?: string;
@@ -635,23 +645,8 @@ function ProgramContent({
           tags: exercise.type ? [exercise.type] : undefined,
           completed: completedProgramDrills.has(routineExerciseKey),
           videoUrl: exercise.videoUrl || undefined,
-          isYoutube: Boolean(
-            exercise.videoUrl && exercise.videoUrl.includes("youtube.com")
-          ),
-          youtubeId: (() => {
-            try {
-              if (
-                !exercise.videoUrl ||
-                !exercise.videoUrl.includes("youtube.com")
-              ) {
-                return undefined;
-              }
-              const url = new URL(exercise.videoUrl);
-              return url.searchParams.get("v") || undefined;
-            } catch {
-              return undefined;
-            }
-          })(),
+          isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
+          youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
         };
 
         allExercises.push(drillLikeExercise);
@@ -687,23 +682,8 @@ function ProgramContent({
             tags: exercise.type ? [exercise.type] : undefined,
             completed: completedProgramDrills.has(routineExerciseKey),
             videoUrl: exercise.videoUrl || undefined,
-            isYoutube: Boolean(
-              exercise.videoUrl && exercise.videoUrl.includes("youtube.com")
-            ),
-            youtubeId: (() => {
-              try {
-                if (
-                  !exercise.videoUrl ||
-                  !exercise.videoUrl.includes("youtube.com")
-                ) {
-                  return undefined;
-                }
-                const url = new URL(exercise.videoUrl);
-                return url.searchParams.get("v") || undefined;
-              } catch {
-                return undefined;
-              }
-            })(),
+            isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
+            youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
           };
           allExercises.push(drillLikeExercise);
         });
@@ -974,24 +954,9 @@ function RoutineContent({
                   videoUrl: exercise.videoUrl || undefined,
                   supersetId: exercise.supersetId || undefined,
                   supersetOrder: exercise.supersetOrder || undefined,
-                  isYoutube: Boolean(
-                    exercise.videoUrl &&
-                      exercise.videoUrl.includes("youtube.com")
-                  ),
-                  youtubeId: (() => {
-                    try {
-                      if (
-                        !exercise.videoUrl ||
-                        !exercise.videoUrl.includes("youtube.com")
-                      ) {
-                        return undefined;
-                      }
-                      const url = new URL(exercise.videoUrl);
-                      return url.searchParams.get("v") || undefined;
-                    } catch {
-                      return undefined;
-                    }
-                  })(),
+                  isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
+                  youtubeId:
+                    extractYouTubeId(exercise.videoUrl || "") || undefined,
                 };
               }
             );

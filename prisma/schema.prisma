@@ -428,6 +428,15 @@ model ProgramDrill {
   routineId              String?
   supersetId             String?
   supersetOrder          Int?
+  // Coach Instructions fields
+  coachInstructionsWhatToDo String?
+  coachInstructionsHowToDoIt String?
+  coachInstructionsKeyPoints String[] @default([])
+  coachInstructionsCommonMistakes String[] @default([])
+  coachInstructionsEasier String?
+  coachInstructionsHarder String?
+  coachInstructionsEquipment String?
+  coachInstructionsSetup String?
   clientVideoSubmissions ClientVideoSubmission[]
   completions            DrillCompletion[]
   day                    ProgramDay              @relation(fields: [dayId], references: [id], onDelete: Cascade)

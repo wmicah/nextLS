@@ -40,6 +40,14 @@ export default function ExerciseRow({
     sets: exercise.sets || undefined,
     reps: exercise.reps || undefined,
     tempo: exercise.tempo || "",
+    // Coach Instructions
+    coachInstructions: exercise.coachInstructions || {
+      whatToDo: "",
+      howToDoIt: "",
+      keyPoints: [],
+      commonMistakes: [],
+      equipment: "",
+    },
   });
 
   // tRPC mutation for updating exercise
@@ -72,6 +80,8 @@ export default function ExerciseRow({
       sets: editedExercise.sets,
       reps: editedExercise.reps,
       tempo: editedExercise.tempo,
+      // Coach Instructions
+      coachInstructions: editedExercise.coachInstructions,
     });
   };
 
@@ -84,6 +94,14 @@ export default function ExerciseRow({
       sets: exercise.sets || undefined,
       reps: exercise.reps || undefined,
       tempo: exercise.tempo || "",
+      // Coach Instructions
+      coachInstructions: exercise.coachInstructions || {
+        whatToDo: "",
+        howToDoIt: "",
+        keyPoints: [],
+        commonMistakes: [],
+        equipment: "",
+      },
     });
     setIsEditing(false);
   };
@@ -266,6 +284,76 @@ export default function ExerciseRow({
                     borderColor: "#606364",
                   }}
                   placeholder="Tempo (e.g., 2-0-2)"
+                />
+              </div>
+            </div>
+
+            {/* Coach Instructions */}
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-gray-300">
+                Coach Instructions
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={editedExercise.coachInstructions.whatToDo}
+                  onChange={e =>
+                    setEditedExercise({
+                      ...editedExercise,
+                      coachInstructions: {
+                        ...editedExercise.coachInstructions,
+                        whatToDo: e.target.value,
+                      },
+                    })
+                  }
+                  className="w-full p-2 rounded border text-white text-xs"
+                  style={{
+                    backgroundColor: "#1F2323",
+                    borderColor: "#606364",
+                  }}
+                  placeholder="What to do (optional)"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={editedExercise.coachInstructions.howToDoIt}
+                  onChange={e =>
+                    setEditedExercise({
+                      ...editedExercise,
+                      coachInstructions: {
+                        ...editedExercise.coachInstructions,
+                        howToDoIt: e.target.value,
+                      },
+                    })
+                  }
+                  className="w-full p-2 rounded border text-white text-xs"
+                  style={{
+                    backgroundColor: "#1F2323",
+                    borderColor: "#606364",
+                  }}
+                  placeholder="How to do it (optional)"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={editedExercise.coachInstructions.equipment}
+                  onChange={e =>
+                    setEditedExercise({
+                      ...editedExercise,
+                      coachInstructions: {
+                        ...editedExercise.coachInstructions,
+                        equipment: e.target.value,
+                      },
+                    })
+                  }
+                  className="w-full p-2 rounded border text-white text-xs"
+                  style={{
+                    backgroundColor: "#1F2323",
+                    borderColor: "#606364",
+                  }}
+                  placeholder="Equipment (optional)"
                 />
               </div>
             </div>

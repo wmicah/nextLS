@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Calendar,
@@ -71,6 +71,7 @@ import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientProgramPage from "./MobileClientProgramPage";
+import { processVideoUrl } from "@/lib/youtube-utils";
 
 interface Drill {
   id: string;
@@ -83,6 +84,14 @@ interface Drill {
   videoUrl?: string;
   supersetId?: string;
   supersetOrder?: number;
+  // Coach Instructions
+  coachInstructions?: {
+    whatToDo: string;
+    howToDoIt: string;
+    keyPoints: string[];
+    commonMistakes: string[];
+    equipment?: string;
+  };
 }
 
 interface ProgramData {
@@ -197,6 +206,36 @@ function ClientProgramPage() {
     month: currentDate.getMonth() + 1,
     viewMode,
   });
+
+  // Debug logging for calendar data
+  useEffect(() => {
+    if (calendarData) {
+      console.log(
+        "🔍 CLIENT PROGRAM PAGE - Calendar data received:",
+        calendarData
+      );
+      // Look for any drills with coach instructions
+      Object.entries(calendarData).forEach(([date, dayData]) => {
+        if (dayData.drills) {
+          dayData.drills.forEach((drill: any) => {
+            if (
+              drill.title === "RPR Spiral Lines" ||
+              drill.title.includes("RPR") ||
+              drill.title === "J Band Routine" ||
+              drill.title.includes("J Band")
+            ) {
+              console.log("🔍 CLIENT PROGRAM PAGE - Drill found:", drill.title);
+              console.log("🔍 CLIENT PROGRAM PAGE - Full drill object:", drill);
+              console.log(
+                "🔍 CLIENT PROGRAM PAGE - Coach instructions:",
+                drill.coachInstructions
+              );
+            }
+          });
+        }
+      });
+    }
+  }, [calendarData]);
 
   // Get current week's calendar data (for "This Week's Schedule" section)
   const currentWeekStart = startOfWeek(new Date());
@@ -717,19 +756,22 @@ function ClientProgramPage() {
 
   // Handle opening video player - simplified to match mobile version
   const handleOpenVideo = (videoUrl: string, drill: any) => {
+    // Use centralized YouTube processing
+    const { isYouTube, youtubeId } = processVideoUrl(videoUrl);
+
     console.log("Opening video:", {
       videoUrl,
       drill,
-      isYoutube: drill.isYoutube,
-      youtubeId: drill.youtubeId,
+      isYouTube,
+      youtubeId,
     });
 
     setSelectedVideo({
       id: drill.id,
       title: drill.title,
       url: videoUrl,
-      isYoutube: drill.isYoutube,
-      youtubeId: drill.youtubeId,
+      isYoutube: isYouTube,
+      youtubeId: youtubeId || undefined,
     });
     setIsVideoPlayerOpen(true);
   };

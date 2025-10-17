@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
+import { extractYouTubeId, getYouTubeThumbnailUrl } from "@/lib/youtube-utils";
 import { Button } from "@/components/ui/button";
 import { Video, User, Filter, Grid3x3, List, Play, Clock } from "lucide-react";
 import {
@@ -15,27 +16,11 @@ import { useThumbnail } from "@/hooks/useThumbnail";
 import VideoViewerModal from "./VideoViewerModal";
 
 // Helper function to extract YouTube video ID
-const getYouTubeVideoId = (url: string): string | null => {
-  if (!url) return null;
-
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/,
-    /youtube\.com\/embed\/([^&\s]+)/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-
-  return null;
-};
-
 // Helper function to get YouTube thumbnail URL
 const getYouTubeThumbnail = (url: string): string | null => {
-  const videoId = getYouTubeVideoId(url);
+  const videoId = extractYouTubeId(url);
   if (!videoId) return null;
-  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+  return getYouTubeThumbnailUrl(videoId, "medium");
 };
 
 export default function OrganizationLibraryView() {
@@ -100,7 +85,7 @@ export default function OrganizationLibraryView() {
         video.filename?.includes("youtu.be") ||
         video.isYoutube ||
         video.url?.includes("youtube"),
-      youtubeId: getYouTubeVideoId(video.url || video.filename),
+      youtubeId: extractYouTubeId(video.url || video.filename || ""),
     };
     setCurrentVideoIndex(index);
     setSelectedVideo(videoData);
@@ -123,7 +108,7 @@ export default function OrganizationLibraryView() {
           video.filename?.includes("youtu.be") ||
           video.isYoutube ||
           video.url?.includes("youtube"),
-        youtubeId: getYouTubeVideoId(video.url || video.filename || ""),
+        youtubeId: extractYouTubeId(video.url || video.filename || ""),
       };
       setCurrentVideoIndex(newIndex);
       setSelectedVideo(videoData);
@@ -141,7 +126,7 @@ export default function OrganizationLibraryView() {
           video.filename?.includes("youtu.be") ||
           video.isYoutube ||
           video.url?.includes("youtube"),
-        youtubeId: getYouTubeVideoId(video.url || video.filename || ""),
+        youtubeId: extractYouTubeId(video.url || video.filename || ""),
       };
       setCurrentVideoIndex(newIndex);
       setSelectedVideo(videoData);

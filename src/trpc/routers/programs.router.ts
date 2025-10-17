@@ -185,6 +185,16 @@ export const programsRouter = router({
                     tempo: z.string().optional(),
                     supersetId: z.string().optional(),
                     supersetOrder: z.number().optional(),
+                    // Coach Instructions
+                    coachInstructions: z
+                      .object({
+                        whatToDo: z.string().optional(),
+                        howToDoIt: z.string().optional(),
+                        keyPoints: z.array(z.string()).optional(),
+                        commonMistakes: z.array(z.string()).optional(),
+                        equipment: z.string().optional(),
+                      })
+                      .optional(),
                   })
                 ),
               })
@@ -272,19 +282,49 @@ export const programsRouter = router({
                       description: day.description || "",
                       isRestDay: isRestDay,
                       drills: {
-                        create: day.drills.map(drill => ({
-                          order: drill.order,
-                          title: drill.title,
-                          description: drill.description || "",
-                          duration: drill.duration || "",
-                          videoUrl: drill.videoUrl || "",
-                          notes: drill.notes || "",
-                          sets: drill.sets || null, // Optional field, set to null if not provided
-                          reps: drill.reps || null, // Optional field, set to null if not provided
-                          tempo: drill.tempo || null, // Optional field, set to null if not provided
-                          supersetId: drill.supersetId || null,
-                          supersetOrder: drill.supersetOrder || null,
-                        })),
+                        create: day.drills.map(drill => {
+                          // Debug logging for coach instructions in create mutation
+                          if (
+                            drill.title === "RPR Spiral Lines" ||
+                            drill.title.includes("RPR")
+                          ) {
+                            console.log(
+                              "🔍 CREATE MUTATION - Processing drill:",
+                              drill.title
+                            );
+                            console.log("Drill object:", drill);
+                            console.log(
+                              "Coach instructions:",
+                              (drill as any).coachInstructions
+                            );
+                          }
+
+                          return {
+                            order: drill.order,
+                            title: drill.title,
+                            description: drill.description || "",
+                            duration: drill.duration || "",
+                            videoUrl: drill.videoUrl || "",
+                            notes: drill.notes || "",
+                            sets: drill.sets || null, // Optional field, set to null if not provided
+                            reps: drill.reps || null, // Optional field, set to null if not provided
+                            tempo: drill.tempo || null, // Optional field, set to null if not provided
+                            supersetId: drill.supersetId || null,
+                            supersetOrder: drill.supersetOrder || null,
+                            // Coach Instructions
+                            coachInstructionsWhatToDo: (drill as any)
+                              .coachInstructions?.whatToDo,
+                            coachInstructionsHowToDoIt: (drill as any)
+                              .coachInstructions?.howToDoIt,
+                            coachInstructionsKeyPoints:
+                              (drill as any).coachInstructions?.keyPoints || [],
+                            coachInstructionsCommonMistakes:
+                              (drill as any).coachInstructions
+                                ?.commonMistakes || [],
+                            coachInstructionsEquipment: (drill as any)
+                              .coachInstructions?.equipment,
+                          };
+                        }),
                       },
                     };
                   }),
@@ -542,6 +582,17 @@ export const programsRouter = router({
                     routineId: drill.routineId,
                     supersetId: drill.supersetId,
                     supersetOrder: drill.supersetOrder,
+                    // Coach Instructions
+                    coachInstructionsWhatToDo: (drill as any).coachInstructions
+                      ?.whatToDo,
+                    coachInstructionsHowToDoIt: (drill as any).coachInstructions
+                      ?.howToDoIt,
+                    coachInstructionsKeyPoints:
+                      (drill as any).coachInstructions?.keyPoints || [],
+                    coachInstructionsCommonMistakes:
+                      (drill as any).coachInstructions?.commonMistakes || [],
+                    coachInstructionsEquipment: (drill as any).coachInstructions
+                      ?.equipment,
                   },
                 });
               }
@@ -905,6 +956,23 @@ export const programsRouter = router({
         sets: z.number().optional(),
         reps: z.number().optional(),
         tempo: z.string().optional(),
+        // Coach Instructions
+        coachInstructions: z
+          .object({
+            whatToDo: z.string().optional(),
+            howToDoIt: z.string().optional(),
+            keyPoints: z.array(z.string()).optional(),
+            commonMistakes: z.array(z.string()).optional(),
+            modifications: z
+              .object({
+                easier: z.string().optional(),
+                harder: z.string().optional(),
+              })
+              .optional(),
+            equipment: z.string().optional(),
+            setup: z.string().optional(),
+          })
+          .optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -999,6 +1067,18 @@ export const programsRouter = router({
           sets: input.sets,
           reps: input.reps,
           tempo: input.tempo,
+          // Coach Instructions
+          coachInstructionsWhatToDo: input.coachInstructions?.whatToDo,
+          coachInstructionsHowToDoIt: input.coachInstructions?.howToDoIt,
+          coachInstructionsKeyPoints: input.coachInstructions?.keyPoints || [],
+          coachInstructionsCommonMistakes:
+            input.coachInstructions?.commonMistakes || [],
+          coachInstructionsEasier:
+            input.coachInstructions?.modifications?.easier,
+          coachInstructionsHarder:
+            input.coachInstructions?.modifications?.harder,
+          coachInstructionsEquipment: input.coachInstructions?.equipment,
+          coachInstructionsSetup: input.coachInstructions?.setup,
         },
       });
 
@@ -1069,6 +1149,16 @@ export const programsRouter = router({
         sets: z.number().optional(),
         reps: z.number().optional(),
         tempo: z.string().optional(),
+        // Coach Instructions
+        coachInstructions: z
+          .object({
+            whatToDo: z.string().optional(),
+            howToDoIt: z.string().optional(),
+            keyPoints: z.array(z.string()).optional(),
+            commonMistakes: z.array(z.string()).optional(),
+            equipment: z.string().optional(),
+          })
+          .optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -1123,6 +1213,13 @@ export const programsRouter = router({
           sets: input.sets,
           reps: input.reps,
           tempo: input.tempo,
+          // Coach Instructions
+          coachInstructionsWhatToDo: input.coachInstructions?.whatToDo,
+          coachInstructionsHowToDoIt: input.coachInstructions?.howToDoIt,
+          coachInstructionsKeyPoints: input.coachInstructions?.keyPoints || [],
+          coachInstructionsCommonMistakes:
+            input.coachInstructions?.commonMistakes || [],
+          coachInstructionsEquipment: input.coachInstructions?.equipment,
         },
       });
 

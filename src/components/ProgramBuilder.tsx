@@ -54,9 +54,12 @@ import {
   Link,
   Unlink,
   ArrowLeft,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/app/_trpc/client";
+import CoachInstructionsDialog from "./CoachInstructionsDialog";
+import CoachInstructionsDisplay from "./CoachInstructionsDisplay";
 import {
   DndContext,
   closestCenter,
@@ -393,7 +396,16 @@ function ProgramBuilder({
       setEditingItem(item);
 
       if (item.type === "video") {
-        onOpenVideoLibrary?.();
+        // Open video details dialog for editing
+        setSelectedVideo({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          duration: item.duration,
+          url: item.videoUrl,
+          thumbnail: item.videoThumbnail || undefined,
+        });
+        setIsVideoDetailsDialogOpen(true);
       }
     },
     []
@@ -476,6 +488,18 @@ function ProgramBuilder({
       sets?: number;
       reps?: number;
       tempo?: string;
+      coachInstructions?: {
+        whatToDo: string;
+        howToDoIt: string;
+        keyPoints: string[];
+        commonMistakes: string[];
+        modifications?: {
+          easier?: string;
+          harder?: string;
+        };
+        equipment?: string;
+        setup?: string;
+      };
     }) => {
       console.log(
         "ProgramBuilder handleVideoDetailsSubmit called with details:",
@@ -484,6 +508,14 @@ function ProgramBuilder({
       console.log("selectedVideo:", selectedVideo);
       console.log("selectedWeekId:", selectedWeekId);
       console.log("selectedDayKey:", selectedDayKey);
+
+      // Debug logging for coach instructions
+      if (details.coachInstructions) {
+        console.log(
+          "🔍 COACH INSTRUCTIONS DEBUG - Details received:",
+          details.coachInstructions
+        );
+      }
 
       if (!selectedVideo) return;
 
@@ -500,7 +532,20 @@ function ProgramBuilder({
         sets: details.sets,
         reps: details.reps,
         tempo: details.tempo || "",
+        coachInstructions: details.coachInstructions,
       };
+
+      // Debug logging for the final videoItem
+      if (details.coachInstructions) {
+        console.log(
+          "🔍 COACH INSTRUCTIONS DEBUG - Final videoItem:",
+          videoItem
+        );
+        console.log(
+          "🔍 COACH INSTRUCTIONS DEBUG - Coach instructions in videoItem:",
+          videoItem.coachInstructions
+        );
+      }
 
       // Add the video item to the program
       if (editingItem) {
@@ -910,15 +955,17 @@ function ProgramBuilder({
 
       {/* Video Details Dialog */}
 
-      <VideoDetailsDialog
+      <VideoDetailsDialogWithInstructions
         isOpen={isVideoDetailsDialogOpen}
         onClose={() => {
           console.log("VideoDetailsDialog onClose called");
           setIsVideoDetailsDialogOpen(false);
           setSelectedVideo(null);
+          setEditingItem(null);
         }}
         onSubmit={handleVideoDetailsSubmit}
         video={selectedVideo}
+        existingItem={editingItem}
       />
 
       {/* Superset Modal */}
@@ -2046,6 +2093,17 @@ function ProgramItemCard({
             {item.notes && (
               <p className="text-xs text-gray-400 line-clamp-2">{item.notes}</p>
             )}
+
+            {/* Coach Instructions */}
+            {item.coachInstructions && (
+              <div className="mt-2">
+                <CoachInstructionsDisplay
+                  instructions={item.coachInstructions}
+                  compact={true}
+                  className="text-xs"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
@@ -2117,6 +2175,13 @@ interface VideoDetailsDialogProps {
     sets?: number;
     reps?: number;
     tempo?: string;
+    coachInstructions?: {
+      whatToDo: string;
+      howToDoIt: string;
+      keyPoints: string[];
+      commonMistakes: string[];
+      equipment?: string;
+    };
   }) => void;
   video: {
     id: string;
@@ -2126,6 +2191,7 @@ interface VideoDetailsDialogProps {
     url?: string;
     thumbnail?: string;
   } | null;
+  existingItem?: ProgramItem | null; // Add existing item for editing
 }
 
 function VideoDetailsDialog({
@@ -2133,23 +2199,30 @@ function VideoDetailsDialog({
   onClose,
   onSubmit,
   video,
+  existingItem,
 }: VideoDetailsDialogProps) {
   const [formData, setFormData] = useState({
-    notes: "",
-    sets: undefined as number | undefined,
-    reps: undefined as number | undefined,
-    tempo: "",
+    notes: existingItem?.notes || "",
+    sets: existingItem?.sets || undefined,
+    reps: existingItem?.reps || undefined,
+    tempo: existingItem?.tempo || "",
+    coachInstructions: existingItem?.coachInstructions || undefined,
   });
+  const [showCoachInstructions, setShowCoachInstructions] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
-    setFormData({
-      notes: "",
-      sets: undefined,
-      reps: undefined,
-      tempo: "",
-    });
+    // Only reset form data if we're not editing an existing item
+    if (!existingItem) {
+      setFormData({
+        notes: "",
+        sets: undefined,
+        reps: undefined,
+        tempo: "",
+        coachInstructions: undefined,
+      });
+    }
   };
 
   const handleQuickAdd = () => {
@@ -2159,6 +2232,7 @@ function VideoDetailsDialog({
       sets: 3,
       reps: 10,
       tempo: "",
+      coachInstructions: undefined,
     });
   };
 
@@ -2265,16 +2339,26 @@ function VideoDetailsDialog({
                 <Label htmlFor="notes" className="text-gray-400 text-xs">
                   Notes
                 </Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={e =>
-                    setFormData(prev => ({ ...prev, notes: e.target.value }))
-                  }
-                  className="bg-[#353A3A] border-gray-600 text-white text-sm resize-none"
-                  placeholder="Additional instructions..."
-                  rows={2}
-                />
+              </div>
+
+              {/* Coach Instructions Button */}
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCoachInstructions(true)}
+                  className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 text-sm w-full"
+                >
+                  <Lightbulb className="h-4 w-4 mr-2" />
+                  Add Coach Instructions
+                </Button>
+                {formData.coachInstructions && (
+                  <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p className="text-yellow-300 text-xs">
+                      ✓ Coach instructions added
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -2298,6 +2382,210 @@ function VideoDetailsDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Add CoachInstructionsDialog component
+function VideoDetailsDialogWithInstructions({
+  isOpen,
+  onClose,
+  onSubmit,
+  video,
+  existingItem,
+}: VideoDetailsDialogProps) {
+  const [formData, setFormData] = useState({
+    notes: existingItem?.notes || "",
+    sets: existingItem?.sets || undefined,
+    reps: existingItem?.reps || undefined,
+    tempo: existingItem?.tempo || "",
+    coachInstructions: existingItem?.coachInstructions || undefined,
+  });
+  const [showCoachInstructions, setShowCoachInstructions] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+    // Only reset form data if we're not editing an existing item
+    if (!existingItem) {
+      setFormData({
+        notes: "",
+        sets: undefined,
+        reps: undefined,
+        tempo: "",
+        coachInstructions: undefined,
+      });
+    }
+  };
+
+  const handleQuickAdd = () => {
+    onSubmit({
+      notes: "",
+      sets: 3,
+      reps: 10,
+      tempo: "",
+      coachInstructions: undefined,
+    });
+  };
+
+  const handleCoachInstructionsSubmit = (instructions: any) => {
+    setFormData(prev => ({ ...prev, coachInstructions: instructions }));
+    setShowCoachInstructions(false);
+  };
+
+  if (!video) return null;
+
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={() => {}}>
+        <DialogContent className="bg-[#2A3133] border-gray-600 text-white z-[150] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white text-lg">Add Video</DialogTitle>
+            <DialogDescription className="text-gray-400 text-sm">
+              {video.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Quick Add Option */}
+            <div className="p-3 bg-[#353A3A] rounded-lg border border-gray-600">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white text-sm font-medium">Quick Add</p>
+                  <p className="text-gray-400 text-xs">
+                    Add with default settings (3 sets, 10 reps)
+                  </p>
+                </div>
+                <Button
+                  onClick={handleQuickAdd}
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1"
+                >
+                  Add Now
+                </Button>
+              </div>
+            </div>
+
+            {/* Custom Settings */}
+            <div className="border-t border-gray-600 pt-4">
+              <p className="text-white text-sm font-medium mb-3">
+                Custom Settings (Optional)
+              </p>
+
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label htmlFor="sets" className="text-gray-400 text-xs">
+                      Sets
+                    </Label>
+                    <Input
+                      id="sets"
+                      type="number"
+                      value={formData.sets || ""}
+                      onChange={e =>
+                        setFormData(prev => ({
+                          ...prev,
+                          sets: e.target.value
+                            ? parseInt(e.target.value)
+                            : undefined,
+                        }))
+                      }
+                      className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
+                      placeholder="3"
+                      min="1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="reps" className="text-gray-400 text-xs">
+                      Reps
+                    </Label>
+                    <Input
+                      id="reps"
+                      type="number"
+                      value={formData.reps || ""}
+                      onChange={e =>
+                        setFormData(prev => ({
+                          ...prev,
+                          reps: e.target.value
+                            ? parseInt(e.target.value)
+                            : undefined,
+                        }))
+                      }
+                      className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
+                      placeholder="10"
+                      min="1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="tempo" className="text-gray-400 text-xs">
+                      Tempo
+                    </Label>
+                    <Input
+                      id="tempo"
+                      value={formData.tempo}
+                      onChange={e =>
+                        setFormData(prev => ({
+                          ...prev,
+                          tempo: e.target.value,
+                        }))
+                      }
+                      className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
+                      placeholder="2-0-2"
+                    />
+                  </div>
+                </div>
+
+                {/* Coach Instructions Button */}
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCoachInstructions(true)}
+                    className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 text-sm w-full"
+                  >
+                    <Lightbulb className="h-4 w-4 mr-2" />
+                    Add Coach Instructions
+                  </Button>
+                  {formData.coachInstructions && (
+                    <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                      <p className="text-yellow-300 text-xs">
+                        ✓ Coach instructions added
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onClose}
+                    className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white text-sm flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm flex-1"
+                  >
+                    Add Custom
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Coach Instructions Dialog */}
+      <CoachInstructionsDialog
+        isOpen={showCoachInstructions}
+        onClose={() => setShowCoachInstructions(false)}
+        onSubmit={handleCoachInstructionsSubmit}
+        initialInstructions={formData.coachInstructions}
+        exerciseTitle={video.title}
+      />
+    </>
   );
 }
 

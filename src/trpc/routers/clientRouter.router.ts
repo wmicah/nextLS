@@ -13,6 +13,7 @@ import {
   fetchPlaylistVideos,
 } from "@/lib/youtube";
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
+import { isYouTubeUrl, extractYouTubeId } from "@/lib/youtube-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
 
 /**
@@ -494,8 +495,36 @@ export const clientRouterRouter = router({
                         days: {
                           include: {
                             drills: {
-                              include: {
-                                completions: true,
+                              select: {
+                                id: true,
+                                order: true,
+                                title: true,
+                                description: true,
+                                duration: true,
+                                videoUrl: true,
+                                notes: true,
+                                sets: true,
+                                reps: true,
+                                tempo: true,
+                                type: true,
+                                routineId: true,
+                                supersetId: true,
+                                supersetOrder: true,
+                                videoId: true,
+                                videoThumbnail: true,
+                                videoTitle: true,
+                                // Coach Instructions
+                                coachInstructionsWhatToDo: true,
+                                coachInstructionsHowToDoIt: true,
+                                coachInstructionsKeyPoints: true,
+                                coachInstructionsCommonMistakes: true,
+                                coachInstructionsEasier: true,
+                                coachInstructionsHarder: true,
+                                coachInstructionsEquipment: true,
+                                coachInstructionsSetup: true,
+                                completions: {
+                                  where: { clientId: user.id },
+                                },
                               },
                             },
                           },
@@ -713,27 +742,54 @@ export const clientRouterRouter = router({
                       videoId: drill.videoId,
                       videoTitle: drill.videoTitle,
                       videoThumbnail: drill.videoThumbnail,
-                      // Add YouTube-specific information
-                      isYoutube: Boolean(
-                        drill.videoUrl && drill.videoUrl.includes("youtube.com")
-                      ),
-                      youtubeId: (() => {
-                        try {
-                          if (
-                            !drill.videoUrl ||
-                            !drill.videoUrl.includes("youtube.com")
-                          ) {
-                            return null;
-                          }
-                          const match = drill.videoUrl.match(
-                            /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+                      // Coach Instructions
+                      coachInstructions: (() => {
+                        const hasInstructions =
+                          drill.coachInstructionsWhatToDo ||
+                          drill.coachInstructionsHowToDoIt ||
+                          drill.coachInstructionsKeyPoints?.length > 0 ||
+                          drill.coachInstructionsCommonMistakes?.length > 0 ||
+                          drill.coachInstructionsEquipment;
+
+                        const instructions = hasInstructions
+                          ? {
+                              whatToDo: drill.coachInstructionsWhatToDo || "",
+                              howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                              keyPoints: drill.coachInstructionsKeyPoints || [],
+                              commonMistakes:
+                                drill.coachInstructionsCommonMistakes || [],
+                              equipment: drill.coachInstructionsEquipment || "",
+                            }
+                          : undefined;
+
+                        // Debug logging
+                        if (
+                          drill.title === "RPR Spiral Lines" ||
+                          drill.title.includes("RPR")
+                        ) {
+                          console.log(
+                            "🔍 Coach instructions debug for drill:",
+                            drill.title
                           );
-                          return match ? match[1] : null;
-                        } catch (error) {
-                          console.error("Error extracting YouTube ID:", error);
-                          return null;
+                          console.log("Raw database fields:", {
+                            whatToDo: drill.coachInstructionsWhatToDo,
+                            howToDoIt: drill.coachInstructionsHowToDoIt,
+                            keyPoints: drill.coachInstructionsKeyPoints,
+                            commonMistakes:
+                              drill.coachInstructionsCommonMistakes,
+                            equipment: drill.coachInstructionsEquipment,
+                          });
+                          console.log(
+                            "Transformed instructions:",
+                            instructions
+                          );
                         }
+
+                        return instructions;
                       })(),
+                      // Add YouTube-specific information
+                      isYoutube: isYouTubeUrl(drill.videoUrl || ""),
+                      youtubeId: extractYouTubeId(drill.videoUrl || ""),
                     });
                   }
                 }
@@ -858,7 +914,33 @@ export const clientRouterRouter = router({
                       days: {
                         include: {
                           drills: {
-                            include: {
+                            select: {
+                              id: true,
+                              order: true,
+                              title: true,
+                              description: true,
+                              duration: true,
+                              videoUrl: true,
+                              notes: true,
+                              sets: true,
+                              reps: true,
+                              tempo: true,
+                              type: true,
+                              routineId: true,
+                              supersetId: true,
+                              supersetOrder: true,
+                              videoId: true,
+                              videoThumbnail: true,
+                              videoTitle: true,
+                              // Coach Instructions
+                              coachInstructionsWhatToDo: true,
+                              coachInstructionsHowToDoIt: true,
+                              coachInstructionsKeyPoints: true,
+                              coachInstructionsCommonMistakes: true,
+                              coachInstructionsEasier: true,
+                              coachInstructionsHarder: true,
+                              coachInstructionsEquipment: true,
+                              coachInstructionsSetup: true,
                               routine: {
                                 include: {
                                   exercises: {
@@ -1000,10 +1082,51 @@ export const clientRouterRouter = router({
                     }
                   }
                 } else {
-                  // Regular drill - add as-is
+                  // Regular drill - add as-is with coach instructions mapping
+                  const hasInstructions =
+                    drill.coachInstructionsWhatToDo ||
+                    drill.coachInstructionsHowToDoIt ||
+                    drill.coachInstructionsKeyPoints?.length > 0 ||
+                    drill.coachInstructionsCommonMistakes?.length > 0 ||
+                    drill.coachInstructionsEquipment;
+
+                  const coachInstructions = hasInstructions
+                    ? {
+                        whatToDo: drill.coachInstructionsWhatToDo || "",
+                        howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                        keyPoints: drill.coachInstructionsKeyPoints || [],
+                        commonMistakes:
+                          drill.coachInstructionsCommonMistakes || [],
+                        equipment: drill.coachInstructionsEquipment || "",
+                      }
+                    : undefined;
+
+                  // Debug logging for getProgramWeekCalendar
+                  if (
+                    drill.title === "RPR Spiral Lines" ||
+                    drill.title.includes("RPR") ||
+                    drill.title === "J Band Routine" ||
+                    drill.title.includes("J Band")
+                  ) {
+                    console.log(
+                      "🔍 getProgramWeekCalendar debug for drill:",
+                      drill.title
+                    );
+                    console.log("Raw database fields:", {
+                      whatToDo: drill.coachInstructionsWhatToDo,
+                      howToDoIt: drill.coachInstructionsHowToDoIt,
+                      keyPoints: drill.coachInstructionsKeyPoints,
+                      commonMistakes: drill.coachInstructionsCommonMistakes,
+                      equipment: drill.coachInstructionsEquipment,
+                    });
+                    console.log("Has instructions:", hasInstructions);
+                    console.log("Transformed instructions:", coachInstructions);
+                  }
+
                   expandedDrills.push({
                     ...drill,
                     completed: !!completion,
+                    coachInstructions,
                   });
                 }
               }

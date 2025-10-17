@@ -855,6 +855,17 @@ export default function MobileProgramsPage() {
                     tempo: exercise.tempo || "",
                     supersetId: exercise.supersetId || undefined,
                     supersetOrder: exercise.supersetOrder || undefined,
+                    // Coach Instructions
+                    coachInstructions: exercise.coachInstructions
+                      ? {
+                          whatToDo: exercise.coachInstructions.whatToDo || "",
+                          howToDoIt: exercise.coachInstructions.howToDoIt || "",
+                          keyPoints: exercise.coachInstructions.keyPoints || [],
+                          commonMistakes:
+                            exercise.coachInstructions.commonMistakes || [],
+                          equipment: exercise.coachInstructions.equipment || "",
+                        }
+                      : undefined,
                   })),
                 })
               ),

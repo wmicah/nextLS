@@ -19,6 +19,14 @@ export interface ProgramItem {
   routineId?: string;
   supersetId?: string; // ID of the superset group
   supersetOrder?: number; // Order within the superset (1 or 2)
+  // Coach Instructions for better client guidance
+  coachInstructions?: {
+    whatToDo: string; // What the client should do
+    howToDoIt: string; // How to perform the exercise
+    keyPoints: string[]; // Key coaching points
+    commonMistakes: string[]; // What to avoid
+    equipment?: string; // Required equipment
+  };
 }
 
 export interface Week {

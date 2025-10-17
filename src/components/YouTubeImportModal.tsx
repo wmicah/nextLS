@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { X, Upload, Youtube, Video, Plus, ChevronLeft } from "lucide-react";
+import {
+  isYouTubeUrl,
+  isYouTubeShortsUrl,
+  convertShortsToWatchUrl,
+} from "@/lib/youtube-utils";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -74,14 +79,37 @@ export default function YouTubeImportModal({
       return;
     }
 
+    // Validate and convert YouTube URLs
+    let processedUrl = url.trim();
+
+    // Check if it's a valid YouTube URL
+    if (!isYouTubeUrl(processedUrl)) {
+      alert(
+        "Please enter a valid YouTube URL (supports regular videos, Shorts, and playlists)"
+      );
+      return;
+    }
+
+    // Convert YouTube Shorts to regular watch URL for better compatibility
+    if (isYouTubeShortsUrl(processedUrl)) {
+      const convertedUrl = convertShortsToWatchUrl(processedUrl);
+      if (convertedUrl) {
+        processedUrl = convertedUrl;
+        console.log(
+          "Converted YouTube Shorts URL to regular format:",
+          convertedUrl
+        );
+      }
+    }
+
     if (importType === "single") {
       importVideo.mutate({
-        url,
+        url: processedUrl,
         category: finalCategory,
       });
     } else {
       importPlaylist.mutate({
-        playlistUrl: url,
+        playlistUrl: processedUrl,
         category: finalCategory,
       });
     }
@@ -162,7 +190,9 @@ export default function YouTubeImportModal({
               value={url}
               onChange={e => setUrl(e.target.value)}
               placeholder={`Paste YouTube ${
-                importType === "single" ? "video" : "playlist"
+                importType === "single"
+                  ? "video (including Shorts)"
+                  : "playlist"
               } URL here...`}
               required
               className="w-full px-3 py-2 rounded-lg border"
@@ -172,6 +202,10 @@ export default function YouTubeImportModal({
                 color: "#C3BCC2",
               }}
             />
+            <p className="text-xs mt-1" style={{ color: "#ABA4AA" }}>
+              Supports: youtube.com/watch, youtu.be, youtube.com/shorts, and
+              playlists
+            </p>
           </div>
 
           {/* Category */}

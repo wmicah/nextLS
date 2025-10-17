@@ -48,6 +48,7 @@ import {
   isToday,
 } from "date-fns";
 import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
+import { processVideoUrl } from "@/lib/youtube-utils";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 import ClientProgramDayModal from "./ClientProgramDayModal";
@@ -412,22 +413,23 @@ export default function MobileClientProgramPage() {
   };
 
   const handleOpenVideo = (videoUrl: string, drill: any) => {
+    // Use centralized YouTube processing
+    const { isYouTube, youtubeId } = processVideoUrl(videoUrl);
+
     console.log("Opening video for routine exercise:", {
       videoUrl,
       drill,
-      isYoutube: drill.isYoutube,
-      youtubeId: drill.youtubeId,
+      isYouTube,
+      youtubeId,
       fullDrillData: drill,
     });
-
-    // Note: utfs.io URLs are failing to load - likely CORS or URL format issue
 
     setSelectedVideo({
       id: drill.id,
       title: drill.title,
       url: videoUrl,
-      isYoutube: drill.isYoutube,
-      youtubeId: drill.youtubeId,
+      isYoutube: isYouTube,
+      youtubeId: youtubeId || undefined,
     });
     setIsVideoPlayerOpen(true);
   };

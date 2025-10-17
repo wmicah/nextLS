@@ -1,5 +1,6 @@
 import React from "react";
 import { useThumbnail } from "@/hooks/useThumbnail";
+import { isYouTubeUrl, getYouTubeEmbedUrl } from "@/lib/youtube-utils";
 import { Play, Video, FileText } from "lucide-react";
 
 interface VideoThumbnailProps {
@@ -16,11 +17,7 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
   // Extract filename safely, avoiding YouTube URLs
   const getFilename = () => {
     if (item.filename) return item.filename;
-    if (
-      item.url &&
-      !item.url.includes("youtube.com") &&
-      !item.url.includes("youtu.be")
-    ) {
+    if (item.url && !isYouTubeUrl(item.url)) {
       return item.url.split("/").pop();
     }
     return null;
@@ -40,7 +37,7 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
         className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}
       >
         <iframe
-          src={`https://www.youtube.com/embed/${item.youtubeId}?controls=0&showinfo=0&rel=0&modestbranding=1`}
+          src={getYouTubeEmbedUrl(item.youtubeId, false)}
           title={item.title}
           className="w-full h-full"
           frameBorder="0"

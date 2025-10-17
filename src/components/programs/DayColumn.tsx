@@ -325,6 +325,16 @@ export default function DayColumn({
       sets: exercise.sets || 0,
       reps: exercise.reps || 0,
       tempo: exercise.tempo || "",
+      // Coach Instructions
+      coachInstructions: exercise.coachInstructions
+        ? {
+            whatToDo: exercise.coachInstructions.whatToDo || "",
+            howToDoIt: exercise.coachInstructions.howToDoIt || "",
+            keyPoints: exercise.coachInstructions.keyPoints || [],
+            commonMistakes: exercise.coachInstructions.commonMistakes || [],
+            equipment: exercise.coachInstructions.equipment || "",
+          }
+        : undefined,
     });
     // Don't close the modal automatically - let user add more exercises
     // setShowExerciseLibrary(false)
