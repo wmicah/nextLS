@@ -218,18 +218,33 @@ function ClientProgramPage() {
       Object.entries(calendarData).forEach(([date, dayData]) => {
         if (dayData.drills) {
           dayData.drills.forEach((drill: any) => {
-            if (
-              drill.title === "RPR Spiral Lines" ||
-              drill.title.includes("RPR") ||
-              drill.title === "J Band Routine" ||
-              drill.title.includes("J Band")
-            ) {
-              console.log("🔍 CLIENT PROGRAM PAGE - Drill found:", drill.title);
-              console.log("🔍 CLIENT PROGRAM PAGE - Full drill object:", drill);
+            if (drill.coachInstructions) {
+              console.log(
+                "🔍 CLIENT PROGRAM PAGE - Drill with coach instructions found:",
+                drill.title
+              );
               console.log(
                 "🔍 CLIENT PROGRAM PAGE - Coach instructions:",
                 drill.coachInstructions
               );
+            }
+          });
+        }
+        if (dayData.programs) {
+          dayData.programs.forEach((program: any) => {
+            if (program.drills) {
+              program.drills.forEach((drill: any) => {
+                if (drill.coachInstructions) {
+                  console.log(
+                    "🔍 CLIENT PROGRAM PAGE - Program drill with coach instructions found:",
+                    drill.title
+                  );
+                  console.log(
+                    "🔍 CLIENT PROGRAM PAGE - Coach instructions:",
+                    drill.coachInstructions
+                  );
+                }
+              });
             }
           });
         }

@@ -395,18 +395,16 @@ function ProgramBuilder({
       setSelectedDayKey(dayKey);
       setEditingItem(item);
 
-      if (item.type === "video") {
-        // Open video details dialog for editing
-        setSelectedVideo({
-          id: item.id,
-          title: item.title,
-          description: item.description,
-          duration: item.duration,
-          url: item.videoUrl,
-          thumbnail: item.videoThumbnail || undefined,
-        });
-        setIsVideoDetailsDialogOpen(true);
-      }
+      // Open video details dialog for editing ANY item type
+      setSelectedVideo({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        duration: item.duration,
+        url: item.videoUrl,
+        thumbnail: item.videoThumbnail || undefined,
+      });
+      setIsVideoDetailsDialogOpen(true);
     },
     []
   );

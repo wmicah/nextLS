@@ -762,13 +762,10 @@ export const clientRouterRouter = router({
                             }
                           : undefined;
 
-                        // Debug logging
-                        if (
-                          drill.title === "RPR Spiral Lines" ||
-                          drill.title.includes("RPR")
-                        ) {
+                        // Debug logging for ALL drills with coach instructions
+                        if (hasInstructions) {
                           console.log(
-                            "🔍 Coach instructions debug for drill:",
+                            "🔍 Coach instructions found for drill:",
                             drill.title
                           );
                           console.log("Raw database fields:", {

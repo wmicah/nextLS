@@ -19,6 +19,7 @@ interface ExerciseRowProps {
   index: number;
   programId: string;
   onDelete: () => void;
+  supersetExercises?: any[]; // Other exercises in the same superset
   onReorder: (fromIndex: number, toIndex: number) => void;
 }
 
@@ -27,9 +28,18 @@ export default function ExerciseRow({
   index,
   programId,
   onDelete,
+  supersetExercises = [],
   onReorder,
 }: ExerciseRowProps) {
   const [isEditing, setIsEditing] = useState(false);
+
+  // Debug logging
+  console.log(
+    "ExerciseRow rendering:",
+    exercise.title,
+    "isEditing:",
+    isEditing
+  );
   const { addToast } = useUIStore();
   const utils = trpc.useUtils();
   const [editedExercise, setEditedExercise] = useState({
@@ -71,6 +81,61 @@ export default function ExerciseRow({
   });
 
   const handleSave = () => {
+    // If this exercise is part of a superset, we need to update both exercises
+    if (exercise.supersetId && supersetExercises.length > 0) {
+      // Update all exercises in the superset with the same data
+      const updatePromises = supersetExercises.map(supersetExercise =>
+        updateExerciseMutation.mutateAsync({
+          exerciseId: supersetExercise.id,
+          title: editedExercise.title,
+          description: editedExercise.description,
+          duration: editedExercise.duration,
+          notes: editedExercise.notes,
+          sets: editedExercise.sets,
+          reps: editedExercise.reps,
+          tempo: editedExercise.tempo,
+          // Coach Instructions
+          coachInstructions: editedExercise.coachInstructions,
+        })
+      );
+
+      // Also update the current exercise
+      updatePromises.push(
+        updateExerciseMutation.mutateAsync({
+          exerciseId: exercise.id,
+          title: editedExercise.title,
+          description: editedExercise.description,
+          duration: editedExercise.duration,
+          notes: editedExercise.notes,
+          sets: editedExercise.sets,
+          reps: editedExercise.reps,
+          tempo: editedExercise.tempo,
+          // Coach Instructions
+          coachInstructions: editedExercise.coachInstructions,
+        })
+      );
+
+      Promise.all(updatePromises)
+        .then(() => {
+          addToast({
+            type: "success",
+            title: "Superset updated",
+            message: "All exercises in the superset have been updated.",
+          });
+          setIsEditing(false);
+        })
+        .catch((error: any) => {
+          addToast({
+            type: "error",
+            title: "Failed to update superset",
+            message: error.message,
+          });
+        });
+
+      return;
+    }
+
+    // Regular exercise update
     updateExerciseMutation.mutate({
       exerciseId: exercise.id,
       title: editedExercise.title,
@@ -145,6 +210,16 @@ export default function ExerciseRow({
         {isEditing ? (
           /* Edit Mode */
           <div className="space-y-3">
+            {/* Superset Indicator in Edit Mode */}
+            {exercise.supersetId && (
+              <div className="flex items-center gap-2 text-xs bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1">
+                <Link className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400 font-medium">
+                  Editing Superset - Changes will apply to all exercises in this
+                  superset
+                </span>
+              </div>
+            )}
             <div>
               <input
                 type="text"
@@ -401,7 +476,13 @@ export default function ExerciseRow({
                   items={[
                     {
                       ...menuItems.edit,
-                      onClick: () => setIsEditing(true),
+                      onClick: () => {
+                        console.log(
+                          "Edit button clicked for exercise:",
+                          exercise.title
+                        );
+                        setIsEditing(true);
+                      },
                     },
                     {
                       ...menuItems.linkSuperset,

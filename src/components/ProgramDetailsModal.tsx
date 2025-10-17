@@ -13,6 +13,7 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import ExerciseRow from "./programs/ExerciseRow";
 import {
   Card,
   CardContent,
@@ -540,27 +541,52 @@ export default function ProgramDetailsModal({
                                             day.drills &&
                                             day.drills.length > 0 && (
                                               <div className="px-3 pb-3 border-t border-gray-700 pt-2">
-                                                <div className="space-y-1">
+                                                <div className="space-y-2">
                                                   {day.drills.map(
-                                                    (drill, drillIndex) => (
-                                                      <div
-                                                        key={
-                                                          drill.id || drillIndex
-                                                        }
-                                                        className="flex items-center gap-2 p-2 bg-gray-800/30 rounded text-xs"
-                                                      >
-                                                        <Dumbbell className="h-3 w-3 text-gray-400" />
-                                                        <span className="text-gray-300 flex-1">
-                                                          {drill.order}.{" "}
-                                                          {drill.title}
-                                                        </span>
-                                                        {drill.duration && (
-                                                          <span className="text-gray-500">
-                                                            {drill.duration}
-                                                          </span>
-                                                        )}
-                                                      </div>
-                                                    )
+                                                    (drill, drillIndex) => {
+                                                      // Find other exercises in the same superset
+                                                      const supersetExercises =
+                                                        day.drills.filter(
+                                                          (otherDrill: any) =>
+                                                            otherDrill.id !==
+                                                              drill.id &&
+                                                            otherDrill.supersetId ===
+                                                              drill.supersetId
+                                                        );
+
+                                                      return (
+                                                        <ExerciseRow
+                                                          key={
+                                                            drill.id ||
+                                                            drillIndex
+                                                          }
+                                                          exercise={drill}
+                                                          index={drillIndex}
+                                                          programId={program.id}
+                                                          supersetExercises={
+                                                            supersetExercises
+                                                          }
+                                                          onDelete={() => {
+                                                            // TODO: Implement delete functionality
+                                                            console.log(
+                                                              "Delete exercise:",
+                                                              drill.id
+                                                            );
+                                                          }}
+                                                          onReorder={(
+                                                            fromIndex,
+                                                            toIndex
+                                                          ) => {
+                                                            // TODO: Implement reorder functionality
+                                                            console.log(
+                                                              "Reorder exercises:",
+                                                              fromIndex,
+                                                              toIndex
+                                                            );
+                                                          }}
+                                                        />
+                                                      );
+                                                    }
                                                   )}
                                                 </div>
                                               </div>
