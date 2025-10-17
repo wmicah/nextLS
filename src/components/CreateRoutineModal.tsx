@@ -403,15 +403,14 @@ export default function CreateRoutineModal({
                 </div>
                 <div>
                   <Label htmlFor="routine-description" className="text-white">
-                    Description
+                    Description (Optional)
                   </Label>
                   <Input
                     id="routine-description"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    placeholder="Describe what this routine focuses on..."
+                    placeholder="Describe what this routine focuses on... (optional)"
                     className="bg-gray-700 border-gray-600 text-white"
-                    required
                   />
                 </div>
               </div>
@@ -468,7 +467,7 @@ export default function CreateRoutineModal({
               </Button>
               <Button
                 type="submit"
-                disabled={!name.trim() || !description.trim()}
+                disabled={!name.trim()}
                 className="bg-green-600 hover:bg-green-700"
               >
                 {routine ? "Update Routine" : "Create Routine"}

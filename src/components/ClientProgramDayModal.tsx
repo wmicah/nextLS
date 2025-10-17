@@ -125,6 +125,8 @@ interface RoutineAssignment {
       videoUrl?: string | null;
       videoTitle?: string | null;
       videoThumbnail?: string | null;
+      supersetId?: string | null;
+      supersetOrder?: number | null;
     }[];
   };
   routineId: string;
@@ -740,44 +742,160 @@ function ProgramContent({
         </h3>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {allExercises.map((drill, index) => {
-          // Create a drill object with the current completion state
-          const drillWithCompletion: Drill = {
-            ...drill,
-            completed: completedProgramDrills.has(drill.id),
-          };
+      <div className="space-y-6">
+        {(() => {
+          // Group drills by superset
+          const supersetGroups: { [key: string]: Drill[] } = {};
+          const regularDrills: Drill[] = [];
+
+          allExercises.forEach(drill => {
+            if (drill.supersetId) {
+              if (!supersetGroups[drill.supersetId]) {
+                supersetGroups[drill.supersetId] = [];
+              }
+              supersetGroups[drill.supersetId].push(drill);
+            } else {
+              regularDrills.push(drill);
+            }
+          });
+
+          // Sort superset groups by superset order
+          Object.keys(supersetGroups).forEach(supersetId => {
+            supersetGroups[supersetId].sort((a, b) => {
+              const orderA = (a as any).supersetOrder || 0;
+              const orderB = (b as any).supersetOrder || 0;
+              return orderA - orderB;
+            });
+          });
+
+          let globalIndex = 0;
 
           return (
-            <DrillCard
-              key={drill.id}
-              drill={drillWithCompletion}
-              index={index}
-              onMarkComplete={completed => {
-                // All program drills (including expanded routine exercises) use the same handler
-                if (drill.id.includes("-") && onMarkRoutineExerciseComplete) {
-                  // This is a standalone routine exercise
-                  const [assignmentId, exerciseId] = drill.id.split("-");
-                  onMarkRoutineExerciseComplete(
-                    exerciseId,
-                    assignmentId,
-                    completed
-                  );
-                } else {
-                  // This is a regular program drill or expanded routine exercise
-                  onMarkDrillComplete(drill.id, completed);
-                }
-              }}
-              onOpenVideo={() =>
-                drill.videoUrl && onOpenVideo(drill.videoUrl, drill)
-              }
-              onOpenComment={() => onOpenCommentModal(drill)}
-              onOpenVideoSubmission={() =>
-                onOpenVideoSubmissionModal(drill.id, drill.title)
-              }
-            />
+            <>
+              {/* Regular drills */}
+              {regularDrills.map((drill, index) => {
+                const drillWithCompletion: Drill = {
+                  ...drill,
+                  completed: completedProgramDrills.has(drill.id),
+                };
+
+                return (
+                  <div
+                    key={drill.id}
+                    className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"
+                  >
+                    <DrillCard
+                      drill={drillWithCompletion}
+                      index={globalIndex++}
+                      onMarkComplete={completed => {
+                        if (
+                          drill.id.includes("-") &&
+                          onMarkRoutineExerciseComplete
+                        ) {
+                          const [assignmentId, exerciseId] =
+                            drill.id.split("-");
+                          onMarkRoutineExerciseComplete(
+                            exerciseId,
+                            assignmentId,
+                            completed
+                          );
+                        } else {
+                          onMarkDrillComplete(drill.id, completed);
+                        }
+                      }}
+                      onOpenVideo={() =>
+                        drill.videoUrl && onOpenVideo(drill.videoUrl, drill)
+                      }
+                      onOpenComment={() => onOpenCommentModal(drill)}
+                      onOpenVideoSubmission={() =>
+                        onOpenVideoSubmissionModal(drill.id, drill.title)
+                      }
+                    />
+                  </div>
+                );
+              })}
+
+              {/* Superset groups */}
+              {Object.entries(supersetGroups).map(
+                ([supersetId, supersetDrills]) => (
+                  <div key={supersetId} className="space-y-4">
+                    {/* Superset label */}
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 border border-purple-500/50 rounded-full">
+                        <Link className="h-4 w-4 text-purple-300" />
+                        <span className="text-sm font-medium text-purple-300">
+                          SUPERSET
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Superset exercises with purple border container */}
+                    <div className="border-2 border-purple-500/50 rounded-xl p-4 bg-purple-600/10">
+                      <div className="space-y-3">
+                        {supersetDrills.map((drill, index) => {
+                          const drillWithCompletion: Drill = {
+                            ...drill,
+                            completed: completedProgramDrills.has(drill.id),
+                          };
+
+                          return (
+                            <div key={drill.id} className="relative">
+                              {/* Superset exercise indicator */}
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">
+                                    {index + 1}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-purple-300 font-medium">
+                                  {index === 0
+                                    ? "First Exercise"
+                                    : "Second Exercise"}
+                                </span>
+                              </div>
+
+                              <DrillCard
+                                drill={drillWithCompletion}
+                                index={globalIndex++}
+                                onMarkComplete={completed => {
+                                  if (
+                                    drill.id.includes("-") &&
+                                    onMarkRoutineExerciseComplete
+                                  ) {
+                                    const [assignmentId, exerciseId] =
+                                      drill.id.split("-");
+                                    onMarkRoutineExerciseComplete(
+                                      exerciseId,
+                                      assignmentId,
+                                      completed
+                                    );
+                                  } else {
+                                    onMarkDrillComplete(drill.id, completed);
+                                  }
+                                }}
+                                onOpenVideo={() =>
+                                  drill.videoUrl &&
+                                  onOpenVideo(drill.videoUrl, drill)
+                                }
+                                onOpenComment={() => onOpenCommentModal(drill)}
+                                onOpenVideoSubmission={() =>
+                                  onOpenVideoSubmissionModal(
+                                    drill.id,
+                                    drill.title
+                                  )
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )
+              )}
+            </>
           );
-        })}
+        })()}
       </div>
     </div>
   );
@@ -837,79 +955,194 @@ function RoutineContent({
       </div>
 
       {/* Routine Exercises */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        {routine.exercises && routine.exercises.length > 0 ? (
-          routine.exercises.map((exercise, index) => {
-            // Convert routine exercise to drill-like format for compatibility
-            // Use the key format for routine exercises: ${routineAssignmentId}-${exerciseId}
-            const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
+      {routine.exercises && routine.exercises.length > 0 ? (
+        <div className="space-y-6">
+          {(() => {
+            // Convert all exercises to drill-like format first
+            const allDrillLikeExercises: Drill[] = routine.exercises.map(
+              (exercise, index) => {
+                const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
+                return {
+                  id: routineExerciseKey,
+                  title: exercise.title,
+                  description: exercise.description || undefined,
+                  sets: exercise.sets || undefined,
+                  reps: exercise.reps || undefined,
+                  tempo: exercise.tempo || undefined,
+                  tags: exercise.type ? [exercise.type] : undefined,
+                  completed: completedProgramDrills.has(routineExerciseKey),
+                  videoUrl: exercise.videoUrl || undefined,
+                  supersetId: exercise.supersetId || undefined,
+                  supersetOrder: exercise.supersetOrder || undefined,
+                  isYoutube: Boolean(
+                    exercise.videoUrl &&
+                      exercise.videoUrl.includes("youtube.com")
+                  ),
+                  youtubeId: (() => {
+                    try {
+                      if (
+                        !exercise.videoUrl ||
+                        !exercise.videoUrl.includes("youtube.com")
+                      ) {
+                        return undefined;
+                      }
+                      const url = new URL(exercise.videoUrl);
+                      return url.searchParams.get("v") || undefined;
+                    } catch {
+                      return undefined;
+                    }
+                  })(),
+                };
+              }
+            );
 
-            const drillLikeExercise: Drill = {
-              id: routineExerciseKey,
-              title: exercise.title,
-              description: exercise.description || undefined,
-              sets: exercise.sets || undefined,
-              reps: exercise.reps || undefined,
-              tempo: exercise.tempo || undefined,
-              tags: exercise.type ? [exercise.type] : undefined,
-              completed: completedProgramDrills.has(routineExerciseKey),
-              videoUrl: exercise.videoUrl || undefined,
-              isYoutube: Boolean(
-                exercise.videoUrl && exercise.videoUrl.includes("youtube.com")
-              ),
-              youtubeId: (() => {
-                try {
-                  if (
-                    !exercise.videoUrl ||
-                    !exercise.videoUrl.includes("youtube.com")
-                  ) {
-                    return undefined;
-                  }
-                  const url = new URL(exercise.videoUrl);
-                  return url.searchParams.get("v") || undefined;
-                } catch {
-                  return undefined;
+            // Group drills by superset
+            const supersetGroups: { [key: string]: Drill[] } = {};
+            const regularDrills: Drill[] = [];
+
+            allDrillLikeExercises.forEach(drill => {
+              if (drill.supersetId) {
+                if (!supersetGroups[drill.supersetId]) {
+                  supersetGroups[drill.supersetId] = [];
                 }
-              })(),
-            };
+                supersetGroups[drill.supersetId].push(drill);
+              } else {
+                regularDrills.push(drill);
+              }
+            });
+
+            // Sort superset groups by superset order
+            Object.keys(supersetGroups).forEach(supersetId => {
+              supersetGroups[supersetId].sort((a, b) => {
+                const orderA = (a as any).supersetOrder || 0;
+                const orderB = (b as any).supersetOrder || 0;
+                return orderA - orderB;
+              });
+            });
+
+            let globalIndex = 0;
 
             return (
-              <DrillCard
-                key={exercise.id}
-                drill={drillLikeExercise}
-                index={index}
-                onMarkComplete={completed =>
-                  onMarkRoutineExerciseComplete(
-                    exercise.id,
-                    routineAssignment.id,
-                    completed
+              <>
+                {/* Regular drills */}
+                {regularDrills.map((drill, index) => (
+                  <div
+                    key={drill.id}
+                    className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"
+                  >
+                    <DrillCard
+                      drill={drill}
+                      index={globalIndex++}
+                      onMarkComplete={completed => {
+                        const exerciseId = drill.id.split("-")[1];
+                        onMarkRoutineExerciseComplete(
+                          exerciseId,
+                          routineAssignment.id,
+                          completed
+                        );
+                      }}
+                      onOpenVideo={() =>
+                        drill.videoUrl && onOpenVideo(drill.videoUrl, drill)
+                      }
+                      onOpenComment={() => onOpenCommentModal(drill)}
+                      onOpenVideoSubmission={() => {
+                        const exerciseId = drill.id.split("-")[1];
+                        const exercise = routine.exercises.find(
+                          ex => ex.id === exerciseId
+                        );
+                        onOpenVideoSubmissionModal(
+                          exerciseId,
+                          exercise?.title || "Exercise"
+                        );
+                      }}
+                    />
+                  </div>
+                ))}
+
+                {/* Superset groups */}
+                {Object.entries(supersetGroups).map(
+                  ([supersetId, supersetDrills]) => (
+                    <div key={supersetId} className="space-y-4">
+                      {/* Superset label */}
+                      <div className="flex items-center justify-center">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 border border-purple-500/50 rounded-full">
+                          <Link className="h-4 w-4 text-purple-300" />
+                          <span className="text-sm font-medium text-purple-300">
+                            SUPERSET
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Superset exercises with purple border container */}
+                      <div className="border-2 border-purple-500/50 rounded-xl p-4 bg-purple-600/10">
+                        <div className="space-y-3">
+                          {supersetDrills.map((drill, index) => (
+                            <div key={drill.id} className="relative">
+                              {/* Superset exercise indicator */}
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">
+                                    {index + 1}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-purple-300 font-medium">
+                                  {index === 0
+                                    ? "First Exercise"
+                                    : "Second Exercise"}
+                                </span>
+                              </div>
+
+                              <DrillCard
+                                drill={drill}
+                                index={globalIndex++}
+                                onMarkComplete={completed => {
+                                  const exerciseId = drill.id.split("-")[1];
+                                  onMarkRoutineExerciseComplete(
+                                    exerciseId,
+                                    routineAssignment.id,
+                                    completed
+                                  );
+                                }}
+                                onOpenVideo={() =>
+                                  drill.videoUrl &&
+                                  onOpenVideo(drill.videoUrl, drill)
+                                }
+                                onOpenComment={() => onOpenCommentModal(drill)}
+                                onOpenVideoSubmission={() => {
+                                  const exerciseId = drill.id.split("-")[1];
+                                  const exercise = routine.exercises.find(
+                                    ex => ex.id === exerciseId
+                                  );
+                                  onOpenVideoSubmissionModal(
+                                    exerciseId,
+                                    exercise?.title || "Exercise"
+                                  );
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   )
-                }
-                onOpenVideo={() =>
-                  drillLikeExercise.videoUrl &&
-                  onOpenVideo(drillLikeExercise.videoUrl, drillLikeExercise)
-                }
-                onOpenComment={() => onOpenCommentModal(drillLikeExercise)}
-                onOpenVideoSubmission={() =>
-                  onOpenVideoSubmissionModal(exercise.id, exercise.title)
-                }
-              />
+                )}
+              </>
             );
-          })
-        ) : (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="h-8 w-8 text-gray-400" />
-            </div>
-            <h4 className="text-lg font-semibold text-white mb-2">
-              No Exercises
-            </h4>
-            <p className="text-gray-400">
-              This routine doesn't have any exercises assigned yet.
-            </p>
+          })()}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <div className="w-16 h-16 bg-gray-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="h-8 w-8 text-gray-400" />
           </div>
-        )}
-      </div>
+          <h4 className="text-lg font-semibold text-white mb-2">
+            No Exercises
+          </h4>
+          <p className="text-gray-400">
+            This routine doesn't have any exercises assigned yet.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

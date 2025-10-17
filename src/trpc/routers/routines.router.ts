@@ -128,6 +128,8 @@ export const routinesRouter = router({
             videoTitle: z.string().optional(),
             videoThumbnail: z.string().optional(),
             videoUrl: z.string().optional(),
+            supersetId: z.string().optional(),
+            supersetOrder: z.number().optional(),
           })
         ),
       })
@@ -206,6 +208,8 @@ export const routinesRouter = router({
             videoTitle: z.string().optional(),
             videoThumbnail: z.string().optional(),
             videoUrl: z.string().optional(),
+            supersetId: z.string().optional(),
+            supersetOrder: z.number().optional(),
           })
         ),
       })
