@@ -249,6 +249,36 @@ export default function MobileClientProgramPage() {
     }
   }, [selectedDay]);
 
+  // Update drill completion status based on our tracked state
+  const updateDrillCompletionStatus = (dayData: DayData | null) => {
+    if (!dayData?.programs) return dayData;
+
+    console.log(
+      "🔄 MOBILE updateDrillCompletionStatus called with completedProgramDrills:",
+      Array.from(completedProgramDrills)
+    );
+
+    const updatedDayData = {
+      ...dayData,
+      programs: dayData.programs.map(program => ({
+        ...program,
+        drills: program.drills.map(drill => {
+          const isCompleted = completedProgramDrills.has(drill.id);
+          console.log(
+            `🔄 MOBILE Drill ${drill.id} (${drill.title}): server completed=${drill.completed}, state completed=${isCompleted}`
+          );
+          return {
+            ...drill,
+            completed: isCompleted, // Use our tracked state, not server data
+          };
+        }),
+      })),
+    };
+
+    console.log("🔄 MOBILE Updated dayData:", updatedDayData);
+    return updatedDayData;
+  };
+
   // Initialize routine exercise completion state from server data when selectedDate changes (exact replica of desktop)
   React.useEffect(() => {
     if (selectedDate && routineAssignments) {
@@ -266,14 +296,18 @@ export default function MobileClientProgramPage() {
         }
       });
 
-      // Only update if there are actually completions to add
-      if (serverCompletedRoutineExercises.size > 0) {
-        setCompletedProgramDrills(prev => {
-          const newSet = new Set(prev);
-          serverCompletedRoutineExercises.forEach(id => newSet.add(id));
-          return newSet;
-        });
-      }
+      console.log(
+        "🔄 Routine exercise completions from server:",
+        Array.from(serverCompletedRoutineExercises)
+      );
+
+      // Update completion state with server data
+      setCompletedProgramDrills(prev => {
+        const newSet = new Set(prev);
+        serverCompletedRoutineExercises.forEach(id => newSet.add(id));
+        console.log("🔄 Updated completion state:", Array.from(newSet));
+        return newSet;
+      });
     }
   }, [selectedDate, routineAssignments]);
 
@@ -462,36 +496,65 @@ export default function MobileClientProgramPage() {
     drillId: string,
     completed: boolean
   ) => {
-    console.log(
-      "🔍 handleMarkDrillComplete called - drillId:",
+    console.log("🎯 MOBILE handleMarkDrillComplete called with:", {
       drillId,
-      "completed:",
-      completed
-    );
+      completed,
+    });
 
     // Update the completion state immediately for real-time UI updates
     setCompletedProgramDrills(prev => {
       const newSet = new Set(prev);
       if (completed) {
         newSet.add(drillId);
+        console.log(
+          "🎯 MOBILE Added drill to completedProgramDrills:",
+          drillId
+        );
       } else {
         newSet.delete(drillId);
+        console.log(
+          "🎯 MOBILE Removed drill from completedProgramDrills:",
+          drillId
+        );
       }
+      console.log("🎯 MOBILE New completedProgramDrills:", Array.from(newSet));
       return newSet;
     });
 
     // Then perform the actual mutation
     try {
-      await markDrillCompleteMutation.mutateAsync({
+      console.log("🎯 MOBILE Calling markDrillCompleteMutation with:", {
+        drillId,
+        completed,
+      });
+
+      // Add timeout to catch hanging mutations
+      const mutationPromise = markDrillCompleteMutation.mutateAsync({
         drillId: drillId,
         completed,
       });
 
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Mutation timeout after 10 seconds")),
+          10000
+        )
+      );
+
+      await Promise.race([mutationPromise, timeoutPromise]);
+      console.log("🎯 MOBILE markDrillCompleteMutation completed successfully");
+
       // Subtle refetch to ensure UI stays in sync - with delay to let server process
+      console.log("🎯 MOBILE Refetching calendar data...");
       setTimeout(async () => {
         await refetchCalendar();
+        console.log("🎯 MOBILE Calendar data refetched");
       }, 1000);
     } catch (error) {
+      console.error(
+        "🎯 MOBILE ERROR: markDrillCompleteMutation failed:",
+        error
+      );
       // Revert optimistic update on error
       setCompletedProgramDrills(prev => {
         const newSet = new Set(prev);
@@ -1005,9 +1068,9 @@ export default function MobileClientProgramPage() {
         <ClientProgramDayModal
           isOpen={isDayModalOpen}
           onClose={() => setIsDayModalOpen(false)}
-          selectedDay={selectedDay}
+          selectedDay={updateDrillCompletionStatus(selectedDay)}
           selectedDate={selectedDate}
-          programs={selectedDay?.programs || []}
+          programs={updateDrillCompletionStatus(selectedDay)?.programs || []}
           routineAssignments={selectedDayRoutineAssignments}
           onMarkDrillComplete={handleMarkDrillComplete}
           onMarkAllComplete={handleMarkAllComplete}

@@ -410,48 +410,14 @@ export const clientRouterRouter = router({
             },
           },
         },
+        completions: {
+          orderBy: { completedAt: "desc" },
+        },
       },
       orderBy: {
         assignedAt: "desc",
       },
     });
-
-    // Debug logging
-    console.log("🔍 Backend Routine Assignments Debug:", {
-      clientId: client.id,
-      userId: user.id,
-      assignmentCount: assignments.length,
-      assignments: assignments.map(assignment => ({
-        id: assignment.id,
-        routineName: assignment.routine.name,
-        assignedAt: assignment.assignedAt,
-        startDate: assignment.startDate,
-        exerciseCount: assignment.routine.exercises.length,
-        exercises: assignment.routine.exercises.map(ex => ({
-          id: ex.id,
-          title: ex.title,
-          sets: ex.sets,
-          reps: ex.reps,
-          order: ex.order,
-          videoUrl: ex.videoUrl,
-          videoId: ex.videoId,
-          videoTitle: ex.videoTitle,
-          videoThumbnail: ex.videoThumbnail,
-          description: ex.description,
-          notes: ex.notes,
-          duration: ex.duration,
-          type: ex.type,
-          tempo: ex.tempo,
-        })),
-      })),
-    });
-
-    // Additional debug: Check if there are ANY routine assignments for this client
-    const allAssignments = await db.routineAssignment.findMany({
-      where: { clientId: client.id },
-      select: { id: true, routineId: true, assignedAt: true },
-    });
-    console.log("🔍 All Routine Assignments for Client:", allAssignments);
 
     return assignments;
   }),
@@ -551,6 +517,11 @@ export const clientRouterRouter = router({
         // Build calendar data for the requested month
         const calendarData: Record<string, any> = {};
 
+        // Get all drill completions for this client
+        const allCompletions = await db.drillCompletion.findMany({
+          where: { clientId: client.id },
+        });
+
         // Process all assigned programs
         for (const assignment of client.programAssignments) {
           const program = assignment.program;
@@ -582,16 +553,6 @@ export const clientRouterRouter = router({
             );
           }
 
-          // Debug logging for start date
-          console.log(
-            `Program Assignment Debug - Client: ${client.id}, Assignment ID: ${assignment.id}:`,
-            {
-              originalStartDate: assignment.startDate,
-              startDateUsed: startDate,
-              startDateString: startDate.toLocaleDateString(),
-            }
-          );
-
           // Get all days in the program
           for (const week of program.weeks) {
             for (const day of week.days) {
@@ -617,14 +578,6 @@ export const clientRouterRouter = router({
                 .padStart(2, "0")}`;
 
               // Debug logging for first few days
-              if (week.weekNumber === 1 && day.dayNumber <= 3) {
-                console.log(`Week ${week.weekNumber}, Day ${day.dayNumber}:`, {
-                  startDate: startDate.toISOString(),
-                  daysToAdd,
-                  dayDate: dayDate.toISOString(),
-                  dateString,
-                });
-              }
 
               // Check if this specific date has been replaced with a lesson
               const hasReplacement = assignment.replacements?.some(
@@ -651,14 +604,17 @@ export const clientRouterRouter = router({
                 continue;
               }
 
-              // Only include days in the requested month
-              if (
-                dayDate.getFullYear() === input.year &&
-                dayDate.getMonth() + 1 === input.month
-              ) {
+              // Include all days from all program assignments
+              // (Remove the month filter to show all program data)
+              if (true) {
                 // Process drills and expand routines
                 const expandedDrills = [];
                 for (const drill of day.drills) {
+                  // Find completion status for this drill
+                  const completion = allCompletions.find(
+                    (c: any) => c.drillId === drill.id
+                  );
+
                   if (drill.routineId) {
                     // This is a routine drill - fetch and expand the routine
                     const routine = await db.routine.findUnique({
@@ -679,14 +635,6 @@ export const clientRouterRouter = router({
                             c => c.clientId === client.id
                           ) || [];
                         const isCompleted = clientCompletions.length > 0;
-                        console.log(
-                          `🔍 Routine exercise ${exercise.title} completion status:`,
-                          {
-                            drillId: drill.id,
-                            completions: drill.completions,
-                            isCompleted,
-                          }
-                        );
                         expandedDrills.push({
                           id: `${drill.id}-routine-${exercise.id}`, // Unique ID for tracking
                           title: exercise.title,
@@ -715,15 +663,7 @@ export const clientRouterRouter = router({
                       drill.completions?.filter(
                         c => c.clientId === client.id
                       ) || [];
-                    const isCompleted = clientCompletions.length > 0;
-                    console.log(
-                      `🔍 Regular drill ${drill.title} completion status:`,
-                      {
-                        drillId: drill.id,
-                        completions: drill.completions,
-                        isCompleted,
-                      }
-                    );
+                    const isCompleted = !!completion; // Use the completion we found
                     expandedDrills.push({
                       id: drill.id,
                       title: drill.title,
@@ -763,24 +703,6 @@ export const clientRouterRouter = router({
                           : undefined;
 
                         // Debug logging for ALL drills with coach instructions
-                        if (hasInstructions) {
-                          console.log(
-                            "🔍 Coach instructions found for drill:",
-                            drill.title
-                          );
-                          console.log("Raw database fields:", {
-                            whatToDo: drill.coachInstructionsWhatToDo,
-                            howToDoIt: drill.coachInstructionsHowToDoIt,
-                            keyPoints: drill.coachInstructionsKeyPoints,
-                            commonMistakes:
-                              drill.coachInstructionsCommonMistakes,
-                            equipment: drill.coachInstructionsEquipment,
-                          });
-                          console.log(
-                            "Transformed instructions:",
-                            instructions
-                          );
-                        }
 
                         return instructions;
                       })(),
@@ -1098,28 +1020,6 @@ export const clientRouterRouter = router({
                       }
                     : undefined;
 
-                  // Debug logging for getProgramWeekCalendar
-                  if (
-                    drill.title === "RPR Spiral Lines" ||
-                    drill.title.includes("RPR") ||
-                    drill.title === "J Band Routine" ||
-                    drill.title.includes("J Band")
-                  ) {
-                    console.log(
-                      "🔍 getProgramWeekCalendar debug for drill:",
-                      drill.title
-                    );
-                    console.log("Raw database fields:", {
-                      whatToDo: drill.coachInstructionsWhatToDo,
-                      howToDoIt: drill.coachInstructionsHowToDoIt,
-                      keyPoints: drill.coachInstructionsKeyPoints,
-                      commonMistakes: drill.coachInstructionsCommonMistakes,
-                      equipment: drill.coachInstructionsEquipment,
-                    });
-                    console.log("Has instructions:", hasInstructions);
-                    console.log("Transformed instructions:", coachInstructions);
-                  }
-
                   expandedDrills.push({
                     ...drill,
                     completed: !!completion,
@@ -1181,11 +1081,9 @@ export const clientRouterRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      console.log("🎯 markDrillComplete mutation called with:", input);
       const { getUser } = getKindeServerSession();
       const user = await getUser();
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
-      console.log("✅ User authenticated:", user.id);
 
       // Verify user is a CLIENT
       const dbUser = await db.user.findFirst({
@@ -1243,6 +1141,17 @@ export const clientRouterRouter = router({
           });
         }
 
+        // Check if the completion date is valid (not in the future)
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // End of today
+
+        if (new Date() > today) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot complete drills for future dates",
+          });
+        }
+
         if (input.completed) {
           // Mark drill as complete (using the original drill ID)
           console.log(
@@ -1293,6 +1202,17 @@ export const clientRouterRouter = router({
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Drill not found or not assigned to client",
+          });
+        }
+
+        // Check if the completion date is valid (not in the future)
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // End of today
+
+        if (new Date() > today) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot complete drills for future dates",
           });
         }
 
@@ -1392,32 +1312,43 @@ export const clientRouterRouter = router({
         });
       }
 
-      // TODO: Implement routine exercise completion tracking
-      // This requires adding a RoutineExerciseCompletion model to the Prisma schema
+      // Check if the completion date is valid (not in the future)
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // End of today
+
+      if (new Date() > today) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot complete exercises for future dates",
+        });
+      }
+
       if (input.completed) {
         console.log(
           "✅ Marking routine exercise as complete:",
           input.exerciseId
         );
-        // await db.routineExerciseCompletion.create({
-        //   data: {
-        //     routineAssignmentId: input.routineAssignmentId,
-        //     exerciseId: input.exerciseId,
-        //     clientId: client.id,
-        //   },
-        // });
+        await db.routineExerciseCompletion.create({
+          data: {
+            routineAssignmentId: input.routineAssignmentId,
+            exerciseId: input.exerciseId,
+            clientId: client.id,
+          },
+        });
+        console.log("✅ Routine exercise completion created successfully");
       } else {
         console.log(
           "❌ Marking routine exercise as incomplete:",
           input.exerciseId
         );
-        // await db.routineExerciseCompletion.deleteMany({
-        //   where: {
-        //     routineAssignmentId: input.routineAssignmentId,
-        //     exerciseId: input.exerciseId,
-        //     clientId: client.id,
-        //   },
-        // });
+        await db.routineExerciseCompletion.deleteMany({
+          where: {
+            routineAssignmentId: input.routineAssignmentId,
+            exerciseId: input.exerciseId,
+            clientId: client.id,
+          },
+        });
+        console.log("✅ Routine exercise completion removed successfully");
       }
 
       return { success: true };

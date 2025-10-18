@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  //directUrl = env("DIRECT_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -124,6 +124,7 @@ model Client {
   organization         Organization?           @relation("OrganizationClients", fields: [organizationId], references: [id])
   primaryCoach         User?                   @relation("PrimaryCoachClients", fields: [primaryCoachId], references: [id])
   assignedCoaches      ClientCoachAssignment[] @relation("ClientCoachAssignments")
+  routineExerciseCompletions RoutineExerciseCompletion[] @relation("ClientRoutineExerciseCompletions")
 
   @@map("clients")
 }
@@ -612,8 +613,25 @@ model RoutineAssignment {
   updatedAt   DateTime  @updatedAt
   client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   routine     Routine   @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  completions RoutineExerciseCompletion[]
 
   @@map("routine_assignments")
+}
+
+model RoutineExerciseCompletion {
+  id                   String            @id @default(cuid())
+  routineAssignmentId  String
+  exerciseId          String
+  clientId            String
+  completedAt         DateTime           @default(now())
+  notes               String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  client              Client             @relation("ClientRoutineExerciseCompletions", fields: [clientId], references: [id], onDelete: Cascade)
+  routineAssignment   RoutineAssignment  @relation(fields: [routineAssignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([routineAssignmentId, exerciseId, clientId, completedAt])
+  @@map("routine_exercise_completions")
 }
 
 model Notification {

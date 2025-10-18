@@ -157,9 +157,43 @@ function ClientProgramPage() {
           }
         });
       });
+      console.log(
+        "🔄 Initializing completedProgramDrills from server:",
+        Array.from(serverCompletedDrills)
+      );
       setCompletedProgramDrills(serverCompletedDrills);
     }
   }, [selectedDay]);
+
+  // Update drill completion status based on our tracked state
+  const updateDrillCompletionStatus = (dayData: DayData | null) => {
+    if (!dayData?.programs) return dayData;
+
+    console.log(
+      "🔄 updateDrillCompletionStatus called with completedProgramDrills:",
+      Array.from(completedProgramDrills)
+    );
+
+    const updatedDayData = {
+      ...dayData,
+      programs: dayData.programs.map(program => ({
+        ...program,
+        drills: program.drills.map(drill => {
+          const isCompleted = completedProgramDrills.has(drill.id);
+          console.log(
+            `🔄 Drill ${drill.id} (${drill.title}): server completed=${drill.completed}, state completed=${isCompleted}`
+          );
+          return {
+            ...drill,
+            completed: isCompleted, // Use our tracked state, not server data
+          };
+        }),
+      })),
+    };
+
+    console.log("🔄 Updated dayData:", updatedDayData);
+    return updatedDayData;
+  };
 
   const [noteToCoach, setNoteToCoach] = useState("");
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
@@ -501,7 +535,7 @@ function ClientProgramPage() {
       return isAvailable;
     });
 
-    return filteredRoutines;
+    return filteredRoutines as any[];
   };
 
   // Get day data from calendar data
@@ -676,14 +710,22 @@ function ClientProgramPage() {
     drillId: string,
     completed: boolean
   ) => {
+    console.log("🎯 handleMarkDrillComplete called with:", {
+      drillId,
+      completed,
+    });
+
     // Update the completion state immediately for real-time UI updates
     setCompletedProgramDrills(prev => {
       const newSet = new Set(prev);
       if (completed) {
         newSet.add(drillId);
+        console.log("🎯 Added drill to completedProgramDrills:", drillId);
       } else {
         newSet.delete(drillId);
+        console.log("🎯 Removed drill from completedProgramDrills:", drillId);
       }
+      console.log("🎯 New completedProgramDrills:", Array.from(newSet));
       return newSet;
     });
 
@@ -701,14 +743,35 @@ function ClientProgramPage() {
 
     // Then perform the actual mutation
     try {
-      await markDrillCompleteMutation.mutateAsync({
+      console.log("🎯 Calling markDrillCompleteMutation with:", {
+        drillId,
+        completed,
+      });
+
+      // Add timeout to catch hanging mutations
+      const mutationPromise = markDrillCompleteMutation.mutateAsync({
         drillId: drillId,
         completed,
       });
 
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Mutation timeout after 10 seconds")),
+          10000
+        )
+      );
+
+      await Promise.race([mutationPromise, timeoutPromise]);
+      console.log("🎯 markDrillCompleteMutation completed successfully");
+
       // Subtle refetch to ensure UI stays in sync
-      await refetchCalendar();
+      console.log("🎯 Refetching calendar data...");
+      console.log("🎯 refetchCalendar function:", refetchCalendar);
+      const refetchResult = await refetchCalendar();
+      console.log("🎯 refetchCalendar result:", refetchResult);
+      console.log("🎯 Calendar data refetched");
     } catch (error) {
+      console.error("🎯 ERROR: markDrillCompleteMutation failed:", error);
       // Revert optimistic update on error
       setCompletedProgramDrills(prev => {
         const newSet = new Set(prev);
@@ -1760,9 +1823,11 @@ function ClientProgramPage() {
             <ClientProgramDayModal
               isOpen={isDaySheetOpen}
               onClose={() => setIsDaySheetOpen(false)}
-              selectedDay={selectedDay}
+              selectedDay={updateDrillCompletionStatus(selectedDay)}
               selectedDate={selectedDate}
-              programs={selectedDay?.programs || []}
+              programs={
+                updateDrillCompletionStatus(selectedDay)?.programs || []
+              }
               routineAssignments={
                 selectedDate ? getRoutinesForDate(selectedDate) : []
               }

@@ -1337,8 +1337,63 @@ export const clientsRouter = router({
         }
       });
 
-      // Count completed drills (this already filters by date range)
-      completedDrills = completions.length;
+      // Count completed drills that match the drills we counted above
+      // We need to filter completions to only include those for drills that were actually assigned
+      const assignedDrillIds = new Set<string>();
+
+      // Collect all drill IDs that were assigned during the time period
+      programAssignments.forEach(assignment => {
+        if (!assignment.startDate) return;
+        const assignmentStartDate = new Date(assignment.startDate);
+
+        assignment.program.weeks.forEach((week, weekIndex) => {
+          week.days.forEach((day, dayIndex) => {
+            const dayDate = new Date(assignmentStartDate);
+            dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex - 1);
+
+            const hasReplacement = assignment.replacements?.some(
+              (replacement: any) => {
+                const replacementDate = new Date(replacement.replacedDate);
+                const replacementDateOnly = new Date(
+                  replacementDate.getFullYear(),
+                  replacementDate.getMonth(),
+                  replacementDate.getDate()
+                );
+                const dayDateOnly = new Date(
+                  dayDate.getFullYear(),
+                  dayDate.getMonth(),
+                  dayDate.getDate()
+                );
+                return replacementDateOnly.getTime() === dayDateOnly.getTime();
+              }
+            );
+
+            if (dayDate >= startDate && dayDate <= now && !hasReplacement) {
+              day.drills.forEach(drill => {
+                assignedDrillIds.add(drill.id);
+              });
+            }
+          });
+        });
+      });
+
+      // Add routine exercise IDs
+      routineAssignments.forEach(assignment => {
+        if (!assignment.startDate) return;
+        const assignmentStartDate = new Date(assignment.startDate);
+        if (assignmentStartDate >= startDate && assignmentStartDate <= now) {
+          assignment.routine.exercises.forEach(exercise => {
+            // Use the same key format as in the completion tracking
+            const routineExerciseKey = `${assignment.id}-${exercise.id}`;
+            assignedDrillIds.add(routineExerciseKey);
+          });
+        }
+      });
+
+      // Count only completions for drills that were actually assigned
+      completedDrills = completions.filter(completion =>
+        assignedDrillIds.has(completion.drillId)
+      ).length;
 
       // Calculate completion rate
       const completionRate =
@@ -1355,7 +1410,9 @@ export const clientsRouter = router({
         completionRate,
         programAssignmentsCount: programAssignments.length,
         routineAssignmentsCount: routineAssignments.length,
-        completionsCount: completions.length,
+        totalCompletionsCount: completions.length,
+        assignedDrillIdsCount: assignedDrillIds.size,
+        assignedDrillIds: Array.from(assignedDrillIds).slice(0, 10), // Show first 10 for debugging
       });
 
       return {
