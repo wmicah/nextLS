@@ -13,24 +13,24 @@ import {
 
 export default function MobileSwapRequests() {
   const {
-    data: swapRequests,
+    data: switchRequests,
     isLoading,
     refetch,
   } = trpc.timeSwap.getSwapRequests.useQuery();
 
-  const approveSwap = trpc.timeSwap.approveSwapRequest.useMutation({
+  const approveSwitch = trpc.timeSwap.approveSwapRequest.useMutation({
     onSuccess: () => {
       refetch();
     },
   });
 
-  const declineSwap = trpc.timeSwap.declineSwapRequest.useMutation({
+  const declineSwitch = trpc.timeSwap.declineSwapRequest.useMutation({
     onSuccess: () => {
       refetch();
     },
   });
 
-  const cancelSwap = trpc.timeSwap.cancelSwapRequest.useMutation({
+  const cancelSwitch = trpc.timeSwap.cancelSwapRequest.useMutation({
     onSuccess: () => {
       refetch();
     },
@@ -45,13 +45,13 @@ export default function MobileSwapRequests() {
   }
 
   if (
-    !swapRequests ||
-    (swapRequests.sent.length === 0 && swapRequests.received.length === 0)
+    !switchRequests ||
+    (switchRequests.sent.length === 0 && switchRequests.received.length === 0)
   ) {
     return (
       <div className="text-center py-8">
         <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-500" />
-        <p className="text-gray-400">No swap requests at this time</p>
+        <p className="text-gray-400">No switch requests at this time</p>
       </div>
     );
   }
@@ -59,13 +59,13 @@ export default function MobileSwapRequests() {
   return (
     <div className="space-y-6">
       {/* Received Requests */}
-      {swapRequests.received.length > 0 && (
+      {switchRequests.received.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4 text-white">
-            Requests to you ({swapRequests.received.length})
+            Requests to you ({switchRequests.received.length})
           </h3>
           <div className="space-y-4">
-            {swapRequests.received.map(request => (
+            {switchRequests.received.map(request => (
               <div
                 key={request.id}
                 className="border rounded-xl p-4 bg-gradient-to-br from-[#2A3133] to-[#353A3A] border-[#4A5A70]"
@@ -161,12 +161,12 @@ export default function MobileSwapRequests() {
                     <div className="flex gap-2">
                       <button
                         onClick={() =>
-                          approveSwap.mutate({ requestId: request.id })
+                          approveSwitch.mutate({ requestId: request.id })
                         }
-                        disabled={approveSwap.isPending}
+                        disabled={approveSwitch.isPending}
                         className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                       >
-                        {approveSwap.isPending ? (
+                        {approveSwitch.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <CheckCircle className="h-4 w-4" />
@@ -175,12 +175,12 @@ export default function MobileSwapRequests() {
                       </button>
                       <button
                         onClick={() =>
-                          declineSwap.mutate({ requestId: request.id })
+                          declineSwitch.mutate({ requestId: request.id })
                         }
-                        disabled={declineSwap.isPending}
+                        disabled={declineSwitch.isPending}
                         className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white px-3 py-2.5 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                       >
-                        {declineSwap.isPending ? (
+                        {declineSwitch.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <XCircle className="h-4 w-4" />
@@ -197,13 +197,13 @@ export default function MobileSwapRequests() {
       )}
 
       {/* Sent Requests */}
-      {swapRequests.sent.length > 0 && (
+      {switchRequests.sent.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4 text-white">
-            Your requests ({swapRequests.sent.length})
+            Your requests ({switchRequests.sent.length})
           </h3>
           <div className="space-y-4">
-            {swapRequests.sent.map(request => (
+            {switchRequests.sent.map(request => (
               <div
                 key={request.id}
                 className="border rounded-xl p-4 bg-gradient-to-br from-[#2A3133] to-[#353A3A] border-[#4A5A70]"
@@ -300,12 +300,12 @@ export default function MobileSwapRequests() {
                       </div>
                       <button
                         onClick={() =>
-                          cancelSwap.mutate({ swapRequestId: request.id })
+                          cancelSwitch.mutate({ swapRequestId: request.id })
                         }
-                        disabled={cancelSwap.isPending}
+                        disabled={cancelSwitch.isPending}
                         className="flex items-center gap-1 bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                       >
-                        {cancelSwap.isPending ? (
+                        {cancelSwitch.isPending ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
                           <XCircle className="h-3 w-3" />

@@ -87,7 +87,7 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
-              Request Time Swap
+              Request Time Switch
             </h2>
             <button
               onClick={onClose}
@@ -102,7 +102,7 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Choose a client to swap with
+                Choose a client to switch with
               </h3>
 
               {clientsLoading ? (
@@ -149,7 +149,7 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                 </button>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  Select events to swap
+                  Select events to switch
                 </h3>
               </div>
 
@@ -245,7 +245,7 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                 </button>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <CheckCircle className="h-5 w-5" />
-                  Confirm swap request
+                  Confirm switch request
                 </h3>
               </div>
 
@@ -343,7 +343,7 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                   ) : (
                     <CheckCircle className="h-4 w-4" />
                   )}
-                  Send Swap Request
+                  Send Switch Request
                 </button>
                 <button
                   onClick={reset}

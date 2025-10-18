@@ -19,7 +19,7 @@ import ProfilePictureUploader from "./ProfilePictureUploader";
 import RichMessageInput from "./RichMessageInput";
 import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
-import SwapRequestMessage from "./SwapRequestMessage";
+import SwitchRequestMessage from "./SwapRequestMessage";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 

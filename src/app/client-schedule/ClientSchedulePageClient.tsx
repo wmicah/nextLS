@@ -678,7 +678,7 @@ function ClientSchedulePageClient() {
                 }}
               >
                 <Users className="h-4 w-4" />
-                <span className="whitespace-nowrap">Swap Requests</span>
+                <span className="whitespace-nowrap">Switch Requests</span>
               </button>
             </div>
           </div>
@@ -1404,12 +1404,12 @@ function ClientSchedulePageClient() {
                                         className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
                                       >
                                         <ArrowRightLeft className="h-4 w-4" />
-                                        Request Swap
+                                        Request Switch
                                       </button>
                                     )}
                                   {!isPast && upcomingLessons.length === 0 && (
                                     <span className="text-xs text-gray-400">
-                                      No lessons to swap
+                                      No lessons to switch
                                     </span>
                                   )}
                                   {!isPast &&
@@ -1511,7 +1511,7 @@ function ClientSchedulePageClient() {
                       className="text-2xl font-bold"
                       style={{ color: "#C3BCC2" }}
                     >
-                      Time Swap Requests
+                      Time Switch Requests
                     </h2>
                     <button
                       onClick={() => setShowSwapRequests(false)}
@@ -1539,10 +1539,10 @@ function ClientSchedulePageClient() {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-bold text-white">
-                      Choose Your Lesson to Swap
+                      Choose Your Lesson to Switch
                     </h2>
                     <p className="text-gray-400 text-sm">
-                      Select which of your lessons you want to swap with{" "}
+                      Select which of your lessons you want to switch with{" "}
                       {selectedSwapLesson.clientId === currentClient?.id
                         ? selectedSwapLesson.client?.name ||
                           selectedSwapLesson.client?.email ||
@@ -1646,7 +1646,7 @@ function ClientSchedulePageClient() {
                                   )}
                                   {hasPendingRequest && (
                                     <span className="ml-2 text-xs text-yellow-400">
-                                      (Swap Request Pending)
+                                      (Switch Request Pending)
                                     </span>
                                   )}
                                   {hasPendingWithTarget &&
@@ -1676,7 +1676,7 @@ function ClientSchedulePageClient() {
                     <div className="text-center py-8">
                       <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
                       <p className="text-gray-400">
-                        No lessons available to swap
+                        No lessons available to switch
                       </p>
                     </div>
                   )}

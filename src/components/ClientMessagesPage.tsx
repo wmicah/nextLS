@@ -20,7 +20,7 @@ import ProfilePictureUploader from "./ProfilePictureUploader";
 import RichMessageInput from "./RichMessageInput";
 import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
-import SwapRequestMessage from "./SwapRequestMessage";
+import SwitchRequestMessage from "./SwapRequestMessage";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientMessagesPage from "./MobileClientMessagesPage";
 // Removed complex SSE hooks - using simple polling instead
@@ -645,7 +645,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                               message.data.type === "SWAP_APPROVAL" ||
                               message.data.type === "SWAP_DECLINE") && (
                               <div className="text-sm">
-                                <SwapRequestMessage
+                                <SwitchRequestMessage
                                   message={message}
                                   onResponse={() => {
                                     // Refresh conversations after swap response

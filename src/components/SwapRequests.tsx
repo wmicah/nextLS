@@ -54,7 +54,7 @@ export default function SwapRequests() {
           className="h-12 w-12 mx-auto mb-3"
           style={{ color: "#ABA4AA" }}
         />
-        <p style={{ color: "#ABA4AA" }}>No swap requests at this time</p>
+        <p style={{ color: "#ABA4AA" }}>No switch requests at this time</p>
       </div>
     );
   }
@@ -88,7 +88,7 @@ export default function SwapRequests() {
                         {request.requester.name}
                       </p>
                       <span className="text-sm" style={{ color: "#ABA4AA" }}>
-                        wants to swap times
+                        wants to switch times
                       </span>
                     </div>
 
@@ -215,7 +215,7 @@ export default function SwapRequests() {
                         ) : (
                           <CheckCircle className="h-4 w-4" />
                         )}
-                        Approve Swap
+                        Approve Switch
                       </button>
                       <button
                         onClick={() =>

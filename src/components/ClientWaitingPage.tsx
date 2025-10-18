@@ -52,13 +52,13 @@ export default function ClientWaitingPage() {
       icon: <Calendar className="h-8 w-8" />,
       title: "Schedule Management",
       description:
-        "View your coach's schedule, request lessons, and swap with other athletes within available time slots.",
+        "View your coach's schedule, request lessons, and switch with other athletes within available time slots.",
     },
     {
       icon: <MessageSquare className="h-8 w-8" />,
       title: "Coach Communication",
       description:
-        "Send videos, files, and messages to your coach. Confirm or deny lesson swaps and get feedback.",
+        "Send videos, files, and messages to your coach. Confirm or deny lesson switches and get feedback.",
     },
     {
       icon: <TrendingUp className="h-8 w-8" />,
@@ -97,7 +97,7 @@ export default function ClientWaitingPage() {
       number: "3",
       title: "Schedule Management",
       description:
-        "View your coach's schedule, request lessons, and swap with other athletes within available time slots.",
+        "View your coach's schedule, request lessons, and switch with other athletes within available time slots.",
     },
     {
       number: "4",

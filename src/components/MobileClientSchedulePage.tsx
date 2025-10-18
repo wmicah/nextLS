@@ -40,8 +40,8 @@ export default function MobileClientSchedulePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showSwapRequests, setShowSwapRequests] = useState(false);
-  const [selectedSwapLesson, setSelectedSwapLesson] = useState<any>(null);
+  const [showSwitchRequests, setShowSwitchRequests] = useState(false);
+  const [selectedSwitchLesson, setSelectedSwitchLesson] = useState<any>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [requestReason, setRequestReason] = useState("");
@@ -112,9 +112,11 @@ export default function MobileClientSchedulePage() {
   const { data: upcomingLessons = [] } =
     trpc.clientRouter.getClientUpcomingLessons.useQuery();
 
-  // Fetch swap requests
-  const { data: existingSwapRequests = [], isLoading: isLoadingSwapRequests } =
-    trpc.timeSwap.getSwapRequests.useQuery();
+  // Fetch switch requests
+  const {
+    data: existingSwitchRequests = [],
+    isLoading: isLoadingSwitchRequests,
+  } = trpc.timeSwap.getSwapRequests.useQuery();
 
   // Get current client info
   const { data: currentClient } = trpc.clientRouter.getCurrentClient.useQuery();
@@ -122,16 +124,16 @@ export default function MobileClientSchedulePage() {
   // Fetch coach's profile
   const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
 
-  // Swap mutation
-  const createSwapRequestMutation =
+  // Switch mutation
+  const createSwitchRequestMutation =
     trpc.timeSwap.createSwapRequestFromLesson.useMutation({
       onSuccess: () => {
-        setSelectedSwapLesson(null);
+        setSelectedSwitchLesson(null);
         utils.timeSwap.getSwapRequests.invalidate();
-        alert("Swap request sent successfully!");
+        alert("Switch request sent successfully!");
       },
       onError: (error: any) => {
-        alert(error.message || "Failed to create swap request");
+        alert(error.message || "Failed to create switch request");
       },
     });
 
@@ -157,11 +159,11 @@ export default function MobileClientSchedulePage() {
   const utils = trpc.useUtils();
 
   // Helper functions
-  const hasPendingSwapRequest = (lessonId: string) => {
-    if (isLoadingSwapRequests || !Array.isArray(existingSwapRequests)) {
+  const hasPendingSwitchRequest = (lessonId: string) => {
+    if (isLoadingSwitchRequests || !Array.isArray(existingSwitchRequests)) {
       return false;
     }
-    return existingSwapRequests.some(
+    return existingSwitchRequests.some(
       (request: any) =>
         (request.requesterEventId === lessonId ||
           request.targetEventId === lessonId) &&
@@ -170,10 +172,10 @@ export default function MobileClientSchedulePage() {
   };
 
   const hasPendingRequestWithTarget = (targetLesson: any) => {
-    if (isLoadingSwapRequests || !Array.isArray(existingSwapRequests)) {
+    if (isLoadingSwitchRequests || !Array.isArray(existingSwitchRequests)) {
       return false;
     }
-    return existingSwapRequests.some(
+    return existingSwitchRequests.some(
       (request: any) =>
         request.targetEventId === targetLesson.id &&
         request.status === "PENDING"
@@ -377,11 +379,11 @@ export default function MobileClientSchedulePage() {
         {/* Action Buttons */}
         <div className="flex gap-3">
           <button
-            onClick={() => setShowSwapRequests(true)}
+            onClick={() => setShowSwitchRequests(true)}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-md"
           >
             <Users className="h-4 w-4" />
-            Swap Requests
+            Switch Requests
           </button>
         </div>
 
@@ -597,11 +599,13 @@ export default function MobileClientSchedulePage() {
                               upcomingLessons.length > 0 &&
                               !hasPendingRequestWithTarget(lesson) && (
                                 <button
-                                  onClick={() => setSelectedSwapLesson(lesson)}
+                                  onClick={() =>
+                                    setSelectedSwitchLesson(lesson)
+                                  }
                                   className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded-lg text-xs"
                                 >
                                   <ArrowRightLeft className="h-3 w-3" />
-                                  Swap
+                                  Switch
                                 </button>
                               )}
                             {!isPast && hasPendingRequestWithTarget(lesson) && (
@@ -667,8 +671,8 @@ export default function MobileClientSchedulePage() {
         </div>
       )}
 
-      {/* Swap Requests Modal */}
-      {showSwapRequests && (
+      {/* Switch Requests Modal */}
+      {showSwitchRequests && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div
             className="rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
@@ -677,10 +681,10 @@ export default function MobileClientSchedulePage() {
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
-                  Time Swap Requests
+                  Time Switch Requests
                 </h2>
                 <button
-                  onClick={() => setShowSwapRequests(false)}
+                  onClick={() => setShowSwitchRequests(false)}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
                   <XCircle className="h-5 w-5" />
@@ -692,8 +696,8 @@ export default function MobileClientSchedulePage() {
         </div>
       )}
 
-      {/* Lesson Selection Modal for Swap */}
-      {selectedSwapLesson && (
+      {/* Lesson Selection Modal for Switch */}
+      {selectedSwitchLesson && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div
             className="rounded-2xl shadow-xl border p-4 w-full max-w-md max-h-[80vh] overflow-y-auto"
@@ -705,14 +709,14 @@ export default function MobileClientSchedulePage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-bold text-white">
-                  Choose Your Lesson to Swap
+                  Choose Your Lesson to Switch
                 </h2>
                 <p className="text-gray-400 text-xs">
-                  Select which of your lessons you want to swap
+                  Select which of your lessons you want to switch
                 </p>
               </div>
               <button
-                onClick={() => setSelectedSwapLesson(null)}
+                onClick={() => setSelectedSwitchLesson(null)}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <XCircle className="h-5 w-5" />
@@ -737,7 +741,7 @@ export default function MobileClientSchedulePage() {
                 Your Available Lessons:
               </h3>
 
-              {isLoadingSwapRequests ? (
+              {isLoadingSwitchRequests ? (
                 <div className="text-center py-6">
                   <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto mb-2" />
                   <p className="text-gray-400 text-xs">Loading...</p>
@@ -745,23 +749,23 @@ export default function MobileClientSchedulePage() {
               ) : upcomingLessons.length > 0 ? (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {upcomingLessons.map((myLesson: any, index: number) => {
-                    const hasPendingRequest = hasPendingSwapRequest(
+                    const hasPendingRequest = hasPendingSwitchRequest(
                       myLesson.id
                     );
                     const hasPendingWithTarget =
-                      hasPendingRequestWithTarget(selectedSwapLesson);
+                      hasPendingRequestWithTarget(selectedSwitchLesson);
                     const isDisabled =
                       hasPendingRequest ||
                       hasPendingWithTarget ||
-                      createSwapRequestMutation.isPending;
+                      createSwitchRequestMutation.isPending;
 
                     return (
                       <button
                         key={index}
                         onClick={() => {
                           if (!isDisabled) {
-                            createSwapRequestMutation.mutate({
-                              targetEventId: selectedSwapLesson.id,
+                            createSwitchRequestMutation.mutate({
+                              targetEventId: selectedSwitchLesson.id,
                               requesterEventId: myLesson.id,
                             });
                           }
@@ -790,7 +794,7 @@ export default function MobileClientSchedulePage() {
                             </p>
                             <p className="text-gray-300">{myLesson.title}</p>
                           </div>
-                          {createSwapRequestMutation.isPending ? (
+                          {createSwitchRequestMutation.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
                           ) : (
                             <ArrowRightLeft className="h-4 w-4 text-blue-400" />
@@ -804,14 +808,14 @@ export default function MobileClientSchedulePage() {
                 <div className="text-center py-6 bg-gray-800/30 rounded-lg">
                   <Calendar className="h-10 w-10 text-gray-500 mx-auto mb-2" />
                   <p className="text-gray-400 text-xs">
-                    No lessons available to swap
+                    No lessons available to switch
                   </p>
                 </div>
               )}
             </div>
 
             <button
-              onClick={() => setSelectedSwapLesson(null)}
+              onClick={() => setSelectedSwitchLesson(null)}
               className="w-full px-4 py-2 border rounded-lg text-sm"
               style={{
                 backgroundColor: "#2A2F2F",

@@ -90,7 +90,7 @@ export default function SwapRequestMessage({
         <div className="flex items-center gap-3">
           <CheckCircle className="h-5 w-5" style={{ color: "#10B981" }} />
           <h4 className="font-semibold" style={{ color: "#C3BCC2" }}>
-            Swap Request Approved
+            Switch Request Approved
           </h4>
         </div>
         <FormattedMessage content={message.content} />
@@ -105,7 +105,7 @@ export default function SwapRequestMessage({
         <div className="flex items-center gap-3">
           <XCircle className="h-5 w-5" style={{ color: "#EF4444" }} />
           <h4 className="font-semibold" style={{ color: "#C3BCC2" }}>
-            Swap Request Declined
+            Switch Request Declined
           </h4>
         </div>
         <FormattedMessage content={message.content} />
@@ -123,14 +123,14 @@ export default function SwapRequestMessage({
         <div className="flex items-center gap-3 mb-2">
           <XCircle className="h-5 w-5" style={{ color: "#DC2626" }} />
           <h4 className="font-semibold" style={{ color: "#C3BCC2" }}>
-            Swap Request Cancelled
+            Switch Request Cancelled
           </h4>
         </div>
         <div className="mb-2" style={{ color: "#ABA4AA" }}>
           <FormattedMessage content={message.content} />
         </div>
         <p className="text-sm" style={{ color: "#ABA4AA" }}>
-          {message.data.cancelledBy} has cancelled their swap request.
+          {message.data.cancelledBy} has cancelled their switch request.
         </p>
       </div>
     );
@@ -154,7 +154,7 @@ export default function SwapRequestMessage({
         <AlertCircle className="h-5 w-5 mt-0.5" style={{ color: "#4A5A70" }} />
         <div className="flex-1">
           <h3 className="font-medium mb-2" style={{ color: "#C3BCC2" }}>
-            Time Swap Request
+            Time Switch Request
           </h3>
           <div className="text-sm mb-3" style={{ color: "#ABA4AA" }}>
             <FormattedMessage content={message.content} />
@@ -271,7 +271,7 @@ export default function SwapRequestMessage({
               ) : (
                 <CheckCircle className="h-4 w-4" />
               )}
-              Approve Swap
+              Approve Switch
             </button>
             <button
               onClick={() => handleResponse("DECLINED")}
@@ -304,7 +304,7 @@ export default function SwapRequestMessage({
         ) : (
           <div className="text-center py-3">
             <p className="text-sm" style={{ color: "#ABA4AA" }}>
-              This swap request has been{" "}
+              This switch request has been{" "}
               {swapRequestStatus?.status?.toLowerCase()}.
             </p>
           </div>
