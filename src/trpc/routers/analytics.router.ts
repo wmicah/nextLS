@@ -924,10 +924,10 @@ export const analyticsRouter = router({
             completion.client.id === client.id &&
             assignedDrillIds.has(completion.drillId)
         ).length;
+        // For routine exercise completions, we need to check if the routine assignment was active
+        // during the date range, not individual drill IDs
         const routineExerciseCompletions = allRoutineExerciseCompletions.filter(
-          completion =>
-            completion.client.id === client.id &&
-            assignedDrillIds.has(completion.drillId)
+          completion => completion.client.id === client.id
         ).length;
         clientCompletions = drillCompletions + routineExerciseCompletions;
 
