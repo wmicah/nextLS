@@ -312,7 +312,7 @@ export default function SwapRequestMessage({
       ) : (
         <div className="text-center py-3">
           <p className="text-sm" style={{ color: "#ABA4AA" }}>
-            Waiting for response from {message.data.requesterName}...
+            Waiting for response from another client...
           </p>
         </div>
       )}

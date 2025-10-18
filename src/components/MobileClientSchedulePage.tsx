@@ -730,8 +730,8 @@ export default function MobileClientSchedulePage() {
                   <div>
                     <p className="font-medium text-blue-300 text-sm">
                       Target:{" "}
-                      {format(new Date(selectedSwapLesson.date), "MMM d")} at{" "}
-                      {format(new Date(selectedSwapLesson.date), "h:mm a")}
+                      {format(new Date(selectedSwitchLesson.date), "MMM d")} at{" "}
+                      {format(new Date(selectedSwitchLesson.date), "h:mm a")}
                     </p>
                   </div>
                 </div>

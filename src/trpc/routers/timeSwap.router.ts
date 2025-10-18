@@ -304,16 +304,16 @@ export const timeSwapRouter = router({
             conversationId: conversation.id,
             client1Id: currentClient.userId,
             client2Id: targetEvent.client.userId,
-            currentClientName: currentClient.name,
-            targetClientName: targetEvent.client.name,
+            currentClientName: "Another Client",
+            targetClientName: "Another Client",
           });
         } else {
           console.log("🔄 Existing conversation found:", {
             conversationId: conversation.id,
             client1Id: currentClient.userId,
             client2Id: targetEvent.client.userId,
-            currentClientName: currentClient.name,
-            targetClientName: targetEvent.client.name,
+            currentClientName: "Another Client",
+            targetClientName: "Another Client",
           });
         }
 
@@ -343,7 +343,7 @@ export const timeSwapRouter = router({
               swapRequestId: swapRequest.id,
               requesterEventId: input.requesterEventId,
               targetEventId: input.targetEventId,
-              requesterName: currentClient.name,
+              requesterName: "Another Client",
               requesterEventTitle: requesterEvent.title,
               targetEventTitle: targetEvent.title,
               requesterEventDate: requesterEvent.date,
@@ -397,7 +397,7 @@ export const timeSwapRouter = router({
             // Send push notification
             await sendMessageNotification(
               targetEvent.client.userId,
-              currentClient.name || currentClient.email || "Another Client",
+              "Another Client",
               message.content,
               conversation.id
             );
@@ -569,14 +569,12 @@ export const timeSwapRouter = router({
             data: {
               conversationId: conversation.id,
               senderId: currentClient.userId || "",
-              content: `Swap request cancelled. ${
-                currentClient.name || "Client"
-              } has cancelled their request to swap lessons.`,
+              content: `Switch request cancelled. Another client has cancelled their request to switch lessons.`,
               requiresAcknowledgment: false,
               data: {
                 type: "SWAP_CANCELLATION",
                 swapRequestId: swapRequest.id,
-                cancelledBy: currentClient.name || "Client",
+                cancelledBy: "Another Client",
               },
             },
           });
@@ -778,7 +776,7 @@ export const timeSwapRouter = router({
             userId: swapRequest.requesterEvent.coachId,
             type: "SCHEDULE_REQUEST",
             title: "Time Swap Approved",
-            message: `${swapRequest.requester.name} and ${currentClient.name} have swapped their lesson times.`,
+            message: `Two clients have switched their lesson times.`,
             data: {
               swapRequestId: input.requestId,
               requesterName: swapRequest.requester.name,
@@ -936,11 +934,11 @@ export const timeSwapRouter = router({
               userId: swapRequest.requesterEvent.coachId,
               type: "SCHEDULE_REQUEST",
               title: "Time Swap Approved",
-              message: `${swapRequest.requester.name} and ${currentClient.name} have swapped their lesson times.`,
+              message: `Two clients have switched their lesson times.`,
               data: {
                 swapRequestId: input.swapRequestId,
-                requesterName: swapRequest.requester.name,
-                targetName: currentClient.name,
+                requesterName: "Another Client",
+                targetName: "Another Client",
                 requesterEventTitle: swapRequest.requesterEvent.title,
                 targetEventTitle: swapRequest.targetEvent.title,
               },
@@ -1028,8 +1026,8 @@ export const timeSwapRouter = router({
                 data: {
                   type: "SWAP_DECLINE",
                   swapRequestId: input.swapRequestId,
-                  requesterName: swapRequest.requester.name,
-                  targetName: currentClient.name,
+                  requesterName: "Another Client",
+                  targetName: "Another Client",
                 },
               },
             });

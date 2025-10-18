@@ -46,7 +46,7 @@ function ClientSchedulePageClient() {
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [showSwapRequests, setShowSwapRequests] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedSwapLesson, setSelectedSwapLesson] = useState<any>(null);
+  const [selectedSwitchLesson, setSelectedSwitchLesson] = useState<any>(null);
   const [requestForm, setRequestForm] = useState({
     date: "",
     time: "",
@@ -298,7 +298,7 @@ function ClientSchedulePageClient() {
       onSuccess: data => {
         alert(data.message);
         // Close modals and refresh data
-        setSelectedSwapLesson(null);
+        setSelectedSwitchLesson(null);
         setShowDayOverviewModal(false);
         setSelectedDate(null);
         utils.clientRouter.getCoachScheduleForClient.invalidate();
@@ -315,7 +315,7 @@ function ClientSchedulePageClient() {
           alert(`Error creating swap request: ${error.message}`);
         }
         // Close the lesson selection modal on error
-        setSelectedSwapLesson(null);
+        setSelectedSwitchLesson(null);
       },
     });
 
@@ -1399,7 +1399,7 @@ function ClientSchedulePageClient() {
                                     !hasPendingRequestWithTarget(lesson) && (
                                       <button
                                         onClick={() => {
-                                          setSelectedSwapLesson(lesson);
+                                          setSelectedSwitchLesson(lesson);
                                         }}
                                         className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
                                       >
@@ -1527,7 +1527,7 @@ function ClientSchedulePageClient() {
           )}
 
           {/* Lesson Selection Modal for Swap */}
-          {selectedSwapLesson && (
+          {selectedSwitchLesson && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div
                 className="rounded-2xl shadow-xl border p-6 w-full max-w-md mx-4"
@@ -1543,16 +1543,16 @@ function ClientSchedulePageClient() {
                     </h2>
                     <p className="text-gray-400 text-sm">
                       Select which of your lessons you want to switch with{" "}
-                      {selectedSwapLesson.clientId === currentClient?.id
-                        ? selectedSwapLesson.client?.name ||
-                          selectedSwapLesson.client?.email ||
+                      {selectedSwitchLesson.clientId === currentClient?.id
+                        ? selectedSwitchLesson.client?.name ||
+                          selectedSwitchLesson.client?.email ||
                           "you"
                         : "this client"}
                     </p>
                   </div>
                   <button
                     onClick={() => {
-                      setSelectedSwapLesson(null);
+                      setSelectedSwitchLesson(null);
                     }}
                     className="text-gray-400 hover:text-white transition-colors"
                   >
@@ -1568,19 +1568,18 @@ function ClientSchedulePageClient() {
                         <p className="font-medium text-blue-900">
                           Target Lesson:{" "}
                           {new Date(
-                            selectedSwapLesson.date
+                            selectedSwitchLesson.date
                           ).toLocaleDateString()}{" "}
                           at{" "}
-                          {new Date(selectedSwapLesson.date).toLocaleTimeString(
-                            [],
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
+                          {new Date(
+                            selectedSwitchLesson.date
+                          ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </p>
                         <p className="text-sm text-blue-700">
-                          {selectedSwapLesson.title}
+                          {selectedSwitchLesson.title}
                         </p>
                       </div>
                     </div>
@@ -1602,7 +1601,7 @@ function ClientSchedulePageClient() {
                           myLesson.id
                         );
                         const hasPendingWithTarget =
-                          hasPendingRequestWithTarget(selectedSwapLesson);
+                          hasPendingRequestWithTarget(selectedSwitchLesson);
                         const isDisabled =
                           hasPendingRequest ||
                           hasPendingWithTarget ||
@@ -1614,7 +1613,7 @@ function ClientSchedulePageClient() {
                             onClick={() => {
                               if (!isDisabled) {
                                 createSwapRequestMutation.mutate({
-                                  targetEventId: selectedSwapLesson.id,
+                                  targetEventId: selectedSwitchLesson.id,
                                   requesterEventId: myLesson.id,
                                 });
                               }
@@ -1685,7 +1684,7 @@ function ClientSchedulePageClient() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
-                      setSelectedSwapLesson(null);
+                      setSelectedSwitchLesson(null);
                     }}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                     style={{

@@ -85,7 +85,7 @@ export default function SwapRequests() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <p className="font-medium" style={{ color: "#C3BCC2" }}>
-                        {request.requester.name}
+                        Another Client
                       </p>
                       <span className="text-sm" style={{ color: "#ABA4AA" }}>
                         wants to switch times
@@ -264,7 +264,7 @@ export default function SwapRequests() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <p className="font-medium" style={{ color: "#C3BCC2" }}>
-                        Request to {request.target.name}
+                        Request to another client
                       </p>
                       <span
                         className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
