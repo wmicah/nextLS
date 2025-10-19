@@ -18,6 +18,7 @@ import {
   validateAndCleanProgramData,
   logProgramCreation,
 } from "@/lib/program-debug-utils";
+import { CompleteEmailService } from "@/lib/complete-email-service";
 
 /**
  * Programs Router
@@ -1689,6 +1690,27 @@ export const programsRouter = router({
             },
           });
           assignments.push(assignment);
+        }
+      }
+
+      // Send email notifications to clients about program assignment
+      const emailService = CompleteEmailService.getInstance();
+      for (const client of clients) {
+        if (client.email) {
+          try {
+            await emailService.sendProgramAssigned(
+              client.email,
+              client.name || "Client",
+              coach.name || "Coach",
+              program.title
+            );
+            console.log(`📧 Program assignment email sent to ${client.email}`);
+          } catch (error) {
+            console.error(
+              `Failed to send program assignment email to ${client.email}:`,
+              error
+            );
+          }
         }
       }
 

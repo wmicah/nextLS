@@ -82,8 +82,13 @@ export async function POST(request: NextRequest) {
     // Check if the message requires acknowledgment (with fallback for legacy messages)
     if (!message.requiresAcknowledgment) {
       // For lesson reminder messages, we can still allow acknowledgment
-      if (message.content.includes("🔔 **Lesson Reminder**")) {
-        console.log("Lesson reminder detected, allowing acknowledgment");
+      if (
+        message.content.includes("🔔 **Lesson Reminder**") ||
+        message.content.includes("🔔 **Lesson Confirmation Required**")
+      ) {
+        console.log(
+          "Lesson reminder/confirmation detected, allowing acknowledgment"
+        );
       } else {
         return NextResponse.json(
           { error: "Message does not require acknowledgment" },
@@ -115,6 +120,67 @@ export async function POST(request: NextRequest) {
 
     console.log("Message acknowledged successfully");
 
+    // Check if this is a lesson confirmation message and handle it
+    if (message.content.includes("🔔 **Lesson Confirmation Required**")) {
+      console.log(
+        "Lesson confirmation acknowledgment detected, processing confirmation..."
+      );
+
+      try {
+        // Find the lesson reminder record for this message
+        const lessonReminder = await db.lessonReminder.findFirst({
+          where: {
+            eventId: {
+              in: await db.event
+                .findMany({
+                  where: {
+                    coachId: conversation.coachId || undefined,
+                    clientId: conversation.clientId,
+                    date: {
+                      gte: new Date(), // Future lessons only
+                    },
+                    status: "CONFIRMED",
+                    confirmationRequired: true,
+                  },
+                  select: { id: true },
+                })
+                .then(events => events.map(e => e.id)),
+            },
+            status: "SENT",
+          },
+          include: {
+            event: true,
+          },
+        });
+
+        if (lessonReminder) {
+          // Update the lesson reminder status
+          await db.lessonReminder.update({
+            where: { id: lessonReminder.id },
+            data: {
+              status: "CONFIRMED",
+              confirmedAt: new Date(),
+            },
+          });
+
+          // Update the lesson to mark as confirmed
+          await db.event.update({
+            where: { id: lessonReminder.eventId },
+            data: {
+              confirmedAt: new Date(),
+            },
+          });
+
+          console.log(
+            `✅ Lesson confirmation processed for lesson ${lessonReminder.eventId}`
+          );
+        }
+      } catch (error) {
+        console.error("Error processing lesson confirmation:", error);
+        // Don't fail the acknowledgment if confirmation processing fails
+      }
+    }
+
     // Automatically send confirmation message to the coach
     try {
       // Only send confirmation if this is a client acknowledging (not a coach)
@@ -124,7 +190,22 @@ export async function POST(request: NextRequest) {
         const clientName = conversation.client?.name || "Client";
         const coachName = conversation.coach?.name || "Coach";
 
-        const confirmationMessage = `✅ **Lesson Confirmed**
+        // Check if this is a lesson confirmation or regular acknowledgment
+        const isLessonConfirmation = message.content.includes(
+          "🔔 **Lesson Confirmation Required**"
+        );
+
+        const confirmationMessage = isLessonConfirmation
+          ? `✅ **Lesson Attendance Confirmed**
+
+Hi Coach ${coachName}!
+
+${clientName} has confirmed their attendance for the upcoming lesson.
+
+- **Client**: ${clientName}
+- **Confirmed at**: ${new Date().toLocaleString()}
+- **Status**: Attendance confirmed - lesson will proceed as scheduled`
+          : `✅ **Lesson Confirmed**
 
 Hi Coach ${coachName}!
 

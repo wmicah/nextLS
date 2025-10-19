@@ -227,58 +227,33 @@ export default function VideoViewerModal({
         </div>
       );
     } else if (item.isOnForm && item.onformId) {
-      // OnForm video
+      // OnForm video - show message to open on OnForm
+      console.log("🎥 Rendering OnForm video:", {
+        onformId: item.onformId,
+        url: item.url,
+        title: item.title,
+      });
+
       return (
         <div className="w-full h-full flex items-center justify-center relative">
-          {isVideoLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+          <div className="text-center p-8 max-w-lg">
+            <div className="text-8xl mb-6">🎥</div>
+            <h3 className="text-2xl font-bold text-white mb-4">OnForm Video</h3>
+            <p className="text-gray-300 mb-6 text-lg">
+              This OnForm video needs to be viewed on the OnForm platform. Click
+              the button below to open it in a new tab.
+            </p>
+            <div className="space-y-4">
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full px-6 py-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-lg font-semibold"
+              >
+                Open on OnForm
+              </a>
+              <p className="text-sm text-gray-400">Video ID: {item.onformId}</p>
             </div>
-          )}
-          <iframe
-            key={`onform-${videoKey}`}
-            width="100%"
-            height="100%"
-            src={`https://onform.net/embed/${item.onformId}`}
-            title={item.title}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-            allowFullScreen
-            className="w-full h-full rounded-lg transition-opacity duration-300"
-            style={{
-              pointerEvents: "auto",
-              backgroundColor: "#000",
-              opacity: isVideoLoading ? 0.5 : 1,
-            }}
-            onLoad={() => {
-              console.log("OnForm iframe loaded successfully");
-              setIsVideoLoading(false);
-            }}
-            onError={() => {
-              console.error("OnForm iframe failed to load");
-              setIsVideoLoading(false);
-            }}
-          />
-          {/* Fallback link in case iframe fails */}
-          <div className="absolute bottom-4 right-4">
-            <a
-              href={`https://onform.net/video/${item.onformId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-2 rounded-lg text-sm transition-all duration-200"
-              style={{
-                backgroundColor: "#F59E0B",
-                color: "#FFFFFF",
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#D97706";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "#F59E0B";
-              }}
-            >
-              Open on OnForm
-            </a>
           </div>
         </div>
       );

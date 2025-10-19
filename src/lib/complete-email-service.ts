@@ -270,6 +270,34 @@ export class CompleteEmailService {
     }
   }
 
+  async sendVideoAssigned(
+    clientEmail: string,
+    clientName: string,
+    coachName: string,
+    videoTitle: string
+  ): Promise<boolean> {
+    try {
+      const template = completeEmailTemplates.videoAssigned(
+        clientName,
+        coachName,
+        videoTitle
+      );
+
+      const result = await resend.emails.send({
+        from: this.fromEmail,
+        to: [clientEmail],
+        subject: template.subject,
+        html: template.html,
+      });
+
+      console.log("Video assignment email sent:", result);
+      return true;
+    } catch (error) {
+      console.error("Failed to send video assignment email:", error);
+      return false;
+    }
+  }
+
   // 7. ORGANIZATION & TEAM NOTIFICATIONS
   async sendOrganizationInvite(
     coachEmail: string,
@@ -450,6 +478,98 @@ export class CompleteEmailService {
       return true;
     } catch (error) {
       console.error("Failed to send test email:", error);
+      return false;
+    }
+  }
+
+  // 10. LESSON CONFIRMATION REMINDER
+  async sendLessonConfirmationReminder(
+    clientEmail: string,
+    clientName: string,
+    coachName: string,
+    lessonDate: string,
+    lessonTime: string,
+    hoursUntilLesson: number
+  ): Promise<boolean> {
+    try {
+      const template = completeEmailTemplates.lessonConfirmationReminder(
+        clientName,
+        coachName,
+        lessonDate,
+        lessonTime,
+        hoursUntilLesson
+      );
+
+      const result = await resend.emails.send({
+        from: this.fromEmail,
+        to: [clientEmail],
+        subject: template.subject,
+        html: template.html,
+      });
+
+      console.log("Lesson confirmation reminder email sent:", result);
+      return true;
+    } catch (error) {
+      console.error(
+        "Failed to send lesson confirmation reminder email:",
+        error
+      );
+      return false;
+    }
+  }
+
+  // 11. LESSON AUTO-CANCELLED
+  async sendLessonAutoCancelled(
+    clientEmail: string,
+    clientName: string,
+    coachName: string,
+    lessonDateTime: string
+  ): Promise<boolean> {
+    try {
+      const template = completeEmailTemplates.lessonAutoCancelled(
+        clientName,
+        coachName,
+        lessonDateTime
+      );
+
+      const result = await resend.emails.send({
+        from: this.fromEmail,
+        to: [clientEmail],
+        subject: template.subject,
+        html: template.html,
+      });
+
+      console.log("Lesson auto-cancellation email sent:", result);
+      return true;
+    } catch (error) {
+      console.error("Failed to send lesson auto-cancellation email:", error);
+      return false;
+    }
+  }
+
+  // DAILY DIGEST NOTIFICATIONS
+  async sendDailyDigest(
+    userEmail: string,
+    userName: string,
+    unreadCount: number
+  ): Promise<boolean> {
+    try {
+      const template = completeEmailTemplates.dailyDigest(
+        userName,
+        unreadCount
+      );
+
+      const result = await resend.emails.send({
+        from: this.fromEmail,
+        to: [userEmail],
+        subject: template.subject,
+        html: template.html,
+      });
+
+      console.log("Daily digest email sent:", result);
+      return true;
+    } catch (error) {
+      console.error("Failed to send daily digest email:", error);
       return false;
     }
   }

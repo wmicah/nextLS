@@ -18,21 +18,27 @@ export interface OnFormVideoData {
  * - https://onform.net/embed/12345
  * - https://app.onform.net/video/12345
  * - https://app.onform.net/embed/12345
+ * - https://link.getonform.com/view?id=BEuFtDTZaoCrP7fCpeV9
+ * - https://link.getonform.com/embed?id=BEuFtDTZaoCrP7fCpeV9
  */
 export function extractOnFormId(url: string): string | null {
-  if (!url || typeof url !== 'string') {
+  if (!url || typeof url !== "string") {
     return null;
   }
 
   // Clean the URL
   const cleanUrl = url.trim();
-  
+
   // OnForm URL patterns
   const patterns = [
+    // Traditional OnForm URLs
     /onform\.net\/video\/([a-zA-Z0-9_-]+)/,
     /onform\.net\/embed\/([a-zA-Z0-9_-]+)/,
     /app\.onform\.net\/video\/([a-zA-Z0-9_-]+)/,
     /app\.onform\.net\/embed\/([a-zA-Z0-9_-]+)/,
+    // New OnForm link formats
+    /link\.getonform\.com\/view\?id=([a-zA-Z0-9_-]+)/,
+    /link\.getonform\.com\/embed\?id=([a-zA-Z0-9_-]+)/,
   ];
 
   for (const pattern of patterns) {
@@ -54,9 +60,22 @@ export function isOnFormUrl(url: string): boolean {
 
 /**
  * Generate OnForm embed URL from video ID
+ * Converts various OnForm URL formats to embeddable URLs
  */
 export function generateOnFormEmbedUrl(onformId: string): string {
   return `https://onform.net/embed/${onformId}`;
+}
+
+/**
+ * Convert OnForm link URL to embeddable URL
+ * Handles the new link.getonform.com format
+ */
+export function convertOnFormLinkToEmbed(url: string): string | null {
+  const onformId = extractOnFormId(url);
+  if (!onformId) {
+    return null;
+  }
+  return generateOnFormEmbedUrl(onformId);
 }
 
 /**
@@ -64,7 +83,7 @@ export function generateOnFormEmbedUrl(onformId: string): string {
  */
 export function parseOnFormUrl(url: string): OnFormVideoData | null {
   const onformId = extractOnFormId(url);
-  
+
   if (!onformId) {
     return null;
   }
@@ -81,10 +100,10 @@ export function parseOnFormUrl(url: string): OnFormVideoData | null {
  * Validate OnForm video ID format
  */
 export function isValidOnFormId(id: string): boolean {
-  if (!id || typeof id !== 'string') {
+  if (!id || typeof id !== "string") {
     return false;
   }
-  
+
   // OnForm IDs are typically alphanumeric with underscores and hyphens
   const onformIdPattern = /^[a-zA-Z0-9_-]+$/;
   return onformIdPattern.test(id) && id.length > 0;
@@ -99,6 +118,3 @@ export function getOnFormThumbnailUrl(onformId: string): string | null {
   // This would need to be implemented with OnForm API integration
   return null;
 }
-
-
-

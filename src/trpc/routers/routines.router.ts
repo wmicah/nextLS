@@ -14,6 +14,7 @@ import {
 } from "@/lib/youtube";
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+import { CompleteEmailService } from "@/lib/complete-email-service";
 
 /**
  * Routines Router
@@ -467,6 +468,27 @@ export const routinesRouter = router({
           })
         )
       );
+
+      // Send email notifications to clients about routine assignment
+      const emailService = CompleteEmailService.getInstance();
+      for (const client of clients) {
+        if (client.email) {
+          try {
+            await emailService.sendWorkoutAssigned(
+              client.email,
+              client.name || "Client",
+              coach.name || "Coach",
+              routine.name
+            );
+            console.log(`📧 Routine assignment email sent to ${client.email}`);
+          } catch (error) {
+            console.error(
+              `Failed to send routine assignment email to ${client.email}:`,
+              error
+            );
+          }
+        }
+      }
 
       return {
         success: true,

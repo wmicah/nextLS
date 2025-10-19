@@ -707,8 +707,12 @@ export default function AdminDashboard() {
               <form
                 onSubmit={async e => {
                   e.preventDefault();
-                  if (!selectedFile) {
-                    alert("Please select a file to upload");
+
+                  // Check if either a file is selected OR an OnForm URL is provided
+                  if (!selectedFile && !newResource.onformUrl) {
+                    alert(
+                      "Please either select a file to upload or provide an OnForm URL"
+                    );
                     return;
                   }
 
@@ -726,9 +730,19 @@ export default function AdminDashboard() {
 
                     // Check if OnForm URL is provided
                     if (newResource.onformUrl) {
+                      console.log(
+                        "Processing OnForm URL:",
+                        newResource.onformUrl
+                      );
+
                       // Import OnForm utilities
                       const { extractOnFormId, isOnFormUrl } = await import(
                         "@/lib/onform-utils"
+                      );
+
+                      console.log(
+                        "OnForm URL validation:",
+                        isOnFormUrl(newResource.onformUrl)
                       );
 
                       if (isOnFormUrl(newResource.onformUrl)) {
@@ -736,7 +750,18 @@ export default function AdminDashboard() {
                         fileUrl = newResource.onformUrl;
                         isOnForm = true;
                         resourceType = "video";
+
+                        console.log("OnForm import successful:", {
+                          onformId,
+                          fileUrl,
+                          isOnForm,
+                          resourceType,
+                        });
                       } else {
+                        console.error(
+                          "Invalid OnForm URL format:",
+                          newResource.onformUrl
+                        );
                         throw new Error("Invalid OnForm URL format");
                       }
                     } else {
@@ -901,10 +926,20 @@ export default function AdminDashboard() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Training Video File *
+                    Training Video File{" "}
+                    {!newResource.onformUrl
+                      ? "*"
+                      : "(Optional if OnForm URL provided)"}
                   </label>
                   {!selectedFile ? (
                     <div className="border-2 border-dashed border-[#4A5A70] rounded-lg p-6 text-center hover:border-[#606364] transition-colors">
+                      {newResource.onformUrl && (
+                        <div className="mb-4 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                          <p className="text-green-400 text-sm">
+                            ✓ OnForm URL provided - file upload is optional
+                          </p>
+                        </div>
+                      )}
                       <UploadButton<OurFileRouter, "videoUploader">
                         endpoint="videoUploader"
                         onClientUploadComplete={res => {

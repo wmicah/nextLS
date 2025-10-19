@@ -51,12 +51,16 @@ export default function OnFormImportModal({
 
   const utils = trpc.useUtils();
 
+  // Check authentication status
+  const { data: authData } = trpc.authCallback.useQuery();
+
   // Fetch existing categories
   const { data: categoriesData = [] } =
     trpc.libraryResources.getCategories.useQuery();
 
   const importOnFormVideo = trpc.library.importOnFormVideo.useMutation({
-    onSuccess: () => {
+    onSuccess: data => {
+      console.log("🎉 OnForm import successful:", data);
       console.log("🎉 OnForm import successful, invalidating cache...");
       utils.library.list.invalidate();
       utils.library.getStats.invalidate();
@@ -68,13 +72,55 @@ export default function OnFormImportModal({
       setDescription("");
     },
     onError: error => {
-      console.error("OnForm import error:", error);
-      alert(`Import failed: ${error.message}`);
+      console.error("❌ OnForm import error:", error);
+      console.error("❌ OnForm import error details:", {
+        message: error.message,
+        code: error.data?.code,
+        httpStatus: error.data?.httpStatus,
+        stack: (error as any).stack,
+      });
+
+      // Check if it's an authentication error
+      if (
+        error.data?.code === "UNAUTHORIZED" ||
+        error.message.includes("UNAUTHORIZED")
+      ) {
+        alert(
+          "You need to log in to import videos. Please refresh the page and try again."
+        );
+        // Optionally redirect to login
+        window.location.href = "/api/auth/login";
+      } else {
+        alert(`Import failed: ${error.message}`);
+      }
     },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check authentication first
+    if (!authData?.success || !authData?.user?.id) {
+      alert(
+        "You need to be logged in to import videos. Please refresh the page and try again."
+      );
+      return;
+    }
+
+    console.log("🚀 OnForm import form submitted with data:", {
+      url,
+      category,
+      customCategory,
+      showCustomInput,
+      title,
+      description,
+      importMode,
+      authData: {
+        success: authData.success,
+        userId: authData.user?.id,
+        userRole: authData.user?.role,
+      },
+    });
 
     // Use custom category if provided, otherwise use selected category
     const finalCategory = showCustomInput ? customCategory.trim() : category;
@@ -86,6 +132,13 @@ export default function OnFormImportModal({
 
     if (importMode === "single") {
       // Single video import
+      console.log("🚀 Starting single OnForm import with:", {
+        url,
+        category: finalCategory,
+        customTitle: title || undefined,
+        customDescription: description || undefined,
+      });
+
       importOnFormVideo.mutate({
         url,
         category: finalCategory,
@@ -94,6 +147,7 @@ export default function OnFormImportModal({
       });
     } else {
       // Batch import
+      console.log("🚀 Starting batch OnForm import");
       await handleBatchImport(finalCategory);
     }
   };
@@ -247,7 +301,7 @@ export default function OnFormImportModal({
                 type="url"
                 value={url}
                 onChange={e => setUrl(e.target.value)}
-                placeholder="https://onform.net/video/12345 or https://onform.net/embed/12345"
+                placeholder="https://onform.net/video/12345 or https://link.getonform.com/view?id=BEuFtDTZaoCrP7fCpeV9"
                 required
                 disabled={isImporting}
                 className="w-full px-3 py-2 rounded-lg border"
@@ -265,8 +319,8 @@ export default function OnFormImportModal({
                   placeholder={[
                     "Paste OnForm video URLs here (one per line)",
                     "https://onform.net/video/12345",
-                    "https://onform.net/video/67890",
-                    "https://onform.net/video/11111",
+                    "https://link.getonform.com/view?id=BEuFtDTZaoCrP7fCpeV9",
+                    "https://link.getonform.com/view?id=67890",
                     "...and so on",
                   ].join("\n")}
                   required

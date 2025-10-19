@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
 import { z } from "zod";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+import { CompleteEmailService } from "@/lib/complete-email-service";
 
 /**
  * User Router
@@ -120,6 +121,23 @@ export const userRouter = router({
               },
             },
           });
+
+          // Send email notification to coach about new client request
+          try {
+            const emailService = CompleteEmailService.getInstance();
+            await emailService.sendNewClientRequest(
+              coach.email,
+              coach.name || "Coach",
+              updatedUser.name || "New Client",
+              updatedUser.email
+            );
+            console.log(`📧 New client request email sent to ${coach.email}`);
+          } catch (error) {
+            console.error(
+              `Failed to send new client request email to ${coach.email}:`,
+              error
+            );
+          }
 
           // Create client record WITHOUT coach assignment (pending approval)
           await db.client.upsert({

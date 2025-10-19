@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
- directUrl = env("DIRECT_URL")
+ //directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -72,6 +72,7 @@ model User {
   primaryCoachClients      Client[]                @relation("PrimaryCoachClients")
   coachClientAssignments   ClientCoachAssignment[] @relation("CoachClientAssignments")
   assignedByMe             ClientCoachAssignment[] @relation("AssignedBy")
+  lessonReminders          LessonReminder[]
 
   @@map("users")
 }
@@ -119,6 +120,7 @@ model Client {
   swapRequestsSent     TimeSwapRequest[]       @relation("SwapRequester")
   swapRequestsReceived TimeSwapRequest[]       @relation("SwapTarget")
   videos               Video[]
+  reminders           LessonReminder[]
   
   // Organization relationships
   organization         Organization?           @relation("OrganizationClients", fields: [organizationId], references: [id])
@@ -237,11 +239,18 @@ model Event {
   startTime      DateTime?
   endTime        DateTime?
   type           String?
+  // Reminder system fields
+  reminderSent   Boolean           @default(false)
+  reminderSentAt DateTime?
+  confirmationRequired Boolean     @default(false)
+  confirmationDeadline DateTime?
+  confirmedAt    DateTime?
   client         Client?           @relation(fields: [clientId], references: [id], onDelete: Cascade)
   coach          User              @relation("CoachEvents", fields: [coachId], references: [id], onDelete: Cascade)
   organization   Organization?     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   swapRequestsAsRequester TimeSwapRequest[] @relation("SwapRequesterEvent")
   swapRequestsAsTarget    TimeSwapRequest[] @relation("SwapTargetEvent")
+  reminders      LessonReminder[]
 
   @@map("events")
 }
@@ -885,6 +894,26 @@ model TimeSwapRequest {
   @@map("time_swap_requests")
 }
 
+model LessonReminder {
+  id                String            @id @default(cuid())
+  eventId           String
+  clientId          String
+  coachId           String
+  reminderType      ReminderType
+  sentAt            DateTime          @default(now())
+  confirmationToken String            @unique
+  expiresAt         DateTime
+  confirmedAt       DateTime?
+  status            ReminderStatus    @default(SENT)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  event             Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  client            Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach             User              @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@map("lesson_reminders")
+}
+
 model AccountDeletionLog {
   id        String   @id @default(cuid())
   userId    String
@@ -926,6 +955,18 @@ enum EventStatus {
   PENDING
   CONFIRMED
   DECLINED
+  CANCELLED
+}
+
+enum ReminderType {
+  LESSON_REMINDER
+  CONFIRMATION_REQUIRED
+}
+
+enum ReminderStatus {
+  SENT
+  CONFIRMED
+  EXPIRED
   CANCELLED
 }
 

@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
 import { z } from "zod";
 import { ensureUserId } from "./_helpers";
+import { CompleteEmailService } from "@/lib/complete-email-service";
 
 /**
  * Messaging Router
@@ -242,6 +243,11 @@ export const messagingRouter = router({
             : conversation.coachId;
 
         if (recipientId) {
+          // Get recipient information for email notification
+          const recipient = await db.user.findFirst({
+            where: { id: recipientId },
+            select: { name: true, email: true },
+          });
           sendToUser(recipientId, {
             type: "new_message",
             data: {
@@ -256,6 +262,27 @@ export const messagingRouter = router({
             input.content,
             input.conversationId
           );
+
+          // Send email notification for new messages
+          if (recipient?.email) {
+            try {
+              const emailService = CompleteEmailService.getInstance();
+              await emailService.sendNewMessage(
+                recipient.email,
+                recipient.name || "User",
+                message.sender.name || message.sender.email,
+                input.content.length > 100
+                  ? input.content.substring(0, 100) + "..."
+                  : input.content
+              );
+              console.log(`📧 New message email sent to ${recipient.email}`);
+            } catch (error) {
+              console.error(
+                `Failed to send new message email to ${recipient.email}:`,
+                error
+              );
+            }
+          }
 
           const unreadCount = await db.message.count({
             where: {

@@ -14,6 +14,7 @@ import {
 } from "@/lib/youtube";
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+import { CompleteEmailService } from "@/lib/complete-email-service";
 
 /**
  * Scheduling Router
@@ -154,6 +155,8 @@ export const schedulingRouter = router({
           status: "CONFIRMED", // Coach-scheduled lessons are automatically confirmed
           clientId: input.clientId, // Use Client.id directly
           coachId: ensureUserId(user.id),
+          type: "LESSON", // Mark as lesson type for reminder system
+          // Reminder system will automatically handle 48-hour reminders
         },
       });
 
@@ -178,13 +181,31 @@ export const schedulingRouter = router({
         });
       }
 
-      // TODO: Send email notification if requested
+      // Send email notification if requested
       if (input.sendEmail && client.email) {
-        // This would integrate with your email service
-        // For now, we'll just log it
-        console.log(
-          `Email notification would be sent to ${client.email} for lesson on ${utcLessonDate}`
-        );
+        try {
+          const emailService = CompleteEmailService.getInstance();
+          // Format the lesson time for the email
+          const lessonTime = utcLessonDate.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
+
+          await emailService.sendLessonScheduled(
+            client.email,
+            client.name || "Client",
+            coach?.name || "Coach",
+            utcLessonDate.toLocaleDateString(),
+            lessonTime
+          );
+          console.log(`📧 Lesson scheduled email sent to ${client.email}`);
+        } catch (error) {
+          console.error(
+            `Failed to send lesson scheduled email to ${client.email}:`,
+            error
+          );
+        }
       }
 
       return lesson;

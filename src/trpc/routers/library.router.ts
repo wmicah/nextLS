@@ -14,6 +14,7 @@ import {
 } from "@/lib/youtube";
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+import { CompleteEmailService } from "@/lib/complete-email-service";
 
 /**
  * Library Router
@@ -425,6 +426,37 @@ export const libraryRouter = router({
           notes: input.notes,
         },
       });
+
+      // Send email notification to client about video assignment
+      if (client.email) {
+        try {
+          // Get video details for the email
+          const video = await db.libraryResource.findFirst({
+            where: { id: input.videoId },
+            select: { title: true, description: true },
+          });
+
+          // Get coach details
+          const coach = await db.user.findFirst({
+            where: { id: ensureUserId(user.id) },
+            select: { name: true, email: true },
+          });
+
+          const emailService = CompleteEmailService.getInstance();
+          await emailService.sendVideoAssigned(
+            client.email,
+            client.name || "Client",
+            coach?.name || "Coach",
+            video?.title || "New Video Assignment"
+          );
+          console.log(`📧 Video assignment email sent to ${client.email}`);
+        } catch (error) {
+          console.error(
+            `Failed to send video assignment email to ${client.email}:`,
+            error
+          );
+        }
+      }
 
       return assignment;
     }),
@@ -1225,8 +1257,15 @@ export const libraryRouter = router({
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
+        console.log("🔍 OnForm import - User session:", {
+          hasUser: !!user,
+          userId: user?.id,
+          userEmail: user?.email,
+        });
+
         if (!user?.id) {
           console.error("❌ OnForm import failed: No user ID");
+          console.error("❌ OnForm import - Full user object:", user);
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
 
@@ -1248,9 +1287,8 @@ export const libraryRouter = router({
         console.log("✅ Coach verification passed");
 
         // Import OnForm utilities
-        const { extractOnFormId, isOnFormUrl } = await import(
-          "@/lib/onform-utils"
-        );
+        const { extractOnFormId, isOnFormUrl, convertOnFormLinkToEmbed } =
+          await import("@/lib/onform-utils");
 
         if (!isOnFormUrl(input.url)) {
           console.error("❌ OnForm import failed: Invalid URL");
@@ -1270,6 +1308,8 @@ export const libraryRouter = router({
 
         console.log("✅ OnForm video ID extracted:", onformId);
 
+        console.log("✅ OnForm original URL:", input.url);
+
         // Use transaction to ensure data consistency
         const newResource = await db.$transaction(async tx => {
           const resource = await tx.libraryResource.create({
@@ -1278,7 +1318,9 @@ export const libraryRouter = router({
               description: input.customDescription || "Imported from OnForm",
               category: input.category,
               type: "video",
-              url: input.url,
+              url: input.url, // Store the original OnForm share URL
+              onformId: onformId,
+              isOnForm: true,
               coachId: ensureUserId(user.id),
               views: 0,
               rating: 0,

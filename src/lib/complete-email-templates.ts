@@ -549,6 +549,66 @@ export const completeEmailTemplates = {
     `,
   }),
 
+  videoAssigned: (
+    clientName: string,
+    coachName: string,
+    videoTitle: string
+  ) => ({
+    subject: `New Video Assignment from ${coachName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+            New Video Assignment
+          </h1>
+          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">
+            NextLevel Coaching Platform
+          </p>
+        </div>
+        
+        <div style="padding: 40px 30px;">
+          <h2 style="color: #2D3748; margin: 0 0 20px 0; font-size: 24px;">
+            Hi ${clientName}!
+          </h2>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 0 0 20px 0; font-size: 16px;">
+            Your coach <strong>${coachName}</strong> has assigned you a new video to watch: 
+            <strong>${videoTitle}</strong>.
+          </p>
+          
+          <div style="background: #F9FAFB; border: 1px solid #D1D5DB; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #374151; margin: 0 0 10px 0; font-size: 18px;">
+              Video Assignment Details:
+            </h3>
+            <p style="color: #374151; margin: 0; font-size: 16px;">
+              <strong>Video:</strong> ${videoTitle}<br>
+              <strong>Coach:</strong> ${coachName}<br>
+              <strong>Assigned Date:</strong> ${new Date().toLocaleDateString()}
+            </p>
+          </div>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 20px 0; font-size: 16px;">
+            Log in to your dashboard to watch the video and continue your training.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://nxlvlcoach.com/client-dashboard" 
+               style="background: #6B7280; color: #ffffff; padding: 15px 30px; text-decoration: none; 
+                      border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+              View Assignment
+            </a>
+          </div>
+          
+          <div style="border-top: 1px solid #E5E7EB; padding-top: 20px; margin-top: 30px;">
+            <p style="color: #6B7280; font-size: 14px; margin: 0;">
+              This is an automated notification from NextLevel Coaching Platform.
+            </p>
+          </div>
+        </div>
+      </div>
+    `,
+  }),
+
   // 7. ORGANIZATION & TEAM NOTIFICATIONS
   organizationInvite: (
     coachName: string,
@@ -742,6 +802,198 @@ export const completeEmailTemplates = {
         <div style="background: #F7FAFC; padding: 20px; text-align: center; border-top: 1px solid #E2E8F0;">
           <p style="color: #718096; font-size: 12px; margin: 0;">
             © 2024 NextLevel Coaching. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+  }),
+
+  // 10. LESSON CONFIRMATION REMINDER
+  lessonConfirmationReminder: (
+    clientName: string,
+    coachName: string,
+    lessonDate: string,
+    lessonTime: string,
+    hoursUntilLesson: number
+  ) => ({
+    subject: `Lesson Confirmation Required - ${lessonDate} at ${lessonTime}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+            Lesson Confirmation Required
+          </h1>
+          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">
+            Please confirm your attendance within 24 hours
+          </p>
+        </div>
+        
+        <div style="padding: 40px 30px;">
+          <h2 style="color: #2D3748; margin: 0 0 20px 0; font-size: 24px;">
+            Hi ${clientName}!
+          </h2>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 20px 0; font-size: 16px;">
+            Your lesson with <strong>Coach ${coachName}</strong> is scheduled for <strong>${lessonDate}</strong> at <strong>${lessonTime}</strong> (in ${hoursUntilLesson} hours).
+          </p>
+          
+          <div style="background: #FEF3C7; border: 2px solid #F59E0B; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="color: #92400E; margin: 0; font-size: 16px; font-weight: bold;">
+              IMPORTANT: Please confirm your attendance within 24 hours or your spot will be released.
+            </p>
+          </div>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 20px 0; font-size: 16px;">
+            To confirm your attendance:
+          </p>
+          
+          <ol style="color: #4A5568; line-height: 1.6; margin: 20px 0; font-size: 16px; padding-left: 20px;">
+            <li>Log into your NextLevel Coaching account</li>
+            <li>Go to your Messages section</li>
+            <li>Find the lesson confirmation message from Coach ${coachName}</li>
+            <li>Click the "Acknowledge" button to confirm your attendance</li>
+          </ol>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 20px 0; font-size: 16px;">
+            If you can't make it, please let Coach ${coachName} know as soon as possible so they can offer the spot to someone else.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://nxlvlcoach.com/messages" 
+               style="background: #6B7280; color: #ffffff; padding: 15px 30px; text-decoration: none; 
+                      border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+              Go to Messages
+            </a>
+          </div>
+          
+          <p style="color: #718096; font-size: 14px; margin: 30px 0 0 0;">
+            Best regards,<br>
+            Coach ${coachName}
+          </p>
+        </div>
+        
+        <div style="background: #F7FAFC; padding: 20px; text-align: center; border-top: 1px solid #E2E8F0;">
+          <p style="color: #718096; font-size: 12px; margin: 0;">
+            © 2024 NextLevel Coaching. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+  }),
+
+  // 11. LESSON AUTO-CANCELLED
+  lessonAutoCancelled: (
+    clientName: string,
+    coachName: string,
+    lessonDateTime: string
+  ) => ({
+    subject: `Lesson Cancelled - ${lessonDateTime}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+            Lesson Cancelled
+          </h1>
+          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">
+            Automatic cancellation due to no confirmation
+          </p>
+        </div>
+        
+        <div style="padding: 40px 30px;">
+          <h2 style="color: #2D3748; margin: 0 0 20px 0; font-size: 24px;">
+            Hi ${clientName},
+          </h2>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 20px 0; font-size: 16px;">
+            Your lesson scheduled for <strong>${lessonDateTime}</strong> has been automatically cancelled because we didn't receive confirmation within the required timeframe.
+          </p>
+          
+          <div style="background: #FEE2E2; border: 2px solid #DC2626; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="color: #991B1B; margin: 0; font-size: 16px; font-weight: bold;">
+              The time slot is now available for other bookings.
+            </p>
+          </div>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 20px 0; font-size: 16px;">
+            If you'd like to reschedule, please let Coach ${coachName} know and they'll help you find a new time.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://nxlvlcoach.com/messages" 
+               style="background: #6B7280; color: #ffffff; padding: 15px 30px; text-decoration: none; 
+                      border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+              Contact Coach
+            </a>
+          </div>
+          
+          <p style="color: #718096; font-size: 14px; margin: 30px 0 0 0;">
+            Best regards,<br>
+            Coach ${coachName}
+          </p>
+        </div>
+        
+        <div style="background: #F7FAFC; padding: 20px; text-align: center; border-top: 1px solid #E2E8F0;">
+          <p style="color: #718096; font-size: 12px; margin: 0;">
+            © 2024 NextLevel Coaching. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+  }),
+
+  // DAILY DIGEST NOTIFICATIONS
+  dailyDigest: (userName: string, unreadCount: number) => ({
+    subject: `Daily Summary - ${unreadCount} unread message${
+      unreadCount !== 1 ? "s" : ""
+    }`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+            Daily Summary
+          </h1>
+          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">
+            Your NextLevel Coaching Updates
+          </p>
+        </div>
+        
+        <div style="padding: 40px 30px;">
+          <h2 style="color: #2D3748; margin: 0 0 20px 0; font-size: 24px;">
+            Hi ${userName}!
+          </h2>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 0 0 20px 0; font-size: 16px;">
+            You have <strong>${unreadCount} unread message${
+      unreadCount !== 1 ? "s" : ""
+    }</strong> in your NextLevel Coaching account.
+          </p>
+          
+          <div style="background: #F7FAFC; border-left: 4px solid #4299E1; padding: 20px; margin: 20px 0;">
+            <p style="color: #2D3748; margin: 0; font-size: 16px; font-weight: 600;">
+              Don't miss important updates from your coach!
+            </p>
+            <p style="color: #4A5568; margin: 10px 0 0 0; font-size: 14px;">
+              Log in to your dashboard to view and respond to your messages.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${
+              process.env.NEXT_PUBLIC_APP_URL || "https://nextlevelcoaching.com"
+            }/dashboard" 
+               style="background: #4299E1; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+              View Messages
+            </a>
+          </div>
+          
+          <p style="color: #718096; font-size: 14px; margin: 30px 0 0 0; text-align: center;">
+            This is a daily summary. You can adjust your notification preferences in your account settings.
+          </p>
+        </div>
+        
+        <div style="background: #F7FAFC; padding: 20px; text-align: center; border-top: 1px solid #E2E8F0;">
+          <p style="color: #718096; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} NextLevel Coaching. All rights reserved.
           </p>
         </div>
       </div>

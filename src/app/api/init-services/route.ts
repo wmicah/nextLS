@@ -1,39 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeLessonReminderService } from "@/lib/startup";
+import appStartupService from "@/lib/app-startup";
 
 export async function POST(request: NextRequest) {
   try {
-    // Only allow initialization in production or when explicitly requested
-    if (process.env.NODE_ENV === "development") {
-      return NextResponse.json({
-        success: true,
-        message: "Services initialization skipped in development",
-      });
-    }
+    console.log("🚀 Initializing app services...");
 
-    // Initialize the lesson reminder service
-    const success = await initializeLessonReminderService();
+    await appStartupService.initializeServices();
 
-    if (success) {
-      return NextResponse.json({
-        success: true,
-        message: "Services initialized successfully",
-      });
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to initialize services",
-        },
-        { status: 500 }
-      );
-    }
+    const status = appStartupService.getStatus();
+
+    return NextResponse.json({
+      success: true,
+      message: "App services initialized successfully",
+      status,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
-    console.error("Error initializing services:", error);
+    console.error("Error initializing app services:", error);
     return NextResponse.json(
       {
-        success: false,
-        message: "Error initializing services",
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -45,4 +32,3 @@ export async function GET() {
     message: "Use POST to initialize services",
   });
 }
-
