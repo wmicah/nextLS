@@ -86,6 +86,7 @@ interface DayData {
   completedDrills: number;
   drills: Drill[];
   expectedTime: number;
+  videoAssignments?: any[];
 }
 
 export default function MobileClientProgramPage() {
@@ -96,6 +97,9 @@ export default function MobileClientProgramPage() {
   const [selectedDayRoutineAssignments, setSelectedDayRoutineAssignments] =
     useState<any[]>([]);
   const [completedProgramDrills, setCompletedProgramDrills] = useState<
+    Set<string>
+  >(new Set());
+  const [completedVideoAssignments, setCompletedVideoAssignments] = useState<
     Set<string>
   >(new Set());
 
@@ -154,6 +158,8 @@ export default function MobileClientProgramPage() {
     trpc.clientRouter.sendNoteToCoach.useMutation();
   const addCommentToDrillMutation =
     trpc.clientRouter.addCommentToDrill.useMutation();
+  const markVideoAssignmentCompleteMutation =
+    trpc.clientRouter.markVideoAssignmentComplete.useMutation();
 
   const {
     data: calendarData,
@@ -246,6 +252,17 @@ export default function MobileClientProgramPage() {
           return serverCompletedDrills;
         }
       });
+    }
+
+    // Initialize video assignments completion state
+    if (selectedDay?.videoAssignments) {
+      const serverCompletedVideoAssignments = new Set<string>();
+      selectedDay.videoAssignments.forEach(assignment => {
+        if (assignment.completed) {
+          serverCompletedVideoAssignments.add(assignment.id);
+        }
+      });
+      setCompletedVideoAssignments(serverCompletedVideoAssignments);
     }
   }, [selectedDay]);
 
@@ -439,6 +456,15 @@ export default function MobileClientProgramPage() {
     // Use the same getDayData function as desktop
     dayData = getDayData(day) || undefined;
 
+    // Debug logging for video assignments
+    console.log("MobileClientProgramPage - handleDateClick:", {
+      dayString,
+      dayData,
+      videoAssignments: dayData?.videoAssignments,
+      hasVideoAssignments:
+        dayData?.videoAssignments && dayData.videoAssignments.length > 0,
+    });
+
     // Check for routine assignments for this day
     const dayRoutineAssignments = routineAssignments.filter(
       (assignment: any) => {
@@ -477,12 +503,22 @@ export default function MobileClientProgramPage() {
           expectedTime: 0,
           completedDrills: 0,
           totalDrills: 0,
+          videoAssignments: [], // Ensure videoAssignments is always an array
         };
+      }
+
+      // Ensure videoAssignments is always an array to prevent crashes
+      if (dayData && !dayData.videoAssignments) {
+        dayData.videoAssignments = [];
       }
 
       // At this point, dayData should never be undefined
       if (dayData) {
         console.log("🔄 Setting selectedDay:", dayData.date);
+        console.log(
+          "🔄 selectedDay videoAssignments:",
+          dayData.videoAssignments
+        );
         setSelectedDay(dayData);
         setSelectedDate(day);
         setSelectedDayRoutineAssignments(dayRoutineAssignments);
@@ -700,6 +736,39 @@ export default function MobileClientProgramPage() {
       console.error("Failed to submit comment:", error);
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleMarkVideoAssignmentComplete = async (
+    assignmentId: string,
+    completed: boolean
+  ) => {
+    setCompletedVideoAssignments(prev => {
+      const newSet = new Set(prev);
+      if (completed) {
+        newSet.add(assignmentId);
+      } else {
+        newSet.delete(assignmentId);
+      }
+      return newSet;
+    });
+
+    try {
+      await markVideoAssignmentCompleteMutation.mutateAsync({
+        assignmentId,
+        completed,
+      });
+      await refetchCalendar();
+    } catch (error) {
+      setCompletedVideoAssignments(prev => {
+        const newSet = new Set(prev);
+        if (completed) {
+          newSet.delete(assignmentId);
+        } else {
+          newSet.add(assignmentId);
+        }
+        return newSet;
+      });
     }
   };
 
@@ -1097,6 +1166,8 @@ export default function MobileClientProgramPage() {
             };
           }}
           onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
+          onMarkVideoAssignmentComplete={handleMarkVideoAssignmentComplete}
+          completedVideoAssignments={completedVideoAssignments}
         />
       )}
 

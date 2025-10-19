@@ -90,6 +90,7 @@ interface DayData {
   expectedTime: number;
   completedDrills: number;
   totalDrills: number;
+  videoAssignments?: any[];
 }
 
 interface ProgramInfo {
@@ -156,6 +157,10 @@ interface ClientProgramDayModalProps {
   routineAssignments?: RoutineAssignment[];
   lessonsForDate?: any[]; // Lessons scheduled for this date
   onMarkDrillComplete: (drillId: string, completed: boolean) => void;
+  onMarkVideoAssignmentComplete: (
+    assignmentId: string,
+    completed: boolean
+  ) => void;
   onMarkAllComplete: () => void;
   onOpenVideo: (videoUrl: string, drill: Drill) => void;
   onOpenCommentModal: (drill: Drill) => void;
@@ -165,6 +170,7 @@ interface ClientProgramDayModalProps {
   setNoteToCoach: (note: string) => void;
   isSubmittingNote: boolean;
   completedProgramDrills: Set<string>;
+  completedVideoAssignments: Set<string>;
   calculateDayCompletionCounts: (
     dayData: DayData | null,
     selectedDate: Date | null
@@ -199,6 +205,7 @@ export default function ClientProgramDayModal({
   routineAssignments = [],
   lessonsForDate = [],
   onMarkDrillComplete,
+  onMarkVideoAssignmentComplete,
   onMarkAllComplete,
   onOpenVideo,
   onOpenCommentModal,
@@ -208,6 +215,7 @@ export default function ClientProgramDayModal({
   setNoteToCoach,
   isSubmittingNote,
   completedProgramDrills,
+  completedVideoAssignments,
   calculateDayCompletionCounts,
   calculateDayAssignmentCounts,
   onMarkRoutineExerciseComplete,
@@ -514,17 +522,69 @@ export default function ClientProgramDayModal({
               onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
               completedProgramDrills={completedProgramDrills}
             />
-          ) : tabs.length === 0 && lessonsForDate.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400 text-lg mb-2">
-                Nothing scheduled for this day
-              </p>
-              <p className="text-gray-500 text-sm">
-                Check back later for updates from your coach
-              </p>
-            </div>
           ) : null}
+
+          {/* Video Assignments - Show regardless of programs/routines */}
+          {selectedDay?.videoAssignments &&
+            selectedDay.videoAssignments.length > 0 && (
+              <div className="space-y-4 mt-6">
+                <h3 className="text-xl font-bold text-white mb-4">
+                  Video Assignments
+                </h3>
+                {selectedDay.videoAssignments.map(
+                  (assignment: any, index: number) => (
+                    <VideoAssignmentCard
+                      key={assignment.id || index}
+                      assignment={{
+                        ...assignment,
+                        completed: completedVideoAssignments.has(assignment.id),
+                      }}
+                      index={index}
+                      onMarkComplete={completed => {
+                        onMarkVideoAssignmentComplete(assignment.id, completed);
+                      }}
+                      onOpenVideo={() =>
+                        assignment.videoUrl &&
+                        onOpenVideo(assignment.videoUrl, {
+                          id: assignment.id,
+                          title: assignment.title,
+                          videoUrl: assignment.videoUrl,
+                        })
+                      }
+                      onOpenComment={() =>
+                        onOpenCommentModal({
+                          id: assignment.id,
+                          title: assignment.title,
+                          description: assignment.description,
+                        })
+                      }
+                      onOpenVideoSubmission={() =>
+                        onOpenVideoSubmissionModal(
+                          assignment.id,
+                          assignment.title
+                        )
+                      }
+                    />
+                  )
+                )}
+              </div>
+            )}
+
+          {/* Show "Nothing scheduled" only if there are no programs, routines, lessons, OR video assignments */}
+          {tabs.length === 0 &&
+            lessonsForDate.length === 0 &&
+            (!selectedDay?.videoAssignments ||
+              selectedDay.videoAssignments.length === 0) && (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400 text-lg mb-2">
+                  Nothing scheduled for this day
+                </p>
+                <p className="text-gray-500 text-sm">
+                  Check back later for updates from your coach
+                </p>
+              </div>
+            )}
         </div>
 
         {/* Actions Footer */}
@@ -548,8 +608,10 @@ export default function ClientProgramDayModal({
               </Button>
             )}
 
-            {/* Note to Coach - Only show if there are programs/routines */}
-            {tabs.length > 0 && (
+            {/* Note to Coach - Show if there are programs/routines OR video assignments */}
+            {(tabs.length > 0 ||
+              (selectedDay?.videoAssignments &&
+                selectedDay.videoAssignments.length > 0)) && (
               <div className="space-y-2">
                 <h4 className="font-semibold text-white text-base flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-blue-400" />
@@ -1255,6 +1317,121 @@ function DrillCard({
         {/* Action Buttons */}
         <div className="flex gap-2">
           {drill.videoUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenVideo}
+              className="flex-1 border-2 border-blue-500 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400 text-xs font-medium"
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Demo
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenComment}
+            className="flex-1 border-2 border-gray-500 text-gray-400 hover:bg-gray-600/20 hover:border-gray-400 text-xs font-medium"
+          >
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Note
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenVideoSubmission}
+            className="flex-1 border-2 border-purple-500 text-purple-400 hover:bg-purple-500/20 hover:border-purple-400 text-xs font-medium"
+          >
+            <Video className="h-3 w-3 mr-1" />
+            Record
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Video Assignment Card Component
+function VideoAssignmentCard({
+  assignment,
+  index,
+  onMarkComplete,
+  onOpenVideo,
+  onOpenComment,
+  onOpenVideoSubmission,
+}: {
+  assignment: any;
+  index: number;
+  onMarkComplete: (completed: boolean) => void;
+  onOpenVideo: () => void;
+  onOpenComment: () => void;
+  onOpenVideoSubmission: () => void;
+}) {
+  return (
+    <div className="rounded-lg border transition-all duration-200 bg-purple-600/10 border-purple-500/30 hover:bg-purple-600/20">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-purple-500/30">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-purple-300">
+              #{index + 1}
+            </span>
+            <h4 className="text-lg font-semibold text-white">
+              {assignment.title}
+            </h4>
+          </div>
+          <div className="flex items-center gap-1 text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded-full">
+            <Video className="h-3 w-3" />
+            <span className="font-medium">VIDEO</span>
+          </div>
+        </div>
+
+        {/* Completion Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            onMarkComplete(!assignment.completed);
+          }}
+          className={cn(
+            "h-8 w-8 p-0 rounded-full transition-all duration-200",
+            assignment.completed
+              ? "bg-green-500 text-white hover:bg-green-600"
+              : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+          )}
+        >
+          <Check className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {/* Due Date */}
+        <div className="mb-3 p-3 bg-purple-800/50 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-purple-200">
+            <Calendar className="h-4 w-4" />
+            <span>
+              Due: {new Date(assignment.dueDate).toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Description */}
+        {assignment.description && (
+          <div className="mb-3 p-3 bg-gray-800/50 rounded-lg">
+            <p className="text-sm text-gray-300">
+              {assignment.description.length > 120
+                ? `${assignment.description.substring(0, 120)}...`
+                : assignment.description}
+            </p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {assignment.videoUrl && (
             <Button
               variant="outline"
               size="sm"

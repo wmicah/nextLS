@@ -311,7 +311,11 @@ export const libraryRouter = router({
       z.object({
         videoId: z.string(),
         clientId: z.string(),
-        dueDate: z.date().optional(),
+        dueDate: z.string().transform(str => {
+          // Parse the date string and create a date at midnight UTC to avoid timezone issues
+          const [year, month, day] = str.split("-").map(Number);
+          return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+        }),
         notes: z.string().optional(),
       })
     )
@@ -359,7 +363,7 @@ export const libraryRouter = router({
 
       // Build the where clause
       let whereClause: any = {
-        userId: input.clientId,
+        id: input.clientId,
       };
 
       if (coachOrganization?.organizationId) {
@@ -394,12 +398,20 @@ export const libraryRouter = router({
         });
       }
 
-      // Create or update the assignment
+      // Get the user ID from the client record
+      if (!client.userId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client user not found",
+        });
+      }
+
+      // Create or update the assignment using the user ID
       const assignment = await db.videoAssignment.upsert({
         where: {
           videoId_clientId: {
             videoId: input.videoId,
-            clientId: input.clientId,
+            clientId: client.userId, // Use the user ID instead of client ID
           },
         },
         update: {
@@ -408,13 +420,85 @@ export const libraryRouter = router({
         },
         create: {
           videoId: input.videoId,
-          clientId: input.clientId,
+          clientId: client.userId, // Use the user ID instead of client ID
           dueDate: input.dueDate,
           notes: input.notes,
         },
       });
 
       return assignment;
+    }),
+
+  // New procedure for coaches to remove video assignments from clients
+  removeVideoAssignment: publicProcedure
+    .input(
+      z.object({
+        assignmentId: z.string(),
+        clientId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can remove video assignments",
+        });
+      }
+
+      // Find the client to verify the coach has access
+      const client = await db.client.findFirst({
+        where: { id: input.clientId },
+        select: { id: true, coachId: true, userId: true },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client not found",
+        });
+      }
+
+      // Check if coach has access to this client
+      if (client.coachId !== user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have access to this client",
+        });
+      }
+
+      // Verify the assignment exists and belongs to this client
+      const existingAssignment = await db.videoAssignment.findFirst({
+        where: {
+          id: input.assignmentId,
+          clientId: client.userId, // Use the user ID from the client record
+        },
+      });
+
+      if (!existingAssignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Video assignment not found or not assigned to this client",
+        });
+      }
+
+      // Delete the video assignment
+      await db.videoAssignment.delete({
+        where: {
+          id: input.assignmentId,
+        },
+      });
+
+      return { success: true };
     }),
 
   // New procedure for clients to mark videos as completed
@@ -480,14 +564,36 @@ export const libraryRouter = router({
         },
       });
 
-      // Build the where clause
-      let whereClause: any = {
-        userId: input.clientId,
-        archived: false,
-      };
+      // First, get the client record to verify it exists and get the user ID
+      const client = await db.client.findFirst({
+        where: { id: input.clientId },
+        select: {
+          id: true,
+          userId: true,
+          coachId: true,
+          archived: true,
+        },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client not found",
+        });
+      }
+
+      if (client.archived) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client is archived",
+        });
+      }
+
+      // Check if coach has access to this client
+      let hasAccess = false;
 
       if (coachOrganization?.organizationId) {
-        // Get all coaches in the organization
+        // Check if client belongs to any coach in the organization
         const orgCoaches = await db.coachOrganization.findMany({
           where: {
             organizationId: coachOrganization.organizationId,
@@ -499,42 +605,35 @@ export const libraryRouter = router({
         });
 
         const orgCoachIds = orgCoaches.map(c => c.coachId);
-
-        // Allow access if client belongs to any coach in the organization
-        whereClause.coachId = { in: orgCoachIds };
+        hasAccess = orgCoachIds.includes(client.coachId);
       } else {
         // Not in an organization, only allow access to own clients
-        whereClause.coachId = ensureUserId(user.id);
+        hasAccess = client.coachId === ensureUserId(user.id);
       }
 
-      // Verify the client is assigned to this coach and is not archived
-      const client = await db.client.findFirst({
-        where: whereClause,
-      });
-
-      if (!client) {
+      if (!hasAccess) {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Client not found or not assigned to you",
+          code: "FORBIDDEN",
+          message: "You don't have access to this client",
         });
       }
 
       // Get all types of assignments for this client
       const [videoAssignments, routineAssignments, programAssignments] =
         await Promise.all([
-          // Video assignments
+          // Video assignments - use userId since video assignments are stored with user ID
           db.videoAssignment.findMany({
-            where: { clientId: input.clientId },
+            where: { clientId: client.userId },
             include: { video: true },
             orderBy: { assignedAt: "desc" },
           }),
-          // Routine assignments
+          // Routine assignments - use client ID (Client model ID)
           db.routineAssignment.findMany({
             where: { clientId: input.clientId },
             include: { routine: true },
             orderBy: { assignedAt: "desc" },
           }),
-          // Program assignments
+          // Program assignments - use client ID (Client model ID)
           db.programAssignment.findMany({
             where: { clientId: input.clientId },
             include: { program: true },

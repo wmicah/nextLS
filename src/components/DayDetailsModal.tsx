@@ -6,6 +6,7 @@ import {
   Clock,
   BookOpen,
   Target,
+  Video,
   X,
   Zap,
   Trash2,
@@ -20,13 +21,16 @@ interface DayDetailsModalProps {
   lessons: any[];
   programs: any[];
   routineAssignments: any[];
+  videoAssignments?: any[];
   onScheduleLesson: () => void;
   onAssignProgram: () => void;
   onAssignRoutine: () => void;
+  onAssignVideo: () => void;
   onReplaceWithLesson: (replacementData: any) => void;
   onRemoveProgram?: (programData: any) => void;
   onRemoveRoutine?: (routineData: any) => void;
   onRemoveLesson?: (lessonData: any) => void;
+  onRemoveVideo?: (videoData: any) => void;
   getStatusIcon: (status: string) => React.ReactNode;
   getStatusColor: (status: string) => string;
 }
@@ -38,13 +42,16 @@ export default function DayDetailsModal({
   lessons,
   programs,
   routineAssignments,
+  videoAssignments = [],
   onScheduleLesson,
   onAssignProgram,
   onAssignRoutine,
+  onAssignVideo,
   onReplaceWithLesson,
   onRemoveProgram,
   onRemoveRoutine,
   onRemoveLesson,
+  onRemoveVideo,
   getStatusIcon,
   getStatusColor,
 }: DayDetailsModalProps) {
@@ -141,10 +148,22 @@ export default function DayDetailsModal({
     }
   };
 
+  const handleRemoveVideo = (assignment: any) => {
+    if (onRemoveVideo) {
+      const videoData = {
+        assignmentId: assignment.id,
+        videoId: assignment.video?.id,
+        videoTitle: assignment.video?.title || "Video Assignment",
+        dayDate: selectedDate.toISOString().split("T")[0],
+      };
+      onRemoveVideo(videoData);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className="rounded-2xl shadow-xl border w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="rounded-2xl shadow-xl border w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
         style={{
           backgroundColor: "#353A3A",
           borderColor: "#606364",
@@ -173,7 +192,7 @@ export default function DayDetailsModal({
               <h3 className="text-lg font-semibold text-white mb-4">
                 Quick Actions
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {/* Schedule Lesson */}
                 <button
                   onClick={onScheduleLesson}
@@ -218,6 +237,22 @@ export default function DayDetailsModal({
                     </div>
                     <div className="text-sm text-green-600/80">
                       Assign a routine for this day
+                    </div>
+                  </div>
+                </button>
+
+                {/* Assign Video */}
+                <button
+                  onClick={onAssignVideo}
+                  className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20 hover:border-purple-500/30"
+                >
+                  <Video className="h-6 w-6" style={{ color: "#8B5CF6" }} />
+                  <div className="text-left">
+                    <div className="font-medium" style={{ color: "#8B5CF6" }}>
+                      Assign Video
+                    </div>
+                    <div className="text-sm text-purple-600/80">
+                      Assign a single video for this day
                     </div>
                   </div>
                 </button>
@@ -431,10 +466,61 @@ export default function DayDetailsModal({
                 </div>
               )}
 
+              {/* Video Assignments */}
+              {videoAssignments.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Video Assignments
+                  </h3>
+                  <div className="space-y-3">
+                    {videoAssignments.map((assignment: any, index: number) => (
+                      <div
+                        key={index}
+                        className="p-4 rounded-lg bg-purple-500/5 text-purple-100 border border-purple-500/20 transition-all duration-200 hover:bg-purple-500/10"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-purple-500/10">
+                              <Video className="h-4 w-4 text-purple-400" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-purple-100">
+                                {assignment.title}
+                              </div>
+                              <div className="text-sm text-purple-200/80">
+                                {assignment.description || "Video to complete"}
+                              </div>
+                              <div className="text-xs text-purple-200/60 mt-1"></div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {onRemoveVideo && (
+                              <button
+                                onClick={() => handleRemoveVideo(assignment)}
+                                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2 border"
+                                style={{
+                                  backgroundColor: "#EF4444",
+                                  color: "#FFFFFF",
+                                  borderColor: "#DC2626",
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Empty State - Only show if absolutely nothing is scheduled */}
               {lessons.length === 0 &&
                 programs.length === 0 &&
-                routineAssignments.length === 0 && (
+                routineAssignments.length === 0 &&
+                videoAssignments.length === 0 && (
                   <div className="text-center py-8">
                     <div className="space-y-4">
                       <div className="text-lg font-semibold text-white">

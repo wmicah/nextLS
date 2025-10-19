@@ -67,6 +67,7 @@ import StreamlinedScheduleLessonModal from "./StreamlinedScheduleLessonModal";
 import QuickAssignProgramModal from "./QuickAssignProgramModal";
 import QuickAssignRoutineFromDayModal from "./QuickAssignRoutineFromDayModal";
 import AssignRoutineModal from "./AssignRoutineModal";
+import AssignVideoModal from "./AssignVideoModal";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 
@@ -94,6 +95,7 @@ export default function MobileClientDetailPage({
     showQuickAssignRoutineFromDayModal,
     setShowQuickAssignRoutineFromDayModal,
   ] = useState(false);
+  const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
 
   // Fetch client data
   const {
@@ -192,7 +194,8 @@ export default function MobileClientDetailPage({
     if (
       !showQuickAssignProgramModal &&
       !showAssignRoutineModal &&
-      !showQuickAssignRoutineFromDayModal
+      !showQuickAssignRoutineFromDayModal &&
+      !showAssignVideoModal
     ) {
       // Small delay to ensure backend has processed the assignment
       const timeoutId = setTimeout(() => {
@@ -206,6 +209,7 @@ export default function MobileClientDetailPage({
     showQuickAssignProgramModal,
     showAssignRoutineModal,
     showQuickAssignRoutineFromDayModal,
+    showAssignVideoModal,
   ]);
 
   // Remove program mutation - using specific assignment ID
@@ -1007,11 +1011,26 @@ export default function MobileClientDetailPage({
           />
         )}
 
+        {/* Assign Video Modal */}
+        {showAssignVideoModal && client && (
+          <AssignVideoModal
+            isOpen={showAssignVideoModal}
+            onClose={() => setShowAssignVideoModal(false)}
+            clientId={clientId}
+            clientName={client.name}
+            startDate={
+              selectedDate
+                ? format(selectedDate, "yyyy-MM-dd")
+                : format(new Date(), "yyyy-MM-dd")
+            }
+          />
+        )}
+
         {/* Day Overview Modal */}
         {showDayOverviewModal && selectedDate && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div
-              className="rounded-2xl shadow-xl border w-full max-w-md max-h-[80vh] overflow-y-auto"
+              className="rounded-2xl shadow-xl border w-full max-w-2xl max-h-[80vh] overflow-y-auto"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
               <div
@@ -1035,7 +1054,7 @@ export default function MobileClientDetailPage({
               </div>
               <div className="p-4">
                 {/* Quick Actions */}
-                <div className="grid grid-cols-3 gap-2 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
                   <button
                     onClick={() => {
                       setShowDayOverviewModal(false);
@@ -1073,6 +1092,19 @@ export default function MobileClientDetailPage({
                     <Target className="h-5 w-5 text-white" />
                     <span className="text-xs font-medium text-white">
                       Routine
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDayOverviewModal(false);
+                      setShowAssignVideoModal(true);
+                    }}
+                    className="flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105"
+                    style={{ backgroundColor: "#8B5CF6" }}
+                  >
+                    <Video className="h-5 w-5 text-white" />
+                    <span className="text-xs font-medium text-white">
+                      Video
                     </span>
                   </button>
                 </div>

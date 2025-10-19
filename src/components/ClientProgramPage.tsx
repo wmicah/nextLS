@@ -113,6 +113,7 @@ interface DayData {
   expectedTime: number;
   completedDrills: number;
   totalDrills: number;
+  videoAssignments?: any[];
 }
 
 // interface ProgramInfo {
@@ -145,6 +146,9 @@ function ClientProgramPage() {
   const [completedProgramDrills, setCompletedProgramDrills] = useState<
     Set<string>
   >(new Set());
+  const [completedVideoAssignments, setCompletedVideoAssignments] = useState<
+    Set<string>
+  >(new Set());
 
   // Initialize completion state from server data when selectedDay changes
   React.useEffect(() => {
@@ -162,6 +166,22 @@ function ClientProgramPage() {
         Array.from(serverCompletedDrills)
       );
       setCompletedProgramDrills(serverCompletedDrills);
+    }
+
+    // Initialize video assignment completion state
+    if (selectedDay?.videoAssignments) {
+      const serverCompletedVideoAssignments = new Set<string>();
+
+      selectedDay.videoAssignments.forEach(assignment => {
+        if (assignment.completed) {
+          serverCompletedVideoAssignments.add(assignment.id);
+        }
+      });
+      console.log(
+        "🔄 Initializing completedVideoAssignments from server:",
+        Array.from(serverCompletedVideoAssignments)
+      );
+      setCompletedVideoAssignments(serverCompletedVideoAssignments);
     }
   }, [selectedDay]);
 
@@ -383,6 +403,13 @@ function ClientProgramPage() {
       // Remove aggressive invalidation - let optimistic updates handle UI
       onError: error => {
         alert(`Error updating drill: ${error.message}`);
+      },
+    });
+
+  const markVideoAssignmentCompleteMutation =
+    trpc.clientRouter.markVideoAssignmentComplete.useMutation({
+      onError: error => {
+        alert(`Error updating video assignment: ${error.message}`);
       },
     });
 
@@ -704,6 +731,64 @@ function ClientProgramPage() {
     }
   };
 
+  // Handle video assignment completion
+  const handleMarkVideoAssignmentComplete = async (
+    assignmentId: string,
+    completed: boolean
+  ) => {
+    console.log("🎯 handleMarkVideoAssignmentComplete called with:", {
+      assignmentId,
+      completed,
+    });
+
+    // Update the completion state immediately for real-time UI updates
+    setCompletedVideoAssignments(prev => {
+      const newSet = new Set(prev);
+      if (completed) {
+        newSet.add(assignmentId);
+        console.log(
+          "🎯 Added video assignment to completedVideoAssignments:",
+          assignmentId
+        );
+      } else {
+        newSet.delete(assignmentId);
+        console.log(
+          "🎯 Removed video assignment from completedVideoAssignments:",
+          assignmentId
+        );
+      }
+      console.log("🎯 New completedVideoAssignments:", Array.from(newSet));
+      return newSet;
+    });
+
+    try {
+      await markVideoAssignmentCompleteMutation.mutateAsync({
+        assignmentId,
+        completed,
+      });
+
+      console.log("🎯 Video assignment completion updated successfully");
+
+      // Refetch calendar data to sync with server
+      await refetchCalendar();
+    } catch (error) {
+      console.error(
+        "🎯 ERROR: markVideoAssignmentCompleteMutation failed:",
+        error
+      );
+      // Revert optimistic update on error
+      setCompletedVideoAssignments(prev => {
+        const newSet = new Set(prev);
+        if (completed) {
+          newSet.delete(assignmentId); // Remove if we were trying to mark complete
+        } else {
+          newSet.add(assignmentId); // Add back if we were trying to mark incomplete
+        }
+        return newSet;
+      });
+    }
+  };
+
   // Handle drill completion
   const handleMarkDrillComplete = async (
     drillId: string,
@@ -900,7 +985,10 @@ function ClientProgramPage() {
       const hasWorkouts =
         dayData.programs?.some(program => !program.isRestDay) || false;
       const hasRoutines = date ? getRoutinesForDate(date).length > 0 : false;
-      const hasActiveContent = hasWorkouts || hasRoutines;
+      const hasVideoAssignments =
+        dayData.videoAssignments && dayData.videoAssignments.length > 0;
+      const hasActiveContent =
+        hasWorkouts || hasRoutines || hasVideoAssignments;
 
       // If there's active content, don't show rest day status
       if (hasActiveContent) {
@@ -1404,6 +1492,33 @@ function ClientProgramPage() {
                                 </>
                               )}
 
+                            {/* Show Video Assignments */}
+                            {dayData.videoAssignments &&
+                              dayData.videoAssignments.length > 0 && (
+                                <>
+                                  {dayData.videoAssignments
+                                    .slice(0, 2)
+                                    .map(
+                                      (
+                                        assignment: any,
+                                        assignmentIndex: number
+                                      ) => (
+                                        <div
+                                          key={`video-${assignmentIndex}`}
+                                          className="p-1 rounded text-xs bg-purple-500/20 text-purple-300"
+                                        >
+                                          <div className="flex items-center gap-1">
+                                            <Video className="h-3 w-3 text-purple-400 flex-shrink-0" />
+                                            <span className="truncate">
+                                              {assignment.title}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )
+                                    )}
+                                </>
+                              )}
+
                             {/* Fallback to old drills format for backward compatibility */}
                             {dayData.drills &&
                               dayData.drills.length > 0 &&
@@ -1458,15 +1573,19 @@ function ClientProgramPage() {
                               const totalFilteredPrograms =
                                 filteredPrograms.length;
                               const totalDrills = dayData.drills?.length || 0;
+                              const totalVideoAssignments =
+                                dayData.videoAssignments?.length || 0;
 
                               return (
                                 (totalFilteredPrograms > 2 ||
-                                  totalDrills > 2) && (
+                                  totalDrills > 2 ||
+                                  totalVideoAssignments > 2) && (
                                   <div className="text-xs text-gray-400 text-center">
                                     +
                                     {Math.max(
                                       totalFilteredPrograms - 2,
-                                      totalDrills - 2
+                                      totalDrills - 2,
+                                      totalVideoAssignments - 2
                                     )}{" "}
                                     more
                                   </div>
@@ -1903,6 +2022,7 @@ function ClientProgramPage() {
                 selectedDate ? getLessonsForDate(selectedDate) : []
               }
               onMarkDrillComplete={handleMarkDrillComplete}
+              onMarkVideoAssignmentComplete={handleMarkVideoAssignmentComplete}
               onMarkAllComplete={handleMarkAllComplete}
               onOpenVideo={handleOpenVideo}
               onOpenCommentModal={handleOpenCommentModal}
@@ -1912,6 +2032,7 @@ function ClientProgramPage() {
               setNoteToCoach={setNoteToCoach}
               isSubmittingNote={isSubmittingNote}
               completedProgramDrills={completedProgramDrills}
+              completedVideoAssignments={completedVideoAssignments}
               calculateDayCompletionCounts={calculateDayCompletionCounts}
               calculateDayAssignmentCounts={calculateDayAssignmentCounts}
               onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}

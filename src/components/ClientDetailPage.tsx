@@ -188,11 +188,17 @@ function ClientDetailPage({
   }, [assignedRoutines]);
 
   // Fetch client's video assignments
-  const { data: assignmentsData } = trpc.library.getClientAssignments.useQuery({
-    clientId,
-  });
+  const { data: assignmentsData, error: assignmentsError } =
+    trpc.library.getClientAssignments.useQuery({
+      clientId,
+    });
 
   const videoAssignments = assignmentsData?.videoAssignments || [];
+
+  // Debug logging
+  console.log("ClientDetailPage - assignmentsData:", assignmentsData);
+  console.log("ClientDetailPage - assignmentsError:", assignmentsError);
+  console.log("ClientDetailPage - videoAssignments:", videoAssignments);
 
   // Fetch coach's working hours for time slot generation
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
@@ -265,6 +271,28 @@ function ClientDetailPage({
       });
     },
   });
+
+  // Remove video assignment mutation
+  const removeVideoAssignmentMutation =
+    trpc.library.removeVideoAssignment.useMutation({
+      onSuccess: () => {
+        addToast({
+          type: "success",
+          title: "Video Assignment Removed!",
+          message: "Video assignment has been successfully removed.",
+        });
+        refreshAllData();
+      },
+      onError: error => {
+        addToast({
+          type: "error",
+          title: "Failed to Remove Video Assignment",
+          message:
+            error.message ||
+            "An error occurred while removing the video assignment.",
+        });
+      },
+    });
 
   // Function to refresh all data after any action
   const refreshAllData = () => {
@@ -418,19 +446,70 @@ function ClientDetailPage({
   };
 
   const getVideosForDate = (date: Date) => {
-    return videoAssignments
-      .filter((assignment: any) => {
-        if (!assignment.dueDate) return false;
-        const dueDate = new Date(assignment.dueDate);
-        return isSameDay(dueDate, date);
-      })
-      .map((assignment: any) => ({
-        id: assignment.id,
-        title: assignment.video?.title || "Video Assignment",
-        description: assignment.notes || "Video to complete",
-        type: "video",
-        assignment,
-      }));
+    try {
+      console.log("getVideosForDate called with:", { date, videoAssignments });
+
+      if (!videoAssignments || !Array.isArray(videoAssignments)) {
+        console.log(
+          "getVideosForDate - videoAssignments is not an array:",
+          videoAssignments
+        );
+        return [];
+      }
+
+      const filteredAssignments = videoAssignments.filter((assignment: any) => {
+        try {
+          if (!assignment || !assignment.dueDate) {
+            console.log("Skipping assignment - missing data:", assignment);
+            return false;
+          }
+          // Parse the due date and compare dates in a timezone-agnostic way
+          const dueDate = new Date(assignment.dueDate);
+          const dueDateString = dueDate.toISOString().split("T")[0];
+          const targetDateString = date.toISOString().split("T")[0];
+          const isMatch = dueDateString === targetDateString;
+          console.log("Assignment date check:", {
+            assignmentId: assignment.id,
+            dueDate: assignment.dueDate,
+            parsedDueDate: dueDate,
+            dueDateString,
+            targetDate: date,
+            targetDateString,
+            isMatch,
+          });
+          return isMatch;
+        } catch (error) {
+          console.error("Error filtering assignment:", error, assignment);
+          return false;
+        }
+      });
+
+      console.log("Filtered video assignments:", filteredAssignments);
+
+      return filteredAssignments.map((assignment: any) => {
+        try {
+          return {
+            id: assignment.id,
+            title: assignment.video?.title || "Video Assignment",
+            description: assignment.notes || "Video to complete",
+            type: "video",
+            assignment,
+          };
+        } catch (error) {
+          console.error("Error mapping assignment:", error, assignment);
+          return {
+            id: assignment.id || "unknown",
+            title: "Video Assignment",
+            description: "Video to complete",
+            type: "video",
+            assignment,
+          };
+        }
+      });
+    } catch (error) {
+      console.error("Error in getVideosForDate:", error);
+      return [];
+    }
   };
 
   const handleDateClick = (date: Date) => {
@@ -470,6 +549,19 @@ function ClientDetailPage({
     ) {
       deleteLessonMutation.mutate({
         lessonId: lessonData.lessonId,
+      });
+    }
+  };
+
+  const handleRemoveVideo = (videoData: any) => {
+    if (
+      confirm(
+        `Are you sure you want to remove "${videoData.videoTitle}" from this day?`
+      )
+    ) {
+      removeVideoAssignmentMutation.mutate({
+        assignmentId: videoData.assignmentId,
+        clientId: clientId,
       });
     }
   };
@@ -665,6 +757,14 @@ function ClientDetailPage({
               >
                 <Target className="h-4 w-4" />
                 Assign Routine
+              </button>
+              <button
+                onClick={() => setShowAssignVideoModal(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 hover:border-purple-500/30"
+                style={{ color: "#8B5CF6" }}
+              >
+                <Video className="h-4 w-4" />
+                Assign Video
               </button>
             </div>
           </div>
@@ -1091,6 +1191,11 @@ function ClientDetailPage({
               }}
               clientId={clientId}
               clientName={client.name}
+              startDate={
+                selectedDate
+                  ? selectedDate.toISOString().split("T")[0]
+                  : undefined
+              }
             />
           )}
 
@@ -1120,6 +1225,9 @@ function ClientDetailPage({
             routineAssignments={
               selectedDate ? getRoutineAssignmentsForDate(selectedDate) : []
             }
+            videoAssignments={
+              selectedDate ? getVideosForDate(selectedDate) : []
+            }
             onScheduleLesson={() => {
               setShowScheduleLessonModal(true);
               setShowDayDetailsModal(false);
@@ -1132,6 +1240,10 @@ function ClientDetailPage({
               setShowQuickAssignRoutineFromDayModal(true);
               setShowDayDetailsModal(false);
             }}
+            onAssignVideo={() => {
+              setShowAssignVideoModal(true);
+              setShowDayDetailsModal(false);
+            }}
             onReplaceWithLesson={replacementData => {
               setReplacementData(replacementData);
               setShowScheduleLessonModal(true);
@@ -1140,6 +1252,7 @@ function ClientDetailPage({
             onRemoveProgram={handleRemoveProgram}
             onRemoveRoutine={handleRemoveRoutine}
             onRemoveLesson={handleRemoveLesson}
+            onRemoveVideo={handleRemoveVideo}
             getStatusIcon={getStatusIcon}
             getStatusColor={getStatusColor}
           />

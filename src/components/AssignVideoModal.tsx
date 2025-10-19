@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   X,
@@ -21,6 +21,7 @@ interface AssignVideoModalProps {
   onClose: () => void;
   clientId: string;
   clientName: string;
+  startDate?: string;
 }
 
 export default function AssignVideoModal({
@@ -28,13 +29,21 @@ export default function AssignVideoModal({
   onClose,
   clientId,
   clientName,
+  startDate,
 }: AssignVideoModalProps) {
   const [selectedVideo, setSelectedVideo] = useState<string>("");
-  const [dueDate, setDueDate] = useState<string>("");
+  const [assignDate, setAssignDate] = useState<string>("");
   const [instructions, setInstructions] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const [videoType, setVideoType] = useState<"all" | "master" | "local">("all");
+
+  // Set assign date when modal opens with startDate
+  useEffect(() => {
+    if (isOpen && startDate) {
+      setAssignDate(startDate);
+    }
+  }, [isOpen, startDate]);
 
   // Fetch available videos
   const { data: videos = [], isLoading: videosLoading } =
@@ -48,7 +57,7 @@ export default function AssignVideoModal({
       setIsAssigning(false);
       onClose();
       setSelectedVideo("");
-      setDueDate("");
+      setAssignDate("");
       setInstructions("");
       setSearchTerm("");
 
@@ -68,11 +77,16 @@ export default function AssignVideoModal({
       return;
     }
 
+    if (!assignDate) {
+      alert("Please select an assign date");
+      return;
+    }
+
     setIsAssigning(true);
     assignVideoMutation.mutate({
       videoId: selectedVideo,
       clientId,
-      dueDate: dueDate ? new Date(dueDate) : undefined,
+      dueDate: assignDate,
       notes: instructions || undefined,
     });
   };
@@ -86,8 +100,8 @@ export default function AssignVideoModal({
 
     const matchesType =
       videoType === "all" ||
-      (videoType === "master" && video.isMasterVideo) ||
-      (videoType === "local" && !video.isMasterVideo);
+      (videoType === "master" && video.isMasterLibrary) ||
+      (videoType === "local" && !video.isMasterLibrary);
 
     return matchesSearch && matchesType;
   });
@@ -284,16 +298,17 @@ export default function AssignVideoModal({
             )}
           </div>
 
-          {/* Due Date (Optional) */}
+          {/* Assign Date (Required) */}
           <div>
             <label className="block text-sm font-medium text-white mb-2">
-              Due Date (Optional)
+              Assign Date *
             </label>
             <input
               type="date"
-              value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
+              value={assignDate}
+              onChange={e => setAssignDate(e.target.value)}
               min={format(new Date(), "yyyy-MM-dd")}
+              required
               className="w-full p-3 rounded-lg border text-white"
               style={{
                 backgroundColor: "#2A2F2F",

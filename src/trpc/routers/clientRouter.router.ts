@@ -793,6 +793,70 @@ export const clientRouterRouter = router({
           }
         }
 
+        // Add video assignments to calendar data
+        const videoAssignments = await db.videoAssignment.findMany({
+          where: {
+            client: {
+              id: user.id,
+            },
+          },
+          include: {
+            video: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                url: true,
+                thumbnail: true,
+              },
+            },
+          },
+        });
+
+        // Add video assignments to calendar data
+        videoAssignments.forEach(assignment => {
+          if (!assignment.dueDate) return; // Skip assignments without due dates
+          const assignmentDate = new Date(assignment.dueDate);
+          const dateString = assignmentDate.toISOString().split("T")[0];
+
+          if (calendarData[dateString]) {
+            // Add video assignment to existing day
+            if (!calendarData[dateString].videoAssignments) {
+              calendarData[dateString].videoAssignments = [];
+            }
+            calendarData[dateString].videoAssignments.push({
+              id: assignment.id,
+              title: assignment.video.title,
+              description: assignment.video.description,
+              videoUrl: assignment.video.url,
+              thumbnailUrl: assignment.video.thumbnail,
+              dueDate: assignment.dueDate,
+              completed: assignment.completed,
+            });
+          } else {
+            // Create new day entry for video assignment
+            calendarData[dateString] = {
+              date: dateString,
+              programs: [],
+              videoAssignments: [
+                {
+                  id: assignment.id,
+                  title: assignment.video.title,
+                  description: assignment.video.description,
+                  videoUrl: assignment.video.url,
+                  thumbnailUrl: assignment.video.thumbnail,
+                  dueDate: assignment.dueDate,
+                  completed: assignment.completed,
+                },
+              ],
+              isRestDay: false,
+              expectedTime: 0,
+              completedDrills: 0,
+              totalDrills: 0,
+            };
+          }
+        });
+
         // Don't fill empty days with rest days - leave them blank
 
         return calendarData;
@@ -1101,6 +1165,119 @@ export const clientRouterRouter = router({
       }
 
       return calendarData;
+    }),
+
+  markVideoAssignmentComplete: publicProcedure
+    .input(
+      z.object({
+        assignmentId: z.string(),
+        completed: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get client record
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // First, verify the assignment exists and belongs to this client
+      const existingAssignment = await db.videoAssignment.findFirst({
+        where: {
+          id: input.assignmentId,
+          clientId: user.id, // Use the user ID, not the client model ID
+        },
+      });
+
+      if (!existingAssignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Video assignment not found or not assigned to you",
+        });
+      }
+
+      // Update the video assignment completion status
+      const updatedAssignment = await db.videoAssignment.update({
+        where: {
+          id: input.assignmentId,
+        },
+        data: {
+          completed: input.completed,
+          completedAt: input.completed ? new Date() : null,
+        },
+      });
+
+      return updatedAssignment;
+    }),
+
+  removeVideoAssignment: publicProcedure
+    .input(
+      z.object({
+        assignmentId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // First, verify the assignment exists and belongs to this client
+      const existingAssignment = await db.videoAssignment.findFirst({
+        where: {
+          id: input.assignmentId,
+          clientId: user.id, // Use the user ID, not the client model ID
+        },
+      });
+
+      if (!existingAssignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Video assignment not found or not assigned to you",
+        });
+      }
+
+      // Delete the video assignment
+      await db.videoAssignment.delete({
+        where: {
+          id: input.assignmentId,
+        },
+      });
+
+      return { success: true };
     }),
 
   markDrillComplete: publicProcedure
