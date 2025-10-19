@@ -468,6 +468,20 @@ export const libraryRouter = router({
         });
       }
 
+      if (!client.userId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client user ID not found",
+        });
+      }
+
+      if (!client.coachId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client coach ID not found",
+        });
+      }
+
       // Check if coach has access to this client
       if (client.coachId !== user.id) {
         throw new TRPCError({
@@ -589,6 +603,13 @@ export const libraryRouter = router({
         });
       }
 
+      if (!client.coachId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client coach ID not found",
+        });
+      }
+
       // Check if coach has access to this client
       let hasAccess = false;
 
@@ -615,6 +636,13 @@ export const libraryRouter = router({
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You don't have access to this client",
+        });
+      }
+
+      if (!client.userId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client user ID not found",
         });
       }
 
