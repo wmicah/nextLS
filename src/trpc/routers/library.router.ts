@@ -1011,6 +1011,7 @@ export const libraryRouter = router({
       z.object({
         playlistUrl: z.string().url(),
         category: z.string().min(1, "Category is required"),
+        customName: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -1055,7 +1056,7 @@ export const libraryRouter = router({
         videos.map(async (video: any) => {
           return await db.libraryResource.create({
             data: {
-              title: video.title,
+              title: input.customName || video.title,
               description:
                 video.description || "Imported from YouTube playlist",
               category: input.category,

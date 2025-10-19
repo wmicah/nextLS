@@ -35,6 +35,7 @@ export default function YouTubeImportModal({
   const [customCategory, setCustomCategory] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [importType, setImportType] = useState<"single" | "playlist">("single");
+  const [customName, setCustomName] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -51,6 +52,7 @@ export default function YouTubeImportModal({
       onClose();
       setUrl("");
       setCategory("");
+      setCustomName("");
     },
   });
 
@@ -65,6 +67,7 @@ export default function YouTubeImportModal({
       onClose();
       setUrl("");
       setCategory("");
+      setCustomName("");
     },
   });
 
@@ -106,11 +109,13 @@ export default function YouTubeImportModal({
       importVideo.mutate({
         url: processedUrl,
         category: finalCategory,
+        customTitle: customName.trim() || undefined,
       });
     } else {
       importPlaylist.mutate({
         playlistUrl: processedUrl,
         category: finalCategory,
+        customName: customName.trim() || undefined,
       });
     }
   };
@@ -205,6 +210,31 @@ export default function YouTubeImportModal({
             <p className="text-xs mt-1" style={{ color: "#ABA4AA" }}>
               Supports: youtube.com/watch, youtu.be, youtube.com/shorts, and
               playlists
+            </p>
+          </div>
+
+          {/* Custom Name */}
+          <div>
+            <label
+              className="block text-sm font-medium mb-2"
+              style={{ color: "#ABA4AA" }}
+            >
+              Custom Name (Optional)
+            </label>
+            <input
+              type="text"
+              value={customName}
+              onChange={e => setCustomName(e.target.value)}
+              placeholder="Enter a custom name for this video..."
+              className="w-full px-3 py-2 rounded-lg border"
+              style={{
+                backgroundColor: "#606364",
+                borderColor: "#ABA4AA",
+                color: "#C3BCC2",
+              }}
+            />
+            <p className="text-xs mt-1" style={{ color: "#ABA4AA" }}>
+              Leave empty to use the original YouTube title
             </p>
           </div>
 
