@@ -892,9 +892,30 @@ function ClientProgramPage() {
   };
 
   // Get status for a day
-  const getDayStatus = (dayData: DayData | null) => {
+  const getDayStatus = (dayData: DayData | null, date?: Date) => {
     if (!dayData) return null;
-    if (dayData.isRestDay) return { type: "rest", label: "Rest", icon: "🛌" };
+
+    // Check if there are active workouts or routines that should override rest days
+    if (dayData.isRestDay) {
+      const hasWorkouts =
+        dayData.programs?.some(program => !program.isRestDay) || false;
+      const hasRoutines = date ? getRoutinesForDate(date).length > 0 : false;
+      const hasActiveContent = hasWorkouts || hasRoutines;
+
+      // If there's active content, don't show rest day status
+      if (hasActiveContent) {
+        // Return workout status instead
+        if (dayData.completedDrills === dayData.totalDrills)
+          return { type: "complete", label: "Complete", icon: "✅" };
+        if (dayData.completedDrills > 0)
+          return { type: "partial", label: "Partial", icon: "🔄" };
+        return { type: "pending", label: "Pending", icon: "⏳" };
+      }
+
+      // Only show rest day if no active content
+      return { type: "rest", label: "Rest", icon: "🛌" };
+    }
+
     if (dayData.completedDrills === dayData.totalDrills)
       return { type: "complete", label: "Complete", icon: "✅" };
     if (dayData.completedDrills > 0)
@@ -1341,21 +1362,45 @@ function ClientProgramPage() {
                             {dayData.programs &&
                               dayData.programs.length > 0 && (
                                 <>
-                                  {dayData.programs
-                                    .slice(0, 2)
-                                    .map((program, programIndex) => (
-                                      <div
-                                        key={`program-${programIndex}`}
-                                        className="p-1 rounded text-xs bg-blue-500/20 text-blue-300"
-                                      >
-                                        <div className="flex items-center gap-1">
-                                          <BookOpen className="h-3 w-3 text-blue-400 flex-shrink-0" />
-                                          <span className="truncate">
-                                            {program.programTitle}
-                                          </span>
+                                  {(() => {
+                                    // Filter out rest days if there are active workouts or routines
+                                    const hasWorkouts =
+                                      dayData.programs?.some(
+                                        program => !program.isRestDay
+                                      ) || false;
+                                    const hasRoutines =
+                                      getRoutinesForDate(date).length > 0;
+                                    const hasActiveContent =
+                                      hasWorkouts || hasRoutines;
+
+                                    const filteredPrograms =
+                                      dayData.programs?.filter(program => {
+                                        // Hide rest days if there are active workouts or routines
+                                        if (
+                                          program.isRestDay &&
+                                          hasActiveContent
+                                        ) {
+                                          return false;
+                                        }
+                                        return true;
+                                      });
+
+                                    return filteredPrograms
+                                      ?.slice(0, 2)
+                                      .map((program, programIndex) => (
+                                        <div
+                                          key={`program-${programIndex}`}
+                                          className="p-1 rounded text-xs bg-blue-500/20 text-blue-300"
+                                        >
+                                          <div className="flex items-center gap-1">
+                                            <BookOpen className="h-3 w-3 text-blue-400 flex-shrink-0" />
+                                            <span className="truncate">
+                                              {program.programTitle}
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      ));
+                                  })()}
                                 </>
                               )}
 
@@ -1391,19 +1436,43 @@ function ClientProgramPage() {
                               )}
 
                             {/* Show "more" indicator if there are more items */}
-                            {((dayData.programs &&
-                              dayData.programs.length > 2) ||
-                              (dayData.drills &&
-                                dayData.drills.length > 2)) && (
-                              <div className="text-xs text-gray-400 text-center">
-                                +
-                                {Math.max(
-                                  (dayData.programs?.length || 0) - 2,
-                                  (dayData.drills?.length || 0) - 2
-                                )}{" "}
-                                more
-                              </div>
-                            )}
+                            {(() => {
+                              // Use same filtering logic for "more" indicator
+                              const hasWorkouts =
+                                dayData.programs?.some(
+                                  program => !program.isRestDay
+                                ) || false;
+                              const hasRoutines =
+                                getRoutinesForDate(date).length > 0;
+                              const hasActiveContent =
+                                hasWorkouts || hasRoutines;
+
+                              const filteredPrograms =
+                                dayData.programs?.filter(program => {
+                                  if (program.isRestDay && hasActiveContent) {
+                                    return false;
+                                  }
+                                  return true;
+                                }) || [];
+
+                              const totalFilteredPrograms =
+                                filteredPrograms.length;
+                              const totalDrills = dayData.drills?.length || 0;
+
+                              return (
+                                (totalFilteredPrograms > 2 ||
+                                  totalDrills > 2) && (
+                                  <div className="text-xs text-gray-400 text-center">
+                                    +
+                                    {Math.max(
+                                      totalFilteredPrograms - 2,
+                                      totalDrills - 2
+                                    )}{" "}
+                                    more
+                                  </div>
+                                )
+                              );
+                            })()}
                           </div>
                         )}
 

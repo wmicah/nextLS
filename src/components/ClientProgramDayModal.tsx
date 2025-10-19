@@ -231,7 +231,18 @@ export default function ClientProgramDayModal({
 
     // Add program tabs for each program
     if (programs && programs.length > 0) {
+      // Check if there are any non-rest-day programs (workouts) OR routines
+      const hasWorkouts = programs.some(program => !program.isRestDay);
+      const hasRoutines = routineAssignments && routineAssignments.length > 0;
+      const hasActiveContent = hasWorkouts || hasRoutines;
+
       programs.forEach((program, index) => {
+        // Hide rest days if there are actual workouts or routines scheduled
+        // This prevents clients from seeing conflicting "rest day" + "workout/routine" on same day
+        if (program.isRestDay && hasActiveContent) {
+          return; // Skip rest days when active content exists
+        }
+
         tabs.push({
           id: `program-${program.programId}`,
           title: program.programTitle,
