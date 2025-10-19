@@ -91,26 +91,27 @@ function MessagesPage({}: MessagesPageProps) {
     }
   );
 
-  // Get conversations with aggressive caching
+  // Get conversations with optimized caching
   const {
     data: conversations = [],
     refetch: refetchConversations,
     isLoading: conversationsLoading,
   } = trpc.messaging.getConversations.useQuery(undefined, {
-    refetchInterval: 60000, // Poll every minute
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    staleTime: 30 * 1000, // Cache for 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchInterval: false, // No automatic polling
+    refetchOnWindowFocus: false, // Don't refetch on focus
+    refetchOnReconnect: true, // Only refetch on reconnect
   });
 
-  // Get unread counts separately for better performance
+  // Get unread counts with optimized caching
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      staleTime: 10 * 1000, // Cache for 10 seconds
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     });
 
   const {
@@ -121,9 +122,11 @@ function MessagesPage({}: MessagesPageProps) {
     { conversationId: selectedConversation! },
     {
       enabled: !!selectedConversation,
-      refetchInterval: 15000, // Poll every 15 seconds when viewing messages
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
+      staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     }
   );
 

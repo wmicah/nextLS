@@ -159,6 +159,12 @@ export const clientRouterRouter = router({
       100
     );
 
+    // Debug: Check if superset fields are present in the database data
+    console.log(
+      "🔍 CLIENT ROUTER - program.weeks:",
+      JSON.stringify(program.weeks, null, 2)
+    );
+
     return {
       id: program.id,
       title: program.title,
@@ -476,6 +482,9 @@ export const clientRouterRouter = router({
                                 routineId: true,
                                 supersetId: true,
                                 supersetOrder: true,
+                                supersetDescription: true,
+                                supersetInstructions: true,
+                                supersetNotes: true,
                                 videoId: true,
                                 videoThumbnail: true,
                                 videoTitle: true,
@@ -651,6 +660,12 @@ export const clientRouterRouter = router({
                           videoId: exercise.videoId,
                           videoTitle: exercise.videoTitle,
                           videoThumbnail: exercise.videoThumbnail,
+                          // Superset fields
+                          supersetId: exercise.supersetId,
+                          supersetOrder: exercise.supersetOrder,
+                          supersetDescription: exercise.supersetDescription,
+                          supersetInstructions: exercise.supersetInstructions,
+                          supersetNotes: exercise.supersetNotes,
                           routineId: drill.routineId, // Keep reference to original routine
                           originalDrillId: drill.id, // Keep reference to original drill
                         });
@@ -682,6 +697,12 @@ export const clientRouterRouter = router({
                       videoId: drill.videoId,
                       videoTitle: drill.videoTitle,
                       videoThumbnail: drill.videoThumbnail,
+                      // Superset fields
+                      supersetId: drill.supersetId,
+                      supersetOrder: drill.supersetOrder,
+                      supersetDescription: drill.supersetDescription,
+                      supersetInstructions: drill.supersetInstructions,
+                      supersetNotes: drill.supersetNotes,
                       // Coach Instructions
                       coachInstructions: (() => {
                         const hasInstructions =
@@ -848,6 +869,9 @@ export const clientRouterRouter = router({
                               routineId: true,
                               supersetId: true,
                               supersetOrder: true,
+                              supersetDescription: true,
+                              supersetInstructions: true,
+                              supersetNotes: true,
                               videoId: true,
                               videoThumbnail: true,
                               videoTitle: true,
@@ -995,6 +1019,12 @@ export const clientRouterRouter = router({
                         videoId: exercise.videoId,
                         videoTitle: exercise.videoTitle,
                         videoThumbnail: exercise.videoThumbnail,
+                        // Superset fields
+                        supersetId: exercise.supersetId,
+                        supersetOrder: exercise.supersetOrder,
+                        supersetDescription: exercise.supersetDescription,
+                        supersetInstructions: exercise.supersetInstructions,
+                        supersetNotes: exercise.supersetNotes,
                         routineId: drill.routineId, // Keep reference to original routine
                         originalDrillId: drill.id, // Keep reference to original drill
                       });
@@ -1109,8 +1139,10 @@ export const clientRouterRouter = router({
         });
       }
 
-      // Check if this is a routine exercise ID (contains "-routine-")
+      // Check if this is a routine exercise ID (contains "-routine-" or is in format "assignmentId-exerciseId")
       const isRoutineExercise = input.drillId.includes("-routine-");
+      const isRoutineExerciseInProgram =
+        input.drillId.includes("-") && !input.drillId.includes("-routine-");
 
       if (isRoutineExercise) {
         // For routine exercises, we need to find the original drill ID
@@ -1178,6 +1210,85 @@ export const clientRouterRouter = router({
             },
           });
           console.log("✅ Drill completion removed successfully");
+        }
+      } else if (isRoutineExerciseInProgram) {
+        // This is a routine exercise within a program (format: "assignmentId-exerciseId")
+        const [routineAssignmentId, exerciseId] = input.drillId.split("-");
+
+        console.log("🎯 Handling routine exercise within program:", {
+          drillId: input.drillId,
+          routineAssignmentId,
+          exerciseId,
+          completed: input.completed,
+        });
+
+        // Verify the routine assignment belongs to this client
+        const routineAssignment = await db.routineAssignment.findFirst({
+          where: {
+            id: routineAssignmentId,
+            clientId: client.id,
+          },
+          include: {
+            routine: {
+              include: {
+                exercises: true,
+              },
+            },
+          },
+        });
+
+        if (!routineAssignment) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Routine assignment not found or not assigned to client",
+          });
+        }
+
+        // Verify the exercise exists in the routine
+        const exercise = routineAssignment.routine.exercises.find(
+          (ex: any) => ex.id === exerciseId
+        );
+
+        if (!exercise) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Exercise not found in routine",
+          });
+        }
+
+        // Check if the completion date is valid (not in the future)
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // End of today
+
+        if (new Date() > today) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot complete exercises for future dates",
+          });
+        }
+
+        if (input.completed) {
+          // Create routine exercise completion
+          console.log("✅ Creating routine exercise completion:", exerciseId);
+          await db.routineExerciseCompletion.create({
+            data: {
+              exerciseId: exerciseId,
+              routineAssignmentId: routineAssignmentId,
+              clientId: client.id,
+            },
+          });
+          console.log("✅ Routine exercise completion created successfully");
+        } else {
+          // Remove routine exercise completion
+          console.log("❌ Removing routine exercise completion:", exerciseId);
+          await db.routineExerciseCompletion.deleteMany({
+            where: {
+              exerciseId: exerciseId,
+              routineAssignmentId: routineAssignmentId,
+              clientId: client.id,
+            },
+          });
+          console.log("✅ Routine exercise completion removed successfully");
         }
       } else {
         // Regular drill - verify it exists and belongs to the client's program
@@ -1248,6 +1359,198 @@ export const clientRouterRouter = router({
       return { success: true };
     }),
 
+  markProgramComplete: publicProcedure
+    .input(
+      z.object({
+        programId: z.string(),
+        programAssignmentId: z.string(),
+        completed: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      console.log("🎯 markProgramComplete mutation called with:", input);
+
+      console.log("🔍 Debug - Client ID:", client.id);
+      console.log(
+        "🔍 Debug - Program Assignment ID:",
+        input.programAssignmentId
+      );
+
+      // Verify the program assignment belongs to this client
+      const programAssignment = await db.programAssignment.findFirst({
+        where: {
+          id: input.programAssignmentId,
+          clientId: client.id,
+        },
+        include: {
+          program: true,
+        },
+      });
+
+      if (!programAssignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Program assignment not found or not assigned to client",
+        });
+      }
+
+      // Update the program assignment completion status
+      const updatedAssignment = await db.programAssignment.update({
+        where: {
+          id: input.programAssignmentId,
+        },
+        data: {
+          completed: input.completed,
+          completedAt: input.completed ? new Date() : null,
+        },
+      });
+
+      console.log("✅ Program completion updated:", updatedAssignment);
+
+      return {
+        success: true,
+        message: input.completed
+          ? "Program marked as complete"
+          : "Program marked as incomplete",
+        assignment: updatedAssignment,
+      };
+    }),
+
+  markProgramDrillComplete: publicProcedure
+    .input(
+      z.object({
+        drillId: z.string(),
+        programAssignmentId: z.string(),
+        completed: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      console.log("🎯 markProgramDrillComplete mutation called with:", input);
+
+      // Verify the program assignment belongs to this client
+      const programAssignment = await db.programAssignment.findFirst({
+        where: {
+          id: input.programAssignmentId,
+          clientId: client.id,
+        },
+        include: {
+          program: true,
+        },
+      });
+
+      if (!programAssignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Program assignment not found or not assigned to client",
+        });
+      }
+
+      // Find the program drill
+      const programDrill = await db.programDrill.findFirst({
+        where: {
+          id: input.drillId,
+        },
+        include: {
+          day: {
+            include: {
+              week: {
+                include: {
+                  program: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!programDrill) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Program drill not found",
+        });
+      }
+
+      // Verify the drill belongs to the assigned program
+      if (programDrill.day.week.program.id !== programAssignment.programId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Drill does not belong to the assigned program",
+        });
+      }
+
+      // Create or update program drill completion
+      if (input.completed) {
+        // Create completion record
+        await db.programDrillCompletion.upsert({
+          where: {
+            drillId_programAssignmentId: {
+              drillId: input.drillId,
+              programAssignmentId: input.programAssignmentId,
+            },
+          },
+          create: {
+            drillId: input.drillId,
+            programAssignmentId: input.programAssignmentId,
+            clientId: client.id,
+            completedAt: new Date(),
+          },
+          update: {
+            completedAt: new Date(),
+          },
+        });
+      } else {
+        // Remove completion record
+        await db.programDrillCompletion.deleteMany({
+          where: {
+            drillId: input.drillId,
+            programAssignmentId: input.programAssignmentId,
+            clientId: client.id,
+          },
+        });
+      }
+
+      console.log("✅ Program drill completion updated");
+
+      return {
+        success: true,
+        message: input.completed
+          ? "Program drill marked as complete"
+          : "Program drill marked as incomplete",
+      };
+    }),
+
   markRoutineExerciseComplete: publicProcedure
     .input(
       z.object({
@@ -1276,6 +1579,32 @@ export const clientRouterRouter = router({
       console.log(
         "🎯 markRoutineExerciseComplete mutation called with:",
         input
+      );
+
+      console.log("🔍 Debug - Client ID:", client.id);
+      console.log(
+        "🔍 Debug - Routine Assignment ID:",
+        input.routineAssignmentId
+      );
+
+      // Debug: Check what routine assignments exist for this client
+      const allClientAssignments = await db.routineAssignment.findMany({
+        where: { clientId: client.id },
+        select: { id: true, routineId: true, assignedAt: true },
+      });
+      console.log(
+        "🔍 Debug - All client routine assignments:",
+        allClientAssignments
+      );
+
+      // Debug: Check if the specific routine assignment exists
+      const specificAssignment = await db.routineAssignment.findFirst({
+        where: { id: input.routineAssignmentId },
+        select: { id: true, clientId: true, routineId: true, assignedAt: true },
+      });
+      console.log(
+        "🔍 Debug - Specific routine assignment:",
+        specificAssignment
       );
 
       // Verify the routine assignment belongs to this client

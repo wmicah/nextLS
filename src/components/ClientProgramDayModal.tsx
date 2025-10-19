@@ -48,7 +48,12 @@ interface Drill {
   completed?: boolean;
   videoUrl?: string;
   supersetId?: string;
+  supersetOrder?: number;
   description?: string;
+  // Superset description fields
+  supersetDescription?: string;
+  supersetInstructions?: string;
+  supersetNotes?: string;
   // Coach Instructions
   coachInstructions?: {
     whatToDo: string;
@@ -292,10 +297,10 @@ export default function ClientProgramDayModal({
         }}
       >
         {/* Header */}
-        <div className="p-6 border-b border-gray-700 flex-shrink-0">
+        <div className="p-4 border-b border-gray-700 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-1">
+              <h2 className="text-xl font-bold text-white mb-1">
                 {(() => {
                   // Use selectedDate if available, otherwise fall back to selectedDay.date
                   const dateToUse =
@@ -325,20 +330,20 @@ export default function ClientProgramDayModal({
               onClick={handleClose}
               className="text-gray-400 hover:text-white"
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
         </div>
 
         {/* Tab Navigation */}
         {tabs.length > 0 && (
-          <div className="px-6 py-4 border-b border-gray-700 bg-gray-900/50 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="px-4 py-3 border-b border-gray-700 bg-gray-900/50 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-2">
               <h3 className="text-sm font-medium text-gray-300">
                 Today's Assignments:
               </h3>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {tabs.map(tab => {
                 const isActive = tab.id === activeTab;
                 const isViewed = viewedTabs.has(tab.id);
@@ -370,7 +375,7 @@ export default function ClientProgramDayModal({
         )}
 
         {/* Content */}
-        <div className="p-6 pb-8 overflow-y-auto flex-1">
+        <div className="p-4 pb-6 overflow-y-auto flex-1">
           {tabs.length === 0 && lessonsForDate.length > 0 ? (
             // Show lessons when there are no programs/routines but there are lessons
             <div className="space-y-4">
@@ -512,20 +517,20 @@ export default function ClientProgramDayModal({
         </div>
 
         {/* Actions Footer */}
-        <div className="p-6 pb-8 border-t border-gray-700 bg-gray-900/50 flex-shrink-0">
-          <div className="space-y-4">
+        <div className="p-4 pb-6 border-t border-gray-700 bg-gray-900/50 flex-shrink-0">
+          <div className="space-y-3">
             {/* Mark All Complete Button */}
             {totalDrills > 0 && (
               <Button
                 onClick={onMarkAllComplete}
-                className="w-full py-4 text-lg font-semibold rounded-2xl"
+                className="w-full py-3 text-base font-semibold rounded-xl"
                 disabled={completedDrills === totalDrills}
                 style={{
                   backgroundColor:
                     completedDrills === totalDrills ? "#10B981" : "#4A5A70",
                 }}
               >
-                <Check className="h-5 w-5 mr-2" />
+                <Check className="h-4 w-4 mr-2" />
                 {completedDrills === totalDrills
                   ? "All Complete! 🎉"
                   : `Mark All Complete (${completedDrills}/${totalDrills})`}
@@ -534,22 +539,22 @@ export default function ClientProgramDayModal({
 
             {/* Note to Coach - Only show if there are programs/routines */}
             {tabs.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-white text-lg flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-blue-400" />
+              <div className="space-y-2">
+                <h4 className="font-semibold text-white text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-blue-400" />
                   Note to Coach
                 </h4>
                 <Textarea
                   placeholder="Add a note about your workout..."
                   value={noteToCoach}
                   onChange={e => setNoteToCoach(e.target.value)}
-                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl"
-                  rows={3}
+                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-lg"
+                  rows={2}
                 />
                 <Button
                   onClick={() => onSendNote(noteToCoach)}
                   disabled={!noteToCoach.trim() || isSubmittingNote}
-                  className="w-full py-3 rounded-xl"
+                  className="w-full py-2 rounded-lg"
                   style={{ backgroundColor: "#10B981" }}
                 >
                   <Send className="h-4 w-4 mr-2" />
@@ -560,7 +565,7 @@ export default function ClientProgramDayModal({
 
             {/* Progress Footer */}
             {tabs.length > 1 && (
-              <div className="border-t border-gray-700 pt-4 mt-4">
+              <div className="border-t border-gray-700 pt-3 mt-3">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-400">
                     {viewedTabs.size} of {tabs.length} assignments viewed
@@ -714,28 +719,30 @@ function ProgramContent({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-          <BookOpen className="h-6 w-6 text-blue-400" />
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-blue-400" />
           Today's Workout
         </h3>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {(() => {
-          // Group drills by superset
+          // Group drills by superset and maintain order
           const supersetGroups: { [key: string]: Drill[] } = {};
-          const regularDrills: Drill[] = [];
+          const orderedExercises: Array<{
+            type: "regular" | "superset";
+            data: Drill | { supersetId: string; drills: Drill[] };
+          }> = [];
 
+          // First, group superset exercises
           allExercises.forEach(drill => {
             if (drill.supersetId) {
               if (!supersetGroups[drill.supersetId]) {
                 supersetGroups[drill.supersetId] = [];
               }
               supersetGroups[drill.supersetId].push(drill);
-            } else {
-              regularDrills.push(drill);
             }
           });
 
@@ -748,23 +755,47 @@ function ProgramContent({
             });
           });
 
+          // Create ordered list maintaining program order
+          allExercises.forEach(drill => {
+            if (drill.supersetId) {
+              // Check if this is the first exercise in the superset
+              const supersetDrills = supersetGroups[drill.supersetId];
+              const isFirstInSuperset = supersetDrills[0]?.id === drill.id;
+
+              if (isFirstInSuperset) {
+                // Add superset group
+                orderedExercises.push({
+                  type: "superset",
+                  data: {
+                    supersetId: drill.supersetId,
+                    drills: supersetDrills,
+                  },
+                });
+              }
+            } else {
+              // Add regular drill
+              orderedExercises.push({
+                type: "regular",
+                data: drill,
+              });
+            }
+          });
+
           let globalIndex = 0;
 
           return (
-            <>
-              {/* Regular drills */}
-              {regularDrills.map((drill, index) => {
-                const drillWithCompletion: Drill = {
-                  ...drill,
-                  completed: completedProgramDrills.has(drill.id),
-                };
+            <div className="space-y-4">
+              {orderedExercises.map((item, itemIndex) => {
+                if (item.type === "regular") {
+                  const drill = item.data as Drill;
+                  const drillWithCompletion: Drill = {
+                    ...drill,
+                    completed: completedProgramDrills.has(drill.id),
+                  };
 
-                return (
-                  <div
-                    key={drill.id}
-                    className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4"
-                  >
+                  return (
                     <DrillCard
+                      key={drill.id}
                       drill={drillWithCompletion}
                       index={globalIndex++}
                       onMarkComplete={completed => {
@@ -791,26 +822,32 @@ function ProgramContent({
                         onOpenVideoSubmissionModal(drill.id, drill.title)
                       }
                     />
-                  </div>
-                );
-              })}
+                  );
+                } else {
+                  // Superset group
+                  const supersetData = item.data as {
+                    supersetId: string;
+                    drills: Drill[];
+                  };
+                  const supersetDrills = supersetData.drills;
 
-              {/* Superset groups */}
-              {Object.entries(supersetGroups).map(
-                ([supersetId, supersetDrills]) => (
-                  <div key={supersetId} className="space-y-4">
-                    {/* Superset label */}
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 border border-purple-500/50 rounded-full">
-                        <Link className="h-4 w-4 text-purple-300" />
-                        <span className="text-sm font-medium text-purple-300">
-                          SUPERSET
-                        </span>
-                      </div>
-                    </div>
+                  return (
+                    <div key={supersetData.supersetId} className="space-y-4">
+                      {/* Superset Header */}
 
-                    {/* Superset exercises with purple border container */}
-                    <div className="border-2 border-purple-500/50 rounded-xl p-4 bg-purple-600/10">
+                      {/* Superset Description */}
+                      {supersetDrills[0]?.supersetDescription && (
+                        <div className="bg-purple-600/5 border border-purple-500/20 rounded-lg p-4">
+                          <h4 className="text-sm font-medium text-purple-300 mb-2">
+                            Instructions
+                          </h4>
+                          <p className="text-sm text-gray-300">
+                            {supersetDrills[0].supersetDescription}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Superset exercises */}
                       <div className="space-y-3">
                         {supersetDrills.map((drill, index) => {
                           const drillWithCompletion: Drill = {
@@ -820,7 +857,7 @@ function ProgramContent({
 
                           return (
                             <div key={drill.id} className="relative">
-                              {/* Superset exercise indicator */}
+                              {/* Exercise number indicator */}
                               <div className="flex items-center gap-2 mb-2">
                                 <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
                                   <span className="text-white text-xs font-bold">
@@ -828,9 +865,7 @@ function ProgramContent({
                                   </span>
                                 </div>
                                 <span className="text-sm text-purple-300 font-medium">
-                                  {index === 0
-                                    ? "First Exercise"
-                                    : "Second Exercise"}
+                                  Exercise {index + 1}
                                 </span>
                               </div>
 
@@ -870,10 +905,10 @@ function ProgramContent({
                         })}
                       </div>
                     </div>
-                  </div>
-                )
-              )}
-            </>
+                  );
+                }
+              })}
+            </div>
           );
         })()}
       </div>
@@ -999,12 +1034,7 @@ function RoutineContent({
                       drill={drill}
                       index={globalIndex++}
                       onMarkComplete={completed => {
-                        const exerciseId = drill.id.split("-")[1];
-                        onMarkRoutineExerciseComplete(
-                          exerciseId,
-                          routineAssignment.id,
-                          completed
-                        );
+                        onMarkDrillComplete(drill.id, completed);
                       }}
                       onOpenVideo={() =>
                         drill.videoUrl && onOpenVideo(drill.videoUrl, drill)
@@ -1029,14 +1059,6 @@ function RoutineContent({
                   ([supersetId, supersetDrills]) => (
                     <div key={supersetId} className="space-y-4">
                       {/* Superset label */}
-                      <div className="flex items-center justify-center">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 border border-purple-500/50 rounded-full">
-                          <Link className="h-4 w-4 text-purple-300" />
-                          <span className="text-sm font-medium text-purple-300">
-                            SUPERSET
-                          </span>
-                        </div>
-                      </div>
 
                       {/* Superset exercises with purple border container */}
                       <div className="border-2 border-purple-500/50 rounded-xl p-4 bg-purple-600/10">
@@ -1061,12 +1083,7 @@ function RoutineContent({
                                 drill={drill}
                                 index={globalIndex++}
                                 onMarkComplete={completed => {
-                                  const exerciseId = drill.id.split("-")[1];
-                                  onMarkRoutineExerciseComplete(
-                                    exerciseId,
-                                    routineAssignment.id,
-                                    completed
-                                  );
+                                  onMarkDrillComplete(drill.id, completed);
                                 }}
                                 onOpenVideo={() =>
                                   drill.videoUrl &&
@@ -1128,105 +1145,30 @@ function DrillCard({
   onOpenComment: () => void;
   onOpenVideoSubmission: () => void;
 }) {
-  console.log(
-    "🔍 DrillCard render - drill.id:",
-    drill.id,
-    "drill.completed:",
-    drill.completed
-  );
   return (
     <div
       className={cn(
-        "rounded-xl p-4 border transition-all duration-200",
+        "rounded-lg border transition-all duration-200",
         drill.supersetId
-          ? "bg-purple-600/20 border-purple-500/50 hover:bg-purple-600/30"
-          : "bg-gray-700/50 border-gray-600 hover:bg-gray-700/70"
+          ? "bg-purple-600/10 border-purple-500/30 hover:bg-purple-600/20"
+          : "bg-gray-700/30 border-gray-600/50 hover:bg-gray-700/50"
       )}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-600/30">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-400">
               #{index + 1}
             </span>
-            <h4 className="text-lg font-bold text-white">{drill.title}</h4>
-            {drill.supersetId && (
-              <div className="flex items-center gap-1 text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded">
-                <Link className="h-3 w-3" />
-                <span className="font-medium">SUPERSET</span>
-              </div>
-            )}
+            <h4 className="text-lg font-semibold text-white">{drill.title}</h4>
           </div>
-
-          {/* Sets, Reps, Tempo */}
-          <div className="flex items-center gap-4 mb-2">
-            {drill.sets && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Sets:</span>
-                <span className="text-white font-semibold">{drill.sets}</span>
-              </div>
-            )}
-            {drill.reps && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Reps:</span>
-                <span className="text-white font-semibold">{drill.reps}</span>
-              </div>
-            )}
-            {drill.tempo && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Tempo:</span>
-                <span className="text-white font-semibold">{drill.tempo}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Tags */}
-          {drill.tags && drill.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2">
-              {drill.tags.map((tag: any, tagIndex: number) => (
-                <Badge
-                  key={tagIndex}
-                  variant="outline"
-                  className="text-xs border-blue-500 text-blue-400"
-                >
-                  {tag}
-                </Badge>
-              ))}
+          {drill.supersetId && (
+            <div className="flex items-center gap-1 text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded-full">
+              <Link className="h-3 w-3" />
+              <span className="font-medium">SUPERSET</span>
             </div>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 mt-2">
-            {drill.videoUrl && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onOpenVideo}
-                className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs px-2 py-1"
-              >
-                <Play className="h-3 w-3 mr-1" />
-                Demo
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onOpenComment}
-              className="border-gray-500 text-gray-400 hover:bg-gray-600 text-xs px-2 py-1"
-            >
-              <MessageSquare className="h-3 w-3 mr-1" />
-              Note
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onOpenVideoSubmission}
-              className="border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white text-xs px-2 py-1"
-            >
-              <Video className="h-3 w-3 mr-1" />
-              Record
-            </Button>
-          </div>
         </div>
 
         {/* Completion Button */}
@@ -1236,27 +1178,101 @@ function DrillCard({
           onClick={e => {
             e.preventDefault();
             e.stopPropagation();
-            console.log(
-              "🔍 BUTTON CLICKED! - drill.completed:",
-              drill.completed
-            );
-            console.log("🔍 BUTTON CLICKED! - drill.id:", drill.id);
-            console.log(
-              "🔍 BUTTON CLICKED! - calling onMarkComplete with:",
-              !drill.completed
-            );
             onMarkComplete(!drill.completed);
           }}
           className={cn(
-            "h-10 w-10 p-0 rounded-lg transition-all duration-200 sm:h-12 sm:w-12 cursor-pointer z-10",
+            "h-8 w-8 p-0 rounded-full transition-all duration-200",
             drill.completed
               ? "bg-green-500 text-white hover:bg-green-600"
               : "bg-gray-600 text-gray-300 hover:bg-gray-500"
           )}
-          style={{ pointerEvents: "auto", zIndex: 10 }}
         >
-          <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+          <Check className="h-4 w-4" />
         </Button>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {/* Exercise Details */}
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          {drill.sets && (
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{drill.sets}</div>
+              <div className="text-xs text-gray-400">Sets</div>
+            </div>
+          )}
+          {drill.reps && (
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{drill.reps}</div>
+              <div className="text-xs text-gray-400">Reps</div>
+            </div>
+          )}
+          {drill.tempo && (
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{drill.tempo}</div>
+              <div className="text-xs text-gray-400">Tempo</div>
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
+        {drill.description && (
+          <div className="mb-3 p-3 bg-gray-800/50 rounded-lg">
+            <p className="text-sm text-gray-300">
+              {drill.description.length > 120
+                ? `${drill.description.substring(0, 120)}...`
+                : drill.description}
+            </p>
+          </div>
+        )}
+
+        {/* Tags */}
+        {drill.tags && drill.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {drill.tags.map((tag: any, tagIndex: number) => (
+              <Badge
+                key={tagIndex}
+                variant="outline"
+                className="text-xs border-blue-500/50 text-blue-400 bg-blue-500/10"
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {drill.videoUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenVideo}
+              className="flex-1 border-2 border-blue-500 text-blue-400 hover:bg-blue-500/20 hover:border-blue-400 text-xs font-medium"
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Demo
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenComment}
+            className="flex-1 border-2 border-gray-500 text-gray-400 hover:bg-gray-600/20 hover:border-gray-400 text-xs font-medium"
+          >
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Note
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenVideoSubmission}
+            className="flex-1 border-2 border-purple-500 text-purple-400 hover:bg-purple-500/20 hover:border-purple-400 text-xs font-medium"
+          >
+            <Video className="h-3 w-3 mr-1" />
+            Record
+          </Button>
+        </div>
       </div>
     </div>
   );

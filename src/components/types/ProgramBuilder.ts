@@ -19,6 +19,10 @@ export interface ProgramItem {
   routineId?: string;
   supersetId?: string; // ID of the superset group
   supersetOrder?: number; // Order within the superset (1 or 2)
+  // Superset description fields (only for first exercise in superset)
+  supersetDescription?: string;
+  supersetInstructions?: string;
+  supersetNotes?: string;
   // Coach Instructions for better client guidance
   coachInstructions?: {
     whatToDo: string; // What the client should do

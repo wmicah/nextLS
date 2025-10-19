@@ -389,7 +389,7 @@ function ClientProgramPage() {
   const markRoutineExerciseCompleteMutation =
     trpc.clientRouter.markRoutineExerciseComplete.useMutation({
       onError: error => {
-        alert(`Error updating routine exercise: ${error.message}`);
+        alert(`Error updating program: ${error.message}`);
       },
     });
 
@@ -681,11 +681,10 @@ function ClientProgramPage() {
       return newSet;
     });
 
-    // Call the backend mutation for routine exercise completion
+    // Call the backend mutation for drill completion (works for both regular drills and routine exercises)
     try {
-      await markRoutineExerciseCompleteMutation.mutateAsync({
-        exerciseId,
-        routineAssignmentId,
+      await markDrillCompleteMutation.mutateAsync({
+        drillId: exerciseId,
         completed,
       });
 

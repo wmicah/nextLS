@@ -115,6 +115,11 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  supersetOrder: drill.supersetOrder || undefined,
+                  description: drill.description || "",
+                  supersetDescription: drill.supersetDescription || undefined,
+                  supersetInstructions: drill.supersetInstructions || undefined,
+                  supersetNotes: drill.supersetNotes || undefined,
                   // Coach Instructions - Map from database format to ProgramBuilder format
                   coachInstructions: (() => {
                     const hasInstructions =
@@ -159,6 +164,11 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  supersetOrder: drill.supersetOrder || undefined,
+                  description: drill.description || "",
+                  supersetDescription: drill.supersetDescription || undefined,
+                  supersetInstructions: drill.supersetInstructions || undefined,
+                  supersetNotes: drill.supersetNotes || undefined,
                   // Coach Instructions - Map from database format to ProgramBuilder format
                   coachInstructions: (() => {
                     const hasInstructions =
@@ -203,6 +213,11 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  supersetOrder: drill.supersetOrder || undefined,
+                  description: drill.description || "",
+                  supersetDescription: drill.supersetDescription || undefined,
+                  supersetInstructions: drill.supersetInstructions || undefined,
+                  supersetNotes: drill.supersetNotes || undefined,
                   // Coach Instructions - Map from database format to ProgramBuilder format
                   coachInstructions: (() => {
                     const hasInstructions =
@@ -247,6 +262,11 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  supersetOrder: drill.supersetOrder || undefined,
+                  description: drill.description || "",
+                  supersetDescription: drill.supersetDescription || undefined,
+                  supersetInstructions: drill.supersetInstructions || undefined,
+                  supersetNotes: drill.supersetNotes || undefined,
                   // Coach Instructions - Map from database format to ProgramBuilder format
                   coachInstructions: (() => {
                     const hasInstructions =
@@ -291,6 +311,11 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  supersetOrder: drill.supersetOrder || undefined,
+                  description: drill.description || "",
+                  supersetDescription: drill.supersetDescription || undefined,
+                  supersetInstructions: drill.supersetInstructions || undefined,
+                  supersetNotes: drill.supersetNotes || undefined,
                   // Coach Instructions - Map from database format to ProgramBuilder format
                   coachInstructions: (() => {
                     const hasInstructions =
@@ -335,6 +360,11 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  supersetOrder: drill.supersetOrder || undefined,
+                  description: drill.description || "",
+                  supersetDescription: drill.supersetDescription || undefined,
+                  supersetInstructions: drill.supersetInstructions || undefined,
+                  supersetNotes: drill.supersetNotes || undefined,
                   // Coach Instructions - Map from database format to ProgramBuilder format
                   coachInstructions: (() => {
                     const hasInstructions =
@@ -379,6 +409,11 @@ function ProgramEditorPageContent() {
                   videoThumbnail: drill.videoThumbnail || "",
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
+                  supersetOrder: drill.supersetOrder || undefined,
+                  description: drill.description || "",
+                  supersetDescription: drill.supersetDescription || undefined,
+                  supersetInstructions: drill.supersetInstructions || undefined,
+                  supersetNotes: drill.supersetNotes || undefined,
                   // Coach Instructions - Map from database format to ProgramBuilder format
                   coachInstructions: (() => {
                     const hasInstructions =
@@ -479,7 +514,7 @@ function ProgramEditorPageContent() {
             drills: items.map((item, itemIndex) => ({
               id: item.id,
               title: item.title,
-              description: item.notes || "",
+              description: item.description || item.notes || "",
               duration: item.duration || "",
               videoUrl: item.videoUrl || "",
               notes: item.notes || "",
@@ -492,6 +527,11 @@ function ProgramEditorPageContent() {
               videoThumbnail: item.videoThumbnail,
               routineId: item.routineId,
               supersetId: item.supersetId,
+              supersetOrder: item.supersetOrder,
+              // Superset description fields
+              supersetDescription: item.supersetDescription || undefined,
+              supersetInstructions: item.supersetInstructions || undefined,
+              supersetNotes: item.supersetNotes || undefined,
               // Coach Instructions - Map from ProgramBuilder format to database format
               coachInstructionsWhatToDo:
                 item.coachInstructions?.whatToDo || undefined,

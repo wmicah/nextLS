@@ -56,10 +56,21 @@ export default function ConversationPage({
   const { data: currentUser } = trpc.user.getProfile.useQuery();
 
   // Get conversation details
-  const { data: conversation } = trpc.messaging.getConversation.useQuery(
-    { conversationId },
-    { refetchInterval: 5000 }
-  );
+  const { data: conversation, error: conversationError } =
+    trpc.messaging.getConversation.useQuery(
+      { conversationId },
+      { refetchInterval: 5000 }
+    );
+
+  // Debug logging
+  useEffect(() => {
+    if (conversationError) {
+      console.error("❌ Conversation error:", conversationError);
+    }
+    if (conversation) {
+      console.log("✅ Conversation loaded:", conversation.id);
+    }
+  }, [conversation, conversationError]);
 
   // Get messages
   const { data: messages = [], refetch: refetchMessages } =

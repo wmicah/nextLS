@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileProgramBuilderNew from "./MobileProgramBuilderNew";
+import SupersetDescriptionModal from "./SupersetDescriptionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUIStore } from "@/lib/stores/uiStore";
@@ -103,6 +104,230 @@ const DAY_LABELS: Record<DayKey, string> = {
   sat: "Saturday",
 };
 
+// Exercise Edit Dialog Component
+interface ExerciseEditDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (details: {
+    title: string;
+    description?: string;
+    sets?: number;
+    reps?: number;
+    tempo?: string;
+    duration?: string;
+    coachInstructions?: {
+      whatToDo: string;
+      howToDoIt: string;
+      keyPoints: string[];
+      commonMistakes: string[];
+      equipment?: string;
+      setup?: string;
+    };
+  }) => void;
+  exercise: ProgramItem | null;
+}
+
+function ExerciseEditDialog({
+  isOpen,
+  onClose,
+  onSubmit,
+  exercise,
+}: ExerciseEditDialogProps) {
+  const [formData, setFormData] = useState({
+    title: exercise?.title || "",
+    description: exercise?.description || "",
+    sets: exercise?.sets || undefined,
+    reps: exercise?.reps || undefined,
+    tempo: exercise?.tempo || "",
+    duration: exercise?.duration || "",
+    coachInstructions: exercise?.coachInstructions || {
+      whatToDo: "",
+      howToDoIt: "",
+      keyPoints: [],
+      commonMistakes: [],
+      equipment: "",
+      setup: "",
+    },
+  });
+
+  // Update form data when exercise changes
+  useEffect(() => {
+    if (exercise) {
+      setFormData({
+        title: exercise.title || "",
+        description: exercise.description || "",
+        sets: exercise.sets || undefined,
+        reps: exercise.reps || undefined,
+        tempo: exercise.tempo || "",
+        duration: exercise.duration || "",
+        coachInstructions: exercise.coachInstructions || {
+          whatToDo: "",
+          howToDoIt: "",
+          keyPoints: [],
+          commonMistakes: [],
+          equipment: "",
+          setup: "",
+        },
+      });
+    }
+  }, [exercise]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-white">Edit Exercise</DialogTitle>
+          <DialogDescription className="text-gray-400">
+            Update the exercise details and instructions
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="title" className="text-gray-400 text-sm">
+                Exercise Title
+              </Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={e =>
+                  setFormData(prev => ({ ...prev, title: e.target.value }))
+                }
+                className="bg-[#353A3A] border-gray-600 text-white"
+                placeholder="Exercise name"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="duration" className="text-gray-400 text-sm">
+                Duration (optional)
+              </Label>
+              <Input
+                id="duration"
+                value={formData.duration}
+                onChange={e =>
+                  setFormData(prev => ({ ...prev, duration: e.target.value }))
+                }
+                className="bg-[#353A3A] border-gray-600 text-white"
+                placeholder="e.g., 30 seconds"
+              />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="description" className="text-gray-400 text-sm">
+                Exercise Description
+              </Label>
+              <span className="text-xs text-gray-500">
+                {formData.description.length}/120
+              </span>
+            </div>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={e => {
+                const value = e.target.value;
+                if (value.length <= 120) {
+                  setFormData(prev => ({ ...prev, description: value }));
+                }
+              }}
+              className="bg-[#353A3A] border-gray-600 text-white"
+              placeholder="Describe how to perform this exercise..."
+              rows={3}
+              maxLength={120}
+            />
+          </div>
+
+          {/* Sets, Reps, Tempo */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="sets" className="text-gray-400 text-sm">
+                Sets
+              </Label>
+              <Input
+                id="sets"
+                type="number"
+                value={formData.sets || ""}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    sets: e.target.value ? parseInt(e.target.value) : undefined,
+                  }))
+                }
+                className="bg-[#353A3A] border-gray-600 text-white"
+                placeholder="3"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="reps" className="text-gray-400 text-sm">
+                Reps
+              </Label>
+              <Input
+                id="reps"
+                type="number"
+                value={formData.reps || ""}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    reps: e.target.value ? parseInt(e.target.value) : undefined,
+                  }))
+                }
+                className="bg-[#353A3A] border-gray-600 text-white"
+                placeholder="10"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="tempo" className="text-gray-400 text-sm">
+                Tempo
+              </Label>
+              <Input
+                id="tempo"
+                value={formData.tempo}
+                onChange={e =>
+                  setFormData(prev => ({ ...prev, tempo: e.target.value }))
+                }
+                className="bg-[#353A3A] border-gray-600 text-white"
+                placeholder="2-1-2"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const DAY_KEYS: DayKey[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 function ProgramBuilder({
@@ -148,6 +373,8 @@ function ProgramBuilder({
   const [editingItem, setEditingItem] = useState<ProgramItem | null>(null);
   const [isVideoDetailsDialogOpen, setIsVideoDetailsDialogOpen] =
     useState(false);
+  const [isExerciseEditDialogOpen, setIsExerciseEditDialogOpen] =
+    useState(false);
   const [selectedVideo, setSelectedVideo] = useState<{
     id: string;
     title: string;
@@ -156,9 +383,28 @@ function ProgramBuilder({
     url?: string;
     thumbnail?: string;
   } | null>(null);
+  const [editingExercise, setEditingExercise] = useState<ProgramItem | null>(
+    null
+  );
   const [isSupersetModalOpen, setIsSupersetModalOpen] = useState(false);
   const [pendingSupersetDrill, setPendingSupersetDrill] =
     useState<ProgramItem | null>(null);
+  const [isSupersetDescriptionModalOpen, setIsSupersetDescriptionModalOpen] =
+    useState(false);
+  const [pendingSupersetDescription, setPendingSupersetDescription] = useState<{
+    supersetId: string;
+    supersetName: string;
+    currentData?: {
+      exercises?: Array<{
+        id: string;
+        title: string;
+        sets?: number;
+        reps?: number;
+        description?: string;
+      }>;
+      supersetDescription?: string;
+    };
+  } | null>(null);
   // tRPC hooks for routines
   const { data: routinesData = [], refetch: refetchRoutines } =
     trpc.routines.list.useQuery();
@@ -395,16 +641,9 @@ function ProgramBuilder({
       setSelectedDayKey(dayKey);
       setEditingItem(item);
 
-      // Open video details dialog for editing ANY item type
-      setSelectedVideo({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        duration: item.duration,
-        url: item.videoUrl,
-        thumbnail: item.videoThumbnail || undefined,
-      });
-      setIsVideoDetailsDialogOpen(true);
+      // Use the new exercise edit dialog for ALL exercises (including videos)
+      setEditingExercise(item);
+      setIsExerciseEditDialogOpen(true);
     },
     []
   );
@@ -430,28 +669,36 @@ function ProgramBuilder({
     }) => {
       // Check if we're creating a routine
       if (selectedWeekId === "routine-creation") {
-        // Add video directly to routine
+        // Use exercise edit dialog for routine creation too
         const videoItem: ProgramItem = {
           id: `temp-${Date.now()}`,
           title: video.title,
           type: "video",
-          notes: video.description || "",
+          description: video.description || "",
           duration: video.duration || "",
           videoUrl: video.url || "",
           videoId: video.id,
           videoTitle: video.title,
           videoThumbnail: video.thumbnail || "",
         };
-        setNewRoutine(prev => ({
-          ...prev,
-          exercises: [...(prev.exercises || []), videoItem],
-        }));
-        setSelectedWeekId("");
-        setSelectedDayKey("sun");
+        setEditingExercise(videoItem);
+        setIsExerciseEditDialogOpen(true);
+        setSelectedWeekId("routine-creation"); // Keep this flag for the submit handler
       } else {
-        // Normal video selection for program days
-        setSelectedVideo(video);
-        setIsVideoDetailsDialogOpen(true);
+        // Normal video selection for program days - use new exercise edit dialog
+        const videoItem: ProgramItem = {
+          id: `temp-${Date.now()}`,
+          title: video.title,
+          type: "video",
+          description: video.description || "",
+          duration: video.duration || "",
+          videoUrl: video.url || "",
+          videoId: video.id,
+          videoTitle: video.title,
+          videoThumbnail: video.thumbnail || "",
+        };
+        setEditingExercise(videoItem);
+        setIsExerciseEditDialogOpen(true);
       }
     },
     [selectedWeekId]
@@ -521,6 +768,135 @@ function ProgramBuilder({
       editingItem,
       addItem,
       editItem,
+    ]
+  );
+
+  const handleExerciseEditSubmit = useCallback(
+    (details: {
+      title: string;
+      description?: string;
+      notes?: string;
+      sets?: number;
+      reps?: number;
+      tempo?: string;
+      duration?: string;
+      coachInstructions?: {
+        whatToDo: string;
+        howToDoIt: string;
+        keyPoints: string[];
+        commonMistakes: string[];
+        equipment?: string;
+        setup?: string;
+      };
+    }) => {
+      if (!editingExercise) return;
+
+      // Create the updated exercise item
+      const exerciseItem: Omit<ProgramItem, "id"> = {
+        title: details.title,
+        type: editingExercise.type || "exercise",
+        description: details.description || "",
+        notes: editingExercise.notes || "", // Keep existing notes from the exercise
+        sets: details.sets,
+        reps: details.reps,
+        tempo: details.tempo || "",
+        duration: details.duration || "",
+        videoUrl: editingExercise.videoUrl,
+        videoId: editingExercise.videoId,
+        videoTitle: editingExercise.videoTitle,
+        videoThumbnail: editingExercise.videoThumbnail,
+        supersetId: editingExercise.supersetId,
+        supersetOrder: editingExercise.supersetOrder,
+        supersetDescription: editingExercise.supersetDescription,
+        supersetInstructions: editingExercise.supersetInstructions,
+        supersetNotes: editingExercise.supersetNotes,
+        coachInstructions: details.coachInstructions,
+      };
+
+      // Check if we're creating a routine, adding a new video, or editing an existing exercise
+      if (selectedWeekId === "routine-creation") {
+        if (editingExercise.id.startsWith("temp-")) {
+          // This is adding a new video to a routine being created
+          const newExercise: ProgramItem = {
+            id: editingExercise.id, // Use the existing temp ID
+            title: details.title,
+            type: editingExercise.type || "exercise",
+            description: details.description || "",
+            notes: editingExercise.notes || "", // Keep existing notes
+            sets: details.sets,
+            reps: details.reps,
+            tempo: details.tempo || "",
+            duration: details.duration || "",
+            videoUrl: editingExercise.videoUrl,
+            videoId: editingExercise.videoId,
+            videoTitle: editingExercise.videoTitle,
+            videoThumbnail: editingExercise.videoThumbnail,
+            supersetId: editingExercise.supersetId,
+            supersetOrder: editingExercise.supersetOrder,
+            supersetDescription: editingExercise.supersetDescription,
+            supersetInstructions: editingExercise.supersetInstructions,
+            supersetNotes: editingExercise.supersetNotes,
+            coachInstructions: details.coachInstructions,
+          };
+          setNewRoutine(prev => ({
+            ...prev,
+            exercises: [...(prev.exercises || []), newExercise],
+          }));
+        } else {
+          // This is editing an existing exercise in a routine being created
+          const updatedExercise: ProgramItem = {
+            id: editingExercise.id, // Keep the existing ID
+            title: details.title,
+            type: editingExercise.type || "exercise",
+            description: details.description || "",
+            notes: editingExercise.notes || "", // Keep existing notes
+            sets: details.sets,
+            reps: details.reps,
+            tempo: details.tempo || "",
+            duration: details.duration || "",
+            videoUrl: editingExercise.videoUrl,
+            videoId: editingExercise.videoId,
+            videoTitle: editingExercise.videoTitle,
+            videoThumbnail: editingExercise.videoThumbnail,
+            supersetId: editingExercise.supersetId,
+            supersetOrder: editingExercise.supersetOrder,
+            supersetDescription: editingExercise.supersetDescription,
+            supersetInstructions: editingExercise.supersetInstructions,
+            supersetNotes: editingExercise.supersetNotes,
+            coachInstructions: details.coachInstructions,
+          };
+          setNewRoutine(prev => ({
+            ...prev,
+            exercises: (prev.exercises || []).map(ex =>
+              ex.id === editingExercise.id ? updatedExercise : ex
+            ),
+          }));
+        }
+        setSelectedWeekId("routine-creation"); // Keep the flag
+      } else if (editingExercise.id.startsWith("temp-")) {
+        // This is a new video being added to a program
+        addItem(selectedWeekId, selectedDayKey, exerciseItem);
+      } else {
+        // This is editing an existing exercise
+        editItem(
+          selectedWeekId,
+          selectedDayKey,
+          editingExercise.id,
+          exerciseItem
+        );
+      }
+
+      setIsExerciseEditDialogOpen(false);
+      setEditingExercise(null);
+      setEditingItem(null);
+    },
+    [
+      editingExercise,
+      selectedWeekId,
+      selectedDayKey,
+      editItem,
+      addItem,
+      setNewRoutine,
     ]
   );
 
@@ -647,6 +1023,20 @@ function ProgramBuilder({
             superset.supersetOrder = 2;
             superset.type = "superset";
 
+            console.log("=== CREATING SUPERSET ===");
+            console.log("First exercise:", {
+              id: item.id,
+              title: item.title,
+              supersetId: item.supersetId,
+              supersetOrder: item.supersetOrder,
+            });
+            console.log("Second exercise:", {
+              id: superset.id,
+              title: superset.title,
+              supersetId: superset.supersetId,
+              supersetOrder: superset.supersetOrder,
+            });
+
             return { ...week, days: updatedDays };
           }
         }
@@ -691,6 +1081,157 @@ function ProgramBuilder({
     setPendingSupersetDrill(item);
     setIsSupersetModalOpen(true);
   }, []);
+
+  const onOpenSupersetDescriptionModal = useCallback(
+    (supersetId: string, supersetName: string) => {
+      // Find all exercises in the superset
+      const allItems = weeks.flatMap(week => Object.values(week.days).flat());
+      console.log(
+        "All items before filtering:",
+        allItems.map(item => ({
+          id: item.id,
+          title: item.title,
+          supersetId: item.supersetId,
+          supersetOrder: item.supersetOrder,
+        }))
+      );
+
+      const supersetExercises = allItems
+        .filter(item => item.supersetId === supersetId)
+        .sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0));
+
+      console.log("=== LOADING SUPERSET DATA ===");
+      console.log("supersetId:", supersetId);
+      console.log("supersetExercises:", supersetExercises);
+      console.log("All weeks data:", weeks);
+
+      // Debug each exercise individually
+      supersetExercises.forEach((ex, index) => {
+        console.log(`Exercise ${index + 1}:`, {
+          title: ex.title,
+          sets: ex.sets,
+          reps: ex.reps,
+          description: ex.description,
+          supersetOrder: ex.supersetOrder,
+          supersetDescription: ex.supersetDescription,
+        });
+      });
+
+      const firstExercise = supersetExercises[0];
+
+      setPendingSupersetDescription({
+        supersetId,
+        supersetName,
+        currentData: firstExercise
+          ? {
+              exercises: supersetExercises.map(ex => ({
+                id: ex.supersetOrder?.toString() || "1",
+                title: ex.title,
+                sets: ex.sets,
+                reps: ex.reps,
+                description: ex.description,
+              })),
+              supersetDescription: firstExercise.supersetDescription,
+            }
+          : undefined,
+      });
+      setIsSupersetDescriptionModalOpen(true);
+    },
+    [weeks]
+  );
+
+  const handleSupersetDescriptionSave = useCallback(
+    (data: {
+      exercises: Array<{
+        id: string;
+        title: string;
+        sets?: number;
+        reps?: number;
+        description?: string;
+      }>;
+      supersetDescription?: string;
+    }) => {
+      if (!pendingSupersetDescription) return;
+
+      const updatedWeeks = weeks.map(week => {
+        const updatedDays = { ...week.days };
+        Object.keys(updatedDays).forEach(dayKey => {
+          updatedDays[dayKey as DayKey] = updatedDays[dayKey as DayKey].map(
+            (item: ProgramItem) => {
+              if (item.supersetId === pendingSupersetDescription.supersetId) {
+                // Find the corresponding exercise data based on supersetOrder
+                const exerciseData = data.exercises.find(
+                  ex => ex.id === item.supersetOrder?.toString()
+                );
+
+                console.log("=== SAVING EXERCISE DATA ===");
+                console.log("item.supersetOrder:", item.supersetOrder);
+                console.log("exerciseData:", exerciseData);
+                console.log("item.title:", item.title);
+                console.log("data.exercises:", data.exercises);
+                console.log("data.exercises[0]:", data.exercises[0]);
+                console.log("data.exercises[1]:", data.exercises[1]);
+
+                console.log(
+                  "Before update - item.sets:",
+                  item.sets,
+                  "item.reps:",
+                  item.reps,
+                  "item.description:",
+                  item.description
+                );
+                console.log(
+                  "Before update - item.supersetId:",
+                  item.supersetId,
+                  "item.supersetOrder:",
+                  item.supersetOrder
+                );
+
+                const updatedItem = {
+                  ...item,
+                  sets: exerciseData?.sets,
+                  reps: exerciseData?.reps,
+                  description: exerciseData?.description,
+                  // Only set superset description on the first exercise (supersetOrder = 1)
+                  supersetDescription:
+                    item.supersetOrder === 1
+                      ? data.supersetDescription
+                      : item.supersetDescription,
+                };
+
+                console.log(
+                  "After update - updatedItem.sets:",
+                  updatedItem.sets,
+                  "updatedItem.reps:",
+                  updatedItem.reps,
+                  "updatedItem.description:",
+                  updatedItem.description
+                );
+                console.log(
+                  "After update - updatedItem.supersetId:",
+                  updatedItem.supersetId,
+                  "updatedItem.supersetOrder:",
+                  updatedItem.supersetOrder
+                );
+                return updatedItem;
+              }
+              return item;
+            }
+          );
+        });
+        return { ...week, days: updatedDays };
+      });
+
+      console.log("Saving superset data:", data);
+      console.log("Updated weeks:", updatedWeeks);
+
+      setWeeks(updatedWeeks);
+      onSave?.(updatedWeeks);
+      setIsSupersetDescriptionModalOpen(false);
+      setPendingSupersetDescription(null);
+    },
+    [weeks, pendingSupersetDescription, onSave]
+  );
 
   const getSupersetGroups = useCallback(() => {
     const groups: { [key: string]: ProgramItem[] } = {};
@@ -896,6 +1437,7 @@ function ProgramBuilder({
             onCreateSuperset={handleCreateSuperset}
             onRemoveSuperset={handleRemoveSuperset}
             onOpenSupersetModal={handleOpenSupersetModal}
+            onOpenSupersetDescriptionModal={onOpenSupersetDescriptionModal}
             getSupersetGroups={getSupersetGroups}
             onOpenAddRoutine={(weekId, dayKey) => {
               setPendingRoutineDay({ weekId, dayKey });
@@ -918,6 +1460,18 @@ function ProgramBuilder({
         onSubmit={handleVideoDetailsSubmit}
         video={selectedVideo}
         existingItem={editingItem}
+      />
+
+      {/* Exercise Edit Dialog */}
+      <ExerciseEditDialog
+        isOpen={isExerciseEditDialogOpen}
+        onClose={() => {
+          setIsExerciseEditDialogOpen(false);
+          setEditingExercise(null);
+          setEditingItem(null);
+        }}
+        onSubmit={handleExerciseEditSubmit}
+        exercise={editingExercise}
       />
 
       {/* Superset Modal */}
@@ -1163,24 +1717,39 @@ function ProgramBuilder({
                               className="bg-gray-700 border-gray-600 text-white text-sm mt-2"
                             />
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const updatedExercises =
-                                newRoutine.exercises?.filter(
-                                  (_, i) => i !== index
-                                ) || [];
-                              setNewRoutine(prev => ({
-                                ...prev,
-                                exercises: updatedExercises,
-                              }));
-                            }}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                            type="button"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingExercise(exercise);
+                                setIsExerciseEditDialogOpen(true);
+                                setSelectedWeekId("routine-creation");
+                              }}
+                              className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                              type="button"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const updatedExercises =
+                                  newRoutine.exercises?.filter(
+                                    (_, i) => i !== index
+                                  ) || [];
+                                setNewRoutine(prev => ({
+                                  ...prev,
+                                  exercises: updatedExercises,
+                                }));
+                              }}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              type="button"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1311,6 +1880,18 @@ function ProgramBuilder({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Superset Description Modal */}
+      <SupersetDescriptionModal
+        isOpen={isSupersetDescriptionModalOpen}
+        onClose={() => {
+          setIsSupersetDescriptionModalOpen(false);
+          setPendingSupersetDescription(null);
+        }}
+        onSave={handleSupersetDescriptionSave}
+        initialData={pendingSupersetDescription?.currentData}
+        supersetName={pendingSupersetDescription?.supersetName || "Superset"}
+      />
     </div>
   );
 }
@@ -1337,6 +1918,10 @@ interface WeekCardProps {
   onCreateSuperset: (itemId: string, supersetId: string) => void;
   onRemoveSuperset: (itemId: string) => void;
   onOpenSupersetModal: (item: ProgramItem) => void;
+  onOpenSupersetDescriptionModal: (
+    supersetId: string,
+    supersetName: string
+  ) => void;
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
   onConvertToRoutine: (dayLabel: string, items: ProgramItem[]) => void;
@@ -1359,6 +1944,7 @@ function WeekCard({
   onCreateSuperset,
   onRemoveSuperset,
   onOpenSupersetModal,
+  onOpenSupersetDescriptionModal,
   getSupersetGroups,
   onOpenAddRoutine,
   onConvertToRoutine,
@@ -1462,6 +2048,7 @@ function WeekCard({
                 onCreateSuperset={onCreateSuperset}
                 onRemoveSuperset={onRemoveSuperset}
                 onOpenSupersetModal={onOpenSupersetModal}
+                onOpenSupersetDescriptionModal={onOpenSupersetDescriptionModal}
                 getSupersetGroups={getSupersetGroups}
                 onOpenAddRoutine={onOpenAddRoutine}
                 onConvertToRoutine={onConvertToRoutine}
@@ -1489,6 +2076,10 @@ interface DayCardProps {
   onCreateSuperset: (itemId: string, supersetId: string) => void;
   onRemoveSuperset: (itemId: string) => void;
   onOpenSupersetModal: (item: ProgramItem) => void;
+  onOpenSupersetDescriptionModal: (
+    supersetId: string,
+    supersetName: string
+  ) => void;
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
   onConvertToRoutine?: (dayLabel: string, items: ProgramItem[]) => void;
@@ -1508,6 +2099,7 @@ function DayCard({
   onCreateSuperset,
   onRemoveSuperset,
   onOpenSupersetModal,
+  onOpenSupersetDescriptionModal,
   getSupersetGroups,
   onOpenAddRoutine,
   onConvertToRoutine,
@@ -1627,6 +2219,9 @@ function DayCard({
                       routines={routines}
                       onCreateSuperset={onCreateSuperset}
                       onRemoveSuperset={onRemoveSuperset}
+                      onOpenSupersetDescriptionModal={
+                        onOpenSupersetDescriptionModal
+                      }
                       getSupersetGroups={getLocalSupersetGroups}
                     />
                   ))}
@@ -1762,6 +2357,10 @@ interface SortableDrillItemProps {
   routines: Routine[];
   onCreateSuperset: (itemId: string, supersetId: string) => void;
   onRemoveSuperset: (itemId: string) => void;
+  onOpenSupersetDescriptionModal: (
+    supersetId: string,
+    supersetName: string
+  ) => void;
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
 }
 
@@ -1773,6 +2372,7 @@ function SortableDrillItem({
   routines,
   onCreateSuperset,
   onRemoveSuperset,
+  onOpenSupersetDescriptionModal,
   getSupersetGroups,
 }: SortableDrillItemProps) {
   const {
@@ -1826,9 +2426,24 @@ function SortableDrillItem({
     >
       {/* Superset indicator */}
       {isSuperset && (
-        <div className="text-xs text-purple-300 mb-2 flex items-center gap-1">
-          <Link className="h-3 w-3" />
-          <span className="font-medium">SUPERSET</span>
+        <div className="text-xs text-purple-300 mb-2 flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <Link className="h-3 w-3" />
+            <span className="font-medium">SUPERSET</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              onOpenSupersetDescriptionModal(
+                item.supersetId!,
+                `Superset ${item.title}`
+              )
+            }
+            className="text-purple-300 hover:text-white hover:bg-purple-600/20 p-1 h-6"
+          >
+            <Edit className="h-3 w-3" />
+          </Button>
         </div>
       )}
 
@@ -1908,14 +2523,16 @@ function SortableDrillItem({
             </Button>
           )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onEdit}
-            className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
-          >
-            <Edit className="h-3 w-3" />
-          </Button>
+          {!isSuperset && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onEdit}
+              className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -1958,6 +2575,10 @@ interface ProgramItemCardProps {
   routines: Routine[];
   onCreateSuperset: (itemId: string, supersetId: string) => void;
   onRemoveSuperset: (itemId: string) => void;
+  onOpenSupersetDescriptionModal: (
+    supersetId: string,
+    supersetName: string
+  ) => void;
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
 }
 
@@ -1969,6 +2590,7 @@ function ProgramItemCard({
   routines,
   onCreateSuperset,
   onRemoveSuperset,
+  onOpenSupersetDescriptionModal,
   getSupersetGroups,
 }: ProgramItemCardProps) {
   const getItemIcon = () => {
@@ -2011,106 +2633,133 @@ function ProgramItemCard({
           : "bg-gray-600/50 border-gray-500/50"
       }`}
     >
-      <CardContent className="p-2">
-        {/* Superset indicator */}
+      <CardContent className="p-3">
+        {/* Superset Header */}
         {isSuperset && (
-          <div className="text-xs text-purple-300 mb-1 flex items-center gap-1">
-            <Link className="h-3 w-3" />
-            <span className="font-medium">SUPERSET</span>
+          <div className="mb-3 pb-2 border-b border-purple-500/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Link className="h-4 w-4 text-purple-300" />
+                <span className="text-sm font-medium text-purple-300">
+                  SUPERSET
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  onOpenSupersetDescriptionModal(
+                    item.supersetId!,
+                    `Superset ${item.title}`
+                  )
+                }
+                className="text-purple-300 hover:text-white hover:bg-purple-600/20 px-2 py-1 h-7 text-xs"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit Instructions
+              </Button>
+            </div>
           </div>
         )}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <div className={cn("w-2 h-2 rounded-full", getItemColor())} />
-              <span className="text-xs font-medium text-white truncate">
-                {item.title}
-              </span>
+
+        {/* Exercise Content */}
+        <div className="space-y-2">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <div className={cn("w-2 h-2 rounded-full", getItemColor())} />
+                <span className="text-sm font-medium text-white truncate">
+                  {item.title}
+                </span>
+              </div>
+
+              {item.sets && item.reps && (
+                <div className="text-xs text-gray-300 mb-1">
+                  {item.sets} × {item.reps}
+                  {item.tempo && ` @ ${item.tempo}`}
+                </div>
+              )}
+
+              {item.duration && (
+                <div className="text-xs text-gray-300 mb-1 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {item.duration}
+                </div>
+              )}
+
+              {item.notes && (
+                <p className="text-xs text-gray-400 line-clamp-2">
+                  {item.notes}
+                </p>
+              )}
+
+              {/* Coach Instructions */}
+              {item.coachInstructions && (
+                <div className="mt-2">
+                  <CoachInstructionsDisplay
+                    instructions={item.coachInstructions}
+                    compact={true}
+                    className="text-xs"
+                  />
+                </div>
+              )}
             </div>
 
-            {item.sets && item.reps && (
-              <div className="text-xs text-gray-300 mb-1">
-                {item.sets} × {item.reps}
-                {item.tempo && ` @ ${item.tempo}`}
-              </div>
-            )}
-
-            {item.duration && (
-              <div className="text-xs text-gray-300 mb-1 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {item.duration}
-              </div>
-            )}
-
-            {item.notes && (
-              <p className="text-xs text-gray-400 line-clamp-2">{item.notes}</p>
-            )}
-
-            {/* Coach Instructions */}
-            {item.coachInstructions && (
-              <div className="mt-2">
-                <CoachInstructionsDisplay
-                  instructions={item.coachInstructions}
-                  compact={true}
-                  className="text-xs"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Superset Chain Link Button */}
-            {!isSuperset ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onAddSuperset}
-                className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30"
-                title="Add Superset"
-              >
-                <Link className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onRemoveSuperset(item.id)}
-                className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30"
-                title="Remove Superset"
-              >
-                <Unlink className="h-4 w-4" />
-              </Button>
-            )}
-
-            {/* More Options Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1 ml-2">
+              {/* Superset Controls */}
+              {!isSuperset ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-500"
+                  onClick={onAddSuperset}
+                  className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30"
+                  title="Add Superset"
                 >
-                  <MoreHorizontal className="h-3 w-3" />
+                  <Link className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-gray-700 border-gray-600">
-                <DropdownMenuItem
-                  onClick={onEdit}
-                  className="text-white hover:bg-gray-600"
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRemoveSuperset(item.id)}
+                  className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30"
+                  title="Remove Superset"
                 >
-                  <Edit className="h-3 w-3 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-600" />
-                <DropdownMenuItem
-                  onClick={onDelete}
-                  className="text-red-400 hover:bg-red-400/10"
-                >
-                  <Trash2 className="h-3 w-3 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <Unlink className="h-4 w-4" />
+                </Button>
+              )}
+
+              {/* More Options Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-gray-500"
+                  >
+                    <MoreHorizontal className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-gray-700 border-gray-600">
+                  <DropdownMenuItem
+                    onClick={onEdit}
+                    className="text-white hover:bg-gray-600"
+                  >
+                    <Edit className="h-3 w-3 mr-2" />
+                    Edit Exercise
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-600" />
+                  <DropdownMenuItem
+                    onClick={onDelete}
+                    className="text-red-400 hover:bg-red-400/10"
+                  >
+                    <Trash2 className="h-3 w-3 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </CardContent>

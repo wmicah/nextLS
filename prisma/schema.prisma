@@ -125,6 +125,7 @@ model Client {
   primaryCoach         User?                   @relation("PrimaryCoachClients", fields: [primaryCoachId], references: [id])
   assignedCoaches      ClientCoachAssignment[] @relation("ClientCoachAssignments")
   routineExerciseCompletions RoutineExerciseCompletion[] @relation("ClientRoutineExerciseCompletions")
+  programDrillCompletions    ProgramDrillCompletion[]    @relation("ClientProgramDrillCompletions")
 
   @@map("clients")
 }
@@ -429,6 +430,10 @@ model ProgramDrill {
   routineId              String?
   supersetId             String?
   supersetOrder          Int?
+  // Superset description fields (only populated for first exercise in superset)
+  supersetDescription    String?
+  supersetInstructions   String?
+  supersetNotes          String?
   // Coach Instructions fields
   coachInstructionsWhatToDo String?
   coachInstructionsHowToDoIt String?
@@ -440,6 +445,7 @@ model ProgramDrill {
   coachInstructionsSetup String?
   clientVideoSubmissions ClientVideoSubmission[]
   completions            DrillCompletion[]
+  programDrillCompletions ProgramDrillCompletion[]
   day                    ProgramDay              @relation(fields: [dayId], references: [id], onDelete: Cascade)
   routine                Routine?                 @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
@@ -544,6 +550,7 @@ model ProgramAssignment {
   clientId     String
   assignedAt   DateTime                @default(now())
   startDate    DateTime?
+  completed    Boolean                 @default(false)
   completedAt  DateTime?
   progress     Int                     @default(0)
   createdAt    DateTime                @default(now())
@@ -553,6 +560,7 @@ model ProgramAssignment {
   client       Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   program      Program                 @relation(fields: [programId], references: [id], onDelete: Cascade)
   replacements ProgramDayReplacement[]
+  drillCompletions ProgramDrillCompletion[]
 
   @@unique([programId, clientId, currentCycle])
   @@map("program_assignments")
@@ -594,6 +602,21 @@ model RoutineExercise {
   videoTitle     String?
   videoThumbnail String?
   videoUrl       String?
+  // Superset fields
+  supersetId             String?
+  supersetOrder          Int?
+  supersetDescription    String?
+  supersetInstructions   String?
+  supersetNotes          String?
+  // Coach Instructions fields
+  coachInstructionsWhatToDo String?
+  coachInstructionsHowToDoIt String?
+  coachInstructionsKeyPoints String[] @default([])
+  coachInstructionsCommonMistakes String[] @default([])
+  coachInstructionsEasier String?
+  coachInstructionsHarder String?
+  coachInstructionsEquipment String?
+  coachInstructionsSetup String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   routine        Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
@@ -823,6 +846,23 @@ model ProgramDayReplacement {
 
   @@unique([assignmentId, replacedDate])
   @@map("program_day_replacements")
+}
+
+model ProgramDrillCompletion {
+  id                   String            @id @default(cuid())
+  drillId              String
+  programAssignmentId  String
+  clientId             String
+  completedAt          DateTime           @default(now())
+  notes                String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  client                Client            @relation("ClientProgramDrillCompletions", fields: [clientId], references: [id], onDelete: Cascade)
+  programAssignment     ProgramAssignment @relation(fields: [programAssignmentId], references: [id], onDelete: Cascade)
+  drill                 ProgramDrill      @relation(fields: [drillId], references: [id], onDelete: Cascade)
+
+  @@unique([drillId, programAssignmentId])
+  @@map("program_drill_completions")
 }
 
 model TimeSwapRequest {

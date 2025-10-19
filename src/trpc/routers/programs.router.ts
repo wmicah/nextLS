@@ -430,6 +430,10 @@ export const programsRouter = router({
                       videoId: true,
                       videoThumbnail: true,
                       videoTitle: true,
+                      // Superset description fields
+                      supersetDescription: true,
+                      supersetInstructions: true,
+                      supersetNotes: true,
                       // Coach Instructions
                       coachInstructionsWhatToDo: true,
                       coachInstructionsHowToDoIt: true,
@@ -871,6 +875,10 @@ export const programsRouter = router({
                 tempo: z.string().optional(),
                 supersetId: z.string().optional(),
                 supersetOrder: z.number().optional(),
+                // Superset description fields
+                supersetDescription: z.string().optional(),
+                supersetInstructions: z.string().optional(),
+                supersetNotes: z.string().optional(),
               })
             ),
           })
@@ -985,6 +993,10 @@ export const programsRouter = router({
               tempo: drillData.tempo || "",
               supersetId: drillData.supersetId || null,
               supersetOrder: drillData.supersetOrder || null,
+              // Superset description fields
+              supersetDescription: drillData.supersetDescription || null,
+              supersetInstructions: drillData.supersetInstructions || null,
+              supersetNotes: drillData.supersetNotes || null,
             },
           });
         }

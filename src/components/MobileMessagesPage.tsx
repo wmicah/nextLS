@@ -89,23 +89,24 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   // Get current user info
   const { data: currentUser } = trpc.user.getProfile.useQuery();
 
-  // Get conversations
+  // Get conversations with optimized caching
   const { data: conversations = [], refetch: refetchConversations } =
     trpc.messaging.getConversations.useQuery(undefined, {
-      refetchInterval: 60000, // Poll every minute
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      staleTime: 30 * 1000, // Cache for 30 seconds
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     });
 
-  // Get unread counts separately for better performance
+  // Get unread counts with optimized caching
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      staleTime: 10 * 1000, // Cache for 10 seconds
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     });
 
   // Get messages for selected conversation
@@ -121,13 +122,15 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
       }
     );
 
-  // Simple polling for unread count
+  // Optimized unread count with smart caching
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     }
   );
 

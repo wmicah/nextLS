@@ -130,6 +130,9 @@ export const routinesRouter = router({
             videoUrl: z.string().optional(),
             supersetId: z.string().optional(),
             supersetOrder: z.number().optional(),
+            supersetDescription: z.string().optional(),
+            supersetInstructions: z.string().optional(),
+            supersetNotes: z.string().optional(),
           })
         ),
       })
@@ -173,6 +176,11 @@ export const routinesRouter = router({
               videoTitle: exercise.videoTitle,
               videoThumbnail: exercise.videoThumbnail,
               videoUrl: exercise.videoUrl,
+              supersetId: exercise.supersetId,
+              supersetOrder: exercise.supersetOrder,
+              supersetDescription: exercise.supersetDescription,
+              supersetInstructions: exercise.supersetInstructions,
+              supersetNotes: exercise.supersetNotes,
             })),
           },
         },
@@ -210,6 +218,9 @@ export const routinesRouter = router({
             videoUrl: z.string().optional(),
             supersetId: z.string().optional(),
             supersetOrder: z.number().optional(),
+            supersetDescription: z.string().optional(),
+            supersetInstructions: z.string().optional(),
+            supersetNotes: z.string().optional(),
           })
         ),
       })
@@ -257,6 +268,11 @@ export const routinesRouter = router({
               videoTitle: exercise.videoTitle,
               videoThumbnail: exercise.videoThumbnail,
               videoUrl: exercise.videoUrl,
+              supersetId: exercise.supersetId,
+              supersetOrder: exercise.supersetOrder,
+              supersetDescription: exercise.supersetDescription,
+              supersetInstructions: exercise.supersetInstructions,
+              supersetNotes: exercise.supersetNotes,
             })),
           },
         },

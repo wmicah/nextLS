@@ -598,11 +598,10 @@ export default function MobileClientProgramPage() {
       return newSet;
     });
 
-    // Call the backend mutation for routine exercise completion
+    // Call the backend mutation for drill completion (works for both regular drills and routine exercises)
     try {
-      await markRoutineExerciseCompleteMutation.mutateAsync({
-        exerciseId,
-        routineAssignmentId,
+      await markDrillCompleteMutation.mutateAsync({
+        drillId: exerciseId,
         completed,
       });
 

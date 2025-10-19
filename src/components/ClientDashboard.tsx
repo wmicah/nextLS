@@ -80,26 +80,28 @@ function ClientDashboard() {
       gcTime: 15 * 60 * 1000, // 15 minutes
     });
 
-  // Simple polling for unread count
+  // Optimized unread count with smart caching
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 30000, // Poll every 30 seconds (reduced from 10)
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     }
   );
 
-  // Get recent notifications
+  // Get recent notifications with optimized caching
   const { data: recentNotifications = [], isLoading: notificationsLoading } =
     trpc.notifications.getNotifications.useQuery(
       { limit: 5, unreadOnly: false },
       {
-        refetchInterval: 60000, // Poll every 60 seconds (reduced from 30)
-        refetchOnWindowFocus: true,
-        refetchOnReconnect: true,
-        staleTime: 30 * 1000, // Cache for 30 seconds
-        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+        refetchInterval: false, // No automatic polling
+        refetchOnWindowFocus: false, // Don't refetch on focus
+        refetchOnReconnect: true, // Only refetch on reconnect
       }
     );
 

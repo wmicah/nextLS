@@ -111,6 +111,11 @@ export default function Dashboard() {
           <WeekAtAGlance />
         </div>
 
+        {/* Quick Stats */}
+        <div className="mb-6 md:mb-8">
+          <QuickStatsSection />
+        </div>
+
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-2 gap-6">
           <RecentNotificationsSection />
@@ -543,34 +548,33 @@ function RecentClientActivitySection() {
 
 // Quick Stats Section Component
 function QuickStatsSection() {
-  const { data: clients = [] } = trpc.clients.list.useQuery({
-    archived: false,
-  });
-
-  const today = new Date();
-  const { data: todaysLessons = [] } =
-    trpc.scheduling.getCoachSchedule.useQuery({
-      month: today.getMonth(),
-      year: today.getFullYear(),
+  // Use batched dashboard query instead of multiple separate queries
+  const { data: dashboardData, isLoading } =
+    trpc.sidebar.getDashboardData.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     });
 
-  // Fetch events and programs for analytics
-  const { data: events = [] } = trpc.events.getUpcoming.useQuery();
-  const { data: programs = [] } = trpc.programs.list.useQuery();
-  const { data: analyticsData } = trpc.analytics.getDashboardData.useQuery({
-    timeRange: "4w",
-  });
+  // Extract data from batched query
+  const clients = dashboardData?.clients || [];
+  const todaysLessons = dashboardData?.todaysLessons || [];
+  const programs = dashboardData?.programs || [];
+  const stats = dashboardData?.stats || {
+    totalClients: 0,
+    totalPrograms: 0,
+    totalLessons: 0,
+    completionRate: 0,
+  };
 
-  // Calculate total lessons (all time)
-  const totalLessons = todaysLessons.length;
+  // Use stats from batched query
+  const totalLessons = stats.totalLessons;
+  const totalPrograms = stats.totalPrograms;
+  const completionRate = stats.completionRate;
 
-  // Calculate analytics - total programs created
-  const totalPrograms = programs.length;
-
-  // Get completion rate from analytics data
-  const completionRate = analyticsData?.completionRate || 0;
-
-  const stats = [
+  const statsArray = [
     {
       label: "Active Clients",
       value: clients.length,
@@ -627,7 +631,7 @@ function QuickStatsSection() {
         </h3>
 
         <div className="grid grid-cols-2 gap-4">
-          {stats.map((stat, index) => (
+          {statsArray.map((stat, index) => (
             <div
               key={index}
               className="p-4 rounded-lg border text-center"

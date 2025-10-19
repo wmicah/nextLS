@@ -77,64 +77,36 @@ export default function Sidebar({ user, children }: SidebarProps) {
       },
     });
 
-  // Smart polling with conditional intervals
-  const { data: unreadCountsObj = {}, refetch: refetchUnreadCount } =
-    trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval:
-        typeof document !== "undefined" &&
-        document.visibilityState === "visible"
-          ? 15000
-          : 30000, // 15s when active, 30s when inactive
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
+  // Batched sidebar data query - gets all data in one call
+  const { data: sidebarData, refetch: refetchSidebarData } =
+    trpc.sidebar.getSidebarData.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     });
 
-  // Calculate total unread count - using smart polling
-  const unreadCount = Object.values(
-    unreadCountsObj as Record<string, number>
-  ).reduce((sum: number, count: number) => sum + count, 0);
+  // Extract data from batched query
+  const unreadCountsObj = sidebarData?.unreadCountsObj || {};
+  const unreadCount = sidebarData?.totalUnreadCount || 0;
+  const unreadNotificationCount = sidebarData?.unreadNotificationCount || 0;
 
-  // Keep notifications polling for now (can be upgraded to WebSocket later)
-  const { data: unreadNotificationCount = 0 } =
-    trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval:
-        typeof document !== "undefined" &&
-        document.visibilityState === "visible"
-          ? 15000
-          : 30000, // 15s when active, 30s when inactive
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-    });
-
-  // Get conversations with aggressive caching
-  const { data: conversations = [] } = trpc.messaging.getConversations.useQuery(
-    undefined,
-    {
+  // Get recent conversations when needed (separate query for performance)
+  const { data: conversations = [] } =
+    trpc.sidebar.getRecentConversations.useQuery(undefined, {
       enabled: showRecentMessages,
-      refetchInterval: 60000, // Poll every minute
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      staleTime: 30 * 1000, // Cache for 30 seconds
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    }
-  );
-
-  // Get unread counts for each conversation
-  const { data: unreadCounts = {} } =
-    trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      enabled: showRecentMessages,
-      refetchInterval: 60000, // Poll every minute
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      staleTime: 30 * 1000, // Cache for 30 seconds
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // No automatic polling
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     });
 
-  // Get user settings for avatar
-  const { data: userSettings } = trpc.settings.getSettings.useQuery();
-
-  // Get organization data to conditionally show Organization link
-  const { data: organization } = trpc.organization.get.useQuery({});
+  // Extract additional data from batched query
+  const userSettings = sidebarData?.userSettings;
+  const organization = sidebarData?.organization;
+  const isInOrganization = sidebarData?.isInOrganization || false;
 
   // Define navLinks inside component to access unreadCount
   const navLinks = [
@@ -974,9 +946,9 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                 ? conversation.coach
                                 : conversation.client;
                             const lastMessage = conversation.messages[0];
-                            // Get actual unread count from the unreadCounts data
+                            // Get actual unread count from the unreadCountsObj data
                             const unreadCount =
-                              unreadCounts[conversation.id] || 0;
+                              unreadCountsObj[conversation.id] || 0;
                             const hasUnread = unreadCount > 0;
 
                             return (
@@ -984,6 +956,10 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                 key={conversation.id}
                                 href={`/messages/${conversation.id}`}
                                 onClick={() => {
+                                  console.log(
+                                    "🔍 Navigating to conversation:",
+                                    conversation.id
+                                  );
                                   setIsAnimating(true);
                                   setTimeout(() => {
                                     setShowRecentMessages(false);
