@@ -22,8 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "./Sidebar";
-import { withMobileDetection } from "@/lib/mobile-detection";
-import MobileVideosPage from "./MobileVideosPage";
+import { SkeletonVideoGrid, SkeletonCard } from "@/components/SkeletonLoader";
 
 function VideosPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -142,16 +141,9 @@ function VideosPage() {
   if (videosLoading || clientSubmissionsLoading) {
     return (
       <Sidebar>
-        <div
-          className="min-h-screen flex items-center justify-center"
-          style={{ backgroundColor: "#2A3133" }}
-        >
-          <div className="text-center">
-            <div
-              className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
-              style={{ borderColor: "#4A5A70" }}
-            />
-            <p style={{ color: "#C3BCC2" }}>Loading video library...</p>
+        <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+          <div className="p-6">
+            <SkeletonVideoGrid items={8} />
           </div>
         </div>
       </Sidebar>
@@ -194,57 +186,51 @@ function VideosPage() {
 
   return (
     <Sidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Hero Header */}
-        <div className="mb-8">
-          <div className="rounded-2xl border relative overflow-hidden group">
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
+      <div className="min-h-screen p-6" style={{ backgroundColor: "#2A3133" }}>
+        {/* Compact Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1
+              className="text-2xl font-bold mb-1"
+              style={{ color: "#C3BCC2" }}
+            >
+              Video Feedback
+            </h1>
+            <p className="text-sm" style={{ color: "#ABA4AA" }}>
+              {activeTab === "coach"
+                ? "Review and manage your video library"
+                : "Review client video submissions and provide feedback"}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span
+              className="px-3 py-1 rounded-full text-sm font-medium"
               style={{
-                background:
-                  "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
+                backgroundColor: "#4A5A70",
+                color: "#C3BCC2",
               }}
-            />
-            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <h1
-                      className="text-4xl font-bold mb-2"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Video Feedback
-                    </h1>
-                    <p
-                      className="flex items-center gap-2 text-lg"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      <TrendingUp className="h-5 w-5 text-yellow-400" />
-                      {activeTab === "coach"
-                        ? `${videos.length} videos uploaded for review`
-                        : `${clientSubmissions.length} client submissions received`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Link
-                    href="/videos/compare"
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                  >
-                    <Video className="w-4 h-4" />
-                    <span>Compare</span>
-                  </Link>
-                  <Link
-                    href="/videos/upload"
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Upload Video</span>
-                  </Link>
-                </div>
-              </div>
+            >
+              {activeTab === "coach"
+                ? `${videos.length} videos`
+                : `${clientSubmissions.length} submissions`}
+            </span>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/videos/compare"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm"
+                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+              >
+                <Video className="w-4 h-4" />
+                <span className="hidden sm:inline">Compare</span>
+              </Link>
+              <Link
+                href="/videos/upload"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm"
+                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Upload</span>
+              </Link>
             </div>
           </div>
         </div>
@@ -253,28 +239,38 @@ function VideosPage() {
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setActiveTab("coach")}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
               activeTab === "coach"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                ? "text-white"
+                : "text-gray-300 hover:text-white"
             }`}
+            style={{
+              backgroundColor: activeTab === "coach" ? "#4A5A70" : "#353A3A",
+              borderColor: "#606364",
+              border: "1px solid",
+            }}
           >
             Coach Videos ({videos.length})
           </button>
           <button
             onClick={() => setActiveTab("client")}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
               activeTab === "client"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                ? "text-white"
+                : "text-gray-300 hover:text-white"
             }`}
+            style={{
+              backgroundColor: activeTab === "client" ? "#4A5A70" : "#353A3A",
+              borderColor: "#606364",
+              border: "1px solid",
+            }}
           >
             Client Submissions ({clientSubmissions.length})
           </button>
         </div>
 
         {/* Filters and Search */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-8">
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search
               className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
@@ -289,7 +285,7 @@ function VideosPage() {
               }
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl text-sm transition-all duration-200"
+              className="w-full pl-10 pr-4 py-2 rounded-lg text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               style={{
                 backgroundColor: "#353A3A",
                 borderColor: "#606364",
@@ -308,7 +304,7 @@ function VideosPage() {
               <select
                 value={selectedCategory}
                 onChange={e => setSelectedCategory(e.target.value)}
-                className="pl-10 pr-8 py-3 rounded-xl text-sm transition-all duration-200 appearance-none"
+                className="pl-10 pr-8 py-2 rounded-lg text-sm transition-all duration-200 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 style={{
                   backgroundColor: "#353A3A",
                   borderColor: "#606364",
@@ -333,7 +329,7 @@ function VideosPage() {
                   onChange={e =>
                     setSortBy(e.target.value as "date" | "client" | "title")
                   }
-                  className="pl-4 pr-8 py-3 rounded-xl text-sm transition-all duration-200 appearance-none"
+                  className="pl-4 pr-8 py-2 rounded-lg text-sm transition-all duration-200 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   style={{
                     backgroundColor: "#353A3A",
                     borderColor: "#606364",
@@ -350,7 +346,7 @@ function VideosPage() {
                 onClick={() =>
                   setSortOrder(sortOrder === "asc" ? "desc" : "asc")
                 }
-                className="px-4 py-3 rounded-xl transition-all duration-200 hover:scale-105"
+                className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 style={{
                   backgroundColor: "#353A3A",
                   borderColor: "#606364",
@@ -374,20 +370,20 @@ function VideosPage() {
           filteredVideos.length === 0 ? (
             <div className="text-center py-12">
               <div
-                className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
+                className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
                 style={{ backgroundColor: "#353A3A" }}
               >
-                <Video className="w-12 h-12" style={{ color: "#ABA4AA" }} />
+                <Video className="w-8 h-8" style={{ color: "#ABA4AA" }} />
               </div>
               <h3
-                className="text-2xl font-bold mb-3"
+                className="text-xl font-bold mb-2"
                 style={{ color: "#C3BCC2" }}
               >
                 {searchQuery || selectedCategory !== "all"
                   ? "No videos found"
                   : "No videos yet"}
               </h3>
-              <p className="text-lg mb-8" style={{ color: "#ABA4AA" }}>
+              <p className="text-sm mb-6" style={{ color: "#ABA4AA" }}>
                 {searchQuery || selectedCategory !== "all"
                   ? "Try adjusting your search or filters"
                   : "Upload your first video to get started"}
@@ -395,38 +391,30 @@ function VideosPage() {
               {!searchQuery && selectedCategory === "all" && (
                 <Link
                   href="/videos/upload"
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl transition-all duration-200 hover:scale-105"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm"
                   style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
                 >
-                  <Plus className="w-5 h-5" />
-                  <span className="text-lg">Upload First Video</span>
+                  <Plus className="w-4 h-4" />
+                  <span>Upload First Video</span>
                 </Link>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {filteredVideos.map(video => (
                 <div
                   key={video.id}
-                  className="group relative rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border"
+                  className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border"
                   style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#3A4040";
                     e.currentTarget.style.borderColor = "#4A5A70";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(74, 90, 112, 0.2)";
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#353A3A";
                     e.currentTarget.style.borderColor = "#606364";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  <div
-                    className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-                    }}
-                  />
-
                   {/* Video Thumbnail */}
                   <div
                     className="relative aspect-video overflow-hidden"
@@ -436,37 +424,37 @@ function VideosPage() {
                       <img
                         src={video.thumbnail}
                         alt={video.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Video
-                          className="w-8 h-8"
+                          className="w-6 h-6"
                           style={{ color: "#ABA4AA" }}
                         />
                       </div>
                     )}
 
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {/* Play Overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <div
-                          className="w-12 h-12 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: "#4A5A70" }}
+                          className="w-8 h-8 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: "rgba(255, 255, 255, 0.9)" }}
                         >
                           <Play
-                            className="w-6 h-6 ml-1"
-                            style={{ color: "#C3BCC2" }}
+                            className="w-4 h-4 ml-0.5"
+                            style={{ color: "#2A3133" }}
                           />
                         </div>
                       </div>
                     </div>
 
                     {/* Category Badge */}
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute top-2 left-2">
                       <span
-                        className="px-2 py-1 text-xs font-medium rounded-full"
-                        style={{ backgroundColor: "#4A5A70", color: "#ABA4AA" }}
+                        className="px-1.5 py-0.5 text-[10px] font-medium rounded-full"
+                        style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
                       >
                         {video.category}
                       </span>
@@ -474,11 +462,11 @@ function VideosPage() {
 
                     {/* Duration */}
                     {video.duration && (
-                      <div className="absolute bottom-3 right-3">
+                      <div className="absolute bottom-2 right-2">
                         <span
-                          className="px-2 py-1 text-xs font-medium rounded"
+                          className="px-1.5 py-0.5 text-[10px] font-medium rounded"
                           style={{
-                            backgroundColor: "#2A3133",
+                            backgroundColor: "rgba(0, 0, 0, 0.8)",
                             color: "#C3BCC2",
                           }}
                         >
@@ -489,64 +477,39 @@ function VideosPage() {
                   </div>
 
                   {/* Content */}
-                  <div className="relative p-4 space-y-3">
+                  <div className="p-2">
                     {/* Title */}
-                    <div>
-                      <h3
-                        className="font-semibold text-sm line-clamp-2 group-hover:text-blue-400 transition-colors"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        {video.title}
-                      </h3>
-                    </div>
-
-                    {/* Description */}
-                    {video.description && (
-                      <p
-                        className="text-xs line-clamp-2"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        {video.description}
-                      </p>
-                    )}
+                    <h3
+                      className="font-medium text-xs line-clamp-2 leading-tight mb-1"
+                      style={{ color: "#C3BCC2" }}
+                    >
+                      {video.title}
+                    </h3>
 
                     {/* Meta Info */}
                     <div
-                      className="flex items-center justify-between text-xs"
+                      className="flex items-center justify-between text-[10px]"
                       style={{ color: "#ABA4AA" }}
                     >
                       <div className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span>{video.uploader.name}</span>
+                        <User className="w-2.5 h-2.5" />
+                        <span className="truncate">{video.uploader.name}</span>
                       </div>
-                      <span>
+                      <span className="text-[9px]">
                         {new Date(video.createdAt).toLocaleDateString()}
                       </span>
                     </div>
 
                     {/* Stats */}
-                    <div
-                      className="flex items-center justify-between text-xs"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      <span>{formatFileSize(video.fileSize)}</span>
-                      {video.feedback && video.feedback.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3" />
-                          <span>{video.feedback.length} feedback</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Button */}
-                    <Link
-                      href={`/videos/${video.id}`}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105"
-                      style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Review</span>
-                    </Link>
+                    {video.feedback && video.feedback.length > 0 && (
+                      <div
+                        className="flex items-center gap-1 text-[10px] mt-1"
+                        style={{ color: "#ABA4AA" }}
+                      >
+                        <MessageSquare className="w-2.5 h-2.5" />
+                        <span>{video.feedback.length}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -559,7 +522,7 @@ function VideosPage() {
             <div className="md:hidden mb-4">
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <div
-                  className="flex-shrink-0 w-24 rounded-lg border p-2"
+                  className="flex-shrink-0 w-24 rounded-lg border p-2 transition-all duration-200 hover:scale-105"
                   style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                 >
                   <div className="text-center">
@@ -575,7 +538,7 @@ function VideosPage() {
                   </div>
                 </div>
                 <div
-                  className="flex-shrink-0 w-24 rounded-lg border p-2"
+                  className="flex-shrink-0 w-24 rounded-lg border p-2 transition-all duration-200 hover:scale-105"
                   style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                 >
                   <div className="text-center">
@@ -591,7 +554,7 @@ function VideosPage() {
                   </div>
                 </div>
                 <div
-                  className="flex-shrink-0 w-24 rounded-lg border p-2"
+                  className="flex-shrink-0 w-24 rounded-lg border p-2 transition-all duration-200 hover:scale-105"
                   style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                 >
                   <div className="text-center">
@@ -618,7 +581,7 @@ function VideosPage() {
             {/* Desktop Summary Stats */}
             <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div
-                className="p-4 rounded-xl border"
+                className="p-4 rounded-xl border transition-all duration-200 hover:scale-105"
                 style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
               >
                 <div className="flex items-center gap-3">
@@ -642,7 +605,7 @@ function VideosPage() {
                 </div>
               </div>
               <div
-                className="p-4 rounded-xl border"
+                className="p-4 rounded-xl border transition-all duration-200 hover:scale-105"
                 style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
               >
                 <div className="flex items-center gap-3">
@@ -666,7 +629,7 @@ function VideosPage() {
                 </div>
               </div>
               <div
-                className="p-4 rounded-xl border"
+                className="p-4 rounded-xl border transition-all duration-200 hover:scale-105"
                 style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
               >
                 <div className="flex items-center gap-3">
@@ -701,52 +664,44 @@ function VideosPage() {
             {filteredClientSubmissions.length === 0 ? (
               <div className="text-center py-12">
                 <div
-                  className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
+                  className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
                   style={{ backgroundColor: "#353A3A" }}
                 >
-                  <Video className="w-12 h-12" style={{ color: "#ABA4AA" }} />
+                  <Video className="w-8 h-8" style={{ color: "#ABA4AA" }} />
                 </div>
                 <h3
-                  className="text-2xl font-bold mb-3"
+                  className="text-xl font-bold mb-2"
                   style={{ color: "#C3BCC2" }}
                 >
                   {searchQuery
                     ? "No client submissions found"
                     : "No client submissions yet"}
                 </h3>
-                <p className="text-lg mb-8" style={{ color: "#ABA4AA" }}>
+                <p className="text-sm mb-6" style={{ color: "#ABA4AA" }}>
                   {searchQuery
                     ? "Try adjusting your search criteria"
                     : "Client video submissions will appear here once they start submitting"}
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {filteredClientSubmissions.map(submission => (
                   <div
                     key={submission.id}
-                    className="group relative rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border"
+                    className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border"
                     style={{
                       backgroundColor: "#353A3A",
                       borderColor: "#606364",
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#3A4040";
                       e.currentTarget.style.borderColor = "#4A5A70";
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(74, 90, 112, 0.2)";
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#353A3A";
                       e.currentTarget.style.borderColor = "#606364";
+                      e.currentTarget.style.boxShadow = "none";
                     }}
                   >
-                    <div
-                      className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-                      }}
-                    />
-
                     {/* Video Thumbnail */}
                     <div
                       className="relative aspect-video overflow-hidden"
@@ -756,36 +711,36 @@ function VideosPage() {
                         <img
                           src={submission.thumbnail}
                           alt={submission.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Video
-                            className="w-8 h-8"
+                            className="w-6 h-6"
                             style={{ color: "#ABA4AA" }}
                           />
                         </div>
                       )}
 
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      {/* Play Overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                           <div
-                            className="w-12 h-12 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: "#4A5A70" }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: "rgba(255, 255, 255, 0.9)" }}
                           >
                             <Play
-                              className="w-6 h-6 ml-1"
-                              style={{ color: "#C3BCC2" }}
+                              className="w-4 h-4 ml-0.5"
+                              style={{ color: "#2A3133" }}
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Client Badge */}
-                      <div className="absolute top-3 left-3">
+                      <div className="absolute top-2 left-2">
                         <span
-                          className="px-2 py-1 text-xs font-medium rounded-full"
+                          className="px-1.5 py-0.5 text-[10px] font-medium rounded-full"
                           style={{
                             backgroundColor: "#10B981",
                             color: "#ffffff",
@@ -795,74 +750,43 @@ function VideosPage() {
                         </span>
                       </div>
 
-                      {/* Client Submission Badge */}
-                      <div className="absolute bottom-3 right-3">
+                      {/* Status Badge */}
+                      <div className="absolute bottom-2 right-2">
                         <span
-                          className="px-2 py-1 text-xs font-medium rounded"
+                          className="px-1.5 py-0.5 text-[10px] font-medium rounded"
                           style={{
-                            backgroundColor: "#2A3133",
+                            backgroundColor: "rgba(0, 0, 0, 0.8)",
                             color: "#C3BCC2",
                           }}
                         >
-                          Submission
+                          New
                         </span>
                       </div>
                     </div>
 
                     {/* Content */}
-                    <div className="relative p-4 space-y-3">
+                    <div className="p-2">
                       {/* Title */}
-                      <div>
-                        <h3
-                          className="font-semibold text-sm line-clamp-2 group-hover:text-blue-400 transition-colors"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {submission.title}
-                        </h3>
-                      </div>
-
-                      {/* Description */}
-                      {submission.description && (
-                        <p
-                          className="text-xs line-clamp-2"
-                          style={{ color: "#ABA4AA" }}
-                        >
-                          {submission.description}
-                        </p>
-                      )}
+                      <h3
+                        className="font-medium text-xs line-clamp-2 leading-tight mb-1"
+                        style={{ color: "#C3BCC2" }}
+                      >
+                        {submission.title}
+                      </h3>
 
                       {/* Meta Info */}
                       <div
-                        className="flex items-center justify-between text-xs"
+                        className="flex items-center justify-between text-[10px]"
                         style={{ color: "#ABA4AA" }}
                       >
                         <div className="flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          <span>{submission.client.name}</span>
+                          <User className="w-2.5 h-2.5" />
+                          <span className="truncate">{submission.client.name}</span>
                         </div>
-                        <span>
-                          {new Date(submission.createdAt).toLocaleDateString()}
+                        <span className="text-[9px]">
+                          {getTimeAgo(submission.createdAt)}
                         </span>
                       </div>
-
-                      {/* Stats */}
-                      <div
-                        className="flex items-center justify-between text-xs"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        <span>Client Submission</span>
-                        <span>{getTimeAgo(submission.createdAt)}</span>
-                      </div>
-
-                      {/* Action Button */}
-                      <Link
-                        href={`/videos/${submission.id}`}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105"
-                        style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span>Review</span>
-                      </Link>
                     </div>
                   </div>
                 ))}
@@ -875,5 +799,4 @@ function VideosPage() {
   );
 }
 
-// Export with mobile detection
-export default withMobileDetection(MobileVideosPage, VideosPage);
+export default VideosPage;
