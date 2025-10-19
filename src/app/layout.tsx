@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     siteName: "NextLevel Coaching",
     images: [
       {
-        url: "/dashboard-preview.jpg",
+        url: "/nextls-coming-soon.png",
         width: 1200,
         height: 630,
         alt: "NextLevel Coaching Dashboard Preview",

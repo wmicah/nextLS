@@ -111,11 +111,6 @@ export default function Dashboard() {
           <WeekAtAGlance />
         </div>
 
-        {/* Quick Stats */}
-        <div className="mb-6 md:mb-8">
-          <QuickStatsSection />
-        </div>
-
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-2 gap-6">
           <RecentNotificationsSection />

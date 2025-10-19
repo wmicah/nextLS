@@ -13,6 +13,7 @@ import {
   Video,
   CheckCheck,
   X,
+  Users,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
 import { format } from "date-fns";
@@ -25,6 +26,7 @@ import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileMessagesPage from "./MobileMessagesPage";
 import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonMessageList, SkeletonCard } from "@/components/SkeletonLoader";
+import MassMessageModal from "./MassMessageModal";
 // Removed complex SSE hooks - using simple polling instead
 
 interface MessagesPageProps {
@@ -42,6 +44,7 @@ function MessagesPage({}: MessagesPageProps) {
   // const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showMassMessageModal, setShowMassMessageModal] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [selectedFile, setSelectedFile] = useState<{
     file: File;
@@ -91,27 +94,27 @@ function MessagesPage({}: MessagesPageProps) {
     }
   );
 
-  // Get conversations with optimized caching
+  // Get conversations with real-time updates
   const {
     data: conversations = [],
     refetch: refetchConversations,
     isLoading: conversationsLoading,
   } = trpc.messaging.getConversations.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchInterval: false, // No automatic polling
-    refetchOnWindowFocus: false, // Don't refetch on focus
-    refetchOnReconnect: true, // Only refetch on reconnect
+    staleTime: 30 * 1000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchInterval: 10000, // Poll every 10 seconds
+    refetchOnWindowFocus: true, // Refetch on focus
+    refetchOnReconnect: true, // Refetch on reconnect
   });
 
-  // Get unread counts with optimized caching
+  // Get unread counts with real-time updates
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-      refetchInterval: false, // No automatic polling
-      refetchOnWindowFocus: false, // Don't refetch on focus
-      refetchOnReconnect: true, // Only refetch on reconnect
+      staleTime: 30 * 1000, // Cache for 30 seconds
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      refetchInterval: 10000, // Poll every 10 seconds
+      refetchOnWindowFocus: true, // Refetch on focus
+      refetchOnReconnect: true, // Refetch on reconnect
     });
 
   const {
@@ -122,11 +125,11 @@ function MessagesPage({}: MessagesPageProps) {
     { conversationId: selectedConversation! },
     {
       enabled: !!selectedConversation,
-      staleTime: 2 * 60 * 1000, // Cache for 2 minutes
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-      refetchInterval: false, // No automatic polling
-      refetchOnWindowFocus: false, // Don't refetch on focus
-      refetchOnReconnect: true, // Only refetch on reconnect
+      staleTime: 30 * 1000, // Cache for 30 seconds
+      gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
+      refetchInterval: 5000, // Poll every 5 seconds
+      refetchOnWindowFocus: true, // Refetch on focus
+      refetchOnReconnect: true, // Refetch on reconnect
     }
   );
 
@@ -379,14 +382,24 @@ function MessagesPage({}: MessagesPageProps) {
                 )}
               </div>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
-              style={{ backgroundColor: "#4A5A70", color: "#ffffff" }}
-            >
-              <Plus className="h-4 w-4 inline mr-2" />
-              New Message
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowMassMessageModal(true)}
+                className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                style={{ backgroundColor: "#10B981", color: "#ffffff" }}
+              >
+                <Users className="h-4 w-4 inline mr-2" />
+                Mass Message
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                style={{ backgroundColor: "#4A5A70", color: "#ffffff" }}
+              >
+                <Plus className="h-4 w-4 inline mr-2" />
+                New Message
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1183,6 +1196,16 @@ function MessagesPage({}: MessagesPageProps) {
             onClose={() => setShowFileUpload(false)}
           />
         )}
+
+        {/* Mass Message Modal */}
+        <MassMessageModal
+          isOpen={showMassMessageModal}
+          onClose={() => {
+            setShowMassMessageModal(false);
+            // Trigger refresh of conversations and unread counts
+            refetchConversations();
+          }}
+        />
       </div>
     </Sidebar>
   );
