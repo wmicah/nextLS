@@ -111,7 +111,14 @@ export default function OrganizationCalendarView() {
       "bg-indigo-500",
       "bg-red-500",
     ];
-    coachColors[coach.id] = colors[index % colors.length];
+    // Always assign blue to the current user (organization owner)
+    if (coach.id === currentUser?.id) {
+      coachColors[coach.id] = "bg-blue-500";
+    } else {
+      // Skip blue for other coaches since it's reserved for current user
+      const availableColors = colors.slice(1); // Remove blue from available colors
+      coachColors[coach.id] = availableColors[index % availableColors.length];
+    }
   });
 
   const currentUserMembership = organization?.coaches.find(
@@ -260,9 +267,7 @@ export default function OrganizationCalendarView() {
                           <div
                             key={lesson.id}
                             className={`text-xs px-2 py-1 rounded truncate ${
-                              isMyLesson
-                                ? "bg-green-600"
-                                : coachColors[lesson.coachId] || "bg-gray-500"
+                              coachColors[lesson.coachId] || "bg-gray-500"
                             }`}
                             style={{ color: "#fff" }}
                             title={`${lesson.client?.name || "Client"} with ${

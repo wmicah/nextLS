@@ -5,6 +5,11 @@ import { db } from "@/db";
 import { z } from "zod";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
 import { CompleteEmailService } from "@/lib/complete-email-service";
+import {
+  sendWelcomeEmailForCoach,
+  sendWelcomeEmailForClient,
+  sendClientJoinNotification,
+} from "@/lib/notification-utils";
 
 /**
  * User Router
@@ -205,6 +210,24 @@ export const userRouter = router({
             },
           });
 
+          // Send email notification to coach about new client
+          try {
+            await sendClientJoinNotification(
+              coach.email,
+              coach.name || "Coach",
+              updatedUser.name || "New Client",
+              updatedUser.email
+            );
+            console.log(
+              `📧 Client join notification sent to coach: ${coach.email}`
+            );
+          } catch (error) {
+            console.error(
+              "Failed to send client join notification email:",
+              error
+            );
+          }
+
           // Send welcome message from coach to client
           await sendWelcomeMessage(coachId, user.id);
         } else {
@@ -222,6 +245,39 @@ export const userRouter = router({
             },
           });
         }
+      }
+
+      // Send welcome email based on role
+      try {
+        if (input.role === "COACH") {
+          await sendWelcomeEmailForCoach(
+            updatedUser.email,
+            updatedUser.name || "Coach"
+          );
+          console.log(`📧 Welcome email sent to coach: ${updatedUser.email}`);
+        } else if (input.role === "CLIENT") {
+          // For clients, we need to determine if they have a coach
+          let coachName: string | undefined;
+          if (input.coachId || input.inviteCode) {
+            const coach = await db.user.findFirst({
+              where: {
+                id: input.coachId || undefined,
+                role: "COACH",
+              },
+            });
+            coachName = coach?.name || undefined;
+          }
+
+          await sendWelcomeEmailForClient(
+            updatedUser.email,
+            updatedUser.name || "Client",
+            coachName
+          );
+          console.log(`📧 Welcome email sent to client: ${updatedUser.email}`);
+        }
+      } catch (error) {
+        console.error("Failed to send welcome email:", error);
+        // Don't throw error - email failure shouldn't break user creation
       }
 
       return updatedUser;
