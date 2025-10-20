@@ -19,6 +19,7 @@ import {
   Link,
   FileText,
   Lightbulb,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -184,6 +185,7 @@ interface ClientProgramDayModalProps {
     routineAssignmentId: string,
     completed: boolean
   ) => void;
+  completedIndividualExercises: Set<string>;
 }
 
 interface Tab {
@@ -219,6 +221,7 @@ export default function ClientProgramDayModal({
   calculateDayCompletionCounts,
   calculateDayAssignmentCounts,
   onMarkRoutineExerciseComplete,
+  completedIndividualExercises,
 }: ClientProgramDayModalProps) {
   const [activeTab, setActiveTab] = useState<string>("");
   const [viewedTabs, setViewedTabs] = useState<Set<string>>(new Set());
@@ -507,21 +510,38 @@ export default function ClientProgramDayModal({
                   completedProgramDrills={completedProgramDrills}
                   routineAssignments={routineAssignments}
                   onMarkRoutineExerciseComplete={onMarkRoutineExerciseComplete}
+                  completedIndividualExercises={completedIndividualExercises}
                 />
               );
             })()
           ) : currentTab?.type === "routine" ? (
-            <RoutineContent
-              routineAssignment={routineAssignments.find(
+            (() => {
+              console.log("🎯 Looking for routine assignment:", {
+                currentTabId: currentTab.id,
+                routineAssignments: routineAssignments.map(a => ({
+                  id: a.id,
+                  tabId: `routine-${a.id}`,
+                })),
+              });
+
+              const foundAssignment = routineAssignments.find(
                 assignment => `routine-${assignment.id}` === currentTab.id
-              )}
-              onMarkDrillComplete={onMarkDrillComplete}
-              onMarkRoutineExerciseComplete={onMarkRoutineExerciseComplete}
-              onOpenVideo={onOpenVideo}
-              onOpenCommentModal={onOpenCommentModal}
-              onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
-              completedProgramDrills={completedProgramDrills}
-            />
+              );
+
+              console.log("🎯 Found routine assignment:", !!foundAssignment);
+
+              return (
+                <RoutineContent
+                  routineAssignment={foundAssignment}
+                  onMarkDrillComplete={onMarkDrillComplete}
+                  onMarkRoutineExerciseComplete={onMarkRoutineExerciseComplete}
+                  onOpenVideo={onOpenVideo}
+                  onOpenCommentModal={onOpenCommentModal}
+                  onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
+                  completedProgramDrills={completedProgramDrills}
+                />
+              );
+            })()
           ) : null}
 
           {/* Video Assignments - Show regardless of programs/routines */}
@@ -691,6 +711,7 @@ function ProgramContent({
   completedProgramDrills,
   routineAssignments = [],
   onMarkRoutineExerciseComplete,
+  completedIndividualExercises,
 }: {
   program: ProgramData;
   onMarkDrillComplete: (drillId: string, completed: boolean) => void;
@@ -704,6 +725,7 @@ function ProgramContent({
     routineAssignmentId: string,
     completed: boolean
   ) => void;
+  completedIndividualExercises?: Set<string>;
 }) {
   // Combine program drills with routine exercises
   const allExercises = [...program.drills];
@@ -748,8 +770,20 @@ function ProgramContent({
 
     if (drillsWithRoutines.length > 0) {
       drillsWithRoutines.forEach((drill: any) => {
+        console.log("🎯 Processing drill with routine:", {
+          drillId: drill.id,
+          drillTitle: drill.title,
+          routineName: drill.routine?.name,
+          exerciseCount: drill.routine?.exercises?.length,
+        });
+
         drill.routine.exercises.forEach((exercise: any) => {
           const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
+          console.log(
+            "🎯 Creating routine exercise drill with key:",
+            routineExerciseKey
+          );
+
           const drillLikeExercise: Drill = {
             id: routineExerciseKey,
             title: exercise.title,
@@ -861,9 +895,40 @@ function ProgramContent({
               {orderedExercises.map((item, itemIndex) => {
                 if (item.type === "regular") {
                   const drill = item.data as Drill;
+
+                  // For routine exercises within programs, check individual exercise completion state
+                  let isCompleted;
+                  if (drill.id.includes("-routine-")) {
+                    // This is a routine exercise within a program
+                    isCompleted =
+                      completedIndividualExercises?.has(drill.id) || false;
+                    console.log(
+                      `🎯 Modal: Checking routine exercise completion for ${drill.id}:`,
+                      {
+                        isCompleted,
+                        completedIndividualExercises:
+                          completedIndividualExercises
+                            ? Array.from(completedIndividualExercises)
+                            : [],
+                      }
+                    );
+                  } else {
+                    // This is a regular drill
+                    isCompleted = completedProgramDrills.has(drill.id);
+                    console.log(
+                      `🎯 Modal: Checking regular drill completion for ${drill.id}:`,
+                      {
+                        isCompleted,
+                        completedProgramDrills: Array.from(
+                          completedProgramDrills
+                        ),
+                      }
+                    );
+                  }
+
                   const drillWithCompletion: Drill = {
                     ...drill,
-                    completed: completedProgramDrills.has(drill.id),
+                    completed: isCompleted,
                   };
 
                   return (
@@ -894,6 +959,7 @@ function ProgramContent({
                       onOpenVideoSubmission={() =>
                         onOpenVideoSubmissionModal(drill.id, drill.title)
                       }
+                      isLoading={false}
                     />
                   );
                 } else {
@@ -923,9 +989,40 @@ function ProgramContent({
                       {/* Superset exercises */}
                       <div className="space-y-3">
                         {supersetDrills.map((drill, index) => {
+                          // For routine exercises within programs, check individual exercise completion state
+                          let isCompleted;
+                          if (drill.id.includes("-routine-")) {
+                            // This is a routine exercise within a program
+                            isCompleted =
+                              completedIndividualExercises?.has(drill.id) ||
+                              false;
+                            console.log(
+                              `🎯 Modal: Checking superset routine exercise completion for ${drill.id}:`,
+                              {
+                                isCompleted,
+                                completedIndividualExercises:
+                                  completedIndividualExercises
+                                    ? Array.from(completedIndividualExercises)
+                                    : [],
+                              }
+                            );
+                          } else {
+                            // This is a regular drill
+                            isCompleted = completedProgramDrills.has(drill.id);
+                            console.log(
+                              `🎯 Modal: Checking superset regular drill completion for ${drill.id}:`,
+                              {
+                                isCompleted,
+                                completedProgramDrills: Array.from(
+                                  completedProgramDrills
+                                ),
+                              }
+                            );
+                          }
+
                           const drillWithCompletion: Drill = {
                             ...drill,
-                            completed: completedProgramDrills.has(drill.id),
+                            completed: isCompleted,
                           };
 
                           return (
@@ -946,18 +1043,58 @@ function ProgramContent({
                                 drill={drillWithCompletion}
                                 index={globalIndex++}
                                 onMarkComplete={completed => {
+                                  console.log(
+                                    "🎯 ProgramContent DrillCard onMarkComplete called with:",
+                                    {
+                                      drillId: drill.id,
+                                      completed,
+                                      drillTitle: drill.title,
+                                    }
+                                  );
+
                                   if (
-                                    drill.id.includes("-") &&
+                                    drill.id.includes("-routine-") &&
                                     onMarkRoutineExerciseComplete
                                   ) {
-                                    const [assignmentId, exerciseId] =
-                                      drill.id.split("-");
+                                    // For routine exercises within programs: drillId-routine-exerciseId
+                                    console.log("🎯 Parsing drill ID:", {
+                                      drillId: drill.id,
+                                      parts: drill.id.split("-routine-"),
+                                    });
+
+                                    const parts = drill.id.split("-routine-");
+                                    const assignmentId = parts[0];
+                                    const exerciseId = parts[1];
+
+                                    console.log("🎯 Parsed values:", {
+                                      assignmentId,
+                                      exerciseId,
+                                      partsLength: parts.length,
+                                    });
+
+                                    console.log(
+                                      "🎯 Calling onMarkRoutineExerciseComplete with:",
+                                      {
+                                        exerciseId,
+                                        assignmentId,
+                                        completed,
+                                      }
+                                    );
+
                                     onMarkRoutineExerciseComplete(
                                       exerciseId,
                                       assignmentId,
                                       completed
                                     );
                                   } else {
+                                    console.log(
+                                      "🎯 Calling onMarkDrillComplete with:",
+                                      {
+                                        drillId: drill.id,
+                                        completed,
+                                      }
+                                    );
+
                                     onMarkDrillComplete(drill.id, completed);
                                   }
                                 }}
@@ -972,6 +1109,7 @@ function ProgramContent({
                                     drill.title
                                   )
                                 }
+                                isLoading={false}
                               />
                             </div>
                           );
@@ -1011,7 +1149,17 @@ function RoutineContent({
   onOpenVideoSubmissionModal: (drillId: string, drillTitle: string) => void;
   completedProgramDrills: Set<string>;
 }) {
+  console.log("🎯 RoutineContent called with:", {
+    routineAssignment: routineAssignment
+      ? {
+          id: routineAssignment.id,
+          routine: routineAssignment.routine?.name,
+        }
+      : null,
+  });
+
   if (!routineAssignment) {
+    console.log("🎯 Routine assignment not found, showing fallback UI");
     return (
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1047,9 +1195,21 @@ function RoutineContent({
         <div className="space-y-6">
           {(() => {
             // Convert all exercises to drill-like format first
+            console.log("🎯 Creating drill-like exercises with:", {
+              routineAssignmentId: routineAssignment.id,
+              exerciseCount: routine.exercises.length,
+              firstExercise: routine.exercises[0]
+                ? {
+                    id: routine.exercises[0].id,
+                    title: routine.exercises[0].title,
+                  }
+                : null,
+            });
+
             const allDrillLikeExercises: Drill[] = routine.exercises.map(
               (exercise, index) => {
                 const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
+                console.log("🎯 Creating drill with key:", routineExerciseKey);
                 return {
                   id: routineExerciseKey,
                   title: exercise.title,
@@ -1107,6 +1267,14 @@ function RoutineContent({
                       drill={drill}
                       index={globalIndex++}
                       onMarkComplete={completed => {
+                        console.log(
+                          "🎯 DrillCard onMarkComplete called with:",
+                          {
+                            drillId: drill.id,
+                            completed,
+                            drillTitle: drill.title,
+                          }
+                        );
                         onMarkDrillComplete(drill.id, completed);
                       }}
                       onOpenVideo={() =>
@@ -1123,6 +1291,7 @@ function RoutineContent({
                           exercise?.title || "Exercise"
                         );
                       }}
+                      isLoading={false}
                     />
                   </div>
                 ))}
@@ -1156,6 +1325,14 @@ function RoutineContent({
                                 drill={drill}
                                 index={globalIndex++}
                                 onMarkComplete={completed => {
+                                  console.log(
+                                    "🎯 Superset DrillCard onMarkComplete called with:",
+                                    {
+                                      drillId: drill.id,
+                                      completed,
+                                      drillTitle: drill.title,
+                                    }
+                                  );
                                   onMarkDrillComplete(drill.id, completed);
                                 }}
                                 onOpenVideo={() =>
@@ -1173,6 +1350,7 @@ function RoutineContent({
                                     exercise?.title || "Exercise"
                                   );
                                 }}
+                                isLoading={false}
                               />
                             </div>
                           ))}
@@ -1210,6 +1388,7 @@ function DrillCard({
   onOpenVideo,
   onOpenComment,
   onOpenVideoSubmission,
+  isLoading = false,
 }: {
   drill: Drill;
   index: number;
@@ -1217,6 +1396,7 @@ function DrillCard({
   onOpenVideo: () => void;
   onOpenComment: () => void;
   onOpenVideoSubmission: () => void;
+  isLoading?: boolean;
 }) {
   return (
     <div
@@ -1254,13 +1434,18 @@ function DrillCard({
             onMarkComplete(!drill.completed);
           }}
           className={cn(
-            "h-8 w-8 p-0 rounded-full transition-all duration-200",
+            "h-8 w-8 p-0 rounded-full transition-all duration-200 hover:scale-105",
             drill.completed
-              ? "bg-green-500 text-white hover:bg-green-600"
-              : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+              ? "bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/25"
+              : "bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white"
           )}
+          disabled={isLoading}
         >
-          <Check className="h-4 w-4" />
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4" />
+          )}
         </Button>
       </div>
 

@@ -146,6 +146,8 @@ function ClientProgramPage() {
   const [completedProgramDrills, setCompletedProgramDrills] = useState<
     Set<string>
   >(new Set());
+  const [completedIndividualExercises, setCompletedIndividualExercises] =
+    useState<Set<string>>(new Set());
   const [completedVideoAssignments, setCompletedVideoAssignments] = useState<
     Set<string>
   >(new Set());
@@ -154,18 +156,38 @@ function ClientProgramPage() {
   React.useEffect(() => {
     if (selectedDay?.programs) {
       const serverCompletedDrills = new Set<string>();
+      const serverCompletedIndividualExercises = new Set<string>();
+
       selectedDay.programs.forEach(program => {
         program.drills.forEach(drill => {
           if (drill.completed) {
-            serverCompletedDrills.add(drill.id);
+            // For routine exercises within programs, use the full exercise ID for completion state
+            if (drill.id.includes("-routine-")) {
+              serverCompletedIndividualExercises.add(drill.id);
+              console.log(`🔄 Adding routine exercise completion: ${drill.id}`);
+            } else {
+              serverCompletedDrills.add(drill.id);
+              console.log(`🔄 Adding regular drill completion: ${drill.id}`);
+            }
           }
         });
       });
+
       console.log(
         "🔄 Initializing completedProgramDrills from server:",
         Array.from(serverCompletedDrills)
       );
+      console.log(
+        "🔄 Initializing completedIndividualExercises from server:",
+        Array.from(serverCompletedIndividualExercises)
+      );
+
       setCompletedProgramDrills(serverCompletedDrills);
+      setCompletedIndividualExercises(serverCompletedIndividualExercises);
+    } else {
+      // Clear completion state if no programs
+      setCompletedProgramDrills(new Set());
+      setCompletedIndividualExercises(new Set());
     }
 
     // Initialize video assignment completion state
@@ -182,6 +204,9 @@ function ClientProgramPage() {
         Array.from(serverCompletedVideoAssignments)
       );
       setCompletedVideoAssignments(serverCompletedVideoAssignments);
+    } else {
+      // Clear video assignment completion state if no assignments
+      setCompletedVideoAssignments(new Set());
     }
   }, [selectedDay]);
 
@@ -199,7 +224,16 @@ function ClientProgramPage() {
       programs: dayData.programs.map(program => ({
         ...program,
         drills: program.drills.map(drill => {
-          const isCompleted = completedProgramDrills.has(drill.id);
+          // For routine exercises within programs, check individual exercise completion state
+          let isCompleted;
+          if (drill.id.includes("-routine-")) {
+            // This is a routine exercise within a program - use individual exercise completion state
+            isCompleted = completedIndividualExercises.has(drill.id);
+          } else {
+            // This is a regular drill - use program drill completion state
+            isCompleted = completedProgramDrills.has(drill.id);
+          }
+
           console.log(
             `🔄 Drill ${drill.id} (${drill.title}): server completed=${drill.completed}, state completed=${isCompleted}`
           );
@@ -401,9 +435,6 @@ function ClientProgramPage() {
   const markDrillCompleteMutation =
     trpc.clientRouter.markDrillComplete.useMutation({
       // Remove aggressive invalidation - let optimistic updates handle UI
-      onError: error => {
-        alert(`Error updating drill: ${error.message}`);
-      },
     });
 
   const markVideoAssignmentCompleteMutation =
@@ -694,24 +725,28 @@ function ClientProgramPage() {
     routineAssignmentId: string,
     completed: boolean
   ) => {
-    // Use exercise ID directly for routine exercises
-    const routineExerciseKey = `${routineAssignmentId}-${exerciseId}`;
+    const fullExerciseId = `${routineAssignmentId}-routine-${exerciseId}`;
 
-    // Update the completion state immediately for real-time UI updates
-    setCompletedProgramDrills(prev => {
+    // Update individual exercise completion state immediately for real-time UI updates
+    setCompletedIndividualExercises(prev => {
       const newSet = new Set(prev);
       if (completed) {
-        newSet.add(routineExerciseKey);
+        newSet.add(fullExerciseId);
       } else {
-        newSet.delete(routineExerciseKey);
+        newSet.delete(fullExerciseId);
       }
+      console.log(`🔄 Updated completedIndividualExercises:`, {
+        fullExerciseId,
+        completed,
+        newSet: Array.from(newSet),
+      });
       return newSet;
     });
 
     // Call the backend mutation for drill completion (works for both regular drills and routine exercises)
     try {
       await markDrillCompleteMutation.mutateAsync({
-        drillId: exerciseId,
+        drillId: fullExerciseId,
         completed,
       });
 
@@ -719,12 +754,12 @@ function ClientProgramPage() {
       await refetchCalendar();
     } catch (error) {
       // Revert optimistic update on error
-      setCompletedProgramDrills(prev => {
+      setCompletedIndividualExercises(prev => {
         const newSet = new Set(prev);
         if (completed) {
-          newSet.delete(routineExerciseKey); // Remove if we were trying to mark complete
+          newSet.delete(fullExerciseId); // Remove if we were trying to mark complete
         } else {
-          newSet.add(routineExerciseKey); // Add if we were trying to mark incomplete
+          newSet.add(fullExerciseId); // Add if we were trying to mark incomplete
         }
         return newSet;
       });
@@ -832,30 +867,21 @@ function ClientProgramPage() {
         completed,
       });
 
-      // Add timeout to catch hanging mutations
-      const mutationPromise = markDrillCompleteMutation.mutateAsync({
+      await markDrillCompleteMutation.mutateAsync({
         drillId: drillId,
         completed,
       });
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Mutation timeout after 10 seconds")),
-          10000
-        )
-      );
-
-      await Promise.race([mutationPromise, timeoutPromise]);
       console.log("🎯 markDrillCompleteMutation completed successfully");
 
-      // Subtle refetch to ensure UI stays in sync
-      console.log("🎯 Refetching calendar data...");
-      console.log("🎯 refetchCalendar function:", refetchCalendar);
-      const refetchResult = await refetchCalendar();
-      console.log("🎯 refetchCalendar result:", refetchResult);
-      console.log("🎯 Calendar data refetched");
+      // Invalidate and refetch calendar data to ensure UI stays in sync
+      await utils.clientRouter.getProgramCalendar.invalidate();
+      await utils.clientRouter.getProgramWeekCalendar.invalidate();
+
+      console.log("🎯 Calendar data invalidated and refetched");
     } catch (error) {
       console.error("🎯 ERROR: markDrillCompleteMutation failed:", error);
+
       // Revert optimistic update on error
       setCompletedProgramDrills(prev => {
         const newSet = new Set(prev);
@@ -866,7 +892,13 @@ function ClientProgramPage() {
         }
         return newSet;
       });
-      console.error("Failed to update drill completion:", error);
+
+      // Show user-friendly error message
+      alert(
+        `Failed to update drill completion: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   };
 
@@ -2036,6 +2068,7 @@ function ClientProgramPage() {
               calculateDayCompletionCounts={calculateDayCompletionCounts}
               calculateDayAssignmentCounts={calculateDayAssignmentCounts}
               onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
+              completedIndividualExercises={completedIndividualExercises}
             />
           )}
 

@@ -1168,6 +1168,7 @@ export default function MobileClientProgramPage() {
           onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
           onMarkVideoAssignmentComplete={handleMarkVideoAssignmentComplete}
           completedVideoAssignments={completedVideoAssignments}
+          completedIndividualExercises={new Set()}
         />
       )}
 
