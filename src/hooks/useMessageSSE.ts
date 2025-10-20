@@ -26,7 +26,9 @@ export function useMessageSSE(options: UseMessageSSEOptions = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
 
