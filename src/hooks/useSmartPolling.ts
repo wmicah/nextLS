@@ -20,7 +20,9 @@ export function useSmartPolling({
   const [interval, setInterval] = useState(baseInterval);
   const [isActive, setIsActive] = useState(true);
   const lastActivityRef = useRef(Date.now());
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
 
   // Track user activity
   useEffect(() => {

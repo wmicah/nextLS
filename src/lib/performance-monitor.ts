@@ -38,7 +38,7 @@ interface PerformanceMetrics {
 class PerformanceMonitor {
   private metrics: PerformanceMetrics | null = null;
   private observers: ((metrics: PerformanceMetrics) => void)[] = [];
-  private updateInterval: NodeJS.Timeout | null = null;
+  private updateInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.initializeMonitoring();
