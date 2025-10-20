@@ -244,3 +244,116 @@ Track email performance:
 
 **NextLevel Coaching** - Complete Email System
 Domain: `nxlvlcoach.com`
+
+# 📧 Email System - Quick Reference
+
+Simple list of all automated emails in NextLevel Coaching.
+
+## Current Emails (13 Total)
+
+### Welcome & Onboarding
+
+1. **🎉 Coach Welcome Email**
+
+   - **When**: New coach signs up
+   - **Who gets it**: The new coach
+   - **Subject**: "Welcome to NextLevel Coaching, [Name]! 🎉"
+
+2. **🎯 Client Welcome Email**
+   - **When**: New client signs up
+   - **Who gets it**: The new client
+   - **Subject**: "Welcome to NextLevel Coaching, [Name]! 🎯"
+
+### Client Requests
+
+3. **📬 Client Join Notification**
+
+   - **When**: Client joins using an invite code
+   - **Who gets it**: The coach
+   - **Subject**: "New Client Request: [Client Name] wants to join your coaching program"
+
+4. **📧 New Client Request Email**
+   - **When**: Client requests to join via email (no invite code)
+   - **Who gets it**: The coach
+
+### Lesson & Scheduling
+
+5. **⏰ Lesson Reminder**
+
+   - **When**: 24 hours before a lesson
+   - **Who gets it**: The client
+   - **What it says**: Reminder about upcoming lesson
+
+6. **📅 Lesson Scheduled**
+   - **When**: New lesson is scheduled
+   - **Who gets it**: The client
+   - **What it says**: Confirmation of new lesson booking
+
+### Programs & Workouts
+
+7. **🏋️ Program Assigned**
+
+   - **When**: Coach assigns a program to client
+   - **Who gets it**: The client
+   - **What it says**: New program details and instructions
+
+8. **💪 Workout Assigned**
+   - **When**: Coach assigns a workout to client
+   - **Who gets it**: The client
+   - **What it says**: New workout details
+
+### Messages & Communication
+
+9. **💬 New Message Notification**
+
+   - **When**: Coach sends message to client
+   - **Who gets it**: The client
+   - **Note**: Rate limited to once per 24 hours per client
+
+10. **📊 Daily Digest**
+    - **When**: Daily (if user has unread messages)
+    - **Who gets it**: Users with unread messages
+    - **What it says**: Summary of unread messages
+
+### Video & Feedback
+
+11. **🎥 Video Feedback**
+
+    - **When**: Coach provides feedback on client video
+    - **Who gets it**: The client
+
+12. **📹 Video Assigned**
+    - **When**: Coach assigns video to client
+    - **Who gets it**: The client
+
+### Organization & Admin
+
+13. **🏢 Organization Invite**
+    - **When**: Coach invites another coach to organization
+    - **Who gets it**: The invited coach
+
+## Email Services
+
+**Main Service**: CompleteEmailService (`src/lib/complete-email-service.ts`)  
+**New Notifications**: notification-utils (`src/lib/notification-utils.ts`)  
+**Lesson Reminders**: lesson-reminder-service (`src/lib/lesson-reminder-service.ts`)  
+**Daily Digests**: daily-digest-service (`src/lib/daily-digest-service.ts`)
+
+## Additional Features
+
+- **Rate Limiting**: Message notifications limited to once per 24 hours per client
+- **Automatic Reminders**: Lesson reminders sent exactly 24 hours before lessons
+- **Daily Digests**: Automatic daily emails for users with unread messages
+- **Bulk Email**: Support for sending emails to multiple recipients
+- **Custom Templates**: All emails use professional HTML templates
+
+## Future Ideas
+
+- Program completion notifications
+- Weekly progress summaries
+- Payment reminder emails
+- Account suspension notifications
+
+---
+
+-Updated: October 25

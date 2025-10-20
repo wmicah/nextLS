@@ -5,7 +5,7 @@ import path from "path";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { type: string; filename: string } }
+  { params }: { params: Promise<{ type: string; filename: string }> }
 ) {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
@@ -15,17 +15,24 @@ export async function GET(
   }
 
   try {
-    const { type, filename } = params;
+    const { type, filename } = await params;
 
     if (!type || !filename) {
-      return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid parameters" },
+        { status: 400 }
+      );
     }
 
     // Determine the thumbnail directory based on type
     let thumbnailDir: string;
-    
+
     if (type === "master") {
-      thumbnailDir = path.join(process.cwd(), "uploads", "master-library-thumbnails");
+      thumbnailDir = path.join(
+        process.cwd(),
+        "uploads",
+        "master-library-thumbnails"
+      );
     } else {
       thumbnailDir = path.join(process.cwd(), "uploads", "library-thumbnails");
     }
@@ -43,15 +50,8 @@ export async function GET(
         "Content-Length": thumbnailBuffer.length.toString(),
       },
     });
-
   } catch (error) {
     console.error("Thumbnail serving error:", error);
     return NextResponse.json({ error: "Thumbnail not found" }, { status: 404 });
   }
 }
-
-
-
-
-
-

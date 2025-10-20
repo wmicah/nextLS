@@ -10,7 +10,7 @@ import dailyDigestService from "./daily-digest-service";
 const sentReminders = new Set<string>();
 
 class LessonReminderService {
-  private intervalId: NodeJS.Timeout | null = null;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
   private isRunning = false;
   private lastCheckTime: Date | null = null;
   private checkCount = 0;
