@@ -3159,6 +3159,7 @@ export const clientRouterRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      console.log(`🎯 addCommentToDrill called with drillId: ${input.drillId}`);
       const { getUser } = getKindeServerSession();
       const user = await getUser();
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
@@ -3188,12 +3189,26 @@ export const clientRouterRouter = router({
       }
 
       // Find video submission for this drill
-      const videoSubmission = await db.clientVideoSubmission.findFirst({
+      // First try with the exact drillId, then try with null for routine exercises
+      let videoSubmission = await db.clientVideoSubmission.findFirst({
         where: {
           clientId: client.id,
           drillId: input.drillId,
         },
       });
+
+      // If not found and drillId is a composite key, try with null drillId
+      if (!videoSubmission && input.drillId.includes("-")) {
+        videoSubmission = await db.clientVideoSubmission.findFirst({
+          where: {
+            clientId: client.id,
+            drillId: null,
+            title: {
+              contains: input.drillId,
+            },
+          },
+        });
+      }
 
       // Create or find conversation between client and coach
       let conversation = await db.conversation.findFirst({
@@ -3267,21 +3282,41 @@ export const clientRouterRouter = router({
         };
       } else {
         // No video submission found, create one with just the comment
+        // Check if drillId is a valid ProgramDrill ID or a composite key
+        let validDrillId: string | null = null;
+
+        // First, try to find if it's a real ProgramDrill ID
+        const existingDrill = await db.programDrill.findUnique({
+          where: { id: input.drillId },
+        });
+
+        if (existingDrill) {
+          validDrillId = input.drillId;
+        } else {
+          // If it's a composite key (routineAssignmentId-exerciseId),
+          // we'll set drillId to null since it's not a real ProgramDrill
+          console.log(
+            `Drill ID ${input.drillId} is not a valid ProgramDrill ID, treating as routine exercise`
+          );
+        }
+
         const newVideoSubmission = await db.clientVideoSubmission.create({
           data: {
             clientId: client.id,
             coachId: client.coachId!,
-            title: `Comment for Drill ${input.drillId}`,
+            title: `Comment for Exercise ${input.drillId}`,
             description: "Client feedback and comments",
             comment: input.comment,
             videoUrl: "", // Empty since no video was uploaded
-            drillId: input.drillId,
+            drillId: validDrillId, // Will be null for routine exercises
             isPublic: false,
           },
         });
 
         // Create message in conversation
-        const messageContent = `💬 **Exercise Feedback for Drill ${input.drillId}**\n\n${input.comment}`;
+        const messageContent = validDrillId
+          ? `💬 **Exercise Feedback for Drill ${input.drillId}**\n\n${input.comment}`
+          : `💬 **Exercise Feedback for Routine Exercise ${input.drillId}**\n\n${input.comment}`;
 
         await db.message.create({
           data: {
