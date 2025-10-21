@@ -112,7 +112,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
     0
   );
 
-  const { data: conversations = [] } = trpc.messaging.getConversations.useQuery(
+  const { data: conversationsData } = trpc.messaging.getConversations.useQuery(
     undefined,
     {
       enabled: showRecentMessages,
@@ -123,6 +123,8 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
       gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     }
   );
+
+  const conversations = conversationsData?.conversations || [];
 
   const { data: unreadNotificationCount = 0 } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {

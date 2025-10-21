@@ -22,7 +22,7 @@ export default function MessagePopup({
   const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
 
   // Get conversations
-  const { data: conversations = [] } = trpc.messaging.getConversations.useQuery(
+  const { data: conversationsData } = trpc.messaging.getConversations.useQuery(
     undefined,
     {
       enabled: isOpen,
@@ -33,6 +33,8 @@ export default function MessagePopup({
       gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     }
   );
+
+  const conversations = conversationsData?.conversations || [];
 
   // Get unread counts
   const { data: unreadCountsObj = {} } =

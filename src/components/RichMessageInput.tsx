@@ -9,7 +9,10 @@ import {
   Send,
   Paperclip,
   Type,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import FormattedMessage from "./FormattedMessage";
 
 interface RichMessageInputProps {
   value: string;
@@ -45,6 +48,7 @@ export default function RichMessageInput({
   const [isFormatted, setIsFormatted] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showFormatting, setShowFormatting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -194,28 +198,55 @@ export default function RichMessageInput({
         )}
 
         <div className="flex-1 relative">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={disabled || isPending}
-            className="w-full rounded-lg text-sm font-medium resize-none overflow-hidden
-             transition-all duration-300 border border-gray-700 px-3 py-2
-             leading-[20px]" // exact 20px line-height to avoid fractional gaps
-            style={{
-              boxSizing: "border-box",
-              backgroundColor: "#2a2a2a",
-              color: "#f9fafb",
-              height: "auto",
-              maxHeight: "120px",
-              // minHeight: "36px", // <- OPTIONAL: 20px line + 16px padding = 36px
-            }}
-          />
+          {showPreview && value.trim() ? (
+            <div
+              className="w-full rounded-lg text-sm resize-none overflow-hidden
+               transition-all duration-300 border border-gray-700 px-3 py-2
+               leading-[20px] min-h-[40px]"
+              style={{
+                boxSizing: "border-box",
+                backgroundColor: "#2a2a2a",
+                color: "#f9fafb",
+                maxHeight: "120px",
+                overflowY: "auto",
+              }}
+            >
+              <FormattedMessage content={value} />
+            </div>
+          ) : (
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={value}
+              onChange={e => onChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              disabled={disabled || isPending}
+              className="w-full rounded-lg text-sm font-medium resize-none overflow-hidden
+               transition-all duration-300 border border-gray-700 px-3 py-2
+               leading-[20px]" // exact 20px line-height to avoid fractional gaps
+              style={{
+                boxSizing: "border-box",
+                backgroundColor: "#2a2a2a",
+                color: "#f9fafb",
+                height: "auto",
+                maxHeight: "120px",
+                // minHeight: "36px", // <- OPTIONAL: 20px line + 16px padding = 36px
+              }}
+            />
+          )}
 
           {/* Formatting hint - only show when focused or has content */}
+          {value.trim() && !showPreview && (
+            <div className="absolute bottom-1 right-1 text-xs text-gray-500">
+              {value.includes("**") ||
+              value.includes("__") ||
+              value.includes("*") ||
+              value.includes("_") ? (
+                <span className="text-blue-400">Rich text detected</span>
+              ) : null}
+            </div>
+          )}
         </div>
 
         <button
@@ -230,6 +261,25 @@ export default function RichMessageInput({
         >
           <Type className="h-4 w-4" />
         </button>
+
+        {value.trim() && (
+          <button
+            type="button"
+            onClick={() => setShowPreview(!showPreview)}
+            className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+              showPreview
+                ? "bg-green-500/20 text-green-400"
+                : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
+            }`}
+            title={showPreview ? "Hide preview" : "Show preview"}
+          >
+            {showPreview ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        )}
 
         <button
           type="button"

@@ -90,7 +90,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   const { data: currentUser } = trpc.user.getProfile.useQuery();
 
   // Get conversations with optimized caching
-  const { data: conversations = [], refetch: refetchConversations } =
+  const { data: conversationsData, refetch: refetchConversations } =
     trpc.messaging.getConversations.useQuery(undefined, {
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
       gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
@@ -98,6 +98,8 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
       refetchOnWindowFocus: false, // Don't refetch on focus
       refetchOnReconnect: true, // Only refetch on reconnect
     });
+
+  const conversations = conversationsData?.conversations || [];
 
   // Get unread counts with optimized caching
   const { data: unreadCountsObj = {} } =
