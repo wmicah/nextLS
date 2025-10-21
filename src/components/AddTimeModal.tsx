@@ -32,8 +32,6 @@ export default function AddTimeModal({
 }: AddTimeModalProps) {
   const [formData, setFormData] = useState({
     clientId: "",
-    title: "",
-    description: "",
     date: "",
     time: "",
     duration: 60, // Default 60 minutes
@@ -64,8 +62,6 @@ export default function AddTimeModal({
   const resetForm = () => {
     setFormData({
       clientId: "",
-      title: "",
-      description: "",
       date: "",
       time: "",
       duration: 60,
@@ -92,8 +88,6 @@ export default function AddTimeModal({
       clientId: formData.clientId,
       lessonDate: dateTime,
       duration: formData.duration,
-      title: formData.title || undefined,
-      description: formData.description || undefined,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
   };
@@ -233,49 +227,6 @@ export default function AddTimeModal({
                 <option value={420}>7 hours</option>
                 <option value={480}>8 hours</option>
               </select>
-            </div>
-
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Lesson Title
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={e =>
-                  setFormData(prev => ({ ...prev, title: e.target.value }))
-                }
-                className="w-full p-2 rounded-lg border text-white"
-                style={{
-                  backgroundColor: "#2A2F2F",
-                  borderColor: "#606364",
-                }}
-                placeholder="e.g., Private Lesson, Technique Session"
-              />
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                className="w-full p-2 rounded-lg border text-white"
-                style={{
-                  backgroundColor: "#2A2F2F",
-                  borderColor: "#606364",
-                }}
-                rows={3}
-                placeholder="Optional lesson description..."
-              />
             </div>
 
             {/* Info Box */}
