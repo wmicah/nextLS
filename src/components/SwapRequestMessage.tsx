@@ -304,8 +304,8 @@ export default function SwapRequestMessage({
         ) : (
           <div className="text-center py-3">
             <p className="text-sm" style={{ color: "#ABA4AA" }}>
-              This switch request has been{" "}
-              {swapRequestStatus?.status?.toLowerCase()}.
+              Switch request has been {swapRequestStatus?.status?.toLowerCase()}
+              .
             </p>
           </div>
         )
