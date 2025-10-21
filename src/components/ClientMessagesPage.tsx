@@ -51,20 +51,72 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   const [pendingMessages, setPendingMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // const fileInputRef = useRef<HTMLInputElement>(null)
+  const [conversationsOffset, setConversationsOffset] = useState(0);
+  const [allConversations, setAllConversations] = useState<any[]>([]);
+  const [hasMoreConversations, setHasMoreConversations] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const conversationsListRef = useRef<HTMLDivElement>(null);
 
   // Get current user info
   const { data: currentUser } = trpc.user.getProfile.useQuery();
   const utils = trpc.useUtils();
 
-  // Get conversations
-  const { data: conversations = [], refetch: refetchConversations } =
-    trpc.messaging.getConversations.useQuery(undefined, {
-      refetchInterval: 60000, // Poll every minute
-      refetchOnWindowFocus: true,
-      refetchOnReconnect: true,
-      staleTime: 30 * 1000, // Cache for 30 seconds
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    });
+  // Get conversations with pagination
+  const { data: conversationsData, refetch: refetchConversations } =
+    trpc.messaging.getConversations.useQuery(
+      { limit: 8, offset: conversationsOffset },
+      {
+        refetchInterval: 60000, // Poll every minute
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+        staleTime: 30 * 1000, // Cache for 30 seconds
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      }
+    );
+
+  // Update conversations and pagination state when data changes
+  useEffect(() => {
+    if (conversationsData) {
+      if (conversationsOffset === 0) {
+        // First load - replace all conversations
+        setAllConversations(conversationsData.conversations);
+      } else {
+        // Load more - append to existing conversations
+        setAllConversations(prev => [
+          ...prev,
+          ...conversationsData.conversations,
+        ]);
+      }
+      setHasMoreConversations(conversationsData.hasMore);
+    }
+  }, [conversationsData, conversationsOffset]);
+
+  const conversations = allConversations;
+
+  // Function to load more conversations
+  const loadMoreConversations = () => {
+    if (!isLoadingMore && hasMoreConversations) {
+      setIsLoadingMore(true);
+      setConversationsOffset(prev => prev + 8);
+    }
+  };
+
+  // Handle scroll to load more conversations
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100; // Load when 100px from bottom
+
+    if (isNearBottom && hasMoreConversations && !isLoadingMore) {
+      loadMoreConversations();
+    }
+  };
+
+  // Reset loading state when new data arrives
+  useEffect(() => {
+    if (conversationsData) {
+      setIsLoadingMore(false);
+    }
+  }, [conversationsData]);
 
   // Get unread counts separately for better performance
   const { data: unreadCountsObj = {} } =
@@ -138,12 +190,27 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   const { data: authData } = trpc.authCallback.useQuery();
   const sidebarUser = authData?.user;
 
+  // Handle conversation selection
+  const handleConversationSelect = (conversationId: string) => {
+    setSelectedConversation(conversationId);
+  };
+
   // Auto-select first conversation if none selected
   useEffect(() => {
     if (!selectedConversation && conversations.length > 0) {
       setSelectedConversation(conversations[0].id);
     }
   }, [conversations, selectedConversation]);
+
+  // Auto-scroll to bottom when conversation is selected
+  useEffect(() => {
+    if (selectedConversation && messages.length > 0) {
+      // Use a longer timeout to ensure messages are rendered
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 300);
+    }
+  }, [selectedConversation, messages]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -265,24 +332,33 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
     setShowFileUpload(false);
   };
 
-  const filteredConversations = conversations.filter((conversation: any) => {
-    if (!searchTerm) return true;
+  const filteredConversations = conversations
+    .filter((conversation: any) => {
+      if (!searchTerm) return true;
 
-    const otherUser = getOtherUser(conversation, authData?.user?.id || "");
-    if (!otherUser) return false;
+      const otherUser = getOtherUser(conversation, authData?.user?.id || "");
+      if (!otherUser) return false;
 
-    const otherUserName = otherUser.name || otherUser.email || "";
-    return otherUserName.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+      const otherUserName = otherUser.name || otherUser.email || "";
+      return otherUserName.toLowerCase().includes(searchTerm.toLowerCase());
+    })
+    .sort((a: any, b: any) => {
+      // Sort by most recent message first (descending order)
+      const aLastMessage = a.messages[0]?.createdAt || a.updatedAt;
+      const bLastMessage = b.messages[0]?.createdAt || b.updatedAt;
+      return (
+        new Date(bLastMessage).getTime() - new Date(aLastMessage).getTime()
+      );
+    });
 
   return (
     <ClientTopNav>
       <div
-        className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6"
+        className="h-screen flex flex-col px-4 sm:px-6 lg:px-8 pt-2 overflow-hidden"
         style={{ backgroundColor: "#2A3133" }}
       >
         {/* Hero Header */}
-        <div className="mb-8">
+        <div className="mb-2 flex-shrink-0">
           <div className="rounded-2xl border relative overflow-hidden group">
             <div
               className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
@@ -291,18 +367,18 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                   "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
               }}
             />
-            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
+            <div className="relative p-3 bg-gradient-to-r from-transparent via-black/20 to-black/40">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div>
                     <h1
-                      className="text-4xl font-bold mb-2"
+                      className="text-lg font-bold mb-1"
                       style={{ color: "#C3BCC2" }}
                     >
                       Messages
                     </h1>
                     <div
-                      className="flex items-center gap-2 text-lg"
+                      className="flex items-center gap-2 text-xs"
                       style={{ color: "#ABA4AA" }}
                     >
                       <div className="h-5 w-5 rounded-full bg-gray-500 flex items-center justify-center">
@@ -342,23 +418,23 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
 
         {/* Messages Interface */}
         <div
-          className="flex h-[calc(100vh-200px)] rounded-2xl border overflow-hidden shadow-xl"
+          className="flex flex-1 rounded-lg border overflow-hidden shadow-lg mb-2"
           style={{
             backgroundColor: "#1E1E1E",
             borderColor: "#374151",
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+            boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.2)",
           }}
         >
           {/* Conversations Sidebar */}
           <div
-            className="w-80 border-r flex flex-col"
+            className="w-80 border-r flex flex-col min-h-0"
             style={{ borderColor: "#374151", backgroundColor: "#1A1A1A" }}
           >
             {/* Header */}
-            <div className="p-6 border-b" style={{ borderColor: "#374151" }}>
-              <div className="flex items-center justify-between mb-6">
+            <div className="p-3 border-b" style={{ borderColor: "#374151" }}>
+              <div className="flex items-center justify-between mb-3">
                 <h2
-                  className="text-2xl font-bold tracking-tight"
+                  className="text-sm font-semibold"
                   style={{ color: "#ffffff" }}
                 >
                   Conversations
@@ -376,7 +452,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                   placeholder="Search conversations..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 transition-all duration-200"
+                  className="w-full pl-8 pr-3 py-1.5 rounded-md border-0 focus:outline-none focus:ring-2 transition-all duration-200 text-xs"
                   style={{
                     backgroundColor: "#353A3A",
                     color: "#C3BCC2",
@@ -393,7 +469,11 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
             </div>
 
             {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto">
+            <div
+              className="flex-1 overflow-y-auto"
+              ref={conversationsListRef}
+              onScroll={handleScroll}
+            >
               {filteredConversations.length === 0 ? (
                 <div className="p-6 text-center">
                   <File
@@ -426,7 +506,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                           ? "bg-gray-800/50 border-gray-600"
                           : "border-gray-700 hover:bg-gray-800/30"
                       }`}
-                      onClick={() => setSelectedConversation(conversation.id)}
+                      onClick={() => handleConversationSelect(conversation.id)}
                     >
                       <div className="flex items-center gap-3">
                         <ProfilePictureUploader
@@ -509,12 +589,32 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                   );
                 })
               )}
+              {hasMoreConversations && (
+                <div className="p-3 text-center">
+                  <button
+                    onClick={loadMoreConversations}
+                    disabled={isLoadingMore}
+                    className="text-xs hover:underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ color: "#6b7280" }}
+                    onMouseEnter={e => {
+                      if (!isLoadingMore) {
+                        e.currentTarget.style.color = "#9ca3af";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = "#6b7280";
+                    }}
+                  >
+                    {isLoadingMore ? "Loading..." : "Load more conversations"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Chat Area */}
           <div
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col overflow-hidden"
             style={{ backgroundColor: "#1E1E1E" }}
           >
             {selectedConversation ? (
@@ -604,7 +704,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="flex-1 p-4 space-y-3">
                   {messages.map((message: any) => {
                     const isCurrentUser = message.sender.id === currentUser?.id;
 

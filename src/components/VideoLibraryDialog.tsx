@@ -149,7 +149,7 @@ export default function VideoLibraryDialog({
         <DialogHeader>
           <DialogTitle className="text-white">Add from Library</DialogTitle>
           <DialogDescription className="text-gray-400">
-            Select a video from your library to add to your routine.
+            Select a video from your library to add.
           </DialogDescription>
         </DialogHeader>
 

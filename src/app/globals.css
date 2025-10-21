@@ -116,14 +116,15 @@
     background: #2a3133;
     margin: 0;
     padding: 0;
-    /* Prevent scrollbar from causing layout shift */
-    overflow-y: scroll;
   }
   body {
     @apply text-foreground;
     background: #2a3133;
     margin: 0;
     padding: 0;
+  }
+  #__next {
+    height: 100%;
   }
 }
 

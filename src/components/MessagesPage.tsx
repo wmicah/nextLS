@@ -55,6 +55,11 @@ function MessagesPage({}: MessagesPageProps) {
       attachmentSize: number;
     };
   } | null>(null);
+  const [conversationsOffset, setConversationsOffset] = useState(0);
+  const [allConversations, setAllConversations] = useState<any[]>([]);
+  const [hasMoreConversations, setHasMoreConversations] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const conversationsListRef = useRef<HTMLDivElement>(null);
 
   // Video creation mutation
   const createVideoMutation = trpc.videos.create.useMutation({
@@ -94,18 +99,65 @@ function MessagesPage({}: MessagesPageProps) {
     }
   );
 
-  // Get conversations with real-time updates
+  // Get conversations with pagination
   const {
-    data: conversations = [],
+    data: conversationsData,
     refetch: refetchConversations,
     isLoading: conversationsLoading,
-  } = trpc.messaging.getConversations.useQuery(undefined, {
-    staleTime: 30 * 1000, // Cache for 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchInterval: 10000, // Poll every 10 seconds
-    refetchOnWindowFocus: true, // Refetch on focus
-    refetchOnReconnect: true, // Refetch on reconnect
-  });
+  } = trpc.messaging.getConversations.useQuery(
+    { limit: 8, offset: conversationsOffset },
+    {
+      staleTime: 30 * 1000, // Cache for 30 seconds
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      refetchInterval: 10000, // Poll every 10 seconds
+      refetchOnWindowFocus: true, // Refetch on focus
+      refetchOnReconnect: true, // Refetch on reconnect
+    }
+  );
+
+  // Update conversations and pagination state when data changes
+  useEffect(() => {
+    if (conversationsData) {
+      if (conversationsOffset === 0) {
+        // First load - replace all conversations
+        setAllConversations(conversationsData.conversations);
+      } else {
+        // Load more - append to existing conversations
+        setAllConversations(prev => [
+          ...prev,
+          ...conversationsData.conversations,
+        ]);
+      }
+      setHasMoreConversations(conversationsData.hasMore);
+    }
+  }, [conversationsData, conversationsOffset]);
+
+  const conversations = allConversations;
+
+  // Function to load more conversations
+  const loadMoreConversations = () => {
+    if (!isLoadingMore && hasMoreConversations) {
+      setIsLoadingMore(true);
+      setConversationsOffset(prev => prev + 8);
+    }
+  };
+
+  // Handle scroll to load more conversations
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100; // Load when 100px from bottom
+
+    if (isNearBottom && hasMoreConversations && !isLoadingMore) {
+      loadMoreConversations();
+    }
+  };
+
+  // Reset loading state when new data arrives
+  useEffect(() => {
+    if (conversationsData) {
+      setIsLoadingMore(false);
+    }
+  }, [conversationsData]);
 
   // Get unread counts with real-time updates
   const { data: unreadCountsObj = {} } =
@@ -154,6 +206,16 @@ function MessagesPage({}: MessagesPageProps) {
         // You could add a toast notification here
       },
     });
+
+  // Auto-scroll to bottom when conversation is selected
+  useEffect(() => {
+    if (selectedConversation && messages.length > 0) {
+      // Use a longer timeout to ensure messages are rendered
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 300);
+    }
+  }, [selectedConversation, messages]);
 
   // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
   useEffect(() => {
@@ -328,17 +390,26 @@ function MessagesPage({}: MessagesPageProps) {
   };
 
   // Filter conversations based on search
-  const filteredConversations = conversations.filter(conversation => {
-    const otherUser = getOtherUser(conversation);
-    if (!otherUser) return false;
+  const filteredConversations = conversations
+    .filter(conversation => {
+      const otherUser = getOtherUser(conversation);
+      if (!otherUser) return false;
 
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      otherUser.name?.toLowerCase().includes(searchLower) ||
-      otherUser.email?.toLowerCase().includes(searchLower) ||
-      conversation.messages[0]?.content.toLowerCase().includes(searchLower)
-    );
-  });
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        otherUser.name?.toLowerCase().includes(searchLower) ||
+        otherUser.email?.toLowerCase().includes(searchLower) ||
+        conversation.messages[0]?.content.toLowerCase().includes(searchLower)
+      );
+    })
+    .sort((a, b) => {
+      // Sort by most recent message first (descending order)
+      const aLastMessage = a.messages[0]?.createdAt || a.updatedAt;
+      const bLastMessage = b.messages[0]?.createdAt || b.updatedAt;
+      return (
+        new Date(bLastMessage).getTime() - new Date(aLastMessage).getTime()
+      );
+    });
 
   // Filter clients for conversation creation
   const filteredClients = clients.filter(client => {
@@ -351,16 +422,22 @@ function MessagesPage({}: MessagesPageProps) {
 
   return (
     <Sidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      <div
+        className="h-screen flex flex-col overflow-hidden"
+        style={{ backgroundColor: "#2A3133" }}
+      >
         {/* Simple Header */}
-        <div className="p-4 border-b" style={{ borderColor: "#374151" }}>
+        <div
+          className="px-3 py-0 border-b flex-shrink-0"
+          style={{ borderColor: "#374151" }}
+        >
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold" style={{ color: "#C3BCC2" }}>
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
                 Messages
               </h1>
               <div
-                className="flex items-center gap-2 text-sm"
+                className="flex items-center gap-2 text-xs"
                 style={{ color: "#ABA4AA" }}
               >
                 <span>
@@ -382,21 +459,21 @@ function MessagesPage({}: MessagesPageProps) {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowMassMessageModal(true)}
-                className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
                 style={{ backgroundColor: "#10B981", color: "#ffffff" }}
               >
-                <Users className="h-4 w-4 inline mr-2" />
+                <Users className="h-3 w-3 inline mr-1" />
                 Mass Message
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
                 style={{ backgroundColor: "#4A5A70", color: "#ffffff" }}
               >
-                <Plus className="h-4 w-4 inline mr-2" />
+                <Plus className="h-3 w-3 inline mr-1" />
                 New Message
               </button>
             </div>
@@ -405,26 +482,26 @@ function MessagesPage({}: MessagesPageProps) {
 
         {/* Messages Interface */}
         <div
-          className="flex h-[calc(100vh-40px)] rounded-2xl border overflow-hidden shadow-xl"
+          className="flex flex-1 rounded-lg border overflow-hidden shadow-lg m-2"
           style={{
             backgroundColor: "#1E1E1E",
             borderColor: "#374151",
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+            boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.2)",
           }}
         >
           {/* Conversations Sidebar */}
           <div
-            className="w-80 border-r flex flex-col"
+            className="w-80 border-r flex flex-col min-h-0"
             style={{ borderColor: "#374151", backgroundColor: "#1A1A1A" }}
           >
             {/* Compact Header with Search */}
-            <div className="p-3 border-b" style={{ borderColor: "#374151" }}>
-              <div className="mb-3">
+            <div className="p-2 border-b" style={{ borderColor: "#374151" }}>
+              <div className="mb-2">
                 <h2
-                  className="text-lg font-semibold"
+                  className="text-sm font-semibold"
                   style={{ color: "#ffffff" }}
                 >
-                  Messages
+                  Conversations
                 </h2>
               </div>
               <div className="relative">
@@ -437,7 +514,7 @@ function MessagesPage({}: MessagesPageProps) {
                   placeholder="Search conversations..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg text-sm transition-all duration-200"
+                  className="w-full pl-8 pr-3 py-1.5 rounded-md text-xs transition-all duration-200"
                   style={{
                     backgroundColor: "#2a2a2a",
                     borderColor: "#374151",
@@ -459,8 +536,12 @@ function MessagesPage({}: MessagesPageProps) {
               </div>
             </div>
 
-            {/* Conversations List - No Scroll */}
-            <div className="flex-1">
+            {/* Conversations List - With Internal Scroll */}
+            <div
+              className="flex-1 overflow-y-auto"
+              ref={conversationsListRef}
+              onScroll={handleScroll}
+            >
               <DataLoadingState
                 isLoading={conversationsLoading}
                 data={filteredConversations}
@@ -481,7 +562,7 @@ function MessagesPage({}: MessagesPageProps) {
                 }
               >
                 <div className="space-y-1">
-                  {filteredConversations.slice(0, 8).map(conversation => {
+                  {filteredConversations.map(conversation => {
                     const otherUser = getOtherUser(conversation);
                     const lastMessage = conversation.messages[0];
                     const unreadCount = unreadCountsObj[conversation.id] || 0;
@@ -563,11 +644,26 @@ function MessagesPage({}: MessagesPageProps) {
                       </div>
                     );
                   })}
-                  {filteredConversations.length > 8 && (
+                  {hasMoreConversations && (
                     <div className="p-3 text-center">
-                      <p className="text-xs" style={{ color: "#6b7280" }}>
-                        +{filteredConversations.length - 8} more conversations
-                      </p>
+                      <button
+                        onClick={loadMoreConversations}
+                        disabled={isLoadingMore}
+                        className="text-xs hover:underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ color: "#6b7280" }}
+                        onMouseEnter={e => {
+                          if (!isLoadingMore) {
+                            e.currentTarget.style.color = "#9ca3af";
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = "#6b7280";
+                        }}
+                      >
+                        {isLoadingMore
+                          ? "Loading..."
+                          : "Load more conversations"}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -577,7 +673,7 @@ function MessagesPage({}: MessagesPageProps) {
 
           {/* Chat Area */}
           <div
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col overflow-hidden"
             style={{ backgroundColor: "#1E1E1E" }}
           >
             {selectedConversation ? (
@@ -1051,162 +1147,159 @@ function MessagesPage({}: MessagesPageProps) {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Create Conversation Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div
-              className="rounded-xl p-6 w-full max-w-md mx-4"
-              style={{
-                backgroundColor: "#1A1A1A",
-                borderColor: "#374151",
-                border: "1px solid",
-              }}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3
-                  className="text-xl font-semibold"
-                  style={{ color: "#ffffff" }}
-                >
-                  Start New Conversation
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setClientSearchTerm("");
-                  }}
-                  className="p-2 rounded-lg transition-colors hover:bg-[#374151]"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+      {/* Create Conversation Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div
+            className="rounded-xl p-6 w-full max-w-md mx-4"
+            style={{
+              backgroundColor: "#1A1A1A",
+              borderColor: "#374151",
+              border: "1px solid",
+            }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3
+                className="text-xl font-semibold"
+                style={{ color: "#ffffff" }}
+              >
+                Start New Conversation
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setClientSearchTerm("");
+                }}
+                className="p-2 rounded-lg transition-colors hover:bg-[#374151]"
+                style={{ color: "#ABA4AA" }}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              <div className="relative mb-6">
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                  style={{ color: "#6b7280" }}
-                />
-                <input
-                  type="text"
-                  placeholder="Search clients..."
-                  value={clientSearchTerm}
-                  onChange={e => setClientSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-lg text-sm transition-all duration-200"
-                  style={{
-                    backgroundColor: "#2a2a2a",
-                    borderColor: "#374151",
-                    color: "#f9fafb",
-                    border: "1px solid",
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = "#4A5A70";
-                    e.currentTarget.style.backgroundColor = "#1E1E1E";
-                    e.currentTarget.style.boxShadow =
-                      "0 0 0 2px rgba(74, 90, 112, 0.1)";
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor = "#374151";
-                    e.currentTarget.style.backgroundColor = "#2a2a2a";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                />
-              </div>
+            <div className="relative mb-6">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                style={{ color: "#6b7280" }}
+              />
+              <input
+                type="text"
+                placeholder="Search clients..."
+                value={clientSearchTerm}
+                onChange={e => setClientSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-lg text-sm transition-all duration-200"
+                style={{
+                  backgroundColor: "#2a2a2a",
+                  borderColor: "#374151",
+                  color: "#f9fafb",
+                  border: "1px solid",
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = "#4A5A70";
+                  e.currentTarget.style.backgroundColor = "#1E1E1E";
+                  e.currentTarget.style.boxShadow =
+                    "0 0 0 2px rgba(74, 90, 112, 0.1)";
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = "#374151";
+                  e.currentTarget.style.backgroundColor = "#2a2a2a";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              />
+            </div>
 
-              <div className="max-h-64 overflow-y-auto">
-                {filteredClients.length === 0 ? (
-                  <div className="text-center py-4">
-                    <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                      {clientSearchTerm
-                        ? "No clients found"
-                        : "No clients available"}
-                    </p>
-                  </div>
-                ) : (
-                  filteredClients.map(client => (
-                    <button
-                      key={client.id}
-                      onClick={() => handleCreateConversation(client.id)}
-                      disabled={createConversationMutation.isPending}
-                      className="w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        borderColor: "#606364",
-                        color: "#C3BCC2",
-                      }}
-                      onMouseEnter={e => {
-                        if (!createConversationMutation.isPending) {
-                          e.currentTarget.style.backgroundColor = "#3A4040";
+            <div className="max-h-64 overflow-y-auto">
+              {filteredClients.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                    {clientSearchTerm
+                      ? "No clients found"
+                      : "No clients available"}
+                  </p>
+                </div>
+              ) : (
+                filteredClients.map(client => (
+                  <button
+                    key={client.id}
+                    onClick={() => handleCreateConversation(client.id)}
+                    disabled={createConversationMutation.isPending}
+                    className="w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      borderColor: "#606364",
+                      color: "#C3BCC2",
+                    }}
+                    onMouseEnter={e => {
+                      if (!createConversationMutation.isPending) {
+                        e.currentTarget.style.backgroundColor = "#3A4040";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!createConversationMutation.isPending) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }
+                    }}
+                  >
+                    {createConversationMutation.isPending && (
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <ProfilePictureUploader
+                        currentAvatarUrl={
+                          client.user?.settings?.avatarUrl || client.avatar
                         }
-                      }}
-                      onMouseLeave={e => {
-                        if (!createConversationMutation.isPending) {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }
-                      }}
-                    >
-                      {createConversationMutation.isPending && (
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
-                        </div>
-                      )}
-                      <div className="flex items-center gap-3">
-                        <ProfilePictureUploader
-                          currentAvatarUrl={
-                            client.user?.settings?.avatarUrl || client.avatar
-                          }
-                          userName={client.name || client.email || "User"}
-                          onAvatarChange={() => {}}
-                          size="sm"
-                          readOnly={true}
-                          className="flex-shrink-0"
-                        />
-                        <div className="text-left">
-                          <p
-                            className="font-medium"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            {client.name ||
-                              client.email?.split("@")[0] ||
-                              "Unknown"}
+                        userName={client.name || client.email || "User"}
+                        onAvatarChange={() => {}}
+                        size="sm"
+                        readOnly={true}
+                        className="flex-shrink-0"
+                      />
+                      <div className="text-left">
+                        <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                          {client.name ||
+                            client.email?.split("@")[0] ||
+                            "Unknown"}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                            {client.email || "No email"}
                           </p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                              {client.email || "No email"}
-                            </p>
-                            {!client.userId && (
-                              <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-                                No Account
-                              </span>
-                            )}
-                          </div>
+                          {!client.userId && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                              No Account
+                            </span>
+                          )}
                         </div>
                       </div>
-                    </button>
-                  ))
-                )}
-              </div>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* File Upload Modal */}
-        {showFileUpload && (
-          <MessageFileUpload
-            onFileSelect={handleFileSelect}
-            onClose={() => setShowFileUpload(false)}
-          />
-        )}
-
-        {/* Mass Message Modal */}
-        <MassMessageModal
-          isOpen={showMassMessageModal}
-          onClose={() => {
-            setShowMassMessageModal(false);
-            // Trigger refresh of conversations and unread counts
-            refetchConversations();
-          }}
+      {/* File Upload Modal */}
+      {showFileUpload && (
+        <MessageFileUpload
+          onFileSelect={handleFileSelect}
+          onClose={() => setShowFileUpload(false)}
         />
-      </div>
+      )}
+
+      {/* Mass Message Modal */}
+      <MassMessageModal
+        isOpen={showMassMessageModal}
+        onClose={() => {
+          setShowMassMessageModal(false);
+          // Trigger refresh of conversations and unread counts
+          refetchConversations();
+        }}
+      />
     </Sidebar>
   );
 }
