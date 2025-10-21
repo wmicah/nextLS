@@ -53,11 +53,29 @@ function ClientSchedulePageClient() {
     reason: "",
   });
 
+  // Fetch coach's profile first
+  const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
+
   // Fetch coach's schedule for the current month and adjacent months
   const { data: coachSchedule = [] } =
     trpc.clientRouter.getCoachScheduleForClient.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
+    });
+
+  // Fetch blocked times for the current month
+  const { data: blockedTimes = [] } =
+    trpc.blockedTimes.getBlockedTimesForDateRange.useQuery({
+      startDate: startOfMonth(currentMonth).toISOString(),
+      endDate: endOfMonth(currentMonth).toISOString(),
+      coachId: coachProfile?.id || "",
+    });
+
+  // Fetch ALL coach's lessons for conflict checking
+  const { data: allCoachLessons = [] } =
+    trpc.clientRouter.getAllCoachLessons.useQuery({
+      startDate: startOfMonth(currentMonth).toISOString(),
+      endDate: endOfMonth(currentMonth).toISOString(),
     });
 
   // Fetch coach's schedule for previous month (for cross-month days)
@@ -131,9 +149,6 @@ function ClientSchedulePageClient() {
 
   // Get current client info - we need the Client record, not User record
   const { data: currentClient } = trpc.clientRouter.getCurrentClient.useQuery();
-
-  // Fetch coach's profile for working hours
-  const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
 
   const utils = trpc.useUtils();
 
@@ -344,7 +359,7 @@ function ClientSchedulePageClient() {
 
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
-    const lessons = allCoachSchedule.filter((lesson: { date: string }) => {
+    const lessons = allCoachLessons.filter((lesson: { date: string }) => {
       // Convert UTC lesson date to user's timezone for proper date comparison
       const timeZone = getUserTimezone();
       const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
@@ -369,6 +384,40 @@ function ClientSchedulePageClient() {
     });
 
     return lessons;
+  };
+
+  // Check if a day has blocked times
+  const getBlockedTimesForDate = (date: Date) => {
+    return blockedTimes.filter((blockedTime: any) => {
+      const startDate = new Date(blockedTime.startTime);
+      const endDate = new Date(blockedTime.endTime);
+
+      // Normalize dates to compare only the date part (ignore time)
+      const targetDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+      const blockedStartDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate()
+      );
+      const blockedEndDate = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate()
+      );
+
+      // Check if the date falls within the blocked time range
+      return targetDate >= blockedStartDate && targetDate <= blockedEndDate;
+    });
+  };
+
+  // Check if a day is completely blocked (all day blocked)
+  const isDayBlocked = (date: Date) => {
+    const dayBlockedTimes = getBlockedTimesForDate(date);
+    return dayBlockedTimes.some((blockedTime: any) => blockedTime.isAllDay);
   };
 
   // Note: formatTimeInUserTimezone is now imported from @/lib/timezone-utils
@@ -526,6 +575,33 @@ function ClientSchedulePageClient() {
     const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
     const slots = [];
 
+    // Get blocked times for this date
+    const dayBlockedTimes = getBlockedTimesForDate(date);
+
+    // Helper function to check if a time slot conflicts with blocked times
+    const isTimeSlotBlocked = (slotTime: string) => {
+      return dayBlockedTimes.some((blockedTime: any) => {
+        if (blockedTime.isAllDay) return true;
+
+        const blockedStart = new Date(blockedTime.startTime);
+        const blockedEnd = new Date(blockedTime.endTime);
+
+        // Parse the slot time (e.g., "2:00 PM")
+        const slotMatch = slotTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!slotMatch) return false;
+
+        const [, hour, minute, period] = slotMatch;
+        let hour24 = parseInt(hour);
+        if (period.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
+        if (period.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
+
+        const slotDate = new Date(date);
+        slotDate.setHours(hour24, parseInt(minute), 0, 0);
+
+        return slotDate >= blockedStart && slotDate < blockedEnd;
+      });
+    };
+
     console.log("Start time:", startTime);
     console.log("End time:", endTime);
     console.log("Interval:", interval);
@@ -592,9 +668,13 @@ function ClientSchedulePageClient() {
       const minuteStr = minute.toString().padStart(2, "0");
       const timeSlot = `${displayHour}:${minuteStr} ${period}`;
 
-      // Only add if not already booked
+      // Only add if not already booked and not blocked
       if (!bookedTimes.includes(timeSlot)) {
-        slots.push(timeSlot);
+        const isBlocked = isTimeSlotBlocked(timeSlot);
+        // For clients, don't show blocked slots at all
+        if (!isBlocked) {
+          slots.push(timeSlot);
+        }
       }
     }
 
@@ -903,6 +983,11 @@ function ClientSchedulePageClient() {
                 ];
                 const isWorkingDay = workingDays.includes(dayName);
 
+                // Check for blocked times
+                const dayBlockedTimes = getBlockedTimesForDate(day);
+                const isBlocked = isDayBlocked(day);
+                const hasBlockedTimes = dayBlockedTimes.length > 0;
+
                 const hasCoachLessons = coachLessonsForDay.length > 0;
                 const hasMyPendingLessons =
                   myLessonsForDay.filter(
@@ -927,7 +1012,9 @@ function ClientSchedulePageClient() {
                           : "cursor-pointer"
                       }
                       ${
-                        isToday
+                        isBlocked
+                          ? "bg-red-500/20 text-red-300 border-red-400 shadow-lg"
+                          : isToday
                           ? "bg-blue-500/20 text-blue-300 border-blue-400 shadow-lg"
                           : isPast
                           ? "text-gray-500 bg-gray-700/30 border-gray-600"
@@ -939,7 +1026,11 @@ function ClientSchedulePageClient() {
                       }
                     `}
                     title={
-                      !isPast && isCurrentMonth && isWorkingDay
+                      isBlocked
+                        ? `Coach unavailable: ${dayBlockedTimes
+                            .map(bt => bt.title)
+                            .join(", ")}`
+                        : !isPast && isCurrentMonth && isWorkingDay
                         ? "Click to request lesson"
                         : !isWorkingDay && isCurrentMonth && !isPast
                         ? "Non-working day"
@@ -971,6 +1062,14 @@ function ClientSchedulePageClient() {
                           <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
                             <span className="text-xs font-bold text-emerald-400">
                               {myLessonsForDay.length}
+                            </span>
+                          </div>
+                        )}
+                        {/* Blocked time indicator */}
+                        {hasBlockedTimes && (
+                          <div className="w-5 h-5 rounded-full bg-red-500/20 border border-red-400/30 flex items-center justify-center">
+                            <span className="text-xs font-bold text-red-400">
+                              🚫
                             </span>
                           </div>
                         )}

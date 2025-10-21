@@ -41,6 +41,8 @@ import Sidebar from "@/components/Sidebar";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileSchedulePage from "@/components/MobileSchedulePage";
 import WorkingHoursModal from "@/components/WorkingHoursModal";
+import BlockedTimesModal from "@/components/BlockedTimesModal";
+import AddTimeModal from "@/components/AddTimeModal";
 
 function SchedulePageClient() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -49,6 +51,8 @@ function SchedulePageClient() {
   const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
   const [showDayManagementModal, setShowDayManagementModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showBlockedTimesModal, setShowBlockedTimesModal] = useState(false);
+  const [showAddTimeModal, setShowAddTimeModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedRequestToReject, setSelectedRequestToReject] =
     useState<any>(null);
@@ -110,6 +114,13 @@ function SchedulePageClient() {
     trpc.scheduling.getCoachSchedule.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
+    });
+
+  // Fetch blocked times for the current month
+  const { data: blockedTimes = [] } =
+    trpc.blockedTimes.getBlockedTimesForSchedule.useQuery({
+      startDate: startOfMonth(currentMonth).toISOString(),
+      endDate: endOfMonth(currentMonth).toISOString(),
     });
 
   // Fetch coach's schedule for previous month (for cross-month days)
@@ -283,6 +294,40 @@ function SchedulePageClient() {
     });
 
     return lessons;
+  };
+
+  // Check if a day has blocked times
+  const getBlockedTimesForDate = (date: Date) => {
+    return blockedTimes.filter((blockedTime: any) => {
+      const startDate = new Date(blockedTime.startTime);
+      const endDate = new Date(blockedTime.endTime);
+
+      // Normalize dates to compare only the date part (ignore time)
+      const targetDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+      const blockedStartDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate()
+      );
+      const blockedEndDate = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate()
+      );
+
+      // Check if the date falls within the blocked time range
+      return targetDate >= blockedStartDate && targetDate <= blockedEndDate;
+    });
+  };
+
+  // Check if a day is completely blocked (all day blocked)
+  const isDayBlocked = (date: Date) => {
+    const dayBlockedTimes = getBlockedTimesForDate(date);
+    return dayBlockedTimes.some((blockedTime: any) => blockedTime.isAllDay);
   };
 
   const getAllLessonsForDate = (date: Date) => {
@@ -774,6 +819,34 @@ function SchedulePageClient() {
                   Schedule Lesson
                 </button>
                 <button
+                  onClick={() => setShowBlockedTimesModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                  style={{ backgroundColor: "#b76e79", color: "#FFFFFF" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#a15f6a";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#b76e79";
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                  Block Times
+                </button>
+                <button
+                  onClick={() => setShowAddTimeModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
+                  style={{ backgroundColor: "#5a7fa4", color: "#FFFFFF" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#4c6b8a";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#5a7fa4";
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Time
+                </button>
+                <button
                   onClick={() => setShowWorkingHoursModal(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
                   style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
@@ -823,6 +896,10 @@ function SchedulePageClient() {
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
               <span className="text-white font-medium">Today</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-red-500/20 border-2 border-red-400" />
+              <span className="text-red-300 font-medium">Blocked Time</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-orange-500/20 border-2 border-orange-500/50" />
@@ -882,6 +959,11 @@ function SchedulePageClient() {
                 ];
                 const isWorkingDay = workingDays.includes(dayName);
 
+                // Check for blocked times
+                const dayBlockedTimes = getBlockedTimesForDate(day);
+                const isBlocked = isDayBlocked(day);
+                const hasBlockedTimes = dayBlockedTimes.length > 0;
+
                 return (
                   <div
                     key={day.toISOString()}
@@ -894,7 +976,9 @@ function SchedulePageClient() {
                           : "cursor-pointer"
                       }
                       ${
-                        isToday
+                        isBlocked
+                          ? "bg-red-500/20 text-red-300 border-red-400 shadow-lg"
+                          : isToday
                           ? "bg-blue-500/20 text-blue-300 border-blue-400 shadow-lg"
                           : isPast
                           ? "text-gray-500 bg-gray-700/30 border-gray-600"
@@ -906,7 +990,11 @@ function SchedulePageClient() {
                       }
                     `}
                     title={
-                      !isPast && isCurrentMonth && isWorkingDay
+                      isBlocked
+                        ? `Blocked: ${dayBlockedTimes
+                            .map(bt => bt.title)
+                            .join(", ")}`
+                        : !isPast && isCurrentMonth && isWorkingDay
                         ? "Click to schedule lesson"
                         : !isWorkingDay && isCurrentMonth && !isPast
                         ? "Non-working day"
@@ -931,6 +1019,14 @@ function SchedulePageClient() {
                           <div className="w-5 h-5 rounded-full bg-orange-500/20 border border-orange-400/30 flex items-center justify-center">
                             <span className="text-xs font-bold text-orange-400">
                               {pendingForDay.length}
+                            </span>
+                          </div>
+                        )}
+                        {/* Blocked time indicator */}
+                        {hasBlockedTimes && (
+                          <div className="w-5 h-5 rounded-full bg-red-500/20 border border-red-400/30 flex items-center justify-center">
+                            <span className="text-xs font-bold text-red-400">
+                              🚫
                             </span>
                           </div>
                         )}
@@ -1102,6 +1198,23 @@ function SchedulePageClient() {
                   }
                 : undefined
             }
+          />
+
+          {/* Blocked Times Modal */}
+          <BlockedTimesModal
+            isOpen={showBlockedTimesModal}
+            onClose={() => setShowBlockedTimesModal(false)}
+            selectedDate={selectedDate || undefined}
+            month={currentMonth.getMonth()}
+            year={currentMonth.getFullYear()}
+          />
+
+          {/* Add Time Modal */}
+          <AddTimeModal
+            isOpen={showAddTimeModal}
+            onClose={() => setShowAddTimeModal(false)}
+            selectedDate={selectedDate || undefined}
+            clients={clients}
           />
 
           {/* Schedule Lesson Modal */}
@@ -1428,6 +1541,39 @@ function SchedulePageClient() {
                         coachProfile?.workingHours?.timeSlotInterval || 60;
                       const slots = [];
 
+                      // Get blocked times for this date
+                      const dayBlockedTimes = getBlockedTimesForDate(date);
+
+                      // Helper function to check if a time slot conflicts with blocked times
+                      const isTimeSlotBlocked = (slotTime: string) => {
+                        return dayBlockedTimes.some((blockedTime: any) => {
+                          if (blockedTime.isAllDay) return true;
+
+                          const blockedStart = new Date(blockedTime.startTime);
+                          const blockedEnd = new Date(blockedTime.endTime);
+
+                          // Parse the slot time (e.g., "2:00 PM")
+                          const slotMatch = slotTime.match(
+                            /(\d+):(\d+)\s*(AM|PM)/i
+                          );
+                          if (!slotMatch) return false;
+
+                          const [, hour, minute, period] = slotMatch;
+                          let hour24 = parseInt(hour);
+                          if (period.toUpperCase() === "PM" && hour24 !== 12)
+                            hour24 += 12;
+                          if (period.toUpperCase() === "AM" && hour24 === 12)
+                            hour24 = 0;
+
+                          const slotDate = new Date(date);
+                          slotDate.setHours(hour24, parseInt(minute), 0, 0);
+
+                          return (
+                            slotDate >= blockedStart && slotDate < blockedEnd
+                          );
+                        });
+                      };
+
                       // Parse start and end times
                       const startMatch = startTime.match(
                         /(\d+):(\d+)\s*(AM|PM)/i
@@ -1519,7 +1665,29 @@ function SchedulePageClient() {
 
                         // Check if this slot is already booked
                         if (!bookedTimes.includes(timeSlot)) {
-                          slots.push(timeSlot);
+                          const isBlocked = isTimeSlotBlocked(timeSlot);
+                          slots.push({
+                            time: timeSlot,
+                            isBlocked: isBlocked,
+                            blockedReason: isBlocked
+                              ? dayBlockedTimes.find((bt: any) => {
+                                  if (bt.isAllDay) return true;
+                                  const blockedStart = new Date(bt.startTime);
+                                  const blockedEnd = new Date(bt.endTime);
+                                  const slotDate = new Date(date);
+                                  slotDate.setHours(
+                                    hour24,
+                                    parseInt(minuteStr),
+                                    0,
+                                    0
+                                  );
+                                  return (
+                                    slotDate >= blockedStart &&
+                                    slotDate < blockedEnd
+                                  );
+                                })?.title
+                              : null,
+                          });
                         }
                       }
 
@@ -1545,28 +1713,38 @@ function SchedulePageClient() {
                           {availableSlots.length > 0 ? (
                             <>
                               <div className="grid grid-cols-3 gap-2">
-                                {availableSlots.map((slot, index) => (
+                                {availableSlots.map((slot: any, index) => (
                                   <button
                                     key={index}
-                                    onClick={() => setSelectedTimeSlot(slot)}
+                                    onClick={() =>
+                                      setSelectedTimeSlot(slot.time)
+                                    }
                                     className={`p-3 rounded-lg border text-center transition-all duration-200 ${
-                                      selectedTimeSlot === slot
+                                      selectedTimeSlot === slot.time
                                         ? "bg-sky-500 border-sky-400 text-white"
                                         : "hover:bg-sky-500/10 hover:border-sky-500/30"
                                     }`}
                                     style={{
                                       backgroundColor:
-                                        selectedTimeSlot === slot
+                                        selectedTimeSlot === slot.time
                                           ? "#0EA5E9"
                                           : "#2A2F2F",
-                                      borderColor:
-                                        selectedTimeSlot === slot
-                                          ? "#0EA5E9"
-                                          : "#606364",
-                                      color: "#FFFFFF",
+                                      borderColor: slot.isBlocked
+                                        ? "#EF4444"
+                                        : selectedTimeSlot === slot.time
+                                        ? "#0EA5E9"
+                                        : "#606364",
+                                      color: slot.isBlocked
+                                        ? "#EF4444"
+                                        : "#FFFFFF",
                                     }}
+                                    title={
+                                      slot.isBlocked
+                                        ? `Blocked: ${slot.blockedReason} (Coach can override)`
+                                        : ""
+                                    }
                                   >
-                                    {slot}
+                                    {slot.time}
                                   </button>
                                 ))}
                               </div>
@@ -1683,28 +1861,34 @@ function SchedulePageClient() {
                     return availableSlots.length > 0 ? (
                       <>
                         <div className="grid grid-cols-3 gap-2">
-                          {availableSlots.map((slot, index) => (
+                          {availableSlots.map((slot: any, index) => (
                             <button
                               key={index}
-                              onClick={() => setSelectedTimeSlot(slot)}
+                              onClick={() => setSelectedTimeSlot(slot.time)}
                               className={`p-3 rounded-lg border text-center transition-all duration-200 ${
-                                selectedTimeSlot === slot
+                                selectedTimeSlot === slot.time
                                   ? "bg-sky-500 border-sky-400 text-white"
                                   : "hover:bg-sky-500/10 hover:border-sky-500/30"
                               }`}
                               style={{
                                 backgroundColor:
-                                  selectedTimeSlot === slot
+                                  selectedTimeSlot === slot.time
                                     ? "#0EA5E9"
                                     : "#2A2F2F",
-                                borderColor:
-                                  selectedTimeSlot === slot
-                                    ? "#0EA5E9"
-                                    : "#606364",
-                                color: "#FFFFFF",
+                                borderColor: slot.isBlocked
+                                  ? "#EF4444"
+                                  : selectedTimeSlot === slot.time
+                                  ? "#0EA5E9"
+                                  : "#606364",
+                                color: slot.isBlocked ? "#EF4444" : "#FFFFFF",
                               }}
+                              title={
+                                slot.isBlocked
+                                  ? `Blocked: ${slot.blockedReason} (Coach can override)`
+                                  : ""
+                              }
                             >
-                              {slot}
+                              {slot.time}
                             </button>
                           ))}
                         </div>

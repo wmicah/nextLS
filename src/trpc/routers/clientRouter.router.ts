@@ -3417,4 +3417,76 @@ export const clientRouterRouter = router({
 
     return upcomingLessons;
   }),
+
+  // Get all coach's lessons for conflict checking (for time slot generation)
+  getAllCoachLessons: publicProcedure
+    .input(
+      z.object({
+        startDate: z.string(),
+        endDate: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get client record to find their coach
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // Only proceed if client has a coach
+      if (!client.coachId) {
+        return [];
+      }
+
+      const startDate = new Date(input.startDate);
+      const endDate = new Date(input.endDate);
+
+      // Get ALL events (lessons) for the coach in the specified date range
+      // This includes ALL lessons, not filtered like getCoachScheduleForClient
+      const events = await db.event.findMany({
+        where: {
+          coachId: client.coachId!,
+          clientId: { not: null }, // Only show events with a client (not reminders)
+          status: "CONFIRMED", // Only confirmed lessons
+          date: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        select: {
+          id: true,
+          date: true,
+          endTime: true,
+          title: true,
+          clientId: true,
+        },
+        orderBy: {
+          date: "asc",
+        },
+      });
+
+      return events;
+    }),
 });

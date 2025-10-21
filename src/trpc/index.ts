@@ -41,6 +41,7 @@ import { timeSwapRouter } from "./routers/timeSwap.router";
 import { utilsRouter } from "./routers/utils.router";
 import { organizationRouter } from "./routers/organization.router";
 import { sidebarRouter } from "./routers/sidebar.router";
+import { blockedTimesRouter } from "./routers/blockedTimes.router";
 
 /**
  * Merge all routers together
@@ -78,6 +79,7 @@ export const appRouter = router({
   utils: utilsRouter,
   organization: organizationRouter,
   sidebar: sidebarRouter,
+  blockedTimes: blockedTimesRouter,
 
   // Admin router
   admin: adminRouter,
