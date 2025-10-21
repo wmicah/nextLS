@@ -3,6 +3,9 @@ uploads/temp-videos/
 uploads/temp-videos/
 node_modules/.pnpm/
 
+# Exclude mobile app directory from Next.js build
+mobile/
+
 # Exclude development files
 .env.local
 .env.development.local
