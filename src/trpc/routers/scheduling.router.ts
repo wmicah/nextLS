@@ -1199,39 +1199,42 @@ export const schedulingRouter = router({
       }
 
       // Check for conflicts with existing lessons
-      const freedomConflictLessonEndTime = new Date(
+      const freedomLessonEndTime = new Date(
         utcLessonDate.getTime() + input.duration * 60000
       );
 
-      const conflictingLesson = await db.event.findFirst({
+      // Get all confirmed lessons for the coach
+      const existingLessons = await db.event.findMany({
         where: {
           coachId: ensureUserId(user.id),
           status: "CONFIRMED",
-          OR: [
-            // New lesson starts within existing lesson
-            {
-              date: {
-                lte: utcLessonDate,
-              },
-              // Assuming 60 minutes duration for existing lessons
-              // You might want to add duration field to Event model
-            },
-            // New lesson ends within existing lesson
-            {
-              date: {
-                lte: freedomConflictLessonEndTime,
-                gte: utcLessonDate,
-              },
-            },
-          ],
+          date: {
+            gte: new Date(utcLessonDate.getTime() - 24 * 60 * 60 * 1000), // Check 24 hours before
+            lte: new Date(utcLessonDate.getTime() + 24 * 60 * 60 * 1000), // Check 24 hours after
+          },
         },
-        include: {
+        select: {
+          id: true,
+          title: true,
+          date: true,
+          endTime: true,
           client: {
             select: {
               name: true,
             },
           },
         },
+      });
+
+      // Check for time overlaps
+      const conflictingLesson = existingLessons.find((lesson) => {
+        const lessonStart = lesson.date;
+        const lessonEnd = lesson.endTime || new Date(lessonStart.getTime() + 60 * 60 * 1000); // Default 60 min if no endTime
+
+        // Check if lessons overlap
+        return (
+          (utcLessonDate < lessonEnd && freedomLessonEndTime > lessonStart)
+        );
       });
 
       if (conflictingLesson) {
@@ -1242,39 +1245,33 @@ export const schedulingRouter = router({
       }
 
       // Check for conflicts with blocked times
-      const conflictingBlockedTime = await db.blockedTime.findFirst({
+      const blockedTimes = await db.blockedTime.findMany({
         where: {
           coachId: ensureUserId(user.id),
-          OR: [
-            // Blocked time starts within the lesson time
-            {
-              startTime: {
-                lte: utcLessonDate,
-              },
-              endTime: {
-                gt: utcLessonDate,
-              },
-            },
-            // Blocked time ends within the lesson time
-            {
-              startTime: {
-                lt: freedomConflictLessonEndTime,
-              },
-              endTime: {
-                gte: utcLessonDate,
-              },
-            },
-            // Blocked time spans the entire lesson time
-            {
-              startTime: {
-                lte: utcLessonDate,
-              },
-              endTime: {
-                gte: freedomConflictLessonEndTime,
-              },
-            },
-          ],
+          startTime: {
+            lte: new Date(utcLessonDate.getTime() + 24 * 60 * 60 * 1000), // Check 24 hours after
+          },
+          endTime: {
+            gte: new Date(utcLessonDate.getTime() - 24 * 60 * 60 * 1000), // Check 24 hours before
+          },
         },
+        select: {
+          id: true,
+          title: true,
+          startTime: true,
+          endTime: true,
+        },
+      });
+
+      // Check for time overlaps with blocked times
+      const conflictingBlockedTime = blockedTimes.find((blockedTime) => {
+        const blockedStart = blockedTime.startTime;
+        const blockedEnd = blockedTime.endTime;
+
+        // Check if lesson overlaps with blocked time
+        return (
+          (utcLessonDate < blockedEnd && freedomLessonEndTime > blockedStart)
+        );
       });
 
       if (conflictingBlockedTime) {
@@ -1284,52 +1281,6 @@ export const schedulingRouter = router({
         });
       }
 
-      // Check for conflicts with existing lessons
-      const freedomLessonEndTime = new Date(
-        utcLessonDate.getTime() + input.duration * 60000
-      );
-      const freedomConflictingLesson = await db.event.findFirst({
-        where: {
-          coachId: ensureUserId(user.id),
-          status: "CONFIRMED", // Only check confirmed lessons
-          OR: [
-            // New lesson starts within existing lesson
-            {
-              date: {
-                lte: utcLessonDate,
-              },
-              endTime: {
-                gt: utcLessonDate,
-              },
-            },
-            // New lesson ends within existing lesson
-            {
-              date: {
-                lt: freedomLessonEndTime,
-              },
-              endTime: {
-                gte: utcLessonDate,
-              },
-            },
-            // New lesson spans existing lesson
-            {
-              date: {
-                lte: utcLessonDate,
-              },
-              endTime: {
-                gte: freedomLessonEndTime,
-              },
-            },
-          ],
-        },
-      });
-
-      if (freedomConflictingLesson) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Time slot is already booked by another client",
-        });
-      }
 
       // Determine lesson title
       const isSchedulingForAnotherCoach =
