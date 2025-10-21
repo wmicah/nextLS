@@ -1568,11 +1568,16 @@ export const clientsRouter = router({
 
       console.log("🔍 Parsed lesson date:", lessonDate);
 
+      const lessonDuration = coach.timeSlotInterval || 60; // Use coach's lesson duration or default to 60 minutes
+      const lessonEndTime = new Date(
+        lessonDate.getTime() + lessonDuration * 60000
+      );
       const lesson = await db.event.create({
         data: {
           title: input.lessonData.title,
           description: input.lessonData.description || replacementNote,
           date: lessonDate,
+          endTime: lessonEndTime,
           status: "CONFIRMED",
           clientId: input.clientId,
           coachId: ensureUserId(user.id),

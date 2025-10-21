@@ -137,6 +137,99 @@ export const schedulingRouter = router({
         }
       }
 
+      // Check for conflicts with blocked times
+      const conflictingBlockedTime = await db.blockedTime.findFirst({
+        where: {
+          coachId: ensureUserId(user.id),
+          OR: [
+            // Blocked time starts within the lesson time
+            {
+              startTime: {
+                lte: utcLessonDate,
+              },
+              endTime: {
+                gt: utcLessonDate,
+              },
+            },
+            // Blocked time ends within the lesson time
+            {
+              startTime: {
+                lt: utcLessonDate,
+              },
+              endTime: {
+                gte: utcLessonDate,
+              },
+            },
+            // Blocked time spans the entire lesson time
+            {
+              startTime: {
+                lte: utcLessonDate,
+              },
+              endTime: {
+                gte: utcLessonDate,
+              },
+            },
+          ],
+        },
+      });
+
+      if (conflictingBlockedTime) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Cannot schedule lesson during blocked time: ${conflictingBlockedTime.title}`,
+        });
+      }
+
+      // Get coach's lesson duration
+      const lessonDuration = coach.timeSlotInterval || 60; // Use coach's lesson duration or default to 60 minutes
+
+      // Check for conflicts with existing lessons
+      const conflictLessonEndTime = new Date(
+        utcLessonDate.getTime() + lessonDuration * 60000
+      );
+      const conflictingLesson = await db.event.findFirst({
+        where: {
+          coachId: ensureUserId(user.id),
+          status: "CONFIRMED", // Only check confirmed lessons
+          OR: [
+            // New lesson starts within existing lesson
+            {
+              date: {
+                lte: utcLessonDate,
+              },
+              endTime: {
+                gt: utcLessonDate,
+              },
+            },
+            // New lesson ends within existing lesson
+            {
+              date: {
+                lt: conflictLessonEndTime,
+              },
+              endTime: {
+                gte: utcLessonDate,
+              },
+            },
+            // New lesson spans existing lesson
+            {
+              date: {
+                lte: utcLessonDate,
+              },
+              endTime: {
+                gte: conflictLessonEndTime,
+              },
+            },
+          ],
+        },
+      });
+
+      if (conflictingLesson) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Time slot is already booked by another client",
+        });
+      }
+
       // Determine lesson title based on context
       // If scheduling for a different coach's client (organization context), show coach name
       // Otherwise, show client name
@@ -147,11 +240,15 @@ export const schedulingRouter = router({
         : `Lesson with ${client.name || client.email || "Client"}`;
 
       // Create the lesson (using Event model) - automatically CONFIRMED when coach schedules
+      const lessonEndTime = new Date(
+        utcLessonDate.getTime() + lessonDuration * 60000
+      );
       const lesson = await db.event.create({
         data: {
           title: lessonTitle,
           description: "Scheduled lesson",
           date: utcLessonDate,
+          endTime: lessonEndTime,
           status: "CONFIRMED", // Coach-scheduled lessons are automatically confirmed
           clientId: input.clientId, // Use Client.id directly
           coachId: ensureUserId(user.id),
@@ -391,43 +488,145 @@ export const schedulingRouter = router({
         });
       }
 
-      // Create all lessons in a transaction
-      const lessons = await db.$transaction(
-        lessonDates.map(lessonDate =>
-          db.event.create({
-            data: {
-              title: lessonTitle,
-              description: `Recurring lesson (${input.recurrencePattern})`,
-              date: lessonDate,
-              status: "CONFIRMED",
-              clientId: input.clientId,
-              coachId: ensureUserId(user.id),
-            },
-          })
-        )
-      );
+      // Get coach's lesson duration
+      const lessonDuration = coach.timeSlotInterval || 60; // Use coach's lesson duration or default to 60 minutes
+
+      // Check for conflicts and filter out conflicting dates
+      const validLessonDates: Date[] = [];
+      const skippedDates: Date[] = [];
+
+      for (const lessonDate of lessonDates) {
+        // Check for conflicts with existing lessons
+        const recurringLessonEndTime = new Date(
+          lessonDate.getTime() + lessonDuration * 60000
+        );
+        const conflictingLesson = await db.event.findFirst({
+          where: {
+            coachId: ensureUserId(user.id),
+            status: "CONFIRMED",
+            OR: [
+              // New lesson starts within existing lesson
+              {
+                date: {
+                  lte: lessonDate,
+                },
+                endTime: {
+                  gt: lessonDate,
+                },
+              },
+              // New lesson ends within existing lesson
+              {
+                date: {
+                  lt: recurringLessonEndTime,
+                },
+                endTime: {
+                  gte: lessonDate,
+                },
+              },
+              // New lesson spans existing lesson
+              {
+                date: {
+                  lte: lessonDate,
+                },
+                endTime: {
+                  gte: recurringLessonEndTime,
+                },
+              },
+            ],
+          },
+        });
+
+        // Check for conflicts with blocked times
+        const conflictingBlockedTime = await db.blockedTime.findFirst({
+          where: {
+            coachId: ensureUserId(user.id),
+            OR: [
+              // Blocked time starts within the lesson time
+              {
+                startTime: {
+                  lte: lessonDate,
+                },
+                endTime: {
+                  gt: lessonDate,
+                },
+              },
+              // Blocked time ends within the lesson time
+              {
+                startTime: {
+                  lt: recurringLessonEndTime,
+                },
+                endTime: {
+                  gte: lessonDate,
+                },
+              },
+              // Blocked time spans the entire lesson time
+              {
+                startTime: {
+                  lte: lessonDate,
+                },
+                endTime: {
+                  gte: recurringLessonEndTime,
+                },
+              },
+            ],
+          },
+        });
+
+        if (conflictingLesson || conflictingBlockedTime) {
+          skippedDates.push(lessonDate);
+        } else {
+          validLessonDates.push(lessonDate);
+        }
+      }
+
+      // Create all valid lessons in a transaction
+      const lessons =
+        validLessonDates.length > 0
+          ? await db.$transaction(
+              validLessonDates.map(lessonDate => {
+                const lessonEndTime = new Date(
+                  lessonDate.getTime() + lessonDuration * 60000
+                );
+                return db.event.create({
+                  data: {
+                    title: lessonTitle,
+                    description: `Recurring lesson (${input.recurrencePattern})`,
+                    date: lessonDate,
+                    endTime: lessonEndTime,
+                    status: "CONFIRMED",
+                    clientId: input.clientId,
+                    coachId: ensureUserId(user.id),
+                  },
+                });
+              })
+            )
+          : [];
 
       // Update client's next lesson date to the first scheduled lesson
-      if (lessonDates.length > 0) {
+      if (validLessonDates.length > 0) {
         await db.client.update({
           where: { id: input.clientId },
-          data: { nextLessonDate: lessonDates[0] },
+          data: { nextLessonDate: validLessonDates[0] },
         });
       }
 
       // Create notifications for the client
       if (client.userId) {
+        let message = `Your coach has scheduled ${validLessonDates.length} recurring lessons`;
+        if (skippedDates.length > 0) {
+          message += ` (${skippedDates.length} dates skipped due to conflicts)`;
+        }
+        message += ` from ${format(localStartDate, "MMM d, yyyy")} to ${format(
+          endDate,
+          "MMM d, yyyy"
+        )}`;
+
         await db.notification.create({
           data: {
             userId: client.userId,
             type: "LESSON_SCHEDULED",
             title: "Recurring Lessons Scheduled",
-            message: `Your coach has scheduled ${
-              lessonDates.length
-            } recurring lessons from ${format(
-              localStartDate,
-              "MMM d, yyyy"
-            )} to ${format(endDate, "MMM d, yyyy")}`,
+            message,
           },
         });
       }
@@ -435,13 +634,15 @@ export const schedulingRouter = router({
       // TODO: Send email notification if requested
       if (input.sendEmail && client.email) {
         console.log(
-          `Email notification would be sent to ${client.email} for ${lessonDates.length} recurring lessons`
+          `Email notification would be sent to ${client.email} for ${validLessonDates.length} recurring lessons`
         );
       }
 
       return {
         lessons,
-        totalLessons: lessonDates.length,
+        totalLessons: validLessonDates.length,
+        skippedLessons: skippedDates.length,
+        skippedDates: skippedDates.map(date => date.toISOString()),
         dateRange: {
           start: localStartDate,
           end: endDate,
@@ -888,4 +1089,322 @@ export const schedulingRouter = router({
 
     return upcomingLessons;
   }),
+
+  // Schedule a lesson with complete time freedom (override all restrictions)
+  scheduleLessonWithFreedom: publicProcedure
+    .input(
+      z.object({
+        clientId: z.string(),
+        lessonDate: z.string(), // Full datetime string
+        duration: z.number().min(15).max(480), // Duration in minutes (15 min to 8 hours)
+        title: z.string().optional(),
+        description: z.string().optional(),
+        sendEmail: z.boolean().optional(),
+        timeZone: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can schedule lessons",
+        });
+      }
+
+      // Check if coach is in an organization
+      const coachOrganization = await db.coachOrganization.findFirst({
+        where: {
+          coachId: ensureUserId(user.id),
+          isActive: true,
+        },
+      });
+
+      // Build the where clause
+      let whereClause: any = {
+        id: input.clientId,
+      };
+
+      if (coachOrganization?.organizationId) {
+        // Get all coaches in the organization
+        const orgCoaches = await db.coachOrganization.findMany({
+          where: {
+            organizationId: coachOrganization.organizationId,
+            isActive: true,
+          },
+          select: {
+            coachId: true,
+          },
+        });
+
+        const orgCoachIds = orgCoaches.map(c => c.coachId);
+
+        // Allow access if client belongs to any coach in the organization
+        whereClause.coachId = { in: orgCoachIds };
+      } else {
+        // Not in an organization, only allow access to own clients
+        whereClause.coachId = ensureUserId(user.id);
+      }
+
+      // Verify the client belongs to this coach or is in the same organization
+      const client = await db.client.findFirst({
+        where: whereClause,
+        include: {
+          coach: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client not found or not assigned to you",
+        });
+      }
+
+      // Convert string to Date object (this is local time from client)
+      const localLessonDate = new Date(input.lessonDate);
+
+      // Convert local time to UTC using the user's timezone
+      const timeZone = input.timeZone || "America/New_York";
+      const utcLessonDate = fromZonedTime(localLessonDate, timeZone);
+
+      // Validate the date
+      if (isNaN(utcLessonDate.getTime())) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid date format",
+        });
+      }
+
+      // Check if the lesson is in the past
+      const now = new Date();
+      if (utcLessonDate <= now) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot schedule lessons in the past",
+        });
+      }
+
+      // Check for conflicts with existing lessons
+      const freedomConflictLessonEndTime = new Date(
+        utcLessonDate.getTime() + input.duration * 60000
+      );
+
+      const conflictingLesson = await db.event.findFirst({
+        where: {
+          coachId: ensureUserId(user.id),
+          status: "CONFIRMED",
+          OR: [
+            // New lesson starts within existing lesson
+            {
+              date: {
+                lte: utcLessonDate,
+              },
+              // Assuming 60 minutes duration for existing lessons
+              // You might want to add duration field to Event model
+            },
+            // New lesson ends within existing lesson
+            {
+              date: {
+                lte: freedomConflictLessonEndTime,
+                gte: utcLessonDate,
+              },
+            },
+          ],
+        },
+        include: {
+          client: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (conflictingLesson) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Cannot schedule lesson that conflicts with existing lesson: ${conflictingLesson.title}`,
+        });
+      }
+
+      // Check for conflicts with blocked times
+      const conflictingBlockedTime = await db.blockedTime.findFirst({
+        where: {
+          coachId: ensureUserId(user.id),
+          OR: [
+            // Blocked time starts within the lesson time
+            {
+              startTime: {
+                lte: utcLessonDate,
+              },
+              endTime: {
+                gt: utcLessonDate,
+              },
+            },
+            // Blocked time ends within the lesson time
+            {
+              startTime: {
+                lt: freedomConflictLessonEndTime,
+              },
+              endTime: {
+                gte: utcLessonDate,
+              },
+            },
+            // Blocked time spans the entire lesson time
+            {
+              startTime: {
+                lte: utcLessonDate,
+              },
+              endTime: {
+                gte: freedomConflictLessonEndTime,
+              },
+            },
+          ],
+        },
+      });
+
+      if (conflictingBlockedTime) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Cannot schedule lesson during blocked time: ${conflictingBlockedTime.title}`,
+        });
+      }
+
+      // Check for conflicts with existing lessons
+      const freedomLessonEndTime = new Date(
+        utcLessonDate.getTime() + input.duration * 60000
+      );
+      const freedomConflictingLesson = await db.event.findFirst({
+        where: {
+          coachId: ensureUserId(user.id),
+          status: "CONFIRMED", // Only check confirmed lessons
+          OR: [
+            // New lesson starts within existing lesson
+            {
+              date: {
+                lte: utcLessonDate,
+              },
+              endTime: {
+                gt: utcLessonDate,
+              },
+            },
+            // New lesson ends within existing lesson
+            {
+              date: {
+                lt: freedomLessonEndTime,
+              },
+              endTime: {
+                gte: utcLessonDate,
+              },
+            },
+            // New lesson spans existing lesson
+            {
+              date: {
+                lte: utcLessonDate,
+              },
+              endTime: {
+                gte: freedomLessonEndTime,
+              },
+            },
+          ],
+        },
+      });
+
+      if (freedomConflictingLesson) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Time slot is already booked by another client",
+        });
+      }
+
+      // Determine lesson title
+      const isSchedulingForAnotherCoach =
+        client.coachId !== ensureUserId(user.id);
+      const lessonTitle =
+        input.title ||
+        (isSchedulingForAnotherCoach
+          ? `Lesson - ${client.coach?.name || "Coach"}`
+          : `Lesson with ${client.name || client.email || "Client"}`);
+
+      // Create the lesson (using Event model) - automatically CONFIRMED when coach schedules
+      const freedomCreateLessonEndTime = new Date(
+        utcLessonDate.getTime() + input.duration * 60000
+      );
+      const lesson = await db.event.create({
+        data: {
+          title: lessonTitle,
+          description: input.description || "Scheduled lesson",
+          date: utcLessonDate,
+          endTime: freedomCreateLessonEndTime,
+          status: "CONFIRMED", // Coach-scheduled lessons are automatically confirmed
+          clientId: input.clientId,
+          coachId: ensureUserId(user.id),
+          type: "LESSON", // Mark as lesson type for reminder system
+        },
+      });
+
+      // Update client's next lesson date
+      await db.client.update({
+        where: { id: input.clientId },
+        data: { nextLessonDate: utcLessonDate },
+      });
+
+      // Create notification for the client
+      if (client.userId) {
+        await db.notification.create({
+          data: {
+            userId: client.userId,
+            type: "LESSON_SCHEDULED",
+            title: "New Lesson Scheduled",
+            message: `Your coach has scheduled a lesson for ${format(
+              utcLessonDate,
+              "MMM d, yyyy 'at' h:mm a"
+            )}`,
+          },
+        });
+      }
+
+      // Send email notification if requested
+      if (input.sendEmail && client.email) {
+        try {
+          const emailService = CompleteEmailService.getInstance();
+          // Format the lesson time for the email
+          const lessonTime = utcLessonDate.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
+
+          await emailService.sendLessonScheduled(
+            client.email,
+            client.name || "Client",
+            coach?.name || "Coach",
+            utcLessonDate.toLocaleDateString(),
+            lessonTime
+          );
+          console.log(`📧 Lesson scheduled email sent to ${client.email}`);
+        } catch (error) {
+          console.error(
+            `Failed to send lesson scheduled email to ${client.email}:`,
+            error
+          );
+        }
+      }
+
+      return lesson;
+    }),
 });

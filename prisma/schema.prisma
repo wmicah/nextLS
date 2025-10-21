@@ -73,6 +73,7 @@ model User {
   coachClientAssignments   ClientCoachAssignment[] @relation("CoachClientAssignments")
   assignedByMe             ClientCoachAssignment[] @relation("AssignedBy")
   lessonReminders          LessonReminder[]
+  blockedTimes             BlockedTime[]
 
   @@map("users")
 }
@@ -1104,4 +1105,19 @@ enum AssignmentRole {
   PRIMARY    // Main coach responsible for client
   ASSISTANT  // Secondary coach helping with client
   OBSERVER   // Coach who can view but not modify client data
+}
+
+model BlockedTime {
+  id          String   @id @default(cuid())
+  coachId     String
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  isAllDay    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  coach       User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@map("blocked_times")
 }

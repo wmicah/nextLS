@@ -5,11 +5,12 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   reactStrictMode: true,
-  
+
   // Force domain consistency
   trailingSlash: false,
-  basePath: '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://nxlvlcoach.com' : '',
+  basePath: "",
+  assetPrefix:
+    process.env.NODE_ENV === "production" ? "https://nxlvlcoach.com" : "",
 
   // ESLint configuration - ignore during builds to prevent warnings from failing deployment
   eslint: {
