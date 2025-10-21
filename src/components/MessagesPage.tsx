@@ -18,9 +18,9 @@ import {
 import Sidebar from "./Sidebar";
 import { format } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
+import FormattedMessage from "./FormattedMessage";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import RichMessageInput from "./RichMessageInput";
-import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileMessagesPage from "./MobileMessagesPage";
@@ -629,7 +629,7 @@ function MessagesPage({}: MessagesPageProps) {
                                 </span>
                               )}
                             </div>
-                            <p
+                            <div
                               className={`text-xs truncate ${
                                 unreadCount > 0 ? "font-medium" : ""
                               }`}
@@ -637,8 +637,21 @@ function MessagesPage({}: MessagesPageProps) {
                                 color: unreadCount > 0 ? "#ffffff" : "#6b7280",
                               }}
                             >
-                              {lastMessage?.content || "No messages yet"}
-                            </p>
+                              {lastMessage?.content ? (
+                                <FormattedMessage
+                                  content={
+                                    lastMessage.content.length > 40
+                                      ? `${lastMessage.content.substring(
+                                          0,
+                                          40
+                                        )}...`
+                                      : lastMessage.content
+                                  }
+                                />
+                              ) : (
+                                "No messages yet"
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

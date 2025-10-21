@@ -564,17 +564,23 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                                 {conversationType}
                               </span>
                               {lastMessage && (
-                                <p
+                                <div
                                   className="text-sm truncate"
                                   style={{ color: "#ABA4AA" }}
                                 >
-                                  {lastMessage.content.length > 20
-                                    ? `${lastMessage.content.substring(
+                                  {lastMessage.content.length > 40 ? (
+                                    <FormattedMessage
+                                      content={`${lastMessage.content.substring(
                                         0,
-                                        20
-                                      )}...`
-                                    : lastMessage.content}
-                                </p>
+                                        40
+                                      )}...`}
+                                    />
+                                  ) : (
+                                    <FormattedMessage
+                                      content={lastMessage.content}
+                                    />
+                                  )}
+                                </div>
                               )}
                             </div>
                             {unreadCount > 0 && (

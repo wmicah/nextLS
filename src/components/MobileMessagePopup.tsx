@@ -33,11 +33,13 @@ export default function MobileMessagePopup({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  const { data: conversations = [], refetch: refetchConversations } =
+  const { data: conversationsData, refetch: refetchConversations } =
     trpc.messaging.getConversations.useQuery(undefined, {
       enabled: isOpen,
       refetchInterval: 5000, // Refresh every 5 seconds
     });
+
+  const conversations = conversationsData?.conversations || [];
 
   // Get unread counts for each conversation
   const { data: unreadCounts = {} } =

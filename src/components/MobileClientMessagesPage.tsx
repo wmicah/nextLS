@@ -48,7 +48,7 @@ export default function MobileClientMessagesPage() {
 
   // Get conversations
   const {
-    data: conversations = [],
+    data: conversationsData,
     refetch: refetchConversations,
     isLoading: conversationsLoading,
     error: conversationsError,
@@ -59,6 +59,8 @@ export default function MobileClientMessagesPage() {
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
   });
+
+  const conversations = conversationsData?.conversations || [];
 
   // Get unread counts
   const { data: unreadCountsObj = {} } =
