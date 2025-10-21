@@ -11,87 +11,115 @@ import { CompleteEmailService } from "@/lib/complete-email-service";
  * Handles conversations and messaging between users
  */
 export const messagingRouter = router({
-  getConversations: publicProcedure.query(async () => {
-    const { getUser } = getKindeServerSession();
-    const user = await getUser();
+  getConversations: publicProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(100).default(8),
+          offset: z.number().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(async ({ input = {} }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
 
-    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-    const conversations = await db.conversation.findMany({
-      where: {
-        OR: [
-          { coachId: user.id },
-          { clientId: user.id },
-          { client1Id: user.id },
-          { client2Id: user.id },
-        ],
-      },
-      include: {
-        coach: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            settings: {
-              select: {
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-        client: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            settings: {
-              select: {
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-        client1: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            settings: {
-              select: {
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-        client2: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            settings: {
-              select: {
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: {
-            id: true,
-            content: true,
-            createdAt: true,
-            senderId: true,
-          },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
-      take: 20,
-    });
+      const { limit = 8, offset = 0 } = input;
 
-    return conversations;
-  }),
+      const conversations = await db.conversation.findMany({
+        where: {
+          OR: [
+            { coachId: user.id },
+            { clientId: user.id },
+            { client1Id: user.id },
+            { client2Id: user.id },
+          ],
+        },
+        include: {
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              settings: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          client: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              settings: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          client1: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              settings: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          client2: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              settings: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: {
+              id: true,
+              content: true,
+              createdAt: true,
+              senderId: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: limit,
+        skip: offset,
+      });
+
+      // Get total count for pagination info
+      const totalCount = await db.conversation.count({
+        where: {
+          OR: [
+            { coachId: user.id },
+            { clientId: user.id },
+            { client1Id: user.id },
+            { client2Id: user.id },
+          ],
+        },
+      });
+
+      return {
+        conversations,
+        totalCount,
+        hasMore: offset + limit < totalCount,
+      };
+    }),
 
   getConversationUnreadCounts: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession();
