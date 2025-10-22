@@ -88,7 +88,7 @@ export function DataLoadingState({
   if (isLoading) {
     return (
       <div className={className}>
-        <SkeletonStats />
+        <SkeletonMessageList items={5} />
       </div>
     );
   }

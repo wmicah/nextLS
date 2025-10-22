@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import { withMobileDetection } from "@/lib/mobile-detection";
@@ -33,13 +33,416 @@ import {
   Key,
   Copy,
   XCircle,
+  MessageSquare,
+  FileText,
+  PenTool,
+  Send,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import AddClientModal from "./AddClientModal";
 import Sidebar from "./Sidebar";
+import Link from "next/link";
+import FormattedMessage from "./FormattedMessage";
 
 import ClientProfileModal from "./ClientProfileModal";
 import ProfilePictureUploader from "./ProfilePictureUploader";
+
+// Quick Message Popup Component
+function QuickMessagePopup({
+  isOpen,
+  onClose,
+  client,
+  buttonRef,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  client: Client;
+  buttonRef: { current: HTMLButtonElement | null };
+}) {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
+  const [messageText, setMessageText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  // Get messages for this specific client
+  const { data: conversationsData, refetch: refetchConversations } =
+    trpc.messaging.getConversations.useQuery(
+      { limit: 100, offset: 0 },
+      { enabled: isOpen }
+    );
+
+  const conversations = conversationsData?.conversations || [];
+
+  // Debug logging
+  console.log("QuickMessagePopup Debug:", {
+    clientId: client.id,
+    clientUserId: client.userId,
+    conversationsCount: conversations.length,
+    conversations: conversations.map(conv => ({
+      id: conv.id,
+      type: conv.type,
+      clientId: conv.clientId,
+      clientUserId: conv.client?.id,
+      messagesCount: conv.messages?.length || 0,
+    })),
+  });
+
+  // Log each conversation to see the actual structure
+  conversations.forEach((conv, index) => {
+    console.log(`Conversation ${index}:`, {
+      id: conv.id,
+      type: conv.type,
+      clientId: conv.clientId,
+      clientUserId: conv.client?.id,
+      coachId: conv.coachId,
+      messagesCount: conv.messages?.length || 0,
+    });
+  });
+
+  // Filter to only show conversation with this specific client
+  const clientConversation = conversations.find((conv: any) => {
+    if (conv.type === "COACH_CLIENT") {
+      // Check if this conversation is with the selected client
+      // The client.id is the client record ID, but we need to match with the client's userId
+      return (
+        conv.clientId === client.userId || conv.client?.id === client.userId
+      );
+    }
+    return false;
+  });
+
+  console.log("Found clientConversation:", clientConversation);
+
+  // Debug the messages in the conversation
+  if (clientConversation) {
+    console.log("Conversation messages:", {
+      conversationId: clientConversation.id,
+      messagesCount: clientConversation.messages?.length || 0,
+      messages:
+        clientConversation.messages?.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.senderId,
+          createdAt: msg.createdAt,
+        })) || [],
+    });
+  }
+
+  // Get current user
+  const { data: authData } = trpc.authCallback.useQuery();
+  const currentUserId = authData?.user?.id;
+
+  // Use the conversation from the main query
+  const conversationToUse = clientConversation;
+
+  // Get utils for invalidating queries
+  const utils = trpc.useUtils();
+
+  // Send message mutation
+  const sendMessage = trpc.messaging.sendMessage.useMutation();
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !conversationToUse || isSending) return;
+
+    setIsSending(true);
+    try {
+      await sendMessage.mutateAsync({
+        conversationId: conversationToUse.id,
+        content: messageText.trim(),
+      });
+      setMessageText("");
+      setIsSending(false);
+      utils.messaging.getConversations.invalidate();
+      refetchConversations();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setIsSending(false);
+    }
+  };
+
+  // Calculate button position for popup positioning
+  useEffect(() => {
+    if (buttonRef?.current && isOpen) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const popupWidth = 400;
+      const popupHeight = 500;
+
+      // Calculate position with viewport boundaries
+      let left = rect.left + rect.width / 2 - popupWidth / 2;
+      let top = rect.bottom + 8;
+
+      // Ensure popup stays within viewport
+      if (left < 8) left = 8;
+      if (left + popupWidth > window.innerWidth - 8) {
+        left = window.innerWidth - popupWidth - 8;
+      }
+      if (top + popupHeight > window.innerHeight - 8) {
+        // Position above the button if there's not enough space below
+        top = rect.top - popupHeight - 8;
+      }
+
+      setButtonPosition({ top, left });
+    }
+  }, [isOpen, buttonRef]);
+
+  // Animation handling
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setIsAnimating(true);
+      return undefined;
+    }
+  }, [isOpen]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Element;
+      if (isOpen && !target.closest("[data-quick-message-popup]")) {
+        onClose();
+      }
+    }
+
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 150);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
+    );
+
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+    return format(date, "MMM d");
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <style jsx>{`
+        @keyframes slideInDown {
+          from {
+            transform: translateY(-8px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+        }
+      `}</style>
+      <div
+        data-quick-message-popup
+        className={`fixed w-[400px] h-[500px] max-w-[90vw] max-h-[80vh] rounded-lg shadow-lg border z-50 ${
+          isAnimating && !isOpen
+            ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
+            : isAnimating
+            ? "animate-[slideInDown_0.3s_ease-out_forwards]"
+            : "transform scale-100 opacity-100"
+        }`}
+        style={{
+          top: buttonPosition.top,
+          left: buttonPosition.left,
+          backgroundColor: "#353A3A",
+          borderColor: "#606364",
+          transformOrigin: "top center",
+          animation:
+            !isAnimating && isOpen ? "slideInDown 0.3s ease-out" : undefined,
+          boxShadow:
+            "0 20px 40px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+        }}
+      >
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div
+            className="flex items-center justify-between p-4 border-b"
+            style={{ borderColor: "#606364" }}
+          >
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" style={{ color: "#C3BCC2" }} />
+              <span className="font-medium" style={{ color: "#C3BCC2" }}>
+                Messages with {client.name}
+              </span>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-md transition-colors"
+              style={{ color: "#ABA4AA" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "#606364";
+                e.currentTarget.style.color = "#C3BCC2";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = "#ABA4AA";
+              }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Messages List */}
+          <div
+            className="flex-1 overflow-y-auto"
+            style={{
+              maxHeight: "350px", // Reduced for smaller popup
+              minHeight: "200px", // Reduced minimum height
+            }}
+          >
+            {!conversationToUse || conversationToUse.messages.length === 0 ? (
+              <div className="p-4 text-center">
+                <MessageCircle
+                  className="h-8 w-8 mx-auto mb-2 opacity-50"
+                  style={{ color: "#ABA4AA" }}
+                />
+                <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                  No messages with {client.name} yet
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 p-2">
+                {conversationToUse.messages
+                  .slice()
+                  .reverse()
+                  .map((message: any, index: number) => (
+                    <div
+                      key={message.id}
+                      className={`p-3 rounded-lg ${
+                        message.senderId === currentUserId
+                          ? "ml-8 bg-[#4A5A70]"
+                          : "mr-8 bg-[#2A3133]"
+                      }`}
+                      style={{
+                        animationDelay: `${index * 50}ms`,
+                        animation:
+                          isOpen && !isAnimating
+                            ? `slideInLeft 0.3s ease-out ${index * 50}ms both`
+                            : undefined,
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <FormattedMessage content={message.content} />
+                        </div>
+                        <span
+                          className="text-xs ml-2 flex-shrink-0"
+                          style={{ color: "#ABA4AA" }}
+                        >
+                          {formatTime(message.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Message Input */}
+          {conversationToUse && (
+            <div className="p-3 border-t" style={{ borderColor: "#606364" }}>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={messageText}
+                  onChange={e => setMessageText(e.target.value)}
+                  onKeyPress={e => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  placeholder="Type a message..."
+                  className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                  style={{
+                    backgroundColor: "#2A3133",
+                    borderColor: "#606364",
+                    color: "#C3BCC2",
+                  }}
+                  disabled={isSending}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!messageText.trim() || isSending}
+                  className="px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  style={{
+                    backgroundColor: "#4A5A70",
+                    color: "white",
+                  }}
+                  onMouseEnter={e => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = "#5A6A80";
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                    }
+                  }}
+                >
+                  {isSending ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="p-3 border-t" style={{ borderColor: "#606364" }}>
+            <Link
+              href="/messages"
+              onClick={onClose}
+              className="block w-full text-center py-2 px-4 rounded-md transition-all duration-200 hover:transform hover:scale-105"
+              style={{
+                backgroundColor: "#4A5A70",
+                color: "white",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "#5A6A80";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "#4A5A70";
+              }}
+            >
+              View All Messages
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 // Small Invite Code Button Component
 function InviteCodeButton() {
@@ -384,6 +787,14 @@ function ClientsPage() {
   const [feedbackClient, setFeedbackClient] = useState<Client | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
 
+  // Quick message popup state
+  const [isQuickMessageOpen, setIsQuickMessageOpen] = useState(false);
+  const [quickMessageClient, setQuickMessageClient] = useState<Client | null>(
+    null
+  );
+  const [quickMessageButtonRef, setQuickMessageButtonRef] =
+    useState<HTMLButtonElement | null>(null);
+
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
   const [selectedClientForProfile, setSelectedClientForProfile] =
@@ -441,6 +852,18 @@ function ClientsPage() {
   const submitFeedback = () => {
     if (!feedbackClient) return;
     updateNotes.mutate({ clientId: feedbackClient.id, notes: feedbackText });
+  };
+
+  const openQuickMessage = (client: Client, buttonRef: HTMLButtonElement) => {
+    setQuickMessageClient(client);
+    setQuickMessageButtonRef(buttonRef);
+    setIsQuickMessageOpen(true);
+  };
+
+  const closeQuickMessage = () => {
+    setIsQuickMessageOpen(false);
+    setQuickMessageClient(null);
+    setQuickMessageButtonRef(null);
   };
 
   const archiveClient = trpc.clients.archive.useMutation({
@@ -845,6 +1268,11 @@ function ClientsPage() {
 
   return (
     <Sidebar>
+      <style jsx>{`
+        .hover-close .absolute {
+          opacity: 1 !important;
+        }
+      `}</style>
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
         {/* Simplified Header */}
         <div className="mb-6">
@@ -995,7 +1423,6 @@ function ClientsPage() {
               }}
             >
               <div className="flex items-center justify-center gap-2">
-                <Archive className="h-4 w-4" />
                 <span>Archived Athletes</span>
                 <span
                   className="px-2 py-1 rounded-full text-xs font-medium"
@@ -1244,7 +1671,6 @@ function ClientsPage() {
                         e.currentTarget.style.backgroundColor = "#F59E0B";
                       }}
                     >
-                      <Archive className="h-4 w-4" />
                       Archive Selected
                     </button>
                   )}
@@ -1398,16 +1824,58 @@ function ClientsPage() {
                                   )}
                                 </button>
                               )}
-                              <ProfilePictureUploader
-                                currentAvatarUrl={
-                                  client.user?.settings?.avatarUrl ||
-                                  client.avatar
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  if (activeTab === "active") {
+                                    handleArchiveClient(client.id, client.name);
+                                  } else {
+                                    handleUnarchiveClient(
+                                      client.id,
+                                      client.name
+                                    );
+                                  }
+                                }}
+                                disabled={archivingClientId === client.id}
+                                className="relative transition-all duration-200 hover:scale-105 disabled:opacity-50 group"
+                                onMouseEnter={e => {
+                                  e.currentTarget.classList.add("hover-close");
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.classList.remove(
+                                    "hover-close"
+                                  );
+                                }}
+                                title={
+                                  activeTab === "active"
+                                    ? "Click to archive client"
+                                    : "Click to unarchive client"
                                 }
-                                userName={client.name}
-                                onAvatarChange={() => {}}
-                                readOnly={true}
-                                size="sm"
-                              />
+                              >
+                                <ProfilePictureUploader
+                                  currentAvatarUrl={
+                                    client.user?.settings?.avatarUrl ||
+                                    client.avatar
+                                  }
+                                  userName={client.name}
+                                  onAvatarChange={() => {}}
+                                  readOnly={true}
+                                  size="sm"
+                                />
+                                {/* Hover overlay with trash icon */}
+                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover-close:opacity-100 transition-opacity duration-200">
+                                  {archivingClientId === client.id ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                                  ) : (
+                                    <Trash2
+                                      className="h-4 w-4 text-white"
+                                      style={{
+                                        color: "#EF4444", // Red color for both archive and unarchive
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              </button>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <h3
@@ -1462,31 +1930,102 @@ function ClientsPage() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1 ml-2">
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  openFeedback(client);
-                                }}
-                                className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
-                                style={{
-                                  color: "#ABA4AA",
-                                  backgroundColor: "transparent",
-                                }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.color = "#C3BCC2";
-                                  e.currentTarget.style.backgroundColor =
-                                    "#3A4040";
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.color = "#ABA4AA";
-                                  e.currentTarget.style.backgroundColor =
-                                    "transparent";
-                                }}
-                                title="Add feedback"
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                              </button>
+                            <div className="flex flex-col gap-1 ml-2">
+                              {activeTab === "active" ? (
+                                <>
+                                  <button
+                                    ref={setQuickMessageButtonRef}
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      openQuickMessage(client, e.currentTarget);
+                                    }}
+                                    className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                                    style={{
+                                      color: "#ABA4AA",
+                                      backgroundColor: "transparent",
+                                    }}
+                                    onMouseEnter={e => {
+                                      e.currentTarget.style.color = "#C3BCC2";
+                                      e.currentTarget.style.backgroundColor =
+                                        "#3A4040";
+                                    }}
+                                    onMouseLeave={e => {
+                                      e.currentTarget.style.color = "#ABA4AA";
+                                      e.currentTarget.style.backgroundColor =
+                                        "transparent";
+                                    }}
+                                    title="Send message"
+                                  >
+                                    <MessageCircle className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      openFeedback(client);
+                                    }}
+                                    className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                                    style={{
+                                      color: "#ABA4AA",
+                                      backgroundColor: "transparent",
+                                    }}
+                                    onMouseEnter={e => {
+                                      e.currentTarget.style.color = "#C3BCC2";
+                                      e.currentTarget.style.backgroundColor =
+                                        "#3A4040";
+                                    }}
+                                    onMouseLeave={e => {
+                                      e.currentTarget.style.color = "#ABA4AA";
+                                      e.currentTarget.style.backgroundColor =
+                                        "transparent";
+                                    }}
+                                    title="Add feedback"
+                                  >
+                                    <PenTool className="h-4 w-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    handleUnarchiveClient(
+                                      client.id,
+                                      client.name
+                                    );
+                                  }}
+                                  disabled={archivingClientId === client.id}
+                                  className="p-2 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
+                                  style={{
+                                    color: "#10B981",
+                                    backgroundColor: "transparent",
+                                  }}
+                                  onMouseEnter={e => {
+                                    if (!e.currentTarget.disabled) {
+                                      e.currentTarget.style.color = "#059669";
+                                      e.currentTarget.style.backgroundColor =
+                                        "#3A4040";
+                                    }
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!e.currentTarget.disabled) {
+                                      e.currentTarget.style.color = "#10B981";
+                                      e.currentTarget.style.backgroundColor =
+                                        "transparent";
+                                    }
+                                  }}
+                                  title="Unarchive client"
+                                >
+                                  {archivingClientId === client.id ? (
+                                    <div
+                                      className="animate-spin rounded-full h-4 w-4 border-b-2"
+                                      style={{
+                                        borderColor: "#10B981",
+                                      }}
+                                    />
+                                  ) : (
+                                    <Archive className="h-4 w-4" />
+                                  )}
+                                </button>
+                              )}
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
@@ -1511,61 +2050,6 @@ function ClientsPage() {
                                 title="Edit client"
                               >
                                 <Edit className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  if (activeTab === "active") {
-                                    handleArchiveClient(client.id, client.name);
-                                  } else {
-                                    handleUnarchiveClient(
-                                      client.id,
-                                      client.name
-                                    );
-                                  }
-                                }}
-                                disabled={archivingClientId === client.id}
-                                className="p-2 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
-                                style={{
-                                  color: "#ABA4AA",
-                                  backgroundColor: "transparent",
-                                }}
-                                onMouseEnter={e => {
-                                  if (!e.currentTarget.disabled) {
-                                    e.currentTarget.style.color =
-                                      activeTab === "active"
-                                        ? "#F59E0B"
-                                        : "#10B981";
-                                    e.currentTarget.style.backgroundColor =
-                                      "#3A4040";
-                                  }
-                                }}
-                                onMouseLeave={e => {
-                                  if (!e.currentTarget.disabled) {
-                                    e.currentTarget.style.color = "#ABA4AA";
-                                    e.currentTarget.style.backgroundColor =
-                                      "transparent";
-                                  }
-                                }}
-                                title={
-                                  activeTab === "active"
-                                    ? "Archive client"
-                                    : "Unarchive client"
-                                }
-                              >
-                                {archivingClientId === client.id ? (
-                                  <div
-                                    className="animate-spin rounded-full h-4 w-4 border-b-2"
-                                    style={{
-                                      borderColor:
-                                        activeTab === "active"
-                                          ? "#F59E0B"
-                                          : "#10B981",
-                                    }}
-                                  />
-                                ) : (
-                                  <Archive className="h-4 w-4" />
-                                )}
                               </button>
                             </div>
                           </div>
@@ -1650,17 +2134,59 @@ function ClientsPage() {
                                   )}
                                 </button>
                               )}
-                              <ProfilePictureUploader
-                                currentAvatarUrl={
-                                  client.user?.settings?.avatarUrl ||
-                                  client.avatar
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  if (activeTab === "active") {
+                                    handleArchiveClient(client.id, client.name);
+                                  } else {
+                                    handleUnarchiveClient(
+                                      client.id,
+                                      client.name
+                                    );
+                                  }
+                                }}
+                                disabled={archivingClientId === client.id}
+                                className="relative transition-all duration-200 hover:scale-105 disabled:opacity-50 flex-shrink-0 group"
+                                onMouseEnter={e => {
+                                  e.currentTarget.classList.add("hover-close");
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.classList.remove(
+                                    "hover-close"
+                                  );
+                                }}
+                                title={
+                                  activeTab === "active"
+                                    ? "Click to archive client"
+                                    : "Click to unarchive client"
                                 }
-                                userName={client.name}
-                                onAvatarChange={() => {}} // No-op for client cards
-                                size="md"
-                                readOnly={true}
-                                className="flex-shrink-0"
-                              />
+                              >
+                                <ProfilePictureUploader
+                                  currentAvatarUrl={
+                                    client.user?.settings?.avatarUrl ||
+                                    client.avatar
+                                  }
+                                  userName={client.name}
+                                  onAvatarChange={() => {}} // No-op for client cards
+                                  size="md"
+                                  readOnly={true}
+                                  className="flex-shrink-0"
+                                />
+                                {/* Hover overlay with trash icon */}
+                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover-close:opacity-100 transition-opacity duration-200">
+                                  {archivingClientId === client.id ? (
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                                  ) : (
+                                    <Trash2
+                                      className="h-5 w-5 text-white"
+                                      style={{
+                                        color: "#EF4444", // Red color for both archive and unarchive
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              </button>
                               <div>
                                 <h3
                                   className="text-xl font-bold mb-2"
@@ -1711,8 +2237,60 @@ function ClientsPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1">
+                              {activeTab === "archived" && (
+                                <div className="px-3 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 mr-2">
+                                  <span className="text-sm font-medium text-amber-300">
+                                    Archived Client
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex flex-col gap-1">
+                                {activeTab === "archived" && (
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      handleUnarchiveClient(
+                                        client.id,
+                                        client.name
+                                      );
+                                    }}
+                                    disabled={archivingClientId === client.id}
+                                    className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
+                                    style={{ color: "#10B981" }}
+                                    onMouseEnter={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color = "#059669";
+                                        e.currentTarget.style.backgroundColor =
+                                          "#3A4040";
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color = "#10B981";
+                                        e.currentTarget.style.backgroundColor =
+                                          "transparent";
+                                      }
+                                    }}
+                                    title="Unarchive client"
+                                  >
+                                    {archivingClientId === client.id ? (
+                                      <div
+                                        className="animate-spin rounded-full h-4 w-4 border-b-2"
+                                        style={{
+                                          borderColor: "#10B981",
+                                        }}
+                                      />
+                                    ) : (
+                                      <Archive className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
                                 <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setSelectedClientForProfile(client);
+                                    setIsProfileModalOpen(true);
+                                  }}
                                   className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110"
                                   style={{ color: "#ABA4AA" }}
                                   onMouseEnter={e => {
@@ -1725,58 +2303,9 @@ function ClientsPage() {
                                     e.currentTarget.style.backgroundColor =
                                       "transparent";
                                   }}
+                                  title="Edit client"
                                 >
                                   <Edit className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    if (activeTab === "active") {
-                                      handleArchiveClient(
-                                        client.id,
-                                        client.name
-                                      );
-                                    } else {
-                                      handleUnarchiveClient(
-                                        client.id,
-                                        client.name
-                                      );
-                                    }
-                                  }}
-                                  disabled={archivingClientId === client.id}
-                                  className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
-                                  style={{ color: "#ABA4AA" }}
-                                  onMouseEnter={e => {
-                                    if (!e.currentTarget.disabled) {
-                                      e.currentTarget.style.color =
-                                        activeTab === "active"
-                                          ? "#F59E0B"
-                                          : "#10B981";
-                                      e.currentTarget.style.backgroundColor =
-                                        "#3A4040";
-                                    }
-                                  }}
-                                  onMouseLeave={e => {
-                                    if (!e.currentTarget.disabled) {
-                                      e.currentTarget.style.color = "#ABA4AA";
-                                      e.currentTarget.style.backgroundColor =
-                                        "transparent";
-                                    }
-                                  }}
-                                >
-                                  {archivingClientId === client.id ? (
-                                    <div
-                                      className="animate-spin rounded-full h-4 w-4 border-b-2"
-                                      style={{
-                                        borderColor:
-                                          activeTab === "active"
-                                            ? "#F59E0B"
-                                            : "#10B981",
-                                      }}
-                                    />
-                                  ) : (
-                                    <Archive className="h-4 w-4" />
-                                  )}
                                 </button>
                               </div>
                             </div>
@@ -1877,6 +2406,16 @@ function ClientsPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Quick Message Popup */}
+        {isQuickMessageOpen && quickMessageClient && (
+          <QuickMessagePopup
+            isOpen={isQuickMessageOpen}
+            onClose={closeQuickMessage}
+            client={quickMessageClient}
+            buttonRef={{ current: quickMessageButtonRef }}
+          />
         )}
       </div>
     </Sidebar>
