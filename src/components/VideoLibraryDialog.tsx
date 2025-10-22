@@ -63,10 +63,20 @@ export default function VideoLibraryDialog({
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Fetch master library resources - only when dialog is open
-  const { data: masterLibraryItems = [], isLoading: masterLoading } =
-    trpc.admin.getMasterLibrary.useQuery(undefined, {
-      enabled: isOpen && activeTab === "master",
-    });
+  const { data: masterLibraryData, isLoading: masterLoading } =
+    trpc.admin.getMasterLibrary.useQuery(
+      {
+        page: 1,
+        limit: 50,
+        search: searchTerm || undefined,
+        category: selectedCategory !== "all" ? selectedCategory : undefined,
+      },
+      {
+        enabled: isOpen && activeTab === "master",
+      }
+    );
+
+  const masterLibraryItems = masterLibraryData?.items || [];
 
   // Fetch local library resources - only when dialog is open
   const { data: localLibraryItems = [], isLoading: localLoading } =

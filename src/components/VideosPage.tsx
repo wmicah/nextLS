@@ -35,12 +35,37 @@ function VideosPage() {
     data: videos = [],
     isLoading: videosLoading,
     error: videosError,
-  } = trpc.videos.list.useQuery();
+  } = trpc.videos.list.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
   const {
     data: clientSubmissions = [],
     isLoading: clientSubmissionsLoading,
     error: clientSubmissionsError,
-  } = trpc.clientRouter.getClientVideoSubmissions.useQuery();
+  } = trpc.clientRouter.getClientVideoSubmissions.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Handle tRPC context errors
+  if (videosError || clientSubmissionsError) {
+    const error = videosError || clientSubmissionsError;
+    if (error?.message?.includes("tRPC Context")) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Loading Videos...
+            </h3>
+            <p className="text-gray-400">
+              Please wait while the application initializes.
+            </p>
+          </div>
+        </div>
+      );
+    }
+  }
 
   // Memoized filtered and sorted data
   const filteredVideos = useMemo(() => {
@@ -408,7 +433,8 @@ function VideosPage() {
                   style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
                   onMouseEnter={e => {
                     e.currentTarget.style.borderColor = "#4A5A70";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(74, 90, 112, 0.2)";
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(74, 90, 112, 0.2)";
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.borderColor = "#606364";
@@ -440,7 +466,9 @@ function VideosPage() {
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: "rgba(255, 255, 255, 0.9)" }}
+                          style={{
+                            backgroundColor: "rgba(255, 255, 255, 0.9)",
+                          }}
                         >
                           <Play
                             className="w-4 h-4 ml-0.5"
@@ -695,7 +723,8 @@ function VideosPage() {
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.borderColor = "#4A5A70";
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(74, 90, 112, 0.2)";
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 12px rgba(74, 90, 112, 0.2)";
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.borderColor = "#606364";
@@ -727,7 +756,9 @@ function VideosPage() {
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                           <div
                             className="w-8 h-8 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: "rgba(255, 255, 255, 0.9)" }}
+                            style={{
+                              backgroundColor: "rgba(255, 255, 255, 0.9)",
+                            }}
                           >
                             <Play
                               className="w-4 h-4 ml-0.5"
@@ -781,7 +812,9 @@ function VideosPage() {
                       >
                         <div className="flex items-center gap-1">
                           <User className="w-2.5 h-2.5" />
-                          <span className="truncate">{submission.client.name}</span>
+                          <span className="truncate">
+                            {submission.client.name}
+                          </span>
                         </div>
                         <span className="text-[9px]">
                           {getTimeAgo(submission.createdAt)}

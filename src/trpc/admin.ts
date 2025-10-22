@@ -36,44 +36,106 @@ const requireAdmin = async (userId: string, action?: string) => {
 
 export const adminRouter = {
   // Get master library resources (viewable by all authenticated users)
-  getMasterLibrary: publicProcedure.query(async ({ ctx }) => {
-    const { getUser } = getKindeServerSession();
-    const user = await getUser();
+  getMasterLibrary: publicProcedure
+    .input(
+      z.object({
+        page: z.number().min(1).optional().default(1),
+        limit: z.number().min(1).max(10000).optional().default(1000),
+        search: z.string().optional(),
+        category: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
 
-    if (!user?.id) {
-      throw new TRPCError({ code: "UNAUTHORIZED" });
-    }
+      if (!user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
 
-    console.log(
-      "getMasterLibrary called by user:",
-      user.id,
-      "email:",
-      user.email
-    );
+      console.log(
+        "getMasterLibrary called by user:",
+        user.id,
+        "email:",
+        user.email
+      );
 
-    // Get user from database to check role and admin status
-    const dbUser = await db.user.findUnique({
-      where: { id: user.id },
-      select: { role: true, isAdmin: true },
-    });
+      // Get user from database to check role and admin status
+      const dbUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: { role: true, isAdmin: true },
+      });
 
-    console.log("Database user data:", dbUser);
+      console.log("Database user data:", dbUser);
 
-    // All authenticated users (coaches and admins) can view master library
-    // Filter at database level for security and performance
-    const resources = await db.libraryResource.findMany({
-      where: {
+      // Build where clause for filtering
+      const where: any = {
         isMasterLibrary: true,
         isActive: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+      };
 
-    console.log("Found", resources.length, "master library resources");
-    return resources;
-  }),
+      if (input.search) {
+        where.OR = [
+          { title: { contains: input.search, mode: "insensitive" } },
+          { description: { contains: input.search, mode: "insensitive" } },
+        ];
+      }
+
+      if (input.category && input.category !== "All") {
+        where.category = input.category;
+      }
+
+      // Calculate pagination
+      const skip = (input.page - 1) * input.limit;
+
+      // Get total count for pagination
+      const totalCount = await db.libraryResource.count({ where });
+
+      // Get paginated resources
+      const resources = await db.libraryResource.findMany({
+        where,
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: input.limit,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          category: true,
+          type: true,
+          url: true,
+          thumbnail: true,
+          duration: true,
+          views: true,
+          rating: true,
+          isYoutube: true,
+          isOnForm: true,
+          youtubeId: true,
+          onformId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      const totalPages = Math.ceil(totalCount / input.limit);
+
+      console.log(
+        `Found ${resources.length} master library resources (page ${input.page}/${totalPages})`
+      );
+
+      return {
+        items: resources,
+        pagination: {
+          currentPage: input.page,
+          totalPages,
+          totalCount,
+          hasNextPage: input.page < totalPages,
+          hasPreviousPage: input.page > 1,
+        },
+      };
+    }),
 
   // Get master library resources (admin only - for editing)
   getMasterLibraryForAdmin: publicProcedure.query(async ({ ctx }) => {

@@ -80,8 +80,12 @@ export default function MobileCreateProgramModal({
   const [libraryTab, setLibraryTab] = useState<"master" | "local">("master");
 
   // Get master library videos
-  const { data: masterLibraryVideos = [] } =
-    trpc.admin.getMasterLibrary.useQuery();
+  const { data: masterLibraryData } = trpc.admin.getMasterLibrary.useQuery({
+    search: undefined,
+    category: undefined,
+  });
+
+  const masterLibraryVideos = masterLibraryData?.items || [];
 
   // Get local library videos
   const { data: localLibraryVideos = [] } =

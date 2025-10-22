@@ -78,10 +78,12 @@ export default function DrillSelectionModal({
     supersetWithId: "",
   });
 
-  const { data: libraryItems = [], isLoading } = trpc.library.list.useQuery({
+  const { data: libraryData, isLoading } = trpc.library.list.useQuery({
     search: searchTerm || undefined,
     category: selectedCategory !== "All" ? selectedCategory : undefined,
   });
+
+  const libraryItems = libraryData?.items || [];
 
   const handleSelectDrill = (item: any) => {
     setSelectedDrill(item);

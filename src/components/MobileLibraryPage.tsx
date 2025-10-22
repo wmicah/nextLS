@@ -74,7 +74,9 @@ export default function MobileLibraryPage() {
   }, [searchTerm]);
 
   const handleItemClick = (item: any) => {
-    const itemIndex = libraryItems.findIndex(libItem => libItem.id === item.id);
+    const itemIndex = libraryItems.findIndex(
+      (libItem: any) => libItem.id === item.id
+    );
     setCurrentItemIndex(itemIndex);
     setSelectedItem(item);
     setIsVideoViewerOpen(true);
@@ -99,23 +101,33 @@ export default function MobileLibraryPage() {
 
   // Use tRPC queries with refetch
   const {
-    data: masterLibraryItems = [],
+    data: masterLibraryItems,
     isLoading: masterLoading,
     error: masterError,
     refetch: refetchMaster,
-  } = trpc.admin.getMasterLibrary.useQuery(undefined, {
-    enabled: activeTab === "master",
-    placeholderData: previousData => previousData,
-    staleTime: 30000,
-  });
+  } = trpc.admin.getMasterLibrary.useQuery(
+    {
+      page: 1,
+      limit: 50,
+      search: debouncedSearchTerm || undefined,
+      category: selectedCategory !== "All" ? selectedCategory : undefined,
+    },
+    {
+      enabled: activeTab === "master",
+      placeholderData: previousData => previousData,
+      staleTime: 30000,
+    }
+  );
 
   const {
-    data: localLibraryItems = [],
+    data: localLibraryItems,
     isLoading: localLoading,
     error: localError,
     refetch: refetchLocal,
   } = trpc.library.list.useQuery(
     {
+      page: 1,
+      limit: 50,
       search: debouncedSearchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
     },
@@ -127,9 +139,11 @@ export default function MobileLibraryPage() {
     }
   );
 
-  // Combine data based on active tab
+  // Combine data based on active tab - handle paginated response
   const libraryItems =
-    activeTab === "master" ? masterLibraryItems : localLibraryItems;
+    activeTab === "master"
+      ? masterLibraryItems?.items || []
+      : localLibraryItems?.items || [];
   const isLoading = activeTab === "master" ? masterLoading : localLoading;
   const error = activeTab === "master" ? masterError : localError;
 

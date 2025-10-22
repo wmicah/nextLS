@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { extractYouTubeId, isYouTubeUrl } from "@/lib/youtube-utils";
+import { trpc } from "@/app/_trpc/client";
 
 interface ProgramData {
   programId: string;
@@ -67,6 +68,9 @@ interface Drill {
   isRoutineExercise?: boolean;
   routineAssignmentId?: string;
   originalExerciseId?: string;
+  // New properties for routine drill handling
+  isRoutineDrill?: boolean;
+  routineExpansionNote?: string;
   isProgramRoutineExercise?: boolean;
   programDrillId?: string;
   // Program drill routine property
@@ -728,7 +732,36 @@ function ProgramContent({
   completedIndividualExercises?: Set<string>;
 }) {
   // Combine program drills with routine exercises
-  const allExercises = [...program.drills];
+  const allExercises: Drill[] = [];
+
+  // First, add all regular drills (non-routine drills)
+  program.drills.forEach((drill: any) => {
+    // Skip drills that should be routines but aren't properly linked
+    const shouldBeRoutine =
+      !drill.routineId &&
+      !drill.routine &&
+      (drill.title.toLowerCase().includes("routine") ||
+        drill.title.toLowerCase().includes("workout") ||
+        drill.title.toLowerCase().includes("session"));
+
+    if (!shouldBeRoutine) {
+      // This is a regular drill, add it as-is
+      const regularDrill: Drill = {
+        id: drill.id,
+        title: drill.title,
+        description: drill.description || undefined,
+        sets: drill.sets || undefined,
+        reps: drill.reps || undefined,
+        tempo: drill.tempo || undefined,
+        tags: drill.tags || undefined,
+        completed: completedProgramDrills.has(drill.id),
+        videoUrl: drill.videoUrl || undefined,
+        isYoutube: isYouTubeUrl(drill.videoUrl || ""),
+        youtubeId: extractYouTubeId(drill.videoUrl || "") || undefined,
+      };
+      allExercises.push(regularDrill);
+    }
+  });
 
   // Add routine exercises from standalone routine assignments
   routineAssignments.forEach((assignment: any) => {
@@ -756,57 +789,187 @@ function ProgramContent({
 
   // Check if backend expanded routine exercises, if not, do it in frontend
 
-  // Check if any drill has routineId (indicating it needs expansion)
-  const drillsNeedingExpansion = program.drills.filter(
-    drill => drill.routineId
+  // Debug: Log drill structure for troubleshooting
+  if (process.env.NODE_ENV === "development") {
+    console.log("🔍 All program drills:", program.drills);
+    program.drills.forEach((drill: any, index: number) => {
+      console.log(`🔍 Drill ${index}:`, {
+        id: drill.id,
+        title: drill.title,
+        routineId: drill.routineId,
+        hasRoutine: !!drill.routine,
+        routineExercises: drill.routine?.exercises?.length || 0,
+        routineName: drill.routine?.name,
+      });
+    });
+  }
+
+  // Check if any drill has a routine property (from the relation we added)
+  const drillsWithRoutines = program.drills.filter(
+    (drill: any) => drill.routine && drill.routine.exercises
   );
 
-  if (drillsNeedingExpansion.length > 0) {
+  if (process.env.NODE_ENV === "development") {
+    console.log("🔍 Drills with routines:", drillsWithRoutines);
+    console.log(
+      "🔍 Drills with routineId:",
+      program.drills.filter((drill: any) => drill.routineId)
+    );
+  }
+
+  if (drillsWithRoutines.length > 0) {
+    drillsWithRoutines.forEach((drill: any) => {
+      console.log("🎯 Processing drill with routine:", {
+        drillId: drill.id,
+        drillTitle: drill.title,
+        routineName: drill.routine?.name,
+        exerciseCount: drill.routine?.exercises?.length,
+      });
+
+      drill.routine.exercises.forEach((exercise: any) => {
+        const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
+        console.log(
+          "🎯 Creating routine exercise drill with key:",
+          routineExerciseKey
+        );
+
+        const drillLikeExercise: Drill = {
+          id: routineExerciseKey,
+          title: exercise.title,
+          description: exercise.description || undefined,
+          sets: exercise.sets || undefined,
+          reps: exercise.reps || undefined,
+          tempo: exercise.tempo || undefined,
+          tags: exercise.type ? [exercise.type] : undefined,
+          completed: completedProgramDrills.has(routineExerciseKey),
+          videoUrl: exercise.videoUrl || undefined,
+          isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
+          youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
+        };
+        allExercises.push(drillLikeExercise);
+      });
+    });
   } else {
-    // Check if any drill has a routine property (from the relation we added)
-    const drillsWithRoutines = program.drills.filter(
-      (drill: any) => drill.routine && drill.routine.exercises
+    // Backend didn't expand routines, but we might have drills that ARE routines
+    // Check if any drill should be treated as a routine (has routineId but no routine data)
+    const drillsThatShouldBeRoutines = program.drills.filter(
+      (drill: any) => drill.routineId && !drill.routine
     );
 
-    if (drillsWithRoutines.length > 0) {
-      drillsWithRoutines.forEach((drill: any) => {
-        console.log("🎯 Processing drill with routine:", {
-          drillId: drill.id,
-          drillTitle: drill.title,
-          routineName: drill.routine?.name,
-          exerciseCount: drill.routine?.exercises?.length,
-        });
-
-        drill.routine.exercises.forEach((exercise: any) => {
-          const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
-          console.log(
-            "🎯 Creating routine exercise drill with key:",
-            routineExerciseKey
-          );
-
-          const drillLikeExercise: Drill = {
-            id: routineExerciseKey,
-            title: exercise.title,
-            description: exercise.description || undefined,
-            sets: exercise.sets || undefined,
-            reps: exercise.reps || undefined,
-            tempo: exercise.tempo || undefined,
-            tags: exercise.type ? [exercise.type] : undefined,
-            completed: completedProgramDrills.has(routineExerciseKey),
-            videoUrl: exercise.videoUrl || undefined,
-            isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
-            youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
-          };
-          allExercises.push(drillLikeExercise);
-        });
-      });
-    } else {
-      // Backend didn't expand routines, but we might have drills that ARE routines
-      // Check if any drill should be treated as a routine (has routineId but no routine data)
-      const drillsThatShouldBeRoutines = program.drills.filter(
-        (drill: any) => drill.routineId && !drill.routine
-      );
+    if (drillsThatShouldBeRoutines.length > 0) {
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "⚠️ Found drills with routineId but no routine data:",
+          drillsThatShouldBeRoutines
+        );
+        console.log(
+          "🔧 TODO: Implement manual routine fetching for drills:",
+          drillsThatShouldBeRoutines.map(d => d.id)
+        );
+      }
     }
+
+    // Check for drills that should be routines but aren't properly linked
+    const unlinkedRoutineDrills = program.drills.filter(
+      (drill: any) =>
+        !drill.routineId &&
+        !drill.routine &&
+        (drill.title.toLowerCase().includes("routine") ||
+          drill.title.toLowerCase().includes("workout") ||
+          drill.title.toLowerCase().includes("session"))
+    );
+
+    if (unlinkedRoutineDrills.length > 0) {
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "⚠️ Found drills that should be routines but aren't properly linked:",
+          unlinkedRoutineDrills.map(d => ({ id: d.id, title: d.title }))
+        );
+        console.log(
+          "🔧 These drills need to be properly linked to routines in the database"
+        );
+      }
+
+      // Handle drills that have routine data (properly linked routines)
+      const drillsWithRoutineData = program.drills.filter(
+        (drill: any) =>
+          drill.routineId && drill.routine && drill.routine.exercises
+      );
+
+      if (drillsWithRoutineData.length > 0) {
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            "🎯 Found drills with routine data:",
+            drillsWithRoutineData
+          );
+        }
+
+        drillsWithRoutineData.forEach((drill: any) => {
+          if (process.env.NODE_ENV === "development") {
+            console.log(
+              `🎯 Expanding routine "${drill.routine.name}" with ${drill.routine.exercises.length} exercises`
+            );
+          }
+
+          // Add each exercise from the routine
+          drill.routine.exercises.forEach((exercise: any) => {
+            const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
+            const drillLikeExercise: Drill = {
+              id: routineExerciseKey,
+              title: exercise.title,
+              description: exercise.description || undefined,
+              sets: exercise.sets || undefined,
+              reps: exercise.reps || undefined,
+              tempo: exercise.tempo || undefined,
+              tags: exercise.type ? [exercise.type] : undefined,
+              completed: completedProgramDrills.has(routineExerciseKey),
+              videoUrl: exercise.videoUrl || undefined,
+              isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
+              youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
+              isRoutineExercise: true,
+              originalExerciseId: exercise.id,
+              routineAssignmentId: drill.id,
+            };
+            allExercises.push(drillLikeExercise);
+
+            if (process.env.NODE_ENV === "development") {
+              console.log(
+                `🎯 Added routine exercise: ${exercise.title} with key: ${routineExerciseKey}`
+              );
+            }
+          });
+        });
+      }
+
+      // Handle unlinked routine drills (fallback)
+      unlinkedRoutineDrills.forEach((drill: any) => {
+        const regularDrill: Drill = {
+          id: drill.id,
+          title: drill.title,
+          description: drill.description || undefined,
+          sets: drill.sets || undefined,
+          reps: drill.reps || undefined,
+          tempo: drill.tempo || undefined,
+          tags: drill.tags || undefined,
+          completed: completedProgramDrills.has(drill.id),
+          videoUrl: drill.videoUrl || undefined,
+          isYoutube: isYouTubeUrl(drill.videoUrl || ""),
+          youtubeId: extractYouTubeId(drill.videoUrl || "") || undefined,
+        };
+        allExercises.push(regularDrill);
+
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            `🎯 Added unlinked routine drill as regular drill: ${drill.title}`
+          );
+        }
+      });
+    }
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("🎯 Final allExercises array:", allExercises);
+    console.log("🎯 Total exercises:", allExercises.length);
   }
 
   if (allExercises.length === 0) {

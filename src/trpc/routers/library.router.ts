@@ -26,6 +26,8 @@ export const libraryRouter = router({
         search: z.string().optional(),
         category: z.string().optional(),
         type: z.enum(["video", "document", "all"]).optional(),
+        page: z.number().min(1).optional().default(1),
+        limit: z.number().min(1).max(10000).optional().default(1000),
       })
     )
     .query(async ({ input }) => {
@@ -100,23 +102,54 @@ export const libraryRouter = router({
           JSON.stringify(where, null, 2)
         );
 
+        // Calculate pagination
+        const skip = (input.page - 1) * input.limit;
+
+        // Get total count for pagination
+        const totalCount = await db.libraryResource.count({ where });
+
+        // Get paginated resources
         const resources = await db.libraryResource.findMany({
           where,
           orderBy: { createdAt: "desc" },
+          skip,
+          take: input.limit,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            category: true,
+            type: true,
+            url: true,
+            thumbnail: true,
+            duration: true,
+            views: true,
+            rating: true,
+            isYoutube: true,
+            isOnForm: true,
+            youtubeId: true,
+            onformId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
         });
 
-        console.log(`✅ Library list: Found ${resources.length} resources`);
+        const totalPages = Math.ceil(totalCount / input.limit);
+
         console.log(
-          "📋 Library list: Resources:",
-          resources.map(r => ({
-            id: r.id,
-            title: r.title,
-            type: r.type,
-            category: r.category,
-          }))
+          `✅ Library list: Found ${resources.length} resources (page ${input.page}/${totalPages})`
         );
 
-        return resources;
+        return {
+          items: resources,
+          pagination: {
+            currentPage: input.page,
+            totalPages,
+            totalCount,
+            hasNextPage: input.page < totalPages,
+            hasPreviousPage: input.page > 1,
+          },
+        };
       } catch (error) {
         console.error("❌ Library list query failed:", {
           error: error instanceof Error ? error.message : "Unknown error",

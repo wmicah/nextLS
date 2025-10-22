@@ -312,6 +312,7 @@ export const programsRouter = router({
                             tempo: drill.tempo || null, // Optional field, set to null if not provided
                             supersetId: drill.supersetId || null,
                             supersetOrder: drill.supersetOrder || null,
+                            routineId: (drill as any).routineId || null, // 🔧 FIX: Include routineId for proper routine linking
                             // Coach Instructions
                             coachInstructionsWhatToDo: (drill as any)
                               .coachInstructions?.whatToDo,
