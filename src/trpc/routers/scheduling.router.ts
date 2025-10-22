@@ -5,6 +5,11 @@ import { db } from "@/db";
 import { z } from "zod";
 import { format, addDays, addMonths } from "date-fns";
 import { fromZonedTime } from "date-fns-tz";
+import { safeLocalToUTC, validateLessonScheduling } from "@/lib/dst-utils";
+import {
+  handleDSTTransition,
+  DSTAutoHandlingOptions,
+} from "@/lib/dst-auto-handler";
 import {
   extractYouTubeVideoId,
   extractPlaylistId,
@@ -29,6 +34,7 @@ export const schedulingRouter = router({
         sendEmail: z.boolean().optional(),
         timeZone: z.string().optional(),
         overrideWorkingDays: z.boolean().optional(), // Allow overriding working day restrictions
+        autoHandleDST: z.boolean().optional(), // Enable automatic DST handling
       })
     )
     .mutation(async ({ input }) => {
@@ -107,7 +113,7 @@ export const schedulingRouter = router({
 
       // Convert local time to UTC using the user's timezone
       const timeZone = input.timeZone || "America/New_York";
-      const utcLessonDate = fromZonedTime(localLessonDate, timeZone);
+      const utcLessonDate = safeLocalToUTC(localLessonDate, timeZone, "UTC");
 
       // Validate the date
       if (isNaN(utcLessonDate.getTime())) {
@@ -133,6 +139,45 @@ export const schedulingRouter = router({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `You are not available on ${dayName}s`,
+          });
+        }
+      }
+
+      // Validate lesson scheduling for DST issues
+      const dstValidation = validateLessonScheduling(utcLessonDate, timeZone);
+      if (!dstValidation.valid && dstValidation.warnings.length > 0) {
+        // Log the DST warnings but don't block the lesson creation
+        console.warn("DST warnings for lesson scheduling:", {
+          lessonDate: utcLessonDate.toISOString(),
+          timezone: timeZone,
+          warnings: dstValidation.warnings,
+          suggestions: dstValidation.suggestions,
+        });
+      }
+
+      // Handle DST transitions automatically if enabled
+      let finalLessonDate = utcLessonDate;
+      if (input.autoHandleDST) {
+        const dstHandlingOptions: DSTAutoHandlingOptions = {
+          autoReschedule: false, // Don't reschedule, adjust time instead
+          autoAdjustTime: true, // Adjust time to maintain consistency
+          preferredRescheduleDirection: "before",
+          maxRescheduleDays: 3,
+          notifyUsers: true,
+        };
+
+        const dstResult = handleDSTTransition(
+          utcLessonDate,
+          timeZone,
+          dstHandlingOptions
+        );
+        if (dstResult.adjustedDate) {
+          finalLessonDate = dstResult.adjustedDate;
+          console.log("DST automatic handling applied:", {
+            originalDate: dstResult.originalDate.toISOString(),
+            adjustedDate: dstResult.adjustedDate.toISOString(),
+            changes: dstResult.changes,
+            notifications: dstResult.notifications,
           });
         }
       }
@@ -241,13 +286,13 @@ export const schedulingRouter = router({
 
       // Create the lesson (using Event model) - automatically CONFIRMED when coach schedules
       const lessonEndTime = new Date(
-        utcLessonDate.getTime() + lessonDuration * 60000
+        finalLessonDate.getTime() + lessonDuration * 60000
       );
       const lesson = await db.event.create({
         data: {
           title: lessonTitle,
           description: "Scheduled lesson",
-          date: utcLessonDate,
+          date: finalLessonDate,
           endTime: lessonEndTime,
           status: "CONFIRMED", // Coach-scheduled lessons are automatically confirmed
           clientId: input.clientId, // Use Client.id directly
@@ -325,6 +370,7 @@ export const schedulingRouter = router({
         sendEmail: z.boolean().optional(),
         timeZone: z.string().optional(),
         overrideWorkingDays: z.boolean().optional(), // Allow overriding working day restrictions
+        autoHandleDST: z.boolean().optional(), // Enable automatic DST handling
       })
     )
     .mutation(async ({ input }) => {
@@ -436,7 +482,7 @@ export const schedulingRouter = router({
 
       // Convert local time to UTC using the user's timezone
       const timeZone = input.timeZone || "America/New_York";
-      const utcStartDate = fromZonedTime(localStartDate, timeZone);
+      const utcStartDate = safeLocalToUTC(localStartDate, timeZone, "UTC");
 
       // Extract time components from the UTC start date to preserve the time for all recurring lessons
       const startTime = utcStartDate.getHours();
@@ -575,7 +621,36 @@ export const schedulingRouter = router({
         if (conflictingLesson || conflictingBlockedTime) {
           skippedDates.push(lessonDate);
         } else {
-          validLessonDates.push(lessonDate);
+          // Handle DST transitions for recurring lessons if enabled
+          let finalLessonDate = lessonDate;
+          if (input.autoHandleDST) {
+            const dstHandlingOptions: DSTAutoHandlingOptions = {
+              autoReschedule: false, // Don't reschedule, adjust time instead
+              autoAdjustTime: true, // Adjust time to maintain consistency
+              preferredRescheduleDirection: "before",
+              maxRescheduleDays: 3,
+              notifyUsers: true,
+            };
+
+            const dstResult = handleDSTTransition(
+              lessonDate,
+              timeZone,
+              dstHandlingOptions
+            );
+            if (dstResult.adjustedDate) {
+              finalLessonDate = dstResult.adjustedDate;
+              console.log(
+                "DST automatic handling applied to recurring lesson:",
+                {
+                  originalDate: dstResult.originalDate.toISOString(),
+                  adjustedDate: dstResult.adjustedDate.toISOString(),
+                  changes: dstResult.changes,
+                  notifications: dstResult.notifications,
+                }
+              );
+            }
+          }
+          validLessonDates.push(finalLessonDate);
         }
       }
 
@@ -1179,7 +1254,7 @@ export const schedulingRouter = router({
 
       // Convert local time to UTC using the user's timezone
       const timeZone = input.timeZone || "America/New_York";
-      const utcLessonDate = fromZonedTime(localLessonDate, timeZone);
+      const utcLessonDate = safeLocalToUTC(localLessonDate, timeZone, "UTC");
 
       // Validate the date
       if (isNaN(utcLessonDate.getTime())) {
@@ -1227,14 +1302,13 @@ export const schedulingRouter = router({
       });
 
       // Check for time overlaps
-      const conflictingLesson = existingLessons.find((lesson) => {
+      const conflictingLesson = existingLessons.find(lesson => {
         const lessonStart = lesson.date;
-        const lessonEnd = lesson.endTime || new Date(lessonStart.getTime() + 60 * 60 * 1000); // Default 60 min if no endTime
+        const lessonEnd =
+          lesson.endTime || new Date(lessonStart.getTime() + 60 * 60 * 1000); // Default 60 min if no endTime
 
         // Check if lessons overlap
-        return (
-          (utcLessonDate < lessonEnd && freedomLessonEndTime > lessonStart)
-        );
+        return utcLessonDate < lessonEnd && freedomLessonEndTime > lessonStart;
       });
 
       if (conflictingLesson) {
@@ -1264,13 +1338,13 @@ export const schedulingRouter = router({
       });
 
       // Check for time overlaps with blocked times
-      const conflictingBlockedTime = blockedTimes.find((blockedTime) => {
+      const conflictingBlockedTime = blockedTimes.find(blockedTime => {
         const blockedStart = blockedTime.startTime;
         const blockedEnd = blockedTime.endTime;
 
         // Check if lesson overlaps with blocked time
         return (
-          (utcLessonDate < blockedEnd && freedomLessonEndTime > blockedStart)
+          utcLessonDate < blockedEnd && freedomLessonEndTime > blockedStart
         );
       });
 
@@ -1280,7 +1354,6 @@ export const schedulingRouter = router({
           message: `Cannot schedule lesson during blocked time: ${conflictingBlockedTime.title}`,
         });
       }
-
 
       // Determine lesson title
       const isSchedulingForAnotherCoach =
