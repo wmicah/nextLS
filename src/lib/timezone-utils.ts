@@ -1,5 +1,10 @@
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import {
+  safeUTCToLocal,
+  getDSTAwareLessonTime,
+  validateLessonScheduling,
+} from "./dst-utils";
 
 /**
  * Formats a UTC date string to display in the user's local timezone
@@ -12,7 +17,10 @@ export const formatTimeInUserTimezone = (
   formatString: string = "h:mm a"
 ): string => {
   const timeZone = getUserTimezone();
-  const localDate = toZonedTime(utcDateString, timeZone);
+  const utcDate = new Date(utcDateString);
+
+  // Use DST-aware conversion
+  const localDate = safeUTCToLocal(utcDate, timeZone, "UTC");
   return format(localDate, formatString);
 };
 
@@ -27,7 +35,10 @@ export const formatDateTimeInUserTimezone = (
   formatString: string = "MMM d, h:mm a"
 ): string => {
   const timeZone = getUserTimezone();
-  const localDate = toZonedTime(utcDateString, timeZone);
+  const utcDate = new Date(utcDateString);
+
+  // Use DST-aware conversion
+  const localDate = safeUTCToLocal(utcDate, timeZone, "UTC");
   return format(localDate, formatString);
 };
 
@@ -42,7 +53,10 @@ export const formatDateInUserTimezone = (
   formatString: string = "MMM d, yyyy"
 ): string => {
   const timeZone = getUserTimezone();
-  const localDate = toZonedTime(utcDateString, timeZone);
+  const utcDate = new Date(utcDateString);
+
+  // Use DST-aware conversion
+  const localDate = safeUTCToLocal(utcDate, timeZone, "UTC");
   return format(localDate, formatString);
 };
 
@@ -113,4 +127,31 @@ export const getTimezoneDebugInfo = () => {
     environment: process.env.NODE_ENV,
     isServer: typeof window === "undefined",
   };
+};
+
+/**
+ * Get DST-aware lesson time information
+ * @param utcDateString - UTC date string from the database
+ * @param formatString - Date-fns format string (default: "h:mm a")
+ * @returns Object with DST-aware time information
+ */
+export const getDSTAwareLessonTimeInfo = (
+  utcDateString: string,
+  formatString: string = "h:mm a"
+) => {
+  const timeZone = getUserTimezone();
+  const utcDate = new Date(utcDateString);
+
+  return getDSTAwareLessonTime(utcDate, timeZone, formatString);
+};
+
+/**
+ * Validate lesson scheduling for DST issues
+ * @param lessonDate - The lesson date to validate
+ * @param timezone - The timezone to check (defaults to user's timezone)
+ * @returns Validation result with warnings and suggestions
+ */
+export const validateLessonForDST = (lessonDate: Date, timezone?: string) => {
+  const userTimezone = timezone || getUserTimezone();
+  return validateLessonScheduling(lessonDate, userTimezone);
 };
