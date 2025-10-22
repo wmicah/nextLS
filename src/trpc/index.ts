@@ -42,6 +42,7 @@ import { utilsRouter } from "./routers/utils.router";
 import { organizationRouter } from "./routers/organization.router";
 import { sidebarRouter } from "./routers/sidebar.router";
 import { blockedTimesRouter } from "./routers/blockedTimes.router";
+import { notesRouter } from "./routers/notes.router";
 
 /**
  * Merge all routers together
@@ -80,6 +81,7 @@ export const appRouter = router({
   organization: organizationRouter,
   sidebar: sidebarRouter,
   blockedTimes: blockedTimesRouter,
+  notes: notesRouter,
 
   // Admin router
   admin: adminRouter,

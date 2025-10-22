@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
+import { extractNoteContent } from "@/lib/note-utils";
 import {
   Calendar,
   Clock,
@@ -574,15 +575,18 @@ export default function MobileClientDetailPage({
             </div>
           </div>
 
-          {client.notes && (
-            <div
-              className="mt-4 p-3 rounded-lg"
-              style={{ backgroundColor: "#2A2F2F" }}
-            >
-              <h3 className="text-sm font-medium text-white mb-2">Notes</h3>
-              <p className="text-sm text-gray-300">{client.notes}</p>
-            </div>
-          )}
+          {client.notes &&
+            extractNoteContent(client.notes).trim().length > 0 && (
+              <div
+                className="mt-4 p-3 rounded-lg"
+                style={{ backgroundColor: "#2A2F2F" }}
+              >
+                <h3 className="text-sm font-medium text-white mb-2">Notes</h3>
+                <p className="text-sm text-gray-300">
+                  {extractNoteContent(client.notes)}
+                </p>
+              </div>
+            )}
         </div>
 
         {/* Compliance Rate */}

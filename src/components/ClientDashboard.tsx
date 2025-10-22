@@ -4,6 +4,7 @@ import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { trpc } from "@/app/_trpc/client";
 // Removed complex SSE hooks - using simple polling instead
 import { useState } from "react";
+import { extractNoteContent } from "@/lib/note-utils";
 import {
   PlayCircle,
   CheckCircle2,
@@ -17,6 +18,7 @@ import {
   BarChart3,
   FileText,
   Video,
+  History,
 } from "lucide-react";
 
 import ClientSidebar from "@/components/ClientSidebar";
@@ -24,6 +26,7 @@ import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientDashboard from "@/components/MobileClientDashboard";
 import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonStats, SkeletonCard } from "@/components/SkeletonLoader";
+import NotesDisplay from "@/components/NotesDisplay";
 
 function ClientDashboard() {
   const {
@@ -413,19 +416,40 @@ function ClientDashboard() {
                 >
                   Coach&apos;s Notes
                 </h3>
-                <p
-                  className="text-sm md:text-base line-clamp-3"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  {coachNotes?.notes && coachNotes.notes.trim().length > 0
-                    ? coachNotes.notes
-                    : "No feedback yet"}
-                </p>
-                {coachNotes?.updatedAt && (
-                  <p className="text-xs mt-2" style={{ color: "#606364" }}>
-                    {new Date(coachNotes.updatedAt).toLocaleDateString()}
-                  </p>
-                )}
+
+                {/* Show recent notes or placeholder */}
+                <div className="space-y-3">
+                  {coachNotes?.notes &&
+                  extractNoteContent(coachNotes.notes).trim().length > 0 ? (
+                    <div>
+                      <p
+                        className="text-sm md:text-base line-clamp-3"
+                        style={{ color: "#ABA4AA" }}
+                      >
+                        {extractNoteContent(coachNotes.notes)}
+                      </p>
+                      {coachNotes.updatedAt && (
+                        <p
+                          className="text-xs mt-2"
+                          style={{ color: "#606364" }}
+                        >
+                          {new Date(coachNotes.updatedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p
+                      className="text-sm md:text-base"
+                      style={{ color: "#ABA4AA" }}
+                    >
+                      No feedback yet
+                    </p>
+                  )}
+
+                  <div className="mt-4">
+                    <NotesDisplay isClientView={true} showComposer={false} />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

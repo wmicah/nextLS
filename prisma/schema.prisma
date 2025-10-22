@@ -74,6 +74,8 @@ model User {
   assignedByMe             ClientCoachAssignment[] @relation("AssignedBy")
   lessonReminders          LessonReminder[]
   blockedTimes             BlockedTime[]
+  clientNotes              ClientNote[]
+  clientNoteHistory        ClientNoteHistory[]
 
   @@map("users")
 }
@@ -83,7 +85,6 @@ model Client {
   name                 String
   email                String?
   phone                String?
-  notes                String?
   coachId              String?
   organizationId       String?                 @map("organization_id")
   primaryCoachId       String?                 @map("primary_coach_id")
@@ -129,6 +130,8 @@ model Client {
   assignedCoaches      ClientCoachAssignment[] @relation("ClientCoachAssignments")
   routineExerciseCompletions RoutineExerciseCompletion[] @relation("ClientRoutineExerciseCompletions")
   programDrillCompletions    ProgramDrillCompletion[]    @relation("ClientProgramDrillCompletions")
+  notes              ClientNote[]
+  noteHistory        ClientNoteHistory[]
 
   @@map("clients")
 }
@@ -1121,4 +1124,89 @@ model BlockedTime {
   coach       User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
 
   @@map("blocked_times")
+}
+
+model ClientNoteHistory {
+  id          String   @id @default(cuid())
+  clientId    String
+  coachId     String
+  notes       String
+  action      NoteAction @default(CREATED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach       User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@map("client_note_history")
+}
+
+model ClientNote {
+  id          String   @id @default(cuid())
+  clientId    String
+  coachId     String
+  title       String?
+  content     String
+  type        NoteType @default(GENERAL)
+  priority    NotePriority @default(NORMAL)
+  isPrivate   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  coach       User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  attachments NoteAttachment[]
+  tags        NoteTag[]
+
+  @@map("client_notes")
+}
+
+model NoteAttachment {
+  id        String   @id @default(cuid())
+  noteId    String
+  fileName  String
+  fileUrl   String
+  fileType  String
+  fileSize  Int
+  createdAt DateTime @default(now())
+  
+  note      ClientNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@map("note_attachments")
+}
+
+model NoteTag {
+  id        String   @id @default(cuid())
+  noteId    String
+  name      String
+  color     String   @default("#4A5A70")
+  createdAt DateTime @default(now())
+  
+  note      ClientNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@map("note_tags")
+}
+
+enum NoteType {
+  GENERAL
+  PROGRESS
+  FEEDBACK
+  GOAL
+  INJURY
+  TECHNIQUE
+  MOTIVATION
+  SCHEDULE
+}
+
+enum NotePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NoteAction {
+  CREATED
+  UPDATED
+  DELETED
 }

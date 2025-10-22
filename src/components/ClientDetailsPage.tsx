@@ -3,6 +3,7 @@
 import { trpc } from "@/app/_trpc/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { extractNoteContent } from "@/lib/note-utils";
 import {
   Mail,
   Phone,
@@ -327,7 +328,9 @@ export default function ClientDetailsPage({
                   <h3 className="text-sm font-semibold text-white mb-2">
                     Notes
                   </h3>
-                  <p className="text-sm text-gray-300">{client.notes}</p>
+                  <p className="text-sm text-gray-300">
+                    {extractNoteContent(client.notes)}
+                  </p>
                 </div>
               )}
             </div>
