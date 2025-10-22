@@ -78,6 +78,7 @@ export const settingsRouter = router({
         newClientNotifications: z.boolean().optional(),
         messageNotifications: z.boolean().optional(),
         scheduleNotifications: z.boolean().optional(),
+        lessonRemindersEnabled: z.boolean().optional(),
 
         // Messaging settings
         defaultWelcomeMessage: z.string().optional(),

@@ -15,6 +15,11 @@ import {
   Settings as SettingsIcon,
   AlertTriangle,
   Building2,
+  Bell,
+  Mail,
+  MessageSquare,
+  Activity,
+  Clock,
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
@@ -55,6 +60,15 @@ function SettingsPageClient({}: SettingsPageClientProps) {
     requireClientEmail: false,
     defaultWelcomeMessage: "",
     messageRetentionMonths: 3,
+  });
+
+  const [notificationData, setNotificationData] = useState({
+    emailNotifications: true,
+    pushNotifications: true,
+    soundNotifications: false,
+    messageNotifications: true,
+    scheduleNotifications: true,
+    lessonRemindersEnabled: true,
   });
 
   // Get current user data
@@ -159,6 +173,15 @@ function SettingsPageClient({}: SettingsPageClientProps) {
         defaultWelcomeMessage: userSettings.defaultWelcomeMessage || "",
         messageRetentionMonths: Math.round(messageRetentionDays / 30),
       });
+
+      setNotificationData({
+        emailNotifications: userSettings.emailNotifications ?? true,
+        pushNotifications: userSettings.pushNotifications ?? true,
+        soundNotifications: userSettings.soundNotifications ?? false,
+        messageNotifications: userSettings.messageNotifications ?? true,
+        scheduleNotifications: userSettings.scheduleNotifications ?? true,
+        lessonRemindersEnabled: userSettings.lessonRemindersEnabled ?? true,
+      });
     }
   }, [userSettings?.id, currentUser?.id]);
 
@@ -174,6 +197,11 @@ function SettingsPageClient({}: SettingsPageClientProps) {
       id: "schedule",
       name: "Schedule",
       icon: <Calendar className="w-5 h-5" />,
+    },
+    {
+      id: "notifications",
+      name: "Notifications",
+      icon: <Bell className="w-5 h-5" />,
     },
     {
       id: "organization",
@@ -223,6 +251,17 @@ function SettingsPageClient({}: SettingsPageClientProps) {
           await updateSettingsMutation.mutateAsync({
             timezone: scheduleData.timezone,
             workingDays: scheduleData.workingDays,
+          });
+          break;
+
+        case "notifications":
+          await updateSettingsMutation.mutateAsync({
+            emailNotifications: notificationData.emailNotifications,
+            pushNotifications: notificationData.pushNotifications,
+            soundNotifications: notificationData.soundNotifications,
+            messageNotifications: notificationData.messageNotifications,
+            scheduleNotifications: notificationData.scheduleNotifications,
+            lessonRemindersEnabled: notificationData.lessonRemindersEnabled,
           });
           break;
       }
@@ -842,6 +881,265 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                           </>
                         )}
                       </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Notifications Tab */}
+              {activeTab === "notifications" && (
+                <div>
+                  <h3
+                    className="text-2xl font-bold mb-6"
+                    style={{ color: "#ffffff" }}
+                  >
+                    Notification Settings
+                  </h3>
+                  <div className="space-y-6">
+                    {/* Email Notifications */}
+                    <div
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: "#1E1E1E",
+                        borderColor: "#2a2a2a",
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Mail
+                          className="h-5 w-5"
+                          style={{ color: "#4A5A70" }}
+                        />
+                        <div>
+                          <h4
+                            className="font-semibold"
+                            style={{ color: "#ffffff" }}
+                          >
+                            Email Notifications
+                          </h4>
+                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                            Receive notifications via email
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationData.emailNotifications}
+                          onChange={e =>
+                            setNotificationData(prev => ({
+                              ...prev,
+                              emailNotifications: e.target.checked,
+                            }))
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Push Notifications */}
+                    <div
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: "#1E1E1E",
+                        borderColor: "#2a2a2a",
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Bell
+                          className="h-5 w-5"
+                          style={{ color: "#4A5A70" }}
+                        />
+                        <div>
+                          <h4
+                            className="font-semibold"
+                            style={{ color: "#ffffff" }}
+                          >
+                            Push Notifications
+                          </h4>
+                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                            Receive browser push notifications
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationData.pushNotifications}
+                          onChange={e =>
+                            setNotificationData(prev => ({
+                              ...prev,
+                              pushNotifications: e.target.checked,
+                            }))
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Sound Notifications */}
+                    <div
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: "#1E1E1E",
+                        borderColor: "#2a2a2a",
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Activity
+                          className="h-5 w-5"
+                          style={{ color: "#4A5A70" }}
+                        />
+                        <div>
+                          <h4
+                            className="font-semibold"
+                            style={{ color: "#ffffff" }}
+                          >
+                            Sound Notifications
+                          </h4>
+                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                            Play sound for notifications
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationData.soundNotifications}
+                          onChange={e =>
+                            setNotificationData(prev => ({
+                              ...prev,
+                              soundNotifications: e.target.checked,
+                            }))
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Message Notifications */}
+                    <div
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: "#1E1E1E",
+                        borderColor: "#2a2a2a",
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <MessageSquare
+                          className="h-5 w-5"
+                          style={{ color: "#4A5A70" }}
+                        />
+                        <div>
+                          <h4
+                            className="font-semibold"
+                            style={{ color: "#ffffff" }}
+                          >
+                            Message Notifications
+                          </h4>
+                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                            Get notified about new messages
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationData.messageNotifications}
+                          onChange={e =>
+                            setNotificationData(prev => ({
+                              ...prev,
+                              messageNotifications: e.target.checked,
+                            }))
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Schedule Notifications */}
+                    <div
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: "#1E1E1E",
+                        borderColor: "#2a2a2a",
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Calendar
+                          className="h-5 w-5"
+                          style={{ color: "#4A5A70" }}
+                        />
+                        <div>
+                          <h4
+                            className="font-semibold"
+                            style={{ color: "#ffffff" }}
+                          >
+                            Schedule Notifications
+                          </h4>
+                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                            Get notified about schedule changes
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationData.scheduleNotifications}
+                          onChange={e =>
+                            setNotificationData(prev => ({
+                              ...prev,
+                              scheduleNotifications: e.target.checked,
+                            }))
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Lesson Reminders */}
+                    <div
+                      className="flex items-center justify-between p-4 rounded-lg border"
+                      style={{
+                        backgroundColor: "#1E1E1E",
+                        borderColor: "#2a2a2a",
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Clock
+                          className="h-5 w-5"
+                          style={{ color: "#4A5A70" }}
+                        />
+                        <div>
+                          <h4
+                            className="font-semibold"
+                            style={{ color: "#ffffff" }}
+                          >
+                            Lesson Reminders
+                          </h4>
+                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                            Automatically send lesson reminders to clients
+                          </p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationData.lessonRemindersEnabled}
+                          onChange={e =>
+                            setNotificationData(prev => ({
+                              ...prev,
+                              lessonRemindersEnabled: e.target.checked,
+                            }))
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
                     </div>
                   </div>
                 </div>

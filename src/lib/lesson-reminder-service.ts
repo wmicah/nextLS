@@ -111,6 +111,11 @@ class LessonReminderService {
             select: {
               id: true,
               name: true,
+              settings: {
+                select: {
+                  lessonRemindersEnabled: true,
+                },
+              },
             },
           },
           organization: {
@@ -131,6 +136,15 @@ class LessonReminderService {
       let errorCount = 0;
 
       for (const lesson of lessonsToRemind) {
+        // Check if the coach has lesson reminders enabled
+        if (lesson.coach.settings?.lessonRemindersEnabled === false) {
+          console.log(
+            `Skipping reminder for lesson ${lesson.id} - coach ${lesson.coach.name} has lesson reminders disabled`
+          );
+          skippedCount++;
+          continue;
+        }
+
         try {
           // Calculate hours until lesson
           const hoursUntilLesson = Math.round(

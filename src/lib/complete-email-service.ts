@@ -3,6 +3,7 @@
 
 import { Resend } from "resend";
 import { completeEmailTemplates } from "./complete-email-templates";
+import { db } from "@/db";
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -24,13 +25,46 @@ export class CompleteEmailService {
     return CompleteEmailService.instance;
   }
 
+  // Check if user has email notifications enabled
+  private async checkEmailNotificationsEnabled(
+    userId: string
+  ): Promise<boolean> {
+    try {
+      const userSettings = await db.userSettings.findUnique({
+        where: { userId },
+        select: { emailNotifications: true },
+      });
+
+      // Default to true if no settings found
+      return userSettings?.emailNotifications ?? true;
+    } catch (error) {
+      console.error("Error checking email notification preferences:", error);
+      // Default to true on error to avoid blocking notifications
+      return true;
+    }
+  }
+
   // 1. CLIENT ONBOARDING & WELCOME
   async sendWelcomeEmail(
     clientEmail: string,
     clientName: string,
-    coachName: string
+    coachName: string,
+    clientUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if client has email notifications enabled
+      if (clientUserId) {
+        const emailEnabled = await this.checkEmailNotificationsEnabled(
+          clientUserId
+        );
+        if (!emailEnabled) {
+          console.log(
+            `Email notifications disabled for user ${clientUserId}, skipping welcome email`
+          );
+          return false;
+        }
+      }
+
       const template = completeEmailTemplates.welcomeClient(
         clientName,
         coachName
@@ -56,9 +90,23 @@ export class CompleteEmailService {
     coachEmail: string,
     coachName: string,
     clientName: string,
-    clientEmail: string
+    clientEmail: string,
+    coachUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if coach has email notifications enabled
+      if (coachUserId) {
+        const emailEnabled = await this.checkEmailNotificationsEnabled(
+          coachUserId
+        );
+        if (!emailEnabled) {
+          console.log(
+            `Email notifications disabled for coach ${coachUserId}, skipping new client request email`
+          );
+          return false;
+        }
+      }
+
       const template = completeEmailTemplates.newClientRequest(
         coachName,
         clientName,
@@ -86,9 +134,23 @@ export class CompleteEmailService {
     clientName: string,
     coachName: string,
     lessonDate: string,
-    lessonTime: string
+    lessonTime: string,
+    clientUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if client has email notifications enabled
+      if (clientUserId) {
+        const emailEnabled = await this.checkEmailNotificationsEnabled(
+          clientUserId
+        );
+        if (!emailEnabled) {
+          console.log(
+            `Email notifications disabled for user ${clientUserId}, skipping lesson reminder email`
+          );
+          return false;
+        }
+      }
+
       const template = completeEmailTemplates.lessonReminder(
         clientName,
         coachName,
@@ -203,9 +265,23 @@ export class CompleteEmailService {
     clientEmail: string,
     clientName: string,
     coachName: string,
-    messagePreview: string
+    messagePreview: string,
+    clientUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if client has email notifications enabled
+      if (clientUserId) {
+        const emailEnabled = await this.checkEmailNotificationsEnabled(
+          clientUserId
+        );
+        if (!emailEnabled) {
+          console.log(
+            `Email notifications disabled for user ${clientUserId}, skipping message notification email`
+          );
+          return false;
+        }
+      }
+
       // Check rate limiting for message notifications (24 hours)
       const now = Date.now();
       const lastSent = this.messageNotificationCooldown.get(clientEmail);

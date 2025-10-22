@@ -709,6 +709,7 @@ model UserSettings {
   newClientNotifications Boolean  @default(true)
   messageNotifications   Boolean  @default(true)
   scheduleNotifications  Boolean  @default(true)
+  lessonRemindersEnabled Boolean  @default(true)
   defaultWelcomeMessage  String?
   messageRetentionDays   Int      @default(90)
   maxFileSizeMB          Int      @default(50)
