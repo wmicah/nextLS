@@ -18,6 +18,9 @@ export default function MessageNotification({}: MessageNotificationProps) {
   const [notification, setNotification] = useState<any>(null);
   const audio = new Audio("/notification.mp3"); // You'll need to add this file
 
+  // Get user settings to check sound preferences
+  const { data: userSettings } = trpc.settings.getSettings.useQuery();
+
   // Simple polling for unread count
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
@@ -42,13 +45,15 @@ export default function MessageNotification({}: MessageNotificationProps) {
         });
         setIsVisible(true);
 
-        // Play sound
-        try {
-          audio.play().catch(() => {
-            // Ignore audio play errors
-          });
-        } catch (error) {
-          // Ignore audio errors
+        // Play sound only if user has sound notifications enabled
+        if (userSettings?.soundNotifications !== false) {
+          try {
+            audio.play().catch(() => {
+              // Ignore audio play errors
+            });
+          } catch (error) {
+            // Ignore audio errors
+          }
         }
 
         // Auto-hide after 5 seconds

@@ -72,6 +72,11 @@ export async function POST(request: NextRequest) {
               select: {
                 id: true,
                 name: true,
+                settings: {
+                  select: {
+                    lessonRemindersEnabled: true,
+                  },
+                },
               },
             },
             organization: {
@@ -112,6 +117,11 @@ export async function POST(request: NextRequest) {
             select: {
               id: true,
               name: true,
+              settings: {
+                select: {
+                  lessonRemindersEnabled: true,
+                },
+              },
             },
           },
           organization: {
@@ -129,6 +139,17 @@ export async function POST(request: NextRequest) {
 
     for (const lesson of lessonsToProcess) {
       try {
+        // Check if the coach has lesson reminders enabled
+        if (lesson.coach.settings?.lessonRemindersEnabled === false) {
+          results.push({
+            lessonId: lesson.id,
+            clientName: lesson.client?.name || "Unknown Client",
+            status: "skipped",
+            reason: "Coach has lesson reminders disabled",
+          });
+          continue;
+        }
+
         // Check if client has notifications enabled
         if (!lesson.client?.user) {
           results.push({

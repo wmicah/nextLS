@@ -7,6 +7,19 @@ export async function sendPushNotification(
   data?: any
 ) {
   try {
+    // Check if user has push notifications enabled
+    const userSettings = await db.userSettings.findUnique({
+      where: { userId },
+      select: { pushNotifications: true },
+    });
+
+    if (userSettings?.pushNotifications === false) {
+      console.log(
+        `Push notifications disabled for user ${userId}, skipping notification`
+      );
+      return false;
+    }
+
     // For now, we'll just log the notification
     // In production, you'd:
     // 1. Get user's push subscription from database
