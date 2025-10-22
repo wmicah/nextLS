@@ -78,7 +78,9 @@ function LibraryPage() {
   }, [searchTerm]);
 
   const handleItemClick = (item: any) => {
-    const itemIndex = libraryItems.findIndex(libItem => libItem.id === item.id);
+    const itemIndex = libraryItems.findIndex(
+      (libItem: any) => libItem.id === item.id
+    );
     setCurrentItemIndex(itemIndex);
     setSelectedItem(item);
     setIsVideoViewerOpen(true);
@@ -103,18 +105,24 @@ function LibraryPage() {
 
   // Use tRPC queries with refetch
   const {
-    data: masterLibraryItems = [],
+    data: masterLibraryItems,
     isLoading: masterLoading,
     error: masterError,
     refetch: refetchMaster,
-  } = trpc.admin.getMasterLibrary.useQuery(undefined, {
-    enabled: activeTab === "master",
-    placeholderData: previousData => previousData, // Prevent flash when switching tabs
-    staleTime: 30000, // Keep data fresh for 30 seconds
-  });
+  } = trpc.admin.getMasterLibrary.useQuery(
+    {
+      search: debouncedSearchTerm || undefined,
+      category: selectedCategory !== "All" ? selectedCategory : undefined,
+    },
+    {
+      enabled: activeTab === "master",
+      placeholderData: previousData => previousData, // Prevent flash when switching tabs
+      staleTime: 30000, // Keep data fresh for 30 seconds
+    }
+  );
 
   const {
-    data: localLibraryItems = [],
+    data: localLibraryItems,
     isLoading: localLoading,
     error: localError,
     refetch: refetchLocal,
@@ -131,9 +139,11 @@ function LibraryPage() {
     }
   );
 
-  // Combine data based on active tab
+  // Combine data based on active tab - handle paginated response
   const libraryItems =
-    activeTab === "master" ? masterLibraryItems : localLibraryItems;
+    activeTab === "master"
+      ? masterLibraryItems?.items || []
+      : localLibraryItems?.items || [];
   const isLoading = activeTab === "master" ? masterLoading : localLoading;
   const error = activeTab === "master" ? masterError : localError;
 
@@ -141,8 +151,8 @@ function LibraryPage() {
   useEffect(() => {
     console.log("🔍 LibraryPage Debug:", {
       activeTab,
-      localLibraryItems: localLibraryItems?.length,
-      masterLibraryItems: masterLibraryItems?.length,
+      localLibraryItems: localLibraryItems?.items?.length,
+      masterLibraryItems: masterLibraryItems?.items?.length,
       libraryItems: libraryItems?.length,
       localLoading,
       localError: localError?.message,
@@ -152,10 +162,10 @@ function LibraryPage() {
       timestamp: new Date().toISOString(),
     });
 
-    if (localLibraryItems && localLibraryItems.length > 0) {
+    if (localLibraryItems?.items && localLibraryItems.items.length > 0) {
       console.log(
         "🎉 Local library items found:",
-        localLibraryItems.map(item => ({
+        localLibraryItems.items.map(item => ({
           id: item.id,
           title: item.title,
           type: item.type,
@@ -163,14 +173,17 @@ function LibraryPage() {
           createdAt: item.createdAt,
         }))
       );
-    } else if (localLibraryItems && localLibraryItems.length === 0) {
+    } else if (
+      localLibraryItems?.items &&
+      localLibraryItems.items.length === 0
+    ) {
       console.log("⚠️ Local library items array is empty");
     }
 
-    if (masterLibraryItems && masterLibraryItems.length > 0) {
+    if (masterLibraryItems?.items && masterLibraryItems.items.length > 0) {
       console.log(
         "🎉 Master library items found:",
-        masterLibraryItems.map(item => ({
+        masterLibraryItems.items.map(item => ({
           id: item.id,
           title: item.title,
           type: item.type,

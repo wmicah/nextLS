@@ -23,19 +23,19 @@ export function useMobileDetection() {
         /iPad/i.test(userAgent) ||
         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-      // Mobile width: phones and small tablets only (768px = typical tablet portrait)
-      const isMobileWidth = width < 768;
+      // Mobile width: phones and small tablets only (640px = typical mobile breakpoint)
+      const isMobileWidth = width < 640;
 
       // Touch device detection
       const isTouchDevice =
         "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
-      // Should use mobile layout: only for actual mobile/tablet devices
+      // Should use mobile layout: only for actual mobile devices
       // Desktop users get desktop layout even with narrow windows
       const shouldBeMobile =
         isMobileWidth ||
         (isIPad && width < 1024) ||
-        (isTouchDevice && width < 768);
+        (isTouchDevice && width < 640);
 
       setIsMobile(shouldBeMobile);
     };

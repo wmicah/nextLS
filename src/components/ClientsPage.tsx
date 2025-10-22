@@ -841,12 +841,10 @@ function ClientsPage() {
   });
   const utils = trpc.useUtils();
 
-
   const openNotes = (client: Client) => {
     setNotesClient(client);
     setIsNotesModalOpen(true);
   };
-
 
   const openQuickMessage = (client: Client, buttonRef: HTMLButtonElement) => {
     setQuickMessageClient(client);

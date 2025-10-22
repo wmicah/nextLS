@@ -46,10 +46,12 @@ export default function AssignVideoModal({
   }, [isOpen, startDate]);
 
   // Fetch available videos
-  const { data: videos = [], isLoading: videosLoading } =
+  const { data: videosData, isLoading: videosLoading } =
     trpc.library.list.useQuery({
       type: "video",
     });
+
+  const videos = videosData?.items || [];
 
   const utils = trpc.useUtils();
   const assignVideoMutation = trpc.library.assignVideoToClient.useMutation({

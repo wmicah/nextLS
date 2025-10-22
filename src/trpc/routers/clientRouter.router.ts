@@ -560,6 +560,33 @@ export const clientRouterRouter = router({
                                 completions: {
                                   where: { clientId: user.id },
                                 },
+                                // Include routine with exercises for proper expansion
+                                routine: {
+                                  select: {
+                                    id: true,
+                                    name: true,
+                                    description: true,
+                                    exercises: {
+                                      select: {
+                                        id: true,
+                                        title: true,
+                                        description: true,
+                                        sets: true,
+                                        reps: true,
+                                        tempo: true,
+                                        type: true,
+                                        videoUrl: true,
+                                        videoId: true,
+                                        videoThumbnail: true,
+                                        videoTitle: true,
+                                        order: true,
+                                      },
+                                      orderBy: {
+                                        order: "asc",
+                                      },
+                                    },
+                                  },
+                                },
                               },
                             },
                           },

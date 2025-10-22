@@ -68,8 +68,12 @@ export default function MobileCreateRoutineModal({
   const [mounted, setMounted] = useState(false);
 
   // Get master library videos
-  const { data: masterLibraryVideos = [] } =
-    trpc.admin.getMasterLibrary.useQuery();
+  const { data: masterLibraryData } = trpc.admin.getMasterLibrary.useQuery({
+    search: undefined,
+    category: undefined,
+  });
+
+  const masterLibraryVideos = masterLibraryData?.items || [];
   // Get local library videos
   const { data: localLibraryVideos = [] } =
     trpc.libraryResources.getAll.useQuery();
