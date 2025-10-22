@@ -420,7 +420,6 @@ export const clientsRouter = router({
             // Update other fields if provided
             ...(input.name && { name: input.name }),
             ...(input.phone && { phone: input.phone }),
-            ...(input.notes && { notes: input.notes }),
             ...(input.age && { age: input.age }),
             ...(input.height && { height: input.height }),
             ...(input.dominantHand && { dominantHand: input.dominantHand }),
@@ -460,7 +459,6 @@ export const clientsRouter = router({
             name: input.name,
             email: input.email || null,
             phone: input.phone || null,
-            notes: input.notes || null,
             coachId: ensureUserId(user.id),
             userId: userId, // Link to user account if found
             nextLessonDate: input.nextLessonDate
@@ -1162,12 +1160,81 @@ export const clientsRouter = router({
         });
       }
 
-      await db.client.update({
+      // Get current notes to determine action
+      const currentClient = await db.client.findFirst({
         where: { id: input.clientId, coachId: user.id },
-        data: { notes: input.notes || null },
+        select: { notes: true },
+      });
+
+      if (!currentClient) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client not found",
+        });
+      }
+
+      // Determine action type
+      let action: "CREATED" | "UPDATED" | "DELETED" = "UPDATED";
+      if (!currentClient.notes && input.notes) {
+        action = "CREATED";
+      } else if (currentClient.notes && !input.notes) {
+        action = "DELETED";
+      }
+
+      // For now, we'll skip updating the notes field since it's now handled by the ClientNote model
+      // This is a temporary solution until we fully migrate to the new note system
+
+      // Create history entry
+      await db.clientNoteHistory.create({
+        data: {
+          clientId: input.clientId,
+          coachId: user.id,
+          notes: input.notes || "",
+          action: action,
+        },
       });
 
       return { success: true };
+    }),
+
+  getNoteHistory: publicProcedure
+    .input(z.object({ clientId: z.string() }))
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view note history",
+        });
+      }
+
+      // Get note history for the client
+      const noteHistory = await db.clientNoteHistory.findMany({
+        where: {
+          clientId: input.clientId,
+          coachId: user.id,
+        },
+        include: {
+          coach: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return noteHistory;
     }),
 
   getComplianceData: publicProcedure

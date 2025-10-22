@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
+import { extractNoteContent, hasNoteContent } from "@/lib/note-utils";
 import {
   Calendar,
   ChevronLeft,
@@ -34,6 +35,7 @@ import {
   CalendarClock,
   Link,
   FileText,
+  Image,
 } from "lucide-react";
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
 import ClientProgramDayModal from "./ClientProgramDayModal";
@@ -374,7 +376,10 @@ function ClientProgramPage() {
   const { data: nextLesson } = trpc.clientRouter.getNextLesson.useQuery();
 
   // Get coach notes
-  const { data: coachNotes } = trpc.clientRouter.getCoachNotes.useQuery();
+  const { data: coachNotes } = trpc.notes.getMyNotes.useQuery();
+
+  // Debug logging
+  console.log("ClientProgramPage - coachNotes:", coachNotes);
 
   // Get routine assignments
   const { data: routineAssignments = [] } =
@@ -1197,15 +1202,18 @@ function ClientProgramPage() {
                       </h3>
                     </div>
 
-                    {coachNotes?.notes ? (
+                    {coachNotes && coachNotes.length > 0 ? (
                       <div className="space-y-3">
                         <div className="bg-purple-500/10 rounded-2xl p-3 md:p-4 border border-purple-400/20">
                           <p className="text-xs md:text-sm text-purple-100 leading-relaxed">
-                            {coachNotes.notes.length > 20
-                              ? `${coachNotes.notes.substring(0, 20)}...`
-                              : coachNotes.notes}
+                            {(() => {
+                              const content = extractNoteContent(coachNotes);
+                              return content.length > 20
+                                ? `${content.substring(0, 20)}...`
+                                : content;
+                            })()}
                           </p>
-                          {coachNotes.notes.length > 20 && (
+                          {extractNoteContent(coachNotes).length > 20 && (
                             <button
                               onClick={() => setIsCoachNotesModalOpen(true)}
                               className="mt-2 text-xs font-semibold text-purple-300 hover:text-purple-200 transition-colors duration-200"
@@ -1219,7 +1227,9 @@ function ClientProgramPage() {
                           <p className="text-xs text-purple-200/80 font-medium">
                             Updated{" "}
                             {new Date(
-                              coachNotes.updatedAt
+                              coachNotes[0]?.updatedAt ||
+                                coachNotes[0]?.createdAt ||
+                                new Date()
                             ).toLocaleDateString()}
                           </p>
                         </div>
@@ -2262,53 +2272,81 @@ function ClientProgramPage() {
 
           {/* Coach Notes Modal */}
           {isCoachNotesModalOpen && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl p-8 max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+              <div className="bg-purple-500/20 rounded-2xl p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-purple-400/30">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-gray-100">
-                      <FileText className="h-6 w-6 text-gray-700" />
+                    <div className="p-3 rounded-xl bg-purple-500/20">
+                      <FileText className="h-6 w-6 text-purple-300" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900">
-                      Coach Notes
-                    </h3>
+                    <div>
+                      <h3 className="text-2xl font-bold text-white">
+                        Coach Notes
+                      </h3>
+                      <p className="text-sm text-purple-200/80">
+                        {coachNotes?.length || 0} note
+                        {(coachNotes?.length || 0) !== 1 ? "s" : ""}
+                      </p>
+                    </div>
                   </div>
                   <button
                     onClick={() => setIsCoachNotesModalOpen(false)}
-                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+                    className="p-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 hover:text-purple-200 transition-colors duration-200"
                   >
-                    <X className="h-5 w-5 text-gray-600" />
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                    <p className="text-base leading-7 text-gray-800 whitespace-pre-wrap">
-                      {coachNotes?.notes}
-                    </p>
-                  </div>
+                <div className="space-y-4">
+                  {coachNotes && coachNotes.length > 0 ? (
+                    coachNotes.map((note, index) => (
+                      <div
+                        key={note.id}
+                        className="bg-purple-500/20 rounded-2xl p-4 border border-purple-400/30"
+                      >
+                        {/* Note Date */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                            <p className="text-sm font-medium text-purple-200/80">
+                              {new Date(note.createdAt).toLocaleDateString(
+                                "en-US",
+                                {
+                                  weekday: "long",
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                }
+                              )}
+                            </p>
+                          </div>
+                        </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    <p className="text-sm text-gray-600 font-medium">
-                      Updated{" "}
-                      {new Date(coachNotes?.updatedAt || "").toLocaleDateString(
-                        "en-US",
-                        {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        }
-                      )}
-                    </p>
-                  </div>
+                        {/* Note Content */}
+                        <div className="mb-4">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap text-purple-100">
+                            {note.content}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 mx-auto mb-4 text-purple-300" />
+                      <p className="text-lg font-medium mb-2 text-white">
+                        No notes yet
+                      </p>
+                      <p className="text-sm text-purple-200/80">
+                        Your coach hasn't added any notes yet.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex justify-end mt-8">
+                <div className="flex justify-end mt-6">
                   <button
                     onClick={() => setIsCoachNotesModalOpen(false)}
-                    className="px-8 py-3 bg-gray-900 text-white text-base font-semibold rounded-xl hover:bg-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className="px-6 py-2 rounded-lg font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 hover:text-purple-200 transition-all duration-200"
                   >
                     Close
                   </button>

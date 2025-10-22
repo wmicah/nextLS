@@ -47,6 +47,7 @@ import FormattedMessage from "./FormattedMessage";
 
 import ClientProfileModal from "./ClientProfileModal";
 import ProfilePictureUploader from "./ProfilePictureUploader";
+import NotesDisplay from "./NotesDisplay";
 
 // Quick Message Popup Component
 function QuickMessagePopup({
@@ -726,7 +727,18 @@ interface Client {
   name: string;
   email: string | null;
   phone: string | null;
-  notes: string | null;
+  notes: Array<{
+    id: string;
+    content: string;
+    title: string | null;
+    type: string;
+    priority: string;
+    isPrivate: boolean;
+    createdAt: string;
+    updatedAt: string;
+    coachId: string;
+    clientId: string;
+  }>;
   coachId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -782,10 +794,9 @@ function ClientsPage() {
   );
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  // Feedback modal state
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [feedbackClient, setFeedbackClient] = useState<Client | null>(null);
-  const [feedbackText, setFeedbackText] = useState("");
+  // Notes modal state
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [notesClient, setNotesClient] = useState<Client | null>(null);
 
   // Quick message popup state
   const [isQuickMessageOpen, setIsQuickMessageOpen] = useState(false);
@@ -830,29 +841,12 @@ function ClientsPage() {
   });
   const utils = trpc.useUtils();
 
-  // Mutation to update notes
-  const updateNotes = trpc.clients.updateNotes.useMutation({
-    onSuccess: () => {
-      utils.clients.list.invalidate();
-      setIsFeedbackOpen(false);
-      setFeedbackText("");
-      setFeedbackClient(null);
-    },
-    onError: error => {
-      console.error("Failed to update notes:", error);
-    },
-  });
 
-  const openFeedback = (client: Client) => {
-    setFeedbackClient(client);
-    setFeedbackText(client.notes || "");
-    setIsFeedbackOpen(true);
+  const openNotes = (client: Client) => {
+    setNotesClient(client);
+    setIsNotesModalOpen(true);
   };
 
-  const submitFeedback = () => {
-    if (!feedbackClient) return;
-    updateNotes.mutate({ clientId: feedbackClient.id, notes: feedbackText });
-  };
 
   const openQuickMessage = (client: Client, buttonRef: HTMLButtonElement) => {
     setQuickMessageClient(client);
@@ -1016,7 +1010,7 @@ function ClientsPage() {
         ? format(new Date(client.nextLessonDate), "MMM d, yyyy")
         : "No lesson scheduled",
       "Created Date": format(new Date(client.createdAt), "MMM d, yyyy"),
-      Notes: client.notes || "",
+      Notes: client.notes.map(note => note.content).join("; "),
     }));
 
     // Create CSV with proper escaping
@@ -1089,7 +1083,7 @@ function ClientsPage() {
                       : "No lesson scheduled"
                   }</td>
                   <td>${format(new Date(client.createdAt), "MMM d, yyyy")}</td>
-                  <td>${client.notes || ""}</td>
+                  <td>${client.notes.map(note => note.content).join("; ")}</td>
                 </tr>
               `
                 )
@@ -1961,7 +1955,7 @@ function ClientsPage() {
                                   <button
                                     onClick={e => {
                                       e.stopPropagation();
-                                      openFeedback(client);
+                                      openNotes(client);
                                     }}
                                     className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
                                     style={{
@@ -2340,7 +2334,9 @@ function ClientsPage() {
             clientName={selectedClientForProfile.name}
             clientEmail={selectedClientForProfile.email}
             clientPhone={selectedClientForProfile.phone}
-            clientNotes={selectedClientForProfile.notes}
+            clientNotes={selectedClientForProfile.notes
+              .map(note => note.content)
+              .join("\n\n")}
             clientAvatar={selectedClientForProfile.avatar}
           />
         )}
@@ -2350,60 +2346,36 @@ function ClientsPage() {
           onClose={() => setIsRequestsModalOpen(false)}
         />
 
-        {/* Feedback Modal */}
-        {isFeedbackOpen && feedbackClient && (
+        {/* Notes Modal */}
+        {isNotesModalOpen && notesClient && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
               className="absolute inset-0 bg-black/60"
-              onClick={() => setIsFeedbackOpen(false)}
+              onClick={() => setIsNotesModalOpen(false)}
             />
             <div
-              className="relative w-full max-w-lg rounded-xl md:rounded-2xl shadow-2xl border p-4 md:p-6 max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-4xl rounded-xl md:rounded-2xl shadow-2xl border p-4 md:p-6 max-h-[90vh] overflow-y-auto"
               style={{ backgroundColor: "#2B3038", borderColor: "#606364" }}
             >
-              <h3
-                className="text-lg md:text-xl font-bold mb-3 md:mb-4"
-                style={{ color: "#C3BCC2" }}
-              >
-                Leave feedback for {feedbackClient.name}
-              </h3>
-              <textarea
-                value={feedbackText}
-                onChange={e => setFeedbackText(e.target.value)}
-                className="w-full rounded-lg md:rounded-xl p-3 border mb-4 text-sm md:text-base resize-none"
-                style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                }}
-                rows={6}
-                placeholder="Type feedback/notes here..."
-              />
-              <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-2">
-                <button
-                  onClick={() => setIsFeedbackOpen(false)}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg md:rounded-xl border touch-manipulation"
-                  style={{
-                    backgroundColor: "transparent",
-                    borderColor: "#606364",
-                    color: "#ABA4AA",
-                  }}
+              <div className="flex items-center justify-between mb-4">
+                <h3
+                  className="text-lg md:text-xl font-bold"
+                  style={{ color: "#C3BCC2" }}
                 >
-                  Cancel
-                </button>
+                  Notes for {notesClient.name}
+                </h3>
                 <button
-                  onClick={submitFeedback}
-                  disabled={updateNotes.isPending}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg md:rounded-xl shadow-lg border disabled:opacity-50 touch-manipulation"
-                  style={{
-                    backgroundColor: "#4A5A70",
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
-                  }}
+                  onClick={() => setIsNotesModalOpen(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
-                  {updateNotes.isPending ? "Saving..." : "Save"}
+                  <X className="h-6 w-6" />
                 </button>
               </div>
+              <NotesDisplay
+                clientId={notesClient.id}
+                isClientView={false}
+                showComposer={true}
+              />
             </div>
           </div>
         )}

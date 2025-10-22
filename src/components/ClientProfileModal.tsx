@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 // import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ProfilePictureUploader from "./ProfilePictureUploader";
+import NotesDisplay from "./NotesDisplay";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 // import { Badge } from "@/components/ui/badge"
 // import { Progress } from "@/components/ui/progress"
@@ -25,6 +27,7 @@ import {
   Activity,
   BookOpen,
   BarChart3,
+  History,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -101,8 +104,6 @@ ClientProfileModalProps) {
     clientName,
   });
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedNotes, setEditedNotes] = useState(clientNotes || "");
   const [editedPitchingData, setEditedPitchingData] = useState({
     age: "",
     height: "",
@@ -151,7 +152,6 @@ ClientProfileModalProps) {
   const updateClientMutation = trpc.clients.update.useMutation({
     onSuccess: () => {
       setIsUpdating(false);
-      setIsEditing(false);
       addToast({
         type: "success",
         title: "Profile updated",
@@ -169,14 +169,6 @@ ClientProfileModalProps) {
       });
     },
   });
-
-  const handleSaveNotes = () => {
-    setIsUpdating(true);
-    updateClientMutation.mutate({
-      id: clientId,
-      notes: editedNotes,
-    });
-  };
 
   const handleSavePitchingData = () => {
     setIsUpdating(true);
@@ -216,8 +208,6 @@ ClientProfileModalProps) {
   };
 
   const handleCancelEdit = () => {
-    setIsEditing(false);
-    setEditedNotes(clientNotes || "");
     if (client) {
       setEditedPitchingData({
         age: client.age?.toString() || "",
@@ -270,17 +260,6 @@ ClientProfileModalProps) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 cursor-pointer"
-                style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#FFFFFF",
-                }}
-              >
-                <Edit className="h-4 w-4" />
-                {isEditing ? "Cancel" : "Edit"}
-              </button>
               <button
                 onClick={onClose}
                 className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
@@ -438,7 +417,7 @@ ClientProfileModalProps) {
                       Pitching Information
                     </h3>
                   </div>
-                  {isEditing ? (
+                  {false ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -881,286 +860,207 @@ ClientProfileModalProps) {
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-
-                {/* Notes Section */}
-                <div
-                  className="rounded-2xl shadow-xl border p-6"
-                  style={{
-                    backgroundColor: "#2A2F2F",
-                    borderColor: "#606364",
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText
-                      className="h-5 w-5"
-                      style={{ color: "#C3BCC2" }}
-                    />
-                    <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
-                      Notes & Description
-                    </h3>
+                  )}{" "}
+                  (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">
+                      Pitching information editing is disabled
+                    </p>
                   </div>
-                  <div>
-                    {isEditing ? (
-                      <div className="space-y-4">
-                        <Label
-                          className="text-sm font-medium"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          Client Notes
-                        </Label>
-                        <textarea
-                          value={editedNotes}
-                          onChange={e => setEditedNotes(e.target.value)}
-                          rows={4}
-                          className="w-full p-3 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-                          style={{
-                            backgroundColor: "#353A3A",
-                            borderColor: "#606364",
-                            color: "#C3BCC2",
-                          }}
-                          placeholder="Add notes about this client..."
-                        />
-                        <div className="flex gap-3">
-                          <button
-                            onClick={handleSaveNotes}
-                            disabled={isUpdating}
-                            className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
-                            style={{
-                              backgroundColor: "#4A5A70",
-                              color: "#FFFFFF",
-                            }}
-                          >
-                            {isUpdating ? "Saving..." : "Save Notes"}
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              color: "#C3BCC2",
-                              borderColor: "#606364",
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        {client?.notes ? (
-                          <p
-                            className="whitespace-pre-wrap"
-                            style={{ color: "#ABA4AA" }}
-                          >
-                            {client.notes}
-                          </p>
-                        ) : (
-                          <p className="italic" style={{ color: "#ABA4AA" }}>
-                            No notes available
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Assigned Programs Section */}
-                <div
-                  className="rounded-2xl shadow-xl border p-6"
-                  style={{
-                    backgroundColor: "#2A2F2F",
-                    borderColor: "#606364",
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-4">
-                    <BookOpen
-                      className="h-5 w-5"
-                      style={{ color: "#C3BCC2" }}
-                    />
-                    <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
-                      Assigned Programs (
-                      {client?.programAssignments?.length || 0})
-                    </h3>
-                  </div>
-                  <div>
-                    {client?.programAssignments &&
-                    client.programAssignments.length > 0 ? (
-                      <div className="space-y-4">
-                        {client.programAssignments.map(assignment => (
-                          <div
-                            key={assignment.id}
-                            className="p-4 rounded-lg borderoadt"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                            }}
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h4
-                                  className="font-medium mb-1"
-                                  style={{ color: "#C3BCC2" }}
-                                >
-                                  {assignment.program.title}
-                                </h4>
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className="px-2 py-1 rounded-full text-xs font-medium"
-                                    style={{
-                                      backgroundColor: "#4A5A70",
-                                      color: "#C3BCC2",
-                                    }}
-                                  >
-                                    {assignment.program.sport || "General"}
-                                  </span>
-                                  <span
-                                    className="px-2 py-1 rounded-full text-xs font-medium"
-                                    style={{
-                                      backgroundColor: "#10B981",
-                                      color: "#FFFFFF",
-                                    }}
-                                  >
-                                    {assignment.program.level}
-                                  </span>
-                                  <span
-                                    className="px-2 py-1 rounded-full text-xs font-medium"
-                                    style={{
-                                      backgroundColor: "#8B5CF6",
-                                      color: "#FFFFFF",
-                                    }}
-                                  >
-                                    {assignment.program.status}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div
-                                  className="text-sm"
-                                  style={{ color: "#ABA4AA" }}
-                                >
-                                  Assigned{" "}
-                                  {format(
-                                    new Date(assignment.assignedAt),
-                                    "MMM dd, yyyy"
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <span
-                                  className="text-sm"
-                                  style={{ color: "#ABA4AA" }}
-                                >
-                                  Progress
-                                </span>
-                                <span
-                                  className="font-medium"
-                                  style={{ color: "#C3BCC2" }}
-                                >
-                                  {assignment.progress}%
-                                </span>
-                              </div>
-                              <div
-                                className="w-full rounded-full h-2"
-                                style={{ backgroundColor: "#2A2F2F" }}
-                              >
-                                <div
-                                  className="h-2 rounded-full transition-all duration-300"
-                                  style={{
-                                    backgroundColor: "#4A5A70",
-                                    width: `${assignment.progress}%`,
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <BookOpen
-                          className="h-12 w-12 mx-auto mb-3"
-                          style={{ color: "#ABA4AA" }}
-                        />
-                        <p style={{ color: "#ABA4AA" }}>
-                          No programs assigned to this client
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Recent Activity Section */}
-                <div
-                  className="rounded-2xl shadow-xl border p-6"
-                  style={{
-                    backgroundColor: "#2A2F2F",
-                    borderColor: "#606364",
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp
-                      className="h-5 w-5"
-                      style={{ color: "#C3BCC2" }}
-                    />
-                    <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
-                      Recent Activity
-                    </h3>
-                  </div>
-                  <div className="space-y-3">
-                    {client?.lastCompletedWorkout ? (
-                      <div
-                        className="flex items-center gap-3 p-3 rounded-lg"
-                        style={{ backgroundColor: "#353A3A" }}
-                      >
-                        <Target
-                          className="h-5 w-5"
-                          style={{ color: "#10B981" }}
-                        />
-                        <div>
-                          <p
-                            className="font-medium"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Last Completed Workout
-                          </p>
-                          <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                            {format(
-                              new Date(client.lastCompletedWorkout),
-                              "MMM dd, yyyy 'at' h:mm a"
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        className="flex items-center gap-3 p-3 rounded-lg"
-                        style={{ backgroundColor: "#353A3A" }}
-                      >
-                        <Clock
-                          className="h-5 w-5"
-                          style={{ color: "#ABA4AA" }}
-                        />
-                        <div>
-                          <p
-                            className="font-medium"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            No Recent Activity
-                          </p>
-                          <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                            This client hasn&apos;t completed any workouts yet
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  )
                 </div>
               </div>
             )}
+
+            {/* Notes Section */}
+            <div
+              className="rounded-2xl shadow-xl border p-6"
+              style={{
+                backgroundColor: "#2A2F2F",
+                borderColor: "#606364",
+              }}
+            >
+              <NotesDisplay
+                clientId={clientId}
+                isClientView={false}
+                showComposer={true}
+              />
+            </div>
+
+            {/* Assigned Programs Section */}
+            <div
+              className="rounded-2xl shadow-xl border p-6"
+              style={{
+                backgroundColor: "#2A2F2F",
+                borderColor: "#606364",
+              }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen className="h-5 w-5" style={{ color: "#C3BCC2" }} />
+                <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
+                  Assigned Programs ({client?.programAssignments?.length || 0})
+                </h3>
+              </div>
+              <div>
+                {client?.programAssignments &&
+                client.programAssignments.length > 0 ? (
+                  <div className="space-y-4">
+                    {client.programAssignments.map(assignment => (
+                      <div
+                        key={assignment.id}
+                        className="p-4 rounded-lg borderoadt"
+                        style={{
+                          backgroundColor: "#353A3A",
+                          borderColor: "#606364",
+                        }}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h4
+                              className="font-medium mb-1"
+                              style={{ color: "#C3BCC2" }}
+                            >
+                              {assignment.program.title}
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="px-2 py-1 rounded-full text-xs font-medium"
+                                style={{
+                                  backgroundColor: "#4A5A70",
+                                  color: "#C3BCC2",
+                                }}
+                              >
+                                {assignment.program.sport || "General"}
+                              </span>
+                              <span
+                                className="px-2 py-1 rounded-full text-xs font-medium"
+                                style={{
+                                  backgroundColor: "#10B981",
+                                  color: "#FFFFFF",
+                                }}
+                              >
+                                {assignment.program.level}
+                              </span>
+                              <span
+                                className="px-2 py-1 rounded-full text-xs font-medium"
+                                style={{
+                                  backgroundColor: "#8B5CF6",
+                                  color: "#FFFFFF",
+                                }}
+                              >
+                                {assignment.program.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div
+                              className="text-sm"
+                              style={{ color: "#ABA4AA" }}
+                            >
+                              Assigned{" "}
+                              {format(
+                                new Date(assignment.assignedAt),
+                                "MMM dd, yyyy"
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span
+                              className="text-sm"
+                              style={{ color: "#ABA4AA" }}
+                            >
+                              Progress
+                            </span>
+                            <span
+                              className="font-medium"
+                              style={{ color: "#C3BCC2" }}
+                            >
+                              {assignment.progress}%
+                            </span>
+                          </div>
+                          <div
+                            className="w-full rounded-full h-2"
+                            style={{ backgroundColor: "#2A2F2F" }}
+                          >
+                            <div
+                              className="h-2 rounded-full transition-all duration-300"
+                              style={{
+                                backgroundColor: "#4A5A70",
+                                width: `${assignment.progress}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <BookOpen
+                      className="h-12 w-12 mx-auto mb-3"
+                      style={{ color: "#ABA4AA" }}
+                    />
+                    <p style={{ color: "#ABA4AA" }}>
+                      No programs assigned to this client
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Recent Activity Section */}
+            <div
+              className="rounded-2xl shadow-xl border p-6"
+              style={{
+                backgroundColor: "#2A2F2F",
+                borderColor: "#606364",
+              }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="h-5 w-5" style={{ color: "#C3BCC2" }} />
+                <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
+                  Recent Activity
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {client?.lastCompletedWorkout ? (
+                  <div
+                    className="flex items-center gap-3 p-3 rounded-lg"
+                    style={{ backgroundColor: "#353A3A" }}
+                  >
+                    <Target className="h-5 w-5" style={{ color: "#10B981" }} />
+                    <div>
+                      <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                        Last Completed Workout
+                      </p>
+                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                        {format(
+                          new Date(client.lastCompletedWorkout),
+                          "MMM dd, yyyy 'at' h:mm a"
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center gap-3 p-3 rounded-lg"
+                    style={{ backgroundColor: "#353A3A" }}
+                  >
+                    <Clock className="h-5 w-5" style={{ color: "#ABA4AA" }} />
+                    <div>
+                      <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                        No Recent Activity
+                      </p>
+                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                        This client hasn&apos;t completed any workouts yet
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </ScrollArea>
       </div>

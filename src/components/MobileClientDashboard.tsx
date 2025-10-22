@@ -3,6 +3,7 @@
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { trpc } from "@/app/_trpc/client";
 import { useState } from "react";
+import { extractNoteContent } from "@/lib/note-utils";
 import {
   PlayCircle,
   CheckCircle2,
@@ -748,8 +749,9 @@ export default function MobileClientDashboard() {
               className="text-sm whitespace-pre-wrap break-words leading-relaxed"
               style={{ color: "#ABA4AA" }}
             >
-              {coachNotes?.notes && coachNotes.notes.trim().length > 0
-                ? coachNotes.notes
+              {coachNotes?.notes &&
+              extractNoteContent(coachNotes.notes).trim().length > 0
+                ? extractNoteContent(coachNotes.notes)
                 : "No feedback yet. Your coach will leave notes for you here."}
             </p>
           </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
+import { extractNoteContent } from "@/lib/note-utils";
 import {
   Plus,
   Calendar,
@@ -46,7 +47,18 @@ interface Client {
   name: string;
   email: string | null;
   phone: string | null;
-  notes: string | null;
+  notes: Array<{
+    id: string;
+    content: string;
+    title: string | null;
+    type: string;
+    priority: string;
+    isPrivate: boolean;
+    createdAt: string;
+    updatedAt: string;
+    coachId: string;
+    clientId: string;
+  }>;
   coachId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -419,7 +431,7 @@ export default function MobileClientsPage() {
 
   const openFeedback = (client: Client) => {
     setFeedbackClient(client);
-    setFeedbackText(client.notes || "");
+    setFeedbackText(extractNoteContent(client.notes));
     setIsFeedbackOpen(true);
   };
 
@@ -563,7 +575,7 @@ export default function MobileClientsPage() {
         ? format(new Date(client.nextLessonDate), "MMM d, yyyy")
         : "No lesson scheduled",
       "Created Date": format(new Date(client.createdAt), "MMM d, yyyy"),
-      Notes: client.notes || "",
+      Notes: extractNoteContent(client.notes),
     }));
 
     // Create CSV with proper escaping
@@ -1243,7 +1255,7 @@ export default function MobileClientsPage() {
           clientName={selectedClientForProfile.name}
           clientEmail={selectedClientForProfile.email}
           clientPhone={selectedClientForProfile.phone}
-          clientNotes={selectedClientForProfile.notes}
+          clientNotes={extractNoteContent(selectedClientForProfile.notes)}
           clientAvatar={selectedClientForProfile.avatar}
         />
       )}

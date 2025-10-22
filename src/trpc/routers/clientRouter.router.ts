@@ -360,7 +360,23 @@ export const clientRouterRouter = router({
 
     const client = await db.client.findFirst({
       where: { userId: user.id },
-      select: { notes: true, updatedAt: true },
+      select: {
+        notes: {
+          select: {
+            id: true,
+            content: true,
+            title: true,
+            type: true,
+            priority: true,
+            isPrivate: true,
+            createdAt: true,
+            updatedAt: true,
+            coachId: true,
+            clientId: true,
+          },
+        },
+        updatedAt: true,
+      },
     });
     if (!client) {
       throw new TRPCError({
@@ -369,7 +385,51 @@ export const clientRouterRouter = router({
       });
     }
 
-    return { notes: client.notes || "", updatedAt: client.updatedAt };
+    return { notes: client.notes, updatedAt: client.updatedAt };
+  }),
+
+  getNoteHistory: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    const dbUser = await db.user.findFirst({
+      where: { id: user.id, role: "CLIENT" },
+    });
+    if (!dbUser) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only clients can access this endpoint",
+      });
+    }
+
+    // Get the client record
+    const client = await db.client.findFirst({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!client) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Client profile not found",
+      });
+    }
+
+    // Get note history for this client
+    const noteHistory = await db.clientNoteHistory.findMany({
+      where: { clientId: client.id },
+      include: {
+        coach: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return noteHistory;
   }),
 
   getRoutineAssignments: publicProcedure.query(async () => {
