@@ -342,15 +342,19 @@ export default function StreamlinedScheduleLessonModal({
       hour = 0;
     }
 
-    const lessonDate = new Date(selectedDate);
-    lessonDate.setHours(hour, minute, 0, 0);
+    // Format the date string like the schedule page does
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const timeStr = `${hour.toString().padStart(2, "0")}:${minute
+      .toString()
+      .padStart(2, "0")}:00`;
+    const fullDateStr = `${dateStr}T${timeStr}`;
 
     if (isRecurring && endDate) {
       // Schedule recurring lessons
       scheduleRecurringLessonsMutation.mutate({
         clientId,
-        startDate: lessonDate.toISOString(),
-        endDate: new Date(endDate).toISOString(),
+        startDate: fullDateStr,
+        endDate: format(new Date(endDate), "yyyy-MM-dd"),
         recurrencePattern,
         recurrenceInterval,
         sendEmail: true,
@@ -361,7 +365,7 @@ export default function StreamlinedScheduleLessonModal({
       // Schedule single lesson
       scheduleLessonMutation.mutate({
         clientId,
-        lessonDate: lessonDate.toISOString(),
+        lessonDate: fullDateStr,
         sendEmail: true,
         overrideWorkingDays,
         timeZone: getUserTimezone(),
