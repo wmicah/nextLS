@@ -27,6 +27,7 @@ import {
   addWeeks,
   isPast,
 } from "date-fns";
+import { getUserTimezone } from "@/lib/timezone-utils";
 
 interface StreamlinedScheduleLessonModalProps {
   isOpen: boolean;
@@ -59,7 +60,13 @@ export default function StreamlinedScheduleLessonModal({
   // Recurring lesson states
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrencePattern, setRecurrencePattern] = useState<
-    "weekly" | "biweekly" | "triweekly" | "monthly"
+    | "weekly"
+    | "biweekly"
+    | "triweekly"
+    | "quadweekly"
+    | "pentweekly"
+    | "hexweekly"
+    | "monthly"
   >("weekly");
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [endDate, setEndDate] = useState<string>("");
@@ -105,6 +112,15 @@ export default function StreamlinedScheduleLessonModal({
             break;
           case "triweekly":
             currentDate = addWeeks(currentDate, 3 * recurrenceInterval);
+            break;
+          case "quadweekly":
+            currentDate = addWeeks(currentDate, 4 * recurrenceInterval);
+            break;
+          case "pentweekly":
+            currentDate = addWeeks(currentDate, 5 * recurrenceInterval);
+            break;
+          case "hexweekly":
+            currentDate = addWeeks(currentDate, 6 * recurrenceInterval);
             break;
           case "monthly":
             currentDate = addMonths(currentDate, recurrenceInterval);
@@ -339,6 +355,7 @@ export default function StreamlinedScheduleLessonModal({
         recurrenceInterval,
         sendEmail: true,
         overrideWorkingDays,
+        timeZone: getUserTimezone(),
       });
     } else {
       // Schedule single lesson
@@ -347,6 +364,7 @@ export default function StreamlinedScheduleLessonModal({
         lessonDate: lessonDate.toISOString(),
         sendEmail: true,
         overrideWorkingDays,
+        timeZone: getUserTimezone(),
       });
     }
   };
@@ -571,6 +589,9 @@ export default function StreamlinedScheduleLessonModal({
                   <option value="weekly">Weekly</option>
                   <option value="biweekly">Every 2 Weeks</option>
                   <option value="triweekly">Every 3 Weeks</option>
+                  <option value="quadweekly">Every 4 Weeks</option>
+                  <option value="pentweekly">Every 5 Weeks</option>
+                  <option value="hexweekly">Every 6 Weeks</option>
                   <option value="monthly">Monthly</option>
                 </select>
               </div>

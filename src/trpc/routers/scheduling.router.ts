@@ -364,6 +364,9 @@ export const schedulingRouter = router({
           "weekly",
           "biweekly",
           "triweekly",
+          "quadweekly",
+          "pentweekly",
+          "hexweekly",
           "monthly",
         ]),
         recurrenceInterval: z.number().min(1).max(6), // 1-6 weeks
@@ -520,6 +523,15 @@ export const schedulingRouter = router({
             break;
           case "triweekly":
             currentDate = addDays(currentDate, 21 * input.recurrenceInterval);
+            break;
+          case "quadweekly":
+            currentDate = addDays(currentDate, 28 * input.recurrenceInterval);
+            break;
+          case "pentweekly":
+            currentDate = addDays(currentDate, 35 * input.recurrenceInterval);
+            break;
+          case "hexweekly":
+            currentDate = addDays(currentDate, 42 * input.recurrenceInterval);
             break;
           case "monthly":
             currentDate = addMonths(currentDate, input.recurrenceInterval);
