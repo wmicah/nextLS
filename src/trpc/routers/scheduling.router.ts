@@ -182,7 +182,9 @@ export const schedulingRouter = router({
         }
       }
 
-      // Check for conflicts with blocked times
+      // Check for conflicts with blocked times - DISABLED FOR COACHES
+      // Coaches can now book lessons even during blocked times if needed
+      /*
       const conflictingBlockedTime = await db.blockedTime.findFirst({
         where: {
           coachId: ensureUserId(user.id),
@@ -224,11 +226,14 @@ export const schedulingRouter = router({
           message: `Cannot schedule lesson during blocked time: ${conflictingBlockedTime.title}`,
         });
       }
+      */
 
       // Get coach's lesson duration
       const lessonDuration = coach.timeSlotInterval || 60; // Use coach's lesson duration or default to 60 minutes
 
-      // Check for conflicts with existing lessons
+      // Check for conflicts with existing lessons - DISABLED FOR COACHES
+      // Coaches can now book overlapping lessons if needed
+      /*
       const conflictLessonEndTime = new Date(
         utcLessonDate.getTime() + lessonDuration * 60000
       );
@@ -274,6 +279,7 @@ export const schedulingRouter = router({
           message: "Time slot is already booked by another client",
         });
       }
+      */
 
       // Determine lesson title based on context
       // If scheduling for a different coach's client (organization context), show coach name
