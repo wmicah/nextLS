@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
@@ -404,29 +405,12 @@ function ClientDetailPage({
           );
 
           if (programDay) {
-            // Check if it's a rest day
-            if (programDay.isRestDay || programDay.drills?.length === 0) {
-              // Show rest day indicator
-              programsForDate.push({
-                id: `${assignment.id}-${weekNumber}-${dayNumber}-rest`,
-                title: `${program.title} - Rest Day`,
-                description: "Recovery day",
-                type: "rest",
-                assignment,
-                program,
-                weekNumber,
-                dayNumber,
-                isRestDay: true,
-              });
-            } else {
-              // Show workout day with program title and day info
+            // Only show workout days, skip rest days
+            if (!programDay.isRestDay && programDay.drills?.length > 0) {
+              // Show workout day with just program title
               programsForDate.push({
                 id: `${assignment.id}-${weekNumber}-${dayNumber}`,
-                title: `${program.title} - ${
-                  programDay.title
-                    ? programDay.title.substring(0, 8)
-                    : "Workout"
-                }`,
+                title: program.title,
                 description: `${programDay.drills.length} drills`,
                 type: "program",
                 assignment,
@@ -957,9 +941,7 @@ function ClientDetailPage({
             <div className="flex items-center gap-6 mb-6 text-sm flex-wrap">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-green-500 border-2 border-green-400" />
-                <span className="text-white font-medium">
-                  Confirmed Lessons
-                </span>
+                <span className="text-white font-medium">Lessons</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-yellow-500 border-2 border-yellow-400" />
@@ -968,10 +950,6 @@ function ClientDetailPage({
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
                 <span className="text-white font-medium">Program Days</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-orange-500 border-2 border-orange-400" />
-                <span className="text-white font-medium">Rest Days</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-green-500/20 border-2 border-green-500/40" />
@@ -1046,18 +1024,10 @@ function ClientDetailPage({
                     {programsForDay.map((program: any, index: number) => (
                       <div
                         key={`program-${index}`}
-                        className={`text-xs p-1 rounded border mb-1 ${
-                          program.type === "rest"
-                            ? "bg-orange-500/20 text-orange-100 border-orange-400"
-                            : "bg-blue-500/20 text-blue-100 border-blue-400"
-                        }`}
+                        className="text-xs p-1 rounded border mb-1 bg-blue-500/20 text-blue-100 border-blue-400"
                       >
                         <div className="flex items-center gap-1">
-                          {program.type === "rest" ? (
-                            <Zap className="h-3 w-3" />
-                          ) : (
-                            <BookOpen className="h-3 w-3" />
-                          )}
+                          <BookOpen className="h-3 w-3" />
                           <span className="truncate">{program.title}</span>
                         </div>
                       </div>

@@ -275,15 +275,6 @@ export default function SeamlessProgramModal({
         days: [
           {
             dayNumber: 1,
-            title: "Sunday",
-            description: "",
-            drills: week.days.sun.map((item, index) => ({
-              ...item,
-              order: index + 1,
-            })),
-          },
-          {
-            dayNumber: 2,
             title: "Monday",
             description: "",
             drills: week.days.mon.map((item, index) => ({
@@ -292,7 +283,7 @@ export default function SeamlessProgramModal({
             })),
           },
           {
-            dayNumber: 3,
+            dayNumber: 2,
             title: "Tuesday",
             description: "",
             drills: week.days.tue.map((item, index) => ({
@@ -301,7 +292,7 @@ export default function SeamlessProgramModal({
             })),
           },
           {
-            dayNumber: 4,
+            dayNumber: 3,
             title: "Wednesday",
             description: "",
             drills: week.days.wed.map((item, index) => ({
@@ -310,7 +301,7 @@ export default function SeamlessProgramModal({
             })),
           },
           {
-            dayNumber: 5,
+            dayNumber: 4,
             title: "Thursday",
             description: "",
             drills: week.days.thu.map((item, index) => ({
@@ -319,7 +310,7 @@ export default function SeamlessProgramModal({
             })),
           },
           {
-            dayNumber: 6,
+            dayNumber: 5,
             title: "Friday",
             description: "",
             drills: week.days.fri.map((item, index) => ({
@@ -328,10 +319,19 @@ export default function SeamlessProgramModal({
             })),
           },
           {
-            dayNumber: 7,
+            dayNumber: 6,
             title: "Saturday",
             description: "",
             drills: week.days.sat.map((item, index) => ({
+              ...item,
+              order: index + 1,
+            })),
+          },
+          {
+            dayNumber: 7,
+            title: "Sunday",
+            description: "",
+            drills: week.days.sun.map((item, index) => ({
               ...item,
               order: index + 1,
             })),

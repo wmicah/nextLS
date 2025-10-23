@@ -827,10 +827,11 @@ export const analyticsRouter = router({
             week.days.forEach((day: any) => {
               // Only count drills that fall within the date range
               const dayDate = new Date(programStartDate);
+              // Calculate the day offset properly for Monday-first week structure
+              // dayNumber 1 = Monday (offset 0), dayNumber 7 = Sunday (offset 6)
+              const dayOffset = day.dayNumber - 1;
               dayDate.setDate(
-                dayDate.getDate() +
-                  (week.weekNumber - 1) * 7 +
-                  (day.dayNumber - 1)
+                dayDate.getDate() + (week.weekNumber - 1) * 7 + dayOffset
               );
 
               // Check if this day has been replaced with a lesson
@@ -879,10 +880,11 @@ export const analyticsRouter = router({
           program.weeks.forEach((week: any) => {
             week.days.forEach((day: any) => {
               const dayDate = new Date(programStartDate);
+              // Calculate the day offset properly for Monday-first week structure
+              // dayNumber 1 = Monday (offset 0), dayNumber 7 = Sunday (offset 6)
+              const dayOffset = day.dayNumber - 1;
               dayDate.setDate(
-                dayDate.getDate() +
-                  (week.weekNumber - 1) * 7 +
-                  (day.dayNumber - 1)
+                dayDate.getDate() + (week.weekNumber - 1) * 7 + dayOffset
               );
 
               const hasReplacement = assignment.replacements?.some(

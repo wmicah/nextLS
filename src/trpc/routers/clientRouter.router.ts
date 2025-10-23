@@ -651,7 +651,11 @@ export const clientRouterRouter = router({
 
           // Get all days in the program
           for (const week of program.weeks) {
-            for (const day of week.days) {
+            // Sort days by dayNumber to ensure correct order
+            const sortedDays = week.days.sort(
+              (a, b) => a.dayNumber - b.dayNumber
+            );
+            for (const day of sortedDays) {
               // Calculate the day date by adding the appropriate number of days
               // Ensure we work with local dates to avoid timezone issues
               const startDateLocal = new Date(
@@ -1117,10 +1121,13 @@ export const clientRouterRouter = router({
               programStartDate.getDate()
             );
             const dayDate = new Date(programStartDateLocal);
+            // Calculate the day offset properly for Monday-first week structure
+            // dayNumber 1 = Monday (offset 0), dayNumber 7 = Sunday (offset 6)
+            const dayOffset = day.dayNumber - 1;
             dayDate.setDate(
               programStartDateLocal.getDate() +
                 (week.weekNumber - 1) * 7 +
-                (day.dayNumber - 1)
+                dayOffset
             );
 
             // Check if this day falls within our requested date range
