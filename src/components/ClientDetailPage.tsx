@@ -114,6 +114,12 @@ function ClientDetailPage({
     programTitle: string;
     dayDate: string;
   } | null>(null);
+  const [showProgramDeleteChoice, setShowProgramDeleteChoice] = useState(false);
+  const [selectedProgramForDeletion, setSelectedProgramForDeletion] = useState<{
+    assignmentId: string;
+    programTitle: string;
+    dayDate?: string;
+  } | null>(null);
 
   // Fetch client data
   const {
@@ -233,6 +239,30 @@ function ClientDetailPage({
       },
     });
 
+  // Delete program day mutation
+  const deleteProgramDayMutation = trpc.programs.deleteProgramDay.useMutation({
+    onSuccess: data => {
+      addToast({
+        type: "success",
+        title: "Program Day Deleted!",
+        message: data.message,
+      });
+      // Force aggressive data refresh
+      refreshAllData();
+      // Also invalidate all queries to force fresh data
+      utils.invalidate();
+      // Close the day details modal to force a refresh
+      setShowDayDetailsModal(false);
+    },
+    onError: error => {
+      addToast({
+        type: "error",
+        title: "Error",
+        message: error.message || "Failed to delete program day.",
+      });
+    },
+  });
+
   // Remove routine mutation - using specific assignment ID
   const unassignRoutineMutation =
     trpc.routines.unassignSpecificRoutine.useMutation({
@@ -310,6 +340,8 @@ function ClientDetailPage({
       clientId,
       period: compliancePeriod,
     });
+    // Force refresh of all program-related queries
+    utils.programs.getProgramAssignments.invalidate();
   };
 
   // Generate calendar days based on view mode
@@ -370,15 +402,24 @@ function ClientDetailPage({
     const programsForDate: any[] = [];
 
     assignedPrograms.forEach((assignment: any) => {
-      // Check if this specific date has been replaced with a lesson
+      // Check if this specific date has been replaced with a lesson or deleted
       const hasReplacement = assignment.replacements?.some(
         (replacement: any) => {
           const replacementDate = new Date(replacement.replacedDate);
-          return isSameDay(replacementDate, date);
+
+          // Normalize both dates to the same timezone for comparison
+          // Convert both to date strings (YYYY-MM-DD) to avoid timezone issues
+          const replacementDateStr = replacementDate
+            .toISOString()
+            .split("T")[0];
+          const targetDateStr = date.toISOString().split("T")[0];
+          const isSame = replacementDateStr === targetDateStr;
+
+          return isSame;
         }
       );
 
-      // Skip this assignment if the date has been replaced
+      // Skip this assignment if the date has been replaced or deleted
       if (hasReplacement) {
         return;
       }
@@ -502,14 +543,33 @@ function ClientDetailPage({
   };
 
   const handleRemoveProgram = (programData: any) => {
-    if (
-      confirm(
-        `Are you sure you want to remove "${programData.programTitle}" from this client?`
-      )
-    ) {
+    setSelectedProgramForDeletion({
+      assignmentId: programData.assignmentId,
+      programTitle: programData.programTitle,
+      dayDate: programData.dayDate,
+    });
+    setShowProgramDeleteChoice(true);
+  };
+
+  const handleDeleteEntireProgram = () => {
+    if (selectedProgramForDeletion) {
       removeProgramMutation.mutate({
-        assignmentId: programData.assignmentId,
+        assignmentId: selectedProgramForDeletion.assignmentId,
       });
+      setShowProgramDeleteChoice(false);
+      setSelectedProgramForDeletion(null);
+    }
+  };
+
+  const handleDeleteProgramDay = () => {
+    if (selectedProgramForDeletion && selectedProgramForDeletion.dayDate) {
+      deleteProgramDayMutation.mutate({
+        assignmentId: selectedProgramForDeletion.assignmentId,
+        dayDate: selectedProgramForDeletion.dayDate,
+        reason: "Program day deleted by coach",
+      });
+      setShowProgramDeleteChoice(false);
+      setSelectedProgramForDeletion(null);
     }
   };
 
@@ -1226,6 +1286,44 @@ function ClientDetailPage({
             getStatusIcon={getStatusIcon}
             getStatusColor={getStatusColor}
           />
+
+          {/* Program Delete Choice Modal */}
+          {showProgramDeleteChoice && selectedProgramForDeletion && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                <h3 className="text-xl font-bold text-white mb-4">
+                  Delete Program
+                </h3>
+                <p className="text-gray-300 mb-6">
+                  What would you like to do with "
+                  {selectedProgramForDeletion.programTitle}"?
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleDeleteEntireProgram}
+                    className="w-full px-4 py-2 bg-red-600/80 hover:bg-red-700/80 text-white rounded-lg transition-colors"
+                  >
+                    Delete Entire Program
+                  </button>
+                  <button
+                    onClick={handleDeleteProgramDay}
+                    className="w-full px-4 py-2 bg-amber-600/80 hover:bg-amber-700/80 text-white rounded-lg transition-colors"
+                  >
+                    Delete Just This Day
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowProgramDeleteChoice(false);
+                      setSelectedProgramForDeletion(null);
+                    }}
+                    className="w-full px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </SidebarWrapper>
