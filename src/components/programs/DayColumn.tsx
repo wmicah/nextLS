@@ -325,6 +325,7 @@ export default function DayColumn({
       sets: exercise.sets || 0,
       reps: exercise.reps || 0,
       tempo: exercise.tempo || "",
+      routineId: exercise.routineId,
       // Coach Instructions
       coachInstructions: exercise.coachInstructions
         ? {

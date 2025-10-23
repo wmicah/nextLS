@@ -87,6 +87,11 @@ export const enhancedProgramSchema = z.object({
                       .min(0, "Superset order must be non-negative")
                       .max(100, "Superset order too high")
                       .optional(),
+                    routineId: z
+                      .string()
+                      .max(100, "Routine ID too long")
+                      .optional(),
+                    type: z.string().max(50, "Type too long").optional(),
                   })
                 )
                 .max(50, "Too many drills per day"), // Limit drills per day
@@ -118,6 +123,8 @@ export function validateAndCleanProgramData(data: any) {
             sets: drill.sets || undefined, // Clean undefined numbers
             reps: drill.reps || undefined,
             supersetOrder: drill.supersetOrder || undefined,
+            routineId: drill.routineId || undefined, // Preserve routineId
+            type: drill.type || undefined, // Preserve type
           })),
         })),
       })),
