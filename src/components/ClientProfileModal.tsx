@@ -28,6 +28,7 @@ import {
   BookOpen,
   BarChart3,
   History,
+  Save,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -120,8 +121,35 @@ ClientProfileModalProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview">("overview");
 
+  // Inline editing state for client name
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
+
   const { addToast } = useUIStore();
   const utils = trpc.useUtils();
+
+  // Handle name editing
+  const handleEditName = () => {
+    setEditedName(clientName);
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = () => {
+    if (editedName.trim() && editedName !== clientName) {
+      setIsUpdating(true);
+      updateClientMutation.mutate({
+        id: clientId,
+        name: editedName.trim(),
+      });
+    } else {
+      setIsEditingName(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+    setEditedName("");
+  };
 
   // Get detailed client data
   const { data: client, isLoading } = trpc.clients.getById.useQuery(
@@ -148,10 +176,12 @@ ClientProfileModalProps) {
     }
   }, [client]);
 
-  // Update client notes mutation
+  // Update client mutation
   const updateClientMutation = trpc.clients.update.useMutation({
     onSuccess: () => {
       setIsUpdating(false);
+      setIsEditingName(false);
+      setEditedName("");
       addToast({
         type: "success",
         title: "Profile updated",
@@ -162,6 +192,8 @@ ClientProfileModalProps) {
     },
     onError: error => {
       setIsUpdating(false);
+      setIsEditingName(false);
+      setEditedName(clientName);
       addToast({
         type: "error",
         title: "Update failed",
@@ -205,24 +237,6 @@ ClientProfileModalProps) {
         ? parseInt(editedPitchingData.curveSpinRate)
         : undefined,
     });
-  };
-
-  const handleCancelEdit = () => {
-    if (client) {
-      setEditedPitchingData({
-        age: client.age?.toString() || "",
-        height: client.height || "",
-        dominantHand: client.dominantHand || "",
-        movementStyle: client.movementStyle || "",
-        reachingAbility: client.reachingAbility || "",
-        averageSpeed: client.averageSpeed?.toString() || "",
-        topSpeed: client.topSpeed?.toString() || "",
-        dropSpinRate: client.dropSpinRate?.toString() || "",
-        changeupSpinRate: client.changeupSpinRate?.toString() || "",
-        riseSpinRate: client.riseSpinRate?.toString() || "",
-        curveSpinRate: client.curveSpinRate?.toString() || "",
-      });
-    }
   };
 
   const handlePitchingInputChange = (
@@ -311,12 +325,57 @@ ClientProfileModalProps) {
                       className="flex-shrink-0"
                     />
                     <div>
-                      <h2
-                        className="text-2xl font-bold"
-                        style={{ color: "#C3BCC2" }}
-                      >
-                        {clientName}
-                      </h2>
+                      {isEditingName ? (
+                        <div className="flex items-center gap-2 mb-1">
+                          <input
+                            type="text"
+                            value={editedName}
+                            onChange={e => setEditedName(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === "Enter") handleSaveName();
+                              if (e.key === "Escape") handleCancelEdit();
+                            }}
+                            className="text-2xl font-bold bg-gray-700 border-2 border-blue-400 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                            style={{
+                              color: "#C3BCC2",
+                              backgroundColor: "#2A2F2F",
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={handleSaveName}
+                            disabled={updateClientMutation.isPending}
+                            className="p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50"
+                            title="Save"
+                          >
+                            <Save className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            disabled={updateClientMutation.isPending}
+                            className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
+                            title="Cancel"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mb-1">
+                          <h2
+                            className="text-2xl font-bold"
+                            style={{ color: "#C3BCC2" }}
+                          >
+                            {clientName}
+                          </h2>
+                          <button
+                            onClick={handleEditName}
+                            className="p-1 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                            title="Edit name"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
                       <div className="flex items-center gap-4 text-sm mt-1">
                         {clientEmail && (
                           <div
