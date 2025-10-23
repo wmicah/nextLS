@@ -1040,9 +1040,23 @@ function ProgramBuilder({
         const routineItem: ProgramItem = {
           id: `routine-item-${Date.now()}`,
           title: routine.name,
-          type: "routine",
+          type: "routine" as const,
           notes: routine.description,
           routineId: routine.id,
+          description: routine.description,
+          duration: "",
+          videoUrl: "",
+          videoId: "",
+          videoTitle: "",
+          videoThumbnail: "",
+          sets: undefined,
+          reps: undefined,
+          tempo: "",
+          supersetId: undefined,
+          supersetOrder: undefined,
+          supersetDescription: undefined,
+          supersetInstructions: undefined,
+          supersetNotes: undefined,
         };
         updatedDays[dayKey] = [...updatedDays[dayKey], routineItem];
         return { ...week, days: updatedDays };
@@ -1050,7 +1064,7 @@ function ProgramBuilder({
       return week;
     });
     setWeeks(updatedWeeks);
-    onSave?.(updatedWeeks);
+    // onSave will be called by useEffect when weeks state updates
   };
 
   // Superset management

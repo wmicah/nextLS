@@ -70,6 +70,24 @@ const programSchema = z.object({
               sets: z.number().optional(),
               reps: z.number().optional(),
               tempo: z.string().optional(),
+              routineId: z.string().optional(),
+              supersetId: z.string().optional(),
+              supersetOrder: z.number().optional(),
+              videoId: z.string().optional(),
+              videoTitle: z.string().optional(),
+              videoThumbnail: z.string().optional(),
+              supersetDescription: z.string().optional(),
+              supersetInstructions: z.string().optional(),
+              supersetNotes: z.string().optional(),
+              // Coach Instructions
+              coachInstructionsWhatToDo: z.string().optional(),
+              coachInstructionsHowToDoIt: z.string().optional(),
+              coachInstructionsKeyPoints: z.array(z.string()).optional(),
+              coachInstructionsCommonMistakes: z.array(z.string()).optional(),
+              coachInstructionsEasier: z.string().optional(),
+              coachInstructionsHarder: z.string().optional(),
+              coachInstructionsEquipment: z.string().optional(),
+              coachInstructionsSetup: z.string().optional(),
             })
           ),
         })
@@ -250,6 +268,14 @@ export default function SeamlessProgramModal({
 
   const handleProgramBuilderSave = useCallback(
     (weeks: ProgramBuilderWeek[]) => {
+      console.log("=== PROGRAM BUILDER SAVE CALLED ===");
+      console.log("Weeks received:", weeks);
+      console.log("First week Thursday items:", weeks[0]?.days?.thu);
+      console.log(
+        "Thursday item routineId:",
+        weeks[0]?.days?.thu?.[0]?.routineId
+      );
+      console.log("Thursday item type:", weeks[0]?.days?.thu?.[0]?.type);
       setProgramBuilderWeeks(weeks);
       // Auto-update duration based on number of weeks
       setValue("duration", weeks.length);
@@ -264,6 +290,9 @@ export default function SeamlessProgramModal({
   const canProceedToReview = programBuilderWeeks.length > 0;
 
   const handleSubmitForm = async (data: ProgramFormData) => {
+    console.log("=== FORM SUBMISSION STARTED ===");
+    console.log("Form data:", data);
+    console.log("ProgramBuilder weeks:", programBuilderWeeks);
     setIsSubmitting(true);
 
     try {
@@ -280,6 +309,8 @@ export default function SeamlessProgramModal({
             drills: week.days.mon.map((item, index) => ({
               ...item,
               order: index + 1,
+              routineId: item.routineId,
+              type: item.type,
             })),
           },
           {
@@ -289,6 +320,8 @@ export default function SeamlessProgramModal({
             drills: week.days.tue.map((item, index) => ({
               ...item,
               order: index + 1,
+              routineId: item.routineId,
+              type: item.type,
             })),
           },
           {
@@ -298,16 +331,28 @@ export default function SeamlessProgramModal({
             drills: week.days.wed.map((item, index) => ({
               ...item,
               order: index + 1,
+              routineId: item.routineId,
+              type: item.type,
             })),
           },
           {
             dayNumber: 4,
             title: "Thursday",
             description: "",
-            drills: week.days.thu.map((item, index) => ({
-              ...item,
-              order: index + 1,
-            })),
+            drills: week.days.thu.map((item, index) => {
+              console.log("Converting Thursday item:", item);
+              console.log("Thursday item routineId:", item.routineId);
+              console.log("Thursday item type:", item.type);
+              const converted = {
+                ...item,
+                order: index + 1,
+                // Explicitly preserve routineId and type fields
+                routineId: item.routineId,
+                type: item.type,
+              };
+              console.log("Converted Thursday item:", converted);
+              return converted;
+            }),
           },
           {
             dayNumber: 5,
@@ -316,6 +361,8 @@ export default function SeamlessProgramModal({
             drills: week.days.fri.map((item, index) => ({
               ...item,
               order: index + 1,
+              routineId: item.routineId,
+              type: item.type,
             })),
           },
           {
@@ -325,6 +372,8 @@ export default function SeamlessProgramModal({
             drills: week.days.sat.map((item, index) => ({
               ...item,
               order: index + 1,
+              routineId: item.routineId,
+              type: item.type,
             })),
           },
           {
@@ -334,6 +383,8 @@ export default function SeamlessProgramModal({
             drills: week.days.sun.map((item, index) => ({
               ...item,
               order: index + 1,
+              routineId: item.routineId,
+              type: item.type,
             })),
           },
         ],
@@ -344,7 +395,28 @@ export default function SeamlessProgramModal({
         weeks: convertedWeeks,
       };
 
+      console.log("=== FINAL PROGRAM DATA ===");
+      console.log("Program data being submitted:", programData);
+      console.log(
+        "First week first day drills:",
+        programData.weeks?.[0]?.days?.[0]?.drills
+      );
+      console.log(
+        "First week Thursday drills:",
+        programData.weeks?.[0]?.days?.[3]?.drills
+      );
+      console.log(
+        "Thursday drill routineId:",
+        programData.weeks?.[0]?.days?.[3]?.drills?.[0]?.routineId
+      );
+      console.log(
+        "Thursday drill type:",
+        programData.weeks?.[0]?.days?.[3]?.drills?.[0]?.type
+      );
+
+      console.log("=== CALLING ONSUBMIT ===");
       await onSubmit(programData);
+      console.log("=== ONSUBMIT COMPLETED ===");
       toast({
         title: "Program created! 🎉",
         description: "Your new program has been saved successfully.",

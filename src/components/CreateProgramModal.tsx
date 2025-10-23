@@ -68,6 +68,24 @@ const programSchema = z.object({
               sets: z.number().optional(),
               reps: z.number().optional(),
               tempo: z.string().optional(),
+              routineId: z.string().optional(),
+              supersetId: z.string().optional(),
+              supersetOrder: z.number().optional(),
+              videoId: z.string().optional(),
+              videoTitle: z.string().optional(),
+              videoThumbnail: z.string().optional(),
+              supersetDescription: z.string().optional(),
+              supersetInstructions: z.string().optional(),
+              supersetNotes: z.string().optional(),
+              // Coach Instructions
+              coachInstructionsWhatToDo: z.string().optional(),
+              coachInstructionsHowToDoIt: z.string().optional(),
+              coachInstructionsKeyPoints: z.array(z.string()).optional(),
+              coachInstructionsCommonMistakes: z.array(z.string()).optional(),
+              coachInstructionsEasier: z.string().optional(),
+              coachInstructionsHarder: z.string().optional(),
+              coachInstructionsEquipment: z.string().optional(),
+              coachInstructionsSetup: z.string().optional(),
             })
           ),
         })
@@ -443,13 +461,83 @@ function CreateProgramModalContent({
       name: week.title || `Week ${weekIndex + 1}`,
       collapsed: false,
       days: {
-        mon: week.days?.find((d: any) => d.dayNumber === 1)?.drills || [],
-        tue: week.days?.find((d: any) => d.dayNumber === 2)?.drills || [],
-        wed: week.days?.find((d: any) => d.dayNumber === 3)?.drills || [],
-        thu: week.days?.find((d: any) => d.dayNumber === 4)?.drills || [],
-        fri: week.days?.find((d: any) => d.dayNumber === 5)?.drills || [],
-        sat: week.days?.find((d: any) => d.dayNumber === 6)?.drills || [],
-        sun: week.days?.find((d: any) => d.dayNumber === 7)?.drills || [],
+        mon:
+          week.days
+            ?.find((d: any) => d.dayNumber === 1)
+            ?.drills?.map((drill: any) => ({
+              ...drill,
+              type: drill.routineId
+                ? "routine"
+                : drill.supersetId
+                ? "superset"
+                : drill.type || "exercise",
+            })) || [],
+        tue:
+          week.days
+            ?.find((d: any) => d.dayNumber === 2)
+            ?.drills?.map((drill: any) => ({
+              ...drill,
+              type: drill.routineId
+                ? "routine"
+                : drill.supersetId
+                ? "superset"
+                : drill.type || "exercise",
+            })) || [],
+        wed:
+          week.days
+            ?.find((d: any) => d.dayNumber === 3)
+            ?.drills?.map((drill: any) => ({
+              ...drill,
+              type: drill.routineId
+                ? "routine"
+                : drill.supersetId
+                ? "superset"
+                : drill.type || "exercise",
+            })) || [],
+        thu:
+          week.days
+            ?.find((d: any) => d.dayNumber === 4)
+            ?.drills?.map((drill: any) => ({
+              ...drill,
+              type: drill.routineId
+                ? "routine"
+                : drill.supersetId
+                ? "superset"
+                : drill.type || "exercise",
+            })) || [],
+        fri:
+          week.days
+            ?.find((d: any) => d.dayNumber === 5)
+            ?.drills?.map((drill: any) => ({
+              ...drill,
+              type: drill.routineId
+                ? "routine"
+                : drill.supersetId
+                ? "superset"
+                : drill.type || "exercise",
+            })) || [],
+        sat:
+          week.days
+            ?.find((d: any) => d.dayNumber === 6)
+            ?.drills?.map((drill: any) => ({
+              ...drill,
+              type: drill.routineId
+                ? "routine"
+                : drill.supersetId
+                ? "superset"
+                : drill.type || "exercise",
+            })) || [],
+        sun:
+          week.days
+            ?.find((d: any) => d.dayNumber === 7)
+            ?.drills?.map((drill: any) => ({
+              ...drill,
+              type: drill.routineId
+                ? "routine"
+                : drill.supersetId
+                ? "superset"
+                : drill.type || "exercise",
+            })) || [],
       },
     }));
   };
@@ -469,9 +557,14 @@ function CreateProgramModalContent({
   };
 
   const handleFormSubmit = (data: ProgramFormData) => {
+    console.log("=== FORM SUBMISSION DEBUG ===");
     console.log(
       "Form submitted with programBuilderWeeks:",
       programBuilderWeeks
+    );
+    console.log(
+      "First week first day items:",
+      programBuilderWeeks[0]?.days?.mon
     );
     // Convert ProgramBuilder weeks to the old format for backward compatibility
     const convertedWeeks = programBuilderWeeks.map(
@@ -523,6 +616,14 @@ function CreateProgramModalContent({
     );
 
     console.log("Converted weeks:", convertedWeeks);
+    console.log(
+      "First week first day drills:",
+      convertedWeeks[0]?.days?.[0]?.drills
+    );
+    console.log(
+      "First drill details:",
+      convertedWeeks[0]?.days?.[0]?.drills?.[0]
+    );
 
     // Ensure weeks are properly initialized and fill empty days with rest days
     const validWeeks = convertedWeeks.map((week, weekIndex) => ({

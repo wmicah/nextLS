@@ -38,7 +38,7 @@
 
 - [ ] **Name YouTube videos when uploading** - Add title/name field for uploaded YouTube videos
 - [ ] **Fix OnForm video imports** - Resolve OnForm video import issues
-- [ ] **Fix /videos route** - Resolve video page routing issues
+- [ ] **Fix /videos route** - Resolve video page routing issuesw D
 
 ## 👥 Client Management & Privacy
 

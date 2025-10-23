@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 import { useState, useCallback } from "react";
 import { trpc } from "@/app/_trpc/client";
@@ -88,8 +89,25 @@ interface ProgramDrill {
   tempo?: string | null;
   duration?: string | null;
   videoUrl?: string | null;
+  videoId?: string | null;
+  videoTitle?: string | null;
+  videoThumbnail?: string | null;
+  routineId?: string | null;
   supersetId?: string | null;
   supersetOrder?: number | null;
+  supersetDescription?: string | null;
+  supersetInstructions?: string | null;
+  supersetNotes?: string | null;
+  coachInstructions?: {
+    whatToDo?: string;
+    howToDoIt?: string;
+    keyPoints?: string[];
+    commonMistakes?: string[];
+    easier?: string;
+    harder?: string;
+    equipment?: string;
+    setup?: string;
+  };
 }
 
 interface ProgramListItem {
@@ -851,6 +869,16 @@ function ProgramsPage() {
                         }
                         onDuplicate={async () => {
                           // Create a duplicate program with a new name
+                          console.log("=== DUPLICATING PROGRAM ===");
+                          console.log("Original program:", program);
+                          console.log(
+                            "Original program drills:",
+                            program.weeks[0]?.days[0]?.drills
+                          );
+                          console.log(
+                            "First drill details:",
+                            program.weeks[0]?.days[0]?.drills[0]
+                          );
                           const duplicatedProgram = {
                             title: `${program.title} (Copy)`,
                             description: program.description || undefined,
@@ -865,36 +893,93 @@ function ProgramsPage() {
                               weekNumber: week.weekNumber,
                               title: week.title,
                               description: week.description || undefined,
-                              days: Object.entries(week.days).map(
-                                ([dayKey, dayData]) => ({
-                                  dayNumber: dayData.dayNumber,
-                                  title: dayData.title,
-                                  description: dayData.description || undefined,
-                                  drills: dayData.drills.map(
-                                    (drill, index) => ({
-                                      order: index + 1,
-                                      title: drill.title,
-                                      description:
-                                        drill.description || undefined,
-                                      duration: drill.duration || undefined,
-                                      videoUrl: drill.videoUrl || undefined,
-                                      notes: drill.notes || undefined,
-                                      sets: drill.sets || undefined,
-                                      reps: drill.reps || undefined,
-                                      tempo: drill.tempo || undefined,
-                                      supersetId: drill.supersetId || undefined,
-                                      supersetOrder:
-                                        drill.supersetOrder || undefined,
-                                    })
-                                  ),
-                                })
-                              ),
+                              days: week.days.map(dayData => ({
+                                dayNumber: dayData.dayNumber,
+                                title: dayData.title,
+                                description: dayData.description || undefined,
+                                drills: dayData.drills.map(
+                                  (drill: any, index) => ({
+                                    order: index + 1,
+                                    title: drill.title,
+                                    type: drill.type || undefined,
+                                    description: drill.description || undefined,
+                                    duration: drill.duration || undefined,
+                                    videoUrl: drill.videoUrl || undefined,
+                                    videoId: drill.videoId || undefined,
+                                    videoTitle: drill.videoTitle || undefined,
+                                    videoThumbnail:
+                                      drill.videoThumbnail || undefined,
+                                    notes: drill.notes || undefined,
+                                    sets: drill.sets || undefined,
+                                    reps: drill.reps || undefined,
+                                    tempo: drill.tempo || undefined,
+                                    routineId: drill.routineId || undefined,
+                                    supersetId: drill.supersetId || undefined,
+                                    supersetOrder:
+                                      drill.supersetOrder || undefined,
+                                    supersetDescription:
+                                      drill.supersetDescription || undefined,
+                                    supersetInstructions:
+                                      drill.supersetInstructions || undefined,
+                                    supersetNotes:
+                                      drill.supersetNotes || undefined,
+                                    // Coach Instructions - flatten the nested object
+                                    coachInstructionsWhatToDo:
+                                      drill.coachInstructions?.whatToDo ||
+                                      drill.coachInstructionsWhatToDo ||
+                                      undefined,
+                                    coachInstructionsHowToDoIt:
+                                      drill.coachInstructions?.howToDoIt ||
+                                      drill.coachInstructionsHowToDoIt ||
+                                      undefined,
+                                    coachInstructionsKeyPoints:
+                                      drill.coachInstructions?.keyPoints ||
+                                      drill.coachInstructionsKeyPoints ||
+                                      undefined,
+                                    coachInstructionsCommonMistakes:
+                                      drill.coachInstructions?.commonMistakes ||
+                                      drill.coachInstructionsCommonMistakes ||
+                                      undefined,
+                                    coachInstructionsEasier:
+                                      drill.coachInstructions?.easier ||
+                                      drill.coachInstructionsEasier ||
+                                      undefined,
+                                    coachInstructionsHarder:
+                                      drill.coachInstructions?.harder ||
+                                      drill.coachInstructionsHarder ||
+                                      undefined,
+                                    coachInstructionsEquipment:
+                                      drill.coachInstructions?.equipment ||
+                                      drill.coachInstructionsEquipment ||
+                                      undefined,
+                                    coachInstructionsSetup:
+                                      drill.coachInstructions?.setup ||
+                                      drill.coachInstructionsSetup ||
+                                      undefined,
+                                  })
+                                ),
+                              })),
                             })),
                           };
 
+                          console.log(
+                            "Duplicated program data:",
+                            duplicatedProgram
+                          );
+                          console.log(
+                            "Duplicated program drills:",
+                            duplicatedProgram.weeks[0]?.days[0]?.drills
+                          );
+
                           try {
+                            console.log(
+                              "About to call createProgram.mutateAsync"
+                            );
                             // Create the program directly without opening modal
                             await createProgram.mutateAsync(duplicatedProgram);
+                            console.log(
+                              "createProgram.mutateAsync completed successfully"
+                            );
                             toast({
                               title: "Program Duplicated",
                               description: `"${duplicatedProgram.title}" has been created successfully.`,

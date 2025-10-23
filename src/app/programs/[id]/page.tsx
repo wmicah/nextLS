@@ -478,21 +478,21 @@ function ProgramEditorPageContent() {
         weekNumber: weekIndex + 1,
         title: builderWeek.name,
         description: "",
-        days: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map(dayKey => {
+        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map(dayKey => {
           const items =
             builderWeek.days[dayKey as keyof typeof builderWeek.days];
           const dayNumber =
-            dayKey === "sun"
+            dayKey === "mon"
               ? 1
-              : dayKey === "mon"
-              ? 2
               : dayKey === "tue"
-              ? 3
+              ? 2
               : dayKey === "wed"
-              ? 4
+              ? 3
               : dayKey === "thu"
-              ? 5
+              ? 4
               : dayKey === "fri"
+              ? 5
+              : dayKey === "sat"
               ? 6
               : 7;
 

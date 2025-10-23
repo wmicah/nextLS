@@ -186,6 +186,8 @@ export const programsRouter = router({
                     tempo: z.string().optional(),
                     supersetId: z.string().optional(),
                     supersetOrder: z.number().optional(),
+                    routineId: z.string().optional(),
+                    type: z.string().optional(),
                     // Coach Instructions
                     coachInstructions: z
                       .object({
@@ -284,21 +286,13 @@ export const programsRouter = router({
                       isRestDay: isRestDay,
                       drills: {
                         create: day.drills.map(drill => {
-                          // Debug logging for coach instructions in create mutation
-                          if (
-                            drill.title === "RPR Spiral Lines" ||
-                            drill.title.includes("RPR")
-                          ) {
-                            console.log(
-                              "🔍 CREATE MUTATION - Processing drill:",
-                              drill.title
-                            );
-                            console.log("Drill object:", drill);
-                            console.log(
-                              "Coach instructions:",
-                              (drill as any).coachInstructions
-                            );
-                          }
+                          console.log("=== BACKEND DRILL CREATION ===");
+                          console.log("Drill data:", drill);
+                          console.log(
+                            "Drill routineId:",
+                            (drill as any).routineId
+                          );
+                          console.log("Drill type:", (drill as any).type);
 
                           return {
                             order: drill.order,
@@ -313,6 +307,7 @@ export const programsRouter = router({
                             supersetId: drill.supersetId || null,
                             supersetOrder: drill.supersetOrder || null,
                             routineId: (drill as any).routineId || null, // 🔧 FIX: Include routineId for proper routine linking
+                            type: (drill as any).type || "exercise", // 🔧 FIX: Include type field for proper routine/exercise distinction
                             // Coach Instructions
                             coachInstructionsWhatToDo: (drill as any)
                               .coachInstructions?.whatToDo,
@@ -621,6 +616,10 @@ export const programsRouter = router({
                 drillIndex++
               ) {
                 const drill = day.drills[drillIndex];
+                console.log("=== BACKEND DRILL CREATION ===");
+                console.log("Drill data:", drill);
+                console.log("Drill routineId:", drill.routineId);
+                console.log("Drill type:", drill.type);
                 await tx.programDrill.create({
                   data: {
                     dayId: newDay.id,
@@ -1022,6 +1021,7 @@ export const programsRouter = router({
         sets: z.number().optional(),
         reps: z.number().optional(),
         tempo: z.string().optional(),
+        routineId: z.string().optional(),
         // Coach Instructions
         coachInstructions: z
           .object({
@@ -1133,6 +1133,7 @@ export const programsRouter = router({
           sets: input.sets,
           reps: input.reps,
           tempo: input.tempo,
+          routineId: input.routineId,
           // Coach Instructions
           coachInstructionsWhatToDo: input.coachInstructions?.whatToDo,
           coachInstructionsHowToDoIt: input.coachInstructions?.howToDoIt,
