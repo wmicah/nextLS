@@ -14,6 +14,8 @@ import {
   Dumbbell,
   MessageCircle,
   Plus,
+  Save,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -39,6 +41,12 @@ export default function ClientDetailsPage({
   const [activeTab, setActiveTab] = useState<"overview" | "progress">(
     "overview"
   );
+
+  // Inline editing state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
+
+  const utils = trpc.useUtils();
 
   const {
     data: client,
@@ -69,10 +77,47 @@ export default function ClientDetailsPage({
     clientId: clientId,
   });
 
+  // TRPC mutation for updating client name
+  const updateClientMutation = trpc.clients.update.useMutation({
+    onSuccess: () => {
+      setIsEditingName(false);
+      setEditedName("");
+      // Refetch client data to get updated name
+      utils.clients.getById.invalidate({ id: clientId });
+    },
+    onError: error => {
+      console.error("Failed to update client name:", error);
+      // Reset to original name on error
+      setEditedName(client?.name || "");
+    },
+  });
+
   // Debug logging
   console.log("Assigned routines:", assignedRoutines);
   console.log("Routines loading:", isLoadingRoutines);
   console.log("Routines error:", routinesError);
+
+  // Handle name editing
+  const handleEditName = () => {
+    setEditedName(client?.name || "");
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = () => {
+    if (editedName.trim() && editedName !== client?.name) {
+      updateClientMutation.mutate({
+        id: clientId,
+        name: editedName.trim(),
+      });
+    } else {
+      setIsEditingName(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+    setEditedName("");
+  };
 
   if (isLoading) {
     return (
@@ -218,9 +263,51 @@ export default function ClientDetailsPage({
                 {/* Client Details */}
                 <div className="flex-1 space-y-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-white mb-2">
-                      {client.name}
-                    </h2>
+                    {isEditingName ? (
+                      <div className="flex items-center gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={editedName}
+                          onChange={e => setEditedName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") handleSaveName();
+                            if (e.key === "Escape") handleCancelEdit();
+                          }}
+                          className="text-2xl font-bold text-white bg-gray-700 border-2 border-blue-400 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                          style={{ backgroundColor: "#2A2F2F" }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={handleSaveName}
+                          disabled={updateClientMutation.isPending}
+                          className="p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50"
+                          title="Save"
+                        >
+                          <Save className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          disabled={updateClientMutation.isPending}
+                          className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
+                          title="Cancel"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mb-2">
+                        <h2 className="text-2xl font-bold text-white">
+                          {client.name}
+                        </h2>
+                        <button
+                          onClick={handleEditName}
+                          className="p-1 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                          title="Edit name"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                     <div className="flex items-center gap-6 text-sm">
                       {client.email && (
                         <div className="flex items-center gap-2 text-gray-300">
