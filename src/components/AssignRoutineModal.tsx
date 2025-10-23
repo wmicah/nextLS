@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
-import { Calendar, Users, Target, X } from "lucide-react";
+import { Calendar, Users, Target, X, Search } from "lucide-react";
 import { format } from "date-fns";
 
 interface AssignRoutineModalProps {
@@ -456,6 +456,7 @@ export default function AssignRoutineModal({
                     type="date"
                     value={startDate}
                     onChange={e => setStartDate(e.target.value)}
+                    min="2020-01-01"
                     className="px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500"
                     style={{
                       backgroundColor: "#353A3A",

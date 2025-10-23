@@ -262,7 +262,7 @@ export default function MobileSimpleAssignRoutineModal({
                         e.target.value ? new Date(e.target.value) : undefined
                       )
                     }
-                    min={new Date().toISOString().split("T")[0]}
+                    min="2020-01-01"
                     className="w-full px-3 py-2 rounded-lg border bg-[#353A3A] border-[#606364] text-[#C3BCC2] focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
                   />
                 </div>

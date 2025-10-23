@@ -233,7 +233,8 @@ function MobileRequestsButton({ onOpenModal }: { onOpenModal: () => void }) {
 
   const clientRequests = pendingRequests.filter(
     (req: any) =>
-      req.type === "CLIENT_JOIN_REQUEST" && req.data?.requiresApproval
+      req.type === "CLIENT_JOIN_REQUEST" &&
+      req.title === "New Athlete Join Request" // Only show email-based requests that need approval
   );
 
   return (
@@ -269,7 +270,8 @@ function MobileClientRequestsModal({
 
   const clientRequests = pendingRequests.filter(
     (req: any) =>
-      req.type === "CLIENT_JOIN_REQUEST" && req.data?.requiresApproval
+      req.type === "CLIENT_JOIN_REQUEST" &&
+      req.title === "New Athlete Join Request" // Only show email-based requests that need approval
   );
 
   const acceptRequest = trpc.user.acceptClientRequest.useMutation({
