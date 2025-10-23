@@ -1829,6 +1829,117 @@ export const programsRouter = router({
       };
     }),
 
+  // Delete a specific program day (create replacement record)
+  deleteProgramDay: publicProcedure
+    .input(
+      z.object({
+        assignmentId: z.string(),
+        dayDate: z.string(), // The specific date to delete (YYYY-MM-DD format)
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can delete program days",
+        });
+      }
+
+      // Verify the assignment exists and belongs to the coach
+      const assignment = await db.programAssignment.findFirst({
+        where: {
+          id: input.assignmentId,
+          client: {
+            coachId: user.id,
+          },
+        },
+        include: {
+          client: {
+            select: {
+              name: true,
+            },
+          },
+          program: {
+            select: {
+              title: true,
+            },
+          },
+        },
+      });
+
+      if (!assignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Program assignment not found or not assigned to you",
+        });
+      }
+
+      // Parse the day date
+      const dayDate = new Date(input.dayDate);
+      if (isNaN(dayDate.getTime())) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid date format. Please use YYYY-MM-DD format.",
+        });
+      }
+
+      // Check if this day is already replaced/deleted
+      const existingReplacement = await db.programDayReplacement.findFirst({
+        where: {
+          assignmentId: input.assignmentId,
+          replacedDate: {
+            gte: new Date(
+              dayDate.getFullYear(),
+              dayDate.getMonth(),
+              dayDate.getDate()
+            ),
+            lt: new Date(
+              dayDate.getFullYear(),
+              dayDate.getMonth(),
+              dayDate.getDate() + 1
+            ),
+          },
+        },
+      });
+
+      if (existingReplacement) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "This program day has already been replaced or deleted",
+        });
+      }
+
+      // Create a replacement record to mark this day as deleted
+      const replacementRecord = await db.programDayReplacement.create({
+        data: {
+          assignmentId: input.assignmentId,
+          programId: assignment.programId,
+          clientId: assignment.clientId,
+          coachId: user.id,
+          replacedDate: dayDate,
+          lessonId: "", // Empty string to indicate deletion (not replacement with lesson)
+          replacementReason: input.reason || `Program day deleted by coach`,
+        },
+      });
+
+      return {
+        success: true,
+        replacementRecord,
+        message: `Program day for ${assignment.client.name} on ${input.dayDate} has been deleted`,
+      };
+    }),
+
   // Unassign multiple program assignments (by assignment IDs)
   unassignMultiplePrograms: publicProcedure
     .input(
