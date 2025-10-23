@@ -579,16 +579,8 @@ export default function SimpleAssignRoutineModal({
                   <input
                     type="date"
                     value={startDate}
-                    onChange={e => {
-                      const selectedDate = e.target.value;
-                      const today = new Date().toISOString().split("T")[0];
-                      if (selectedDate > today) {
-                        setStartDate(today);
-                      } else {
-                        setStartDate(selectedDate);
-                      }
-                    }}
-                    max={new Date().toISOString().split("T")[0]}
+                    onChange={e => setStartDate(e.target.value)}
+                    min="2020-01-01"
                     className="w-full px-4 py-3 rounded-lg border text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
                     style={{
                       backgroundColor: "#2A3133",

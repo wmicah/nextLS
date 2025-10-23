@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileProgramBuilderNew from "./MobileProgramBuilderNew";
 import SupersetDescriptionModal from "./SupersetDescriptionModal";
@@ -95,13 +95,13 @@ interface Routine {
 }
 
 const DAY_LABELS: Record<DayKey, string> = {
-  sun: "Sunday",
-  mon: "Monday",
-  tue: "Tuesday",
-  wed: "Wednesday",
-  thu: "Thursday",
-  fri: "Friday",
-  sat: "Saturday",
+  sun: "Day 7",
+  mon: "Day 1",
+  tue: "Day 2",
+  wed: "Day 3",
+  thu: "Day 4",
+  fri: "Day 5",
+  sat: "Day 6",
 };
 
 // Exercise Edit Dialog Component
@@ -328,7 +328,7 @@ function ExerciseEditDialog({
   );
 }
 
-const DAY_KEYS: DayKey[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const DAY_KEYS: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 function ProgramBuilder({
   onSave,
@@ -342,6 +342,9 @@ function ProgramBuilder({
   const [weeks, setWeeks] = useState<Week[]>(initialWeeks);
   const [selectedWeekId, setSelectedWeekId] = useState<string>("");
   const [selectedDayKey, setSelectedDayKey] = useState<DayKey>("sun");
+
+  // Prevent double submission
+  const isSubmittingRef = useRef(false);
 
   // Sync internal weeks state with initialWeeks prop changes
   useEffect(() => {
@@ -371,18 +374,8 @@ function ProgramBuilder({
     }
   }, [weeks.length, programDetails]);
   const [editingItem, setEditingItem] = useState<ProgramItem | null>(null);
-  const [isVideoDetailsDialogOpen, setIsVideoDetailsDialogOpen] =
-    useState(false);
   const [isExerciseEditDialogOpen, setIsExerciseEditDialogOpen] =
     useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<{
-    id: string;
-    title: string;
-    description?: string;
-    duration?: string;
-    url?: string;
-    thumbnail?: string;
-  } | null>(null);
   const [editingExercise, setEditingExercise] = useState<ProgramItem | null>(
     null
   );
@@ -457,10 +450,89 @@ function ProgramBuilder({
   const [isCreateRoutineModalOpen, setIsCreateRoutineModalOpen] =
     useState(false);
   const [isAddRoutineModalOpen, setIsAddRoutineModalOpen] = useState(false);
+  const [routineSearchTerm, setRoutineSearchTerm] = useState("");
   const [pendingRoutineDay, setPendingRoutineDay] = useState<{
     weekId: string;
     dayKey: DayKey;
   } | null>(null);
+
+  // Copy/paste functionality
+  const [copiedDay, setCopiedDay] = useState<{
+    weekId: string;
+    dayKey: DayKey;
+    items: ProgramItem[];
+  } | null>(null);
+
+  // Filter and sort routines
+  const filteredRoutines = useMemo(() => {
+    if (!routineSearchTerm.trim()) {
+      return [...routines].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return [...routines]
+      .filter(
+        routine =>
+          routine.name
+            .toLowerCase()
+            .includes(routineSearchTerm.toLowerCase()) ||
+          routine.description
+            ?.toLowerCase()
+            .includes(routineSearchTerm.toLowerCase())
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [routines, routineSearchTerm]);
+
+  // Reset search when modal opens
+  const handleOpenAddRoutineModal = (weekId: string, dayKey: DayKey) => {
+    setPendingRoutineDay({ weekId, dayKey });
+    setRoutineSearchTerm("");
+    setIsAddRoutineModalOpen(true);
+  };
+
+  // Copy day functionality
+  const handleCopyDay = (weekId: string, dayKey: DayKey) => {
+    const week = weeks.find(w => w.id === weekId);
+    if (week) {
+      const dayItems = week.days[dayKey] || [];
+      setCopiedDay({ weekId, dayKey, items: [...dayItems] });
+      addToast({
+        type: "success",
+        title: "Day Copied!",
+        message: `${dayKey} has been copied. You can now paste it to another day.`,
+      });
+    }
+  };
+
+  // Paste day functionality
+  const handlePasteDay = (targetWeekId: string, targetDayKey: DayKey) => {
+    if (!copiedDay) return;
+
+    const updatedWeeks = weeks.map(week => {
+      if (week.id === targetWeekId) {
+        const updatedDays = { ...week.days };
+        // Create new items with unique IDs to avoid conflicts
+        const newItems = copiedDay.items.map(item => ({
+          ...item,
+          id: `${item.type}-${Date.now()}-${Math.random()
+            .toString(36)
+            .substr(2, 9)}`,
+        }));
+        updatedDays[targetDayKey] = newItems;
+        return { ...week, days: updatedDays };
+      }
+      return week;
+    });
+
+    setWeeks(updatedWeeks);
+    onSave?.(updatedWeeks);
+
+    addToast({
+      type: "success",
+      title: "Day Pasted!",
+      message: `Workout has been pasted to ${targetDayKey}.`,
+    });
+  };
+
   const [newRoutine, setNewRoutine] = useState({
     name: "",
     description: "",
@@ -642,8 +714,6 @@ function ProgramBuilder({
       setEditingItem(item);
 
       // Use the new exercise edit dialog for ALL exercises (including videos)
-      setEditingExercise(item);
-      setIsExerciseEditDialogOpen(true);
     },
     []
   );
@@ -685,7 +755,7 @@ function ProgramBuilder({
         setIsExerciseEditDialogOpen(true);
         setSelectedWeekId("routine-creation"); // Keep this flag for the submit handler
       } else {
-        // Normal video selection for program days - use new exercise edit dialog
+        // Normal video selection for program days - open edit dialog first
         const videoItem: ProgramItem = {
           id: `temp-${Date.now()}`,
           title: video.title,
@@ -697,11 +767,13 @@ function ProgramBuilder({
           videoTitle: video.title,
           videoThumbnail: video.thumbnail || "",
         };
+
+        // Open edit dialog for the video (video not added to program yet)
         setEditingExercise(videoItem);
         setIsExerciseEditDialogOpen(true);
       }
     },
-    [selectedWeekId]
+    [selectedWeekId, selectedDayKey, addItem]
   );
 
   // Handle video selection from library
@@ -710,66 +782,7 @@ function ProgramBuilder({
       handleVideoSelect(selectedVideoFromLibrary);
       onVideoProcessed?.(); // Clear the selected video after processing
     }
-  }, [selectedVideoFromLibrary, handleVideoSelect, onVideoProcessed]);
-
-  const handleVideoDetailsSubmit = useCallback(
-    (details: {
-      notes?: string;
-      sets?: number;
-      reps?: number;
-      tempo?: string;
-      coachInstructions?: {
-        whatToDo: string;
-        howToDoIt: string;
-        keyPoints: string[];
-        commonMistakes: string[];
-        modifications?: {
-          easier?: string;
-          harder?: string;
-        };
-        equipment?: string;
-        setup?: string;
-      };
-    }) => {
-      if (!selectedVideo) return;
-
-      // Create the video item
-      const videoItem: Omit<ProgramItem, "id"> = {
-        title: selectedVideo.title,
-        type: "video",
-        notes: details.notes || "",
-        duration: selectedVideo.duration || "",
-        videoUrl: selectedVideo.url || "",
-        videoId: selectedVideo.id,
-        videoTitle: selectedVideo.title,
-        videoThumbnail: selectedVideo.thumbnail || "",
-        sets: details.sets,
-        reps: details.reps,
-        tempo: details.tempo || "",
-        coachInstructions: details.coachInstructions,
-      };
-
-      // Add the video item to the program
-      if (editingItem) {
-        editItem(selectedWeekId, selectedDayKey, editingItem.id, videoItem);
-      } else {
-        addItem(selectedWeekId, selectedDayKey, videoItem);
-      }
-
-      // Close the dialog
-      setIsVideoDetailsDialogOpen(false);
-      setSelectedVideo(null);
-      setEditingItem(null);
-    },
-    [
-      selectedVideo,
-      selectedWeekId,
-      selectedDayKey,
-      editingItem,
-      addItem,
-      editItem,
-    ]
-  );
+  }, [selectedVideoFromLibrary, onVideoProcessed, handleVideoSelect]);
 
   const handleExerciseEditSubmit = useCallback(
     (details: {
@@ -790,6 +803,10 @@ function ProgramBuilder({
       };
     }) => {
       if (!editingExercise) return;
+
+      // Prevent double submission
+      if (isSubmittingRef.current) return;
+      isSubmittingRef.current = true;
 
       // Create the updated exercise item
       const exerciseItem: Omit<ProgramItem, "id"> = {
@@ -889,6 +906,11 @@ function ProgramBuilder({
       setIsExerciseEditDialogOpen(false);
       setEditingExercise(null);
       setEditingItem(null);
+
+      // Reset submission flag after a short delay
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 100);
     },
     [
       editingExercise,
@@ -933,35 +955,66 @@ function ProgramBuilder({
     routineName: string,
     items: ProgramItem[]
   ) => {
-    const exercises = items.map(item => ({
-      title: item.title,
-      type: item.type || "exercise",
-      notes: item.notes || "",
-      sets: item.sets ?? undefined,
-      reps: item.reps ?? undefined,
-      tempo: item.tempo || "",
-      duration: item.duration || "",
-      videoUrl: item.videoUrl ?? undefined,
-      videoId: item.videoId ?? undefined,
-      videoTitle: item.videoTitle ?? undefined,
-      videoThumbnail: item.videoThumbnail ?? undefined,
-    }));
+    const expandedExercises: any[] = [];
+
+    // Process each item - expand routines into their individual exercises
+    items.forEach(item => {
+      if (item.type === "routine" && item.routineId) {
+        // Find the routine in our routines list and expand its exercises
+        const routine = routines.find(r => r.id === item.routineId);
+        if (routine) {
+          // Add all exercises from the routine
+          routine.exercises.forEach(exercise => {
+            expandedExercises.push({
+              title: exercise.title,
+              type: "exercise",
+              notes: exercise.description || "",
+              sets: exercise.sets ?? undefined,
+              reps: exercise.reps ?? undefined,
+              tempo: exercise.tempo || "",
+              duration: exercise.duration || "",
+              videoUrl: exercise.videoUrl ?? undefined,
+              videoId: exercise.videoId ?? undefined,
+              videoTitle: exercise.videoTitle ?? undefined,
+              videoThumbnail: exercise.videoThumbnail ?? undefined,
+            });
+          });
+        }
+      } else {
+        // Regular exercise - add as is
+        expandedExercises.push({
+          title: item.title,
+          type: item.type || "exercise",
+          notes: item.notes || "",
+          sets: item.sets ?? undefined,
+          reps: item.reps ?? undefined,
+          tempo: item.tempo || "",
+          duration: item.duration || "",
+          videoUrl: item.videoUrl ?? undefined,
+          videoId: item.videoId ?? undefined,
+          videoTitle: item.videoTitle ?? undefined,
+          videoThumbnail: item.videoThumbnail ?? undefined,
+        });
+      }
+    });
 
     createRoutineMutation.mutate(
       {
         name: routineName,
-        description: `Routine with ${items.length} ${
-          items.length === 1 ? "exercise" : "exercises"
+        description: `Routine with ${expandedExercises.length} ${
+          expandedExercises.length === 1 ? "exercise" : "exercises"
         }`,
-        exercises: exercises as any,
+        exercises: expandedExercises,
       },
       {
         onSuccess: () => {
           addToast({
             type: "success",
             title: "Routine Created!",
-            message: `"${routineName}" has been created with ${items.length} ${
-              items.length === 1 ? "exercise" : "exercises"
+            message: `"${routineName}" has been created with ${
+              expandedExercises.length
+            } ${
+              expandedExercises.length === 1 ? "exercise" : "exercises"
             }. Find it in the Routines tab!`,
           });
         },
@@ -1439,28 +1492,14 @@ function ProgramBuilder({
             onOpenSupersetModal={handleOpenSupersetModal}
             onOpenSupersetDescriptionModal={onOpenSupersetDescriptionModal}
             getSupersetGroups={getSupersetGroups}
-            onOpenAddRoutine={(weekId, dayKey) => {
-              setPendingRoutineDay({ weekId, dayKey });
-              setIsAddRoutineModalOpen(true);
-            }}
+            onOpenAddRoutine={handleOpenAddRoutineModal}
             onConvertToRoutine={handleConvertDayToRoutine}
+            onCopyDay={handleCopyDay}
+            onPasteDay={handlePasteDay}
+            copiedDay={copiedDay}
           />
         ))}
       </div>
-
-      {/* Video Details Dialog */}
-
-      <VideoDetailsDialogWithInstructions
-        isOpen={isVideoDetailsDialogOpen}
-        onClose={() => {
-          setIsVideoDetailsDialogOpen(false);
-          setSelectedVideo(null);
-          setEditingItem(null);
-        }}
-        onSubmit={handleVideoDetailsSubmit}
-        video={selectedVideo}
-        existingItem={editingItem}
-      />
 
       {/* Exercise Edit Dialog */}
       <ExerciseEditDialog
@@ -1801,6 +1840,18 @@ function ProgramBuilder({
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search routines..."
+                value={routineSearchTerm}
+                onChange={e => setRoutineSearchTerm(e.target.value)}
+                className="pl-10 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+
             {routines.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -1809,9 +1860,15 @@ function ProgramBuilder({
                   Create a routine first to use this feature.
                 </p>
               </div>
+            ) : filteredRoutines.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No routines found matching "{routineSearchTerm}"</p>
+                <p className="text-sm">Try adjusting your search terms.</p>
+              </div>
             ) : (
               <div className="grid gap-3 max-h-96 overflow-y-auto">
-                {routines.map(routine => (
+                {filteredRoutines.map(routine => (
                   <Card
                     key={routine.id}
                     className="bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 cursor-pointer transition-colors"
@@ -1925,6 +1982,13 @@ interface WeekCardProps {
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
   onConvertToRoutine: (dayLabel: string, items: ProgramItem[]) => void;
+  onCopyDay: (weekId: string, dayKey: DayKey) => void;
+  onPasteDay: (weekId: string, dayKey: DayKey) => void;
+  copiedDay: {
+    weekId: string;
+    dayKey: DayKey;
+    items: ProgramItem[];
+  } | null;
 }
 
 function WeekCard({
@@ -1948,6 +2012,9 @@ function WeekCard({
   getSupersetGroups,
   onOpenAddRoutine,
   onConvertToRoutine,
+  onCopyDay,
+  onPasteDay,
+  copiedDay,
 }: WeekCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({
@@ -2052,6 +2119,9 @@ function WeekCard({
                 getSupersetGroups={getSupersetGroups}
                 onOpenAddRoutine={onOpenAddRoutine}
                 onConvertToRoutine={onConvertToRoutine}
+                onCopyDay={() => onCopyDay(week.id, dayKey)}
+                onPasteDay={() => onPasteDay(week.id, dayKey)}
+                copiedDay={copiedDay}
               />
             ))}
           </div>
@@ -2083,6 +2153,13 @@ interface DayCardProps {
   getSupersetGroups: () => { name: string; items: ProgramItem[] }[];
   onOpenAddRoutine: (weekId: string, dayKey: DayKey) => void;
   onConvertToRoutine?: (dayLabel: string, items: ProgramItem[]) => void;
+  onCopyDay: (weekId: string, dayKey: DayKey) => void;
+  onPasteDay: (weekId: string, dayKey: DayKey) => void;
+  copiedDay: {
+    weekId: string;
+    dayKey: DayKey;
+    items: ProgramItem[];
+  } | null;
 }
 
 function DayCard({
@@ -2103,6 +2180,9 @@ function DayCard({
   getSupersetGroups,
   onOpenAddRoutine,
   onConvertToRoutine,
+  onCopyDay,
+  onPasteDay,
+  copiedDay,
 }: DayCardProps) {
   const [showRoutineInput, setShowRoutineInput] = useState(false);
   const [routineName, setRoutineName] = useState("");
@@ -2156,9 +2236,55 @@ function DayCard({
     <div className="space-y-3">
       {/* Day Header */}
       <div className="text-center mb-3">
-        <h3 className="text-sm font-medium text-gray-300 mb-1">{dayLabel}</h3>
-        <div className="text-xs text-gray-500 uppercase tracking-wide">
-          {dayKey}
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-sm font-medium text-gray-300">{dayLabel}</h3>
+          <div className="flex items-center gap-1">
+            {/* Copy Button */}
+            <button
+              onClick={() => onCopyDay(weekId, dayKey)}
+              className="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+              title="Copy this day"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+            {/* Paste Button */}
+            <button
+              onClick={() => onPasteDay(weekId, dayKey)}
+              disabled={!copiedDay}
+              className={`p-1 rounded transition-colors ${
+                copiedDay
+                  ? "text-gray-400 hover:text-white hover:bg-gray-600"
+                  : "text-gray-600 cursor-not-allowed"
+              }`}
+              title={copiedDay ? "Paste copied day" : "No day copied"}
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2415,7 +2541,7 @@ function SortableDrillItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "rounded-lg p-3 border transition-all duration-200",
+        "rounded-lg p-3 border transition-all duration-200 group",
         isDragging && "opacity-50 scale-95",
         isSuperset
           ? "bg-purple-600/30 border-purple-500/50"
@@ -2471,7 +2597,7 @@ function SortableDrillItem({
             <div className="space-y-1">
               {supersetGroup.items.map((supersetItem, index) => (
                 <div key={supersetItem.id} className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-white truncate">
+                  <span className="text-xs font-medium text-white truncate whitespace-nowrap">
                     {supersetItem.title}
                   </span>
                   {index === 0 && (
@@ -2484,7 +2610,7 @@ function SortableDrillItem({
             </div>
           ) : (
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-white truncate">
+              <span className="text-xs font-medium text-white truncate whitespace-nowrap">
                 {item.title}
               </span>
             </div>
@@ -2498,7 +2624,7 @@ function SortableDrillItem({
           )}
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons - always visible */}
         <div className="flex items-center gap-1">
           {/* Superset Chain Link Button */}
           {!item.supersetId ? (
@@ -2764,444 +2890,6 @@ function ProgramItemCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-// Video Details Dialog Component
-interface VideoDetailsDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (details: {
-    notes?: string;
-    sets?: number;
-    reps?: number;
-    tempo?: string;
-    coachInstructions?: {
-      whatToDo: string;
-      howToDoIt: string;
-      keyPoints: string[];
-      commonMistakes: string[];
-      equipment?: string;
-    };
-  }) => void;
-  video: {
-    id: string;
-    title: string;
-    description?: string;
-    duration?: string;
-    url?: string;
-    thumbnail?: string;
-  } | null;
-  existingItem?: ProgramItem | null; // Add existing item for editing
-}
-
-function VideoDetailsDialog({
-  isOpen,
-  onClose,
-  onSubmit,
-  video,
-  existingItem,
-}: VideoDetailsDialogProps) {
-  const [formData, setFormData] = useState({
-    notes: existingItem?.notes || "",
-    sets: existingItem?.sets || undefined,
-    reps: existingItem?.reps || undefined,
-    tempo: existingItem?.tempo || "",
-    coachInstructions: existingItem?.coachInstructions || undefined,
-  });
-  const [showCoachInstructions, setShowCoachInstructions] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-    // Only reset form data if we're not editing an existing item
-    if (!existingItem) {
-      setFormData({
-        notes: "",
-        sets: undefined,
-        reps: undefined,
-        tempo: "",
-        coachInstructions: undefined,
-      });
-    }
-  };
-
-  const handleQuickAdd = () => {
-    // Add video with default values - no modal needed
-    onSubmit({
-      notes: "",
-      sets: 3,
-      reps: 10,
-      tempo: "",
-      coachInstructions: undefined,
-    });
-  };
-
-  if (!video) return null;
-
-  return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="bg-[#2A3133] border-gray-600 text-white z-[110] max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-white text-lg">Add Video</DialogTitle>
-          <DialogDescription className="text-gray-400 text-sm">
-            {video.title}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Quick Add Option */}
-          <div className="p-3 bg-[#353A3A] rounded-lg border border-gray-600">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white text-sm font-medium">Quick Add</p>
-                <p className="text-gray-400 text-xs">
-                  Add with default settings (3 sets, 10 reps)
-                </p>
-              </div>
-              <Button
-                onClick={handleQuickAdd}
-                className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1"
-              >
-                Add Now
-              </Button>
-            </div>
-          </div>
-
-          {/* Custom Settings */}
-          <div className="border-t border-gray-600 pt-4">
-            <p className="text-white text-sm font-medium mb-3">
-              Custom Settings (Optional)
-            </p>
-
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label htmlFor="sets" className="text-gray-400 text-xs">
-                    Sets
-                  </Label>
-                  <Input
-                    id="sets"
-                    type="number"
-                    value={formData.sets || ""}
-                    onChange={e => {
-                      const value = parseInt(e.target.value);
-                      if (value >= 0) {
-                        setFormData(prev => ({
-                          ...prev,
-                          sets: value || undefined,
-                        }));
-                      }
-                    }}
-                    className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
-                    placeholder="3"
-                    min="0"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="reps" className="text-gray-400 text-xs">
-                    Reps
-                  </Label>
-                  <Input
-                    id="reps"
-                    type="number"
-                    value={formData.reps || ""}
-                    onChange={e =>
-                      setFormData(prev => ({
-                        ...prev,
-                        reps: e.target.value
-                          ? parseInt(e.target.value)
-                          : undefined,
-                      }))
-                    }
-                    className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
-                    placeholder="10"
-                    min="1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="tempo" className="text-gray-400 text-xs">
-                    Tempo
-                  </Label>
-                  <Input
-                    id="tempo"
-                    value={formData.tempo}
-                    onChange={e =>
-                      setFormData(prev => ({ ...prev, tempo: e.target.value }))
-                    }
-                    className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
-                    placeholder="2-0-2"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes" className="text-gray-400 text-xs">
-                  Notes
-                </Label>
-              </div>
-
-              {/* Coach Instructions Button */}
-              <div className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowCoachInstructions(true)}
-                  className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 text-sm w-full"
-                >
-                  <Lightbulb className="h-4 w-4 mr-2" />
-                  Add Coach Instructions
-                </Button>
-                {formData.coachInstructions && (
-                  <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                    <p className="text-yellow-300 text-xs">
-                      ✓ Coach instructions added
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white text-sm flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm flex-1"
-                >
-                  Add Custom
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Add CoachInstructionsDialog component
-function VideoDetailsDialogWithInstructions({
-  isOpen,
-  onClose,
-  onSubmit,
-  video,
-  existingItem,
-}: VideoDetailsDialogProps) {
-  const [formData, setFormData] = useState({
-    notes: existingItem?.notes || "",
-    sets: existingItem?.sets || undefined,
-    reps: existingItem?.reps || undefined,
-    tempo: existingItem?.tempo || "",
-    coachInstructions: existingItem?.coachInstructions || undefined,
-  });
-  const [showCoachInstructions, setShowCoachInstructions] = useState(false);
-
-  // Update formData when existingItem changes
-  useEffect(() => {
-    if (existingItem) {
-      setFormData({
-        notes: existingItem.notes || "",
-        sets: existingItem.sets || undefined,
-        reps: existingItem.reps || undefined,
-        tempo: existingItem.tempo || "",
-        coachInstructions: existingItem.coachInstructions || undefined,
-      });
-    }
-  }, [existingItem]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-    // Only reset form data if we're not editing an existing item
-    if (!existingItem) {
-      setFormData({
-        notes: "",
-        sets: undefined,
-        reps: undefined,
-        tempo: "",
-        coachInstructions: undefined,
-      });
-    }
-  };
-
-  const handleQuickAdd = () => {
-    onSubmit({
-      notes: "",
-      sets: 3,
-      reps: 10,
-      tempo: "",
-      coachInstructions: undefined,
-    });
-  };
-
-  const handleCoachInstructionsSubmit = (instructions: any) => {
-    setFormData(prev => ({ ...prev, coachInstructions: instructions }));
-    setShowCoachInstructions(false);
-  };
-
-  if (!video) return null;
-
-  return (
-    <>
-      <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="bg-[#2A3133] border-gray-600 text-white z-[150] max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-white text-lg">Add Video</DialogTitle>
-            <DialogDescription className="text-gray-400 text-sm">
-              {video.title}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Quick Add Option */}
-            <div className="p-3 bg-[#353A3A] rounded-lg border border-gray-600">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white text-sm font-medium">Quick Add</p>
-                  <p className="text-gray-400 text-xs">
-                    Add with default settings (3 sets, 10 reps)
-                  </p>
-                </div>
-                <Button
-                  onClick={handleQuickAdd}
-                  className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1"
-                >
-                  Add Now
-                </Button>
-              </div>
-            </div>
-
-            {/* Custom Settings */}
-            <div className="border-t border-gray-600 pt-4">
-              <p className="text-white text-sm font-medium mb-3">
-                Custom Settings (Optional)
-              </p>
-
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label htmlFor="sets" className="text-gray-400 text-xs">
-                      Sets
-                    </Label>
-                    <Input
-                      id="sets"
-                      type="number"
-                      value={formData.sets || ""}
-                      onChange={e =>
-                        setFormData(prev => ({
-                          ...prev,
-                          sets: e.target.value
-                            ? parseInt(e.target.value)
-                            : undefined,
-                        }))
-                      }
-                      className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
-                      placeholder="3"
-                      min="1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="reps" className="text-gray-400 text-xs">
-                      Reps
-                    </Label>
-                    <Input
-                      id="reps"
-                      type="number"
-                      value={formData.reps || ""}
-                      onChange={e => {
-                        const value = parseInt(e.target.value);
-                        if (value >= 0) {
-                          setFormData(prev => ({
-                            ...prev,
-                            reps: value || undefined,
-                          }));
-                        }
-                      }}
-                      className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
-                      placeholder="10"
-                      min="0"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="tempo" className="text-gray-400 text-xs">
-                      Tempo
-                    </Label>
-                    <Input
-                      id="tempo"
-                      value={formData.tempo}
-                      onChange={e =>
-                        setFormData(prev => ({
-                          ...prev,
-                          tempo: e.target.value,
-                        }))
-                      }
-                      className="bg-[#353A3A] border-gray-600 text-white text-sm h-8"
-                      placeholder="2-0-2"
-                    />
-                  </div>
-                </div>
-
-                {/* Coach Instructions Button */}
-                <div className="pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCoachInstructions(true)}
-                    className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300 text-sm w-full"
-                  >
-                    <Lightbulb className="h-4 w-4 mr-2" />
-                    Add Coach Instructions
-                  </Button>
-                  {formData.coachInstructions && (
-                    <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                      <p className="text-yellow-300 text-xs">
-                        ✓ Coach instructions added
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onClose}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white text-sm flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm flex-1"
-                  >
-                    Add Custom
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Coach Instructions Dialog */}
-      <CoachInstructionsDialog
-        isOpen={showCoachInstructions}
-        onClose={() => setShowCoachInstructions(false)}
-        onSubmit={handleCoachInstructionsSubmit}
-        initialInstructions={formData.coachInstructions}
-        exerciseTitle={video.title}
-      />
-    </>
   );
 }
 
