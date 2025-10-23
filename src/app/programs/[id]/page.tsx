@@ -92,7 +92,7 @@ function ProgramEditorPageContent() {
           name: week.title || `Week ${week.weekNumber}`,
           collapsed: false,
           days: {
-            sun:
+            mon:
               week.days
                 .find(d => d.dayNumber === 1)
                 ?.drills?.map(drill => ({
@@ -141,7 +141,7 @@ function ProgramEditorPageContent() {
                       : undefined;
                   })(),
                 })) || [],
-            mon:
+            tue:
               week.days
                 .find(d => d.dayNumber === 2)
                 ?.drills?.map(drill => ({
@@ -190,7 +190,7 @@ function ProgramEditorPageContent() {
                       : undefined;
                   })(),
                 })) || [],
-            tue:
+            wed:
               week.days
                 .find(d => d.dayNumber === 3)
                 ?.drills?.map(drill => ({
@@ -239,7 +239,7 @@ function ProgramEditorPageContent() {
                       : undefined;
                   })(),
                 })) || [],
-            wed:
+            thu:
               week.days
                 .find(d => d.dayNumber === 4)
                 ?.drills?.map(drill => ({
@@ -288,7 +288,7 @@ function ProgramEditorPageContent() {
                       : undefined;
                   })(),
                 })) || [],
-            thu:
+            fri:
               week.days
                 .find(d => d.dayNumber === 5)
                 ?.drills?.map(drill => ({
@@ -337,7 +337,7 @@ function ProgramEditorPageContent() {
                       : undefined;
                   })(),
                 })) || [],
-            fri:
+            sat:
               week.days
                 .find(d => d.dayNumber === 6)
                 ?.drills?.map(drill => ({
@@ -386,7 +386,7 @@ function ProgramEditorPageContent() {
                       : undefined;
                   })(),
                 })) || [],
-            sat:
+            sun:
               week.days
                 .find(d => d.dayNumber === 7)
                 ?.drills?.map(drill => ({

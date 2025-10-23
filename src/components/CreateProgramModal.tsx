@@ -207,13 +207,13 @@ function CreateProgramModalContent({
           name: "Week 1",
           collapsed: false,
           days: {
-            sun: [],
             mon: [],
             tue: [],
             wed: [],
             thu: [],
             fri: [],
             sat: [],
+            sun: [],
           },
         },
       ];
@@ -434,6 +434,26 @@ function CreateProgramModalContent({
     setWeeks(updatedWeeks);
   };
 
+  // Convert database program data to ProgramBuilder format
+  const convertDatabaseToBuilder = (
+    databaseWeeks: any[]
+  ): ProgramBuilderWeek[] => {
+    return databaseWeeks.map((week, weekIndex) => ({
+      id: `week-${weekIndex + 1}`,
+      name: week.title || `Week ${weekIndex + 1}`,
+      collapsed: false,
+      days: {
+        mon: week.days?.find((d: any) => d.dayNumber === 1)?.drills || [],
+        tue: week.days?.find((d: any) => d.dayNumber === 2)?.drills || [],
+        wed: week.days?.find((d: any) => d.dayNumber === 3)?.drills || [],
+        thu: week.days?.find((d: any) => d.dayNumber === 4)?.drills || [],
+        fri: week.days?.find((d: any) => d.dayNumber === 5)?.drills || [],
+        sat: week.days?.find((d: any) => d.dayNumber === 6)?.drills || [],
+        sun: week.days?.find((d: any) => d.dayNumber === 7)?.drills || [],
+      },
+    }));
+  };
+
   // Handle ProgramBuilder save
   const handleProgramBuilderSave = (builderWeeks: ProgramBuilderWeek[]) => {
     console.log("ProgramBuilder save called with weeks:", builderWeeks);
@@ -459,55 +479,46 @@ function CreateProgramModalContent({
         weekNumber: weekIndex + 1,
         title: builderWeek.name,
         description: "",
-        days: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map(dayKey => {
-          const items =
-            builderWeek.days[dayKey as keyof typeof builderWeek.days];
-          const dayNumber =
-            dayKey === "sun"
-              ? 1
-              : dayKey === "mon"
-              ? 2
-              : dayKey === "tue"
-              ? 3
-              : dayKey === "wed"
-              ? 4
-              : dayKey === "thu"
-              ? 5
-              : dayKey === "fri"
-              ? 6
-              : 7;
+        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map(
+          (dayKey, index) => {
+            const items =
+              builderWeek.days[dayKey as keyof typeof builderWeek.days];
+            // Fix: The program builder shows Day 1-7, so we need to map correctly
+            // mon=Day1, tue=Day2, wed=Day3, thu=Day4, fri=Day5, sat=Day6, sun=Day7
+            const dayNumber = index + 1; // This is correct: mon(0)→1, tue(1)→2, etc.
 
-          // If the day has no items, make it a rest day
-          if (items.length === 0) {
+            // If the day has no items, make it a rest day
+            if (items.length === 0) {
+              return {
+                dayNumber,
+                title: "Rest Day",
+                description: "Recovery and rest day",
+                drills: [], // No drills for rest days
+              };
+            }
+
+            // Convert items to drills format
             return {
               dayNumber,
-              title: "Rest Day",
-              description: "Recovery and rest day",
-              drills: [], // No drills for rest days
+              title: "",
+              description: "",
+              drills: items.map((item, itemIndex) => ({
+                order: itemIndex + 1,
+                title: item.title,
+                description: item.notes || "",
+                duration: item.duration || "",
+                videoUrl: item.videoUrl || "",
+                notes: item.notes || "",
+                type: item.type || "exercise",
+                sets: item.sets,
+                reps: item.reps,
+                tempo: item.tempo || "",
+                routineId: item.routineId,
+                supersetId: item.supersetId,
+              })),
             };
           }
-
-          // Convert items to drills format
-          return {
-            dayNumber,
-            title: "",
-            description: "",
-            drills: items.map((item, itemIndex) => ({
-              order: itemIndex + 1,
-              title: item.title,
-              description: item.notes || "",
-              duration: item.duration || "",
-              videoUrl: item.videoUrl || "",
-              notes: item.notes || "",
-              type: item.type || "exercise",
-              sets: item.sets,
-              reps: item.reps,
-              tempo: item.tempo || "",
-              routineId: item.routineId,
-              supersetId: item.supersetId,
-            })),
-          };
-        }),
+        ),
       })
     );
 
