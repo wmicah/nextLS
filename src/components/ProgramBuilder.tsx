@@ -95,13 +95,13 @@ interface Routine {
 }
 
 const DAY_LABELS: Record<DayKey, string> = {
-  sun: "Day 7",
-  mon: "Day 1",
-  tue: "Day 2",
-  wed: "Day 3",
-  thu: "Day 4",
-  fri: "Day 5",
-  sat: "Day 6",
+  sun: "Saturday",
+  mon: "Sunday",
+  tue: "Monday",
+  wed: "Tuesday",
+  thu: "Wednesday",
+  fri: "Thursday",
+  sat: "Friday",
 };
 
 // Exercise Edit Dialog Component
