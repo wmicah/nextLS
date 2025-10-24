@@ -316,7 +316,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - uploadthing (file upload routes)
+     * - stream-master-video (video streaming)
+     * - generate-thumbnail (thumbnail generation)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|public|uploadthing|stream-master-video|generate-thumbnail).*)",
   ],
 };
