@@ -280,38 +280,9 @@ export default function NotificationsPage({}: NotificationsPageProps) {
     [filteredNotifications]
   );
 
-  // Handle notification click
-  const handleNotificationClick = (notification: any) => {
-    // Mark as read if unread
-    if (!notification.isRead) {
-      markAsReadMutation.mutate({
-        notificationId: notification.id,
-      });
-    }
-
-    // Navigate based on notification type
-    switch (notification.type) {
-      case "MESSAGE":
-        router.push("/messages");
-        break;
-      case "CLIENT_JOIN_REQUEST":
-        router.push("/clients");
-        break;
-      case "WORKOUT_ASSIGNED":
-      case "WORKOUT_COMPLETED":
-      case "PROGRAM_ASSIGNED":
-      case "PROGRESS_UPDATE":
-        router.push("/programs");
-        break;
-      case "LESSON_SCHEDULED":
-      case "LESSON_CANCELLED":
-      case "SCHEDULE_REQUEST":
-        router.push("/schedule");
-        break;
-      default:
-        router.push("/dashboard");
-        break;
-    }
+  // Handle notification click using smart routing
+  const handleNotificationClickWrapper = (notification: any) => {
+    handleNotificationClick(notification, router, markAsReadMutation);
   };
 
   // Handle bulk actions
@@ -631,7 +602,9 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                               ? "#1A1D1E"
                               : "#2A3133",
                           }}
-                          onClick={() => handleNotificationClick(notification)}
+                          onClick={() =>
+                            handleNotificationClickWrapper(notification)
+                          }
                         >
                           <div className="p-4">
                             <div className="flex items-start gap-4">

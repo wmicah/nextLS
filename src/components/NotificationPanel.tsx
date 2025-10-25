@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
+import {
+  handleNotificationClick,
+  getNotificationAction as getSmartNotificationAction,
+} from "@/lib/notification-routing";
 // Removed complex SSE hooks - using simple polling instead
 import {
   Bell,
@@ -79,19 +83,17 @@ export default function NotificationPanel({
   };
 
   const getNotificationAction = (notification: any) => {
-    if (
-      notification.type === "CLIENT_JOIN_REQUEST" &&
-      notification.data?.clientId
-    ) {
+    // Use smart routing to get the appropriate action
+    const action = getSmartNotificationAction(notification);
+    if (action) {
       return (
         <button
           onClick={() => {
-            // Navigate to clients page to view the new client
-            window.location.href = "/clients";
+            window.location.href = action.route;
           }}
           className="text-sm text-blue-500 hover:text-blue-600 font-medium"
         >
-          View Client
+          {action.text}
         </button>
       );
     }
