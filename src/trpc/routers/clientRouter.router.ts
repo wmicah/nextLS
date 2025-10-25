@@ -369,11 +369,16 @@ export const clientRouterRouter = router({
             type: true,
             priority: true,
             isPrivate: true,
+            isPinned: true,
             createdAt: true,
             updatedAt: true,
             coachId: true,
             clientId: true,
           },
+          orderBy: [
+            { isPinned: "desc" }, // Pinned notes first
+            { createdAt: "desc" }, // Then by creation date
+          ],
         },
         updatedAt: true,
       },

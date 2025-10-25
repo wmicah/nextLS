@@ -1236,6 +1236,85 @@ export const clientsRouter = router({
       return noteHistory;
     }),
 
+  getClientNotes: publicProcedure
+    .input(z.object({ clientId: z.string() }))
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view client notes",
+        });
+      }
+
+      // Get notes for the client, ordered by pinned first, then by createdAt
+      const notes = await db.clientNote.findMany({
+        where: {
+          clientId: input.clientId,
+          coachId: user.id,
+        },
+        orderBy: [
+          { isPinned: "desc" }, // Pinned notes first
+          { createdAt: "desc" }, // Then by creation date
+        ],
+      });
+
+      return notes;
+    }),
+
+  togglePinNote: publicProcedure
+    .input(z.object({ noteId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can pin notes",
+        });
+      }
+
+      // Get the note to check ownership
+      const note = await db.clientNote.findFirst({
+        where: {
+          id: input.noteId,
+          coachId: user.id,
+        },
+      });
+
+      if (!note) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Note not found or access denied",
+        });
+      }
+
+      // Toggle pin status
+      const updatedNote = await db.clientNote.update({
+        where: { id: input.noteId },
+        data: { isPinned: !note.isPinned },
+      });
+
+      return updatedNote;
+    }),
+
   getComplianceData: publicProcedure
     .input(
       z.object({
