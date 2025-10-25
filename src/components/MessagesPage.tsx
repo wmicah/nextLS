@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -34,7 +34,8 @@ interface MessagesPageProps {
 }
 
 function MessagesPage({}: MessagesPageProps) {
-  // const router = useRouter()
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
   >(null);
@@ -133,6 +134,20 @@ function MessagesPage({}: MessagesPageProps) {
   }, [conversationsData, conversationsOffset]);
 
   const conversations = allConversations;
+
+  // Handle URL parameters for conversation and message
+  useEffect(() => {
+    const conversationId = searchParams.get("conversation");
+    const messageId = searchParams.get("message");
+
+    if (conversationId) {
+      setSelectedConversation(conversationId);
+    } else if (messageId) {
+      // If we have a messageId but no conversationId, we need to find the conversation
+      // For now, we'll just set it to null and let the user select
+      setSelectedConversation(null);
+    }
+  }, [searchParams]);
 
   // Function to load more conversations
   const loadMoreConversations = () => {
