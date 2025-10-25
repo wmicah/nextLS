@@ -2270,6 +2270,164 @@ export const clientRouterRouter = router({
       return filteredEvents;
     }),
 
+  // Get ALL organization coaches' schedules for client to view
+  getOrganizationCoachesSchedules: publicProcedure
+    .input(
+      z.object({
+        month: z.number(),
+        year: z.number(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get client record to find their coach
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+        include: {
+          coach: {
+            include: {
+              coachOrganizations: {
+                where: { isActive: true },
+              },
+            },
+          },
+          organization: true, // Include client's organization
+        },
+      });
+
+      if (!client || !client.coachId) {
+        return { coaches: [], events: [] };
+      }
+
+      // Determine organization ID - prioritize client's organizationId, then coach's organization
+      let organizationId = client.organizationId;
+
+      if (!organizationId) {
+        // Check if coach is in an organization
+        const coachOrganization = client.coach?.coachOrganizations?.[0];
+        if (coachOrganization) {
+          organizationId = coachOrganization.organizationId;
+        }
+      }
+
+      if (!organizationId) {
+        // Not in an organization, fall back to single coach
+        return { coaches: [], events: [] };
+      }
+
+      // Get all coaches in the organization
+      const orgCoaches = await db.coachOrganization.findMany({
+        where: {
+          organizationId: organizationId,
+          isActive: true,
+        },
+        include: {
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              workingDays: true,
+              workingHoursStart: true,
+              workingHoursEnd: true,
+              timeSlotInterval: true,
+            },
+          },
+        },
+      });
+
+      const coachIds = orgCoaches.map(c => c.coachId);
+
+      // Calculate month start and end dates
+      const monthStart = new Date(input.year, input.month, 1);
+      const monthEnd = new Date(input.year, input.month + 1, 0, 23, 59, 59);
+      const now = new Date();
+
+      // Get all events (lessons) from ALL coaches in the organization
+      const events = await db.event.findMany({
+        where: {
+          coachId: { in: coachIds },
+          clientId: { not: null }, // Only show events with a client (not reminders)
+          status: "CONFIRMED", // Only show confirmed lessons
+          date: {
+            gte: monthStart,
+            lte: monthEnd,
+            gt: now, // Only return future lessons
+          },
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          date: "asc",
+        },
+      });
+
+      // Filter out this client's own pending requests
+      const filteredEvents = events.filter(
+        event => !(event.clientId === client.id && event.status === "PENDING")
+      );
+
+      const result = {
+        coaches: orgCoaches.map(co => ({
+          id: co.coach.id,
+          name: co.coach.name,
+          email: co.coach.email,
+          workingDays: co.coach.workingDays,
+          workingHoursStart: co.coach.workingHoursStart,
+          workingHoursEnd: co.coach.workingHoursEnd,
+          timeSlotInterval: co.coach.timeSlotInterval,
+        })),
+        events: filteredEvents,
+      };
+
+      // Debug logging
+      console.log("🔍 CLIENT SCHEDULE DEBUG:", {
+        clientId: client.id,
+        clientName: client.name,
+        clientOrganizationId: client.organizationId,
+        coachOrganizationId: organizationId,
+        totalCoachesInOrg: result.coaches.length,
+        coachNames: result.coaches.map(c => c.name),
+        totalEvents: result.events.length,
+        eventsByCoach: result.events.reduce((acc: any, event: any) => {
+          const coachName = event.coach?.name || "Unknown";
+          acc[coachName] = (acc[coachName] || 0) + 1;
+          return acc;
+        }, {}),
+      });
+
+      return result;
+    }),
+
   // Get current client record for the logged-in user
   getCurrentClient: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession();
@@ -2681,6 +2839,7 @@ export const clientRouterRouter = router({
         requestedTime: z.string(),
         reason: z.string().optional(),
         timeZone: z.string().optional(),
+        coachId: z.string().optional(), // Allow selecting a specific coach in organization
       })
     )
     .mutation(async ({ input }) => {
@@ -2703,12 +2862,60 @@ export const clientRouterRouter = router({
       // Get client record to find their coach
       const client = await db.client.findFirst({
         where: { userId: user.id },
+        include: {
+          coach: {
+            include: {
+              coachOrganizations: {
+                where: { isActive: true },
+              },
+            },
+          },
+        },
       });
 
       if (!client) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Client profile not found",
+        });
+      }
+
+      // Determine which coach to send the request to
+      let targetCoachId = input.coachId || client.coachId;
+
+      // If a specific coach was selected, verify they're in the same organization
+      if (input.coachId && input.coachId !== client.coachId) {
+        const coachOrganization = client.coach?.coachOrganizations?.[0];
+
+        if (!coachOrganization) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "You can only request lessons from coaches in your organization",
+          });
+        }
+
+        // Verify the selected coach is in the same organization
+        const targetCoachInOrg = await db.coachOrganization.findFirst({
+          where: {
+            coachId: input.coachId,
+            organizationId: coachOrganization.organizationId,
+            isActive: true,
+          },
+        });
+
+        if (!targetCoachInOrg) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Selected coach is not in your organization",
+          });
+        }
+      }
+
+      if (!targetCoachId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No coach specified",
         });
       }
 
@@ -2763,7 +2970,7 @@ export const clientRouterRouter = router({
 
       // Check if the requested date is on a working day
       const coach = await db.user.findFirst({
-        where: { id: client.coachId || undefined },
+        where: { id: targetCoachId },
       });
 
       if (coach?.workingDays) {
@@ -2771,7 +2978,7 @@ export const clientRouterRouter = router({
         if (!coach.workingDays.includes(dayName)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `Coach is not available on ${dayName}s`,
+            message: `${coach.name} is not available on ${dayName}s`,
           });
         }
       }
@@ -2779,7 +2986,7 @@ export const clientRouterRouter = router({
       // Check if the requested time slot is already booked
       const existingLesson = await db.event.findFirst({
         where: {
-          coachId: client.coachId!,
+          coachId: targetCoachId,
           date: utcDateTime,
         },
       });
@@ -2791,50 +2998,40 @@ export const clientRouterRouter = router({
         });
       }
 
-      // Create a schedule change request
-      // Only create schedule request if client has a coach
-      if (!client.coachId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Client must have an assigned coach to request schedule changes",
-        });
-      }
-
       const scheduleRequest = await db.event.create({
         data: {
-          title: `Schedule Request - ${client.name}`,
+          title: `Schedule Request - ${client.name}${
+            input.coachId && input.coachId !== client.coachId
+              ? ` (requesting ${coach?.name})`
+              : ""
+          }`,
           description: input.reason || "Client requested schedule change",
           date: utcDateTime,
           clientId: client.id,
-          coachId: client.coachId!,
+          coachId: targetCoachId,
           status: "PENDING", // New status field for pending requests
         },
       });
 
-      // Create notification for the coach (only if coach exists)
-      if (client.coachId) {
-        await db.notification.create({
+      // Create notification for the coach
+      await db.notification.create({
+        data: {
+          userId: targetCoachId,
+          type: "SCHEDULE_REQUEST",
+          title: "New Schedule Request",
+          message: `${client.name} has requested a lesson for ${format(
+            new Date(fullDateStr),
+            "MMM d, yyyy 'at' h:mm a"
+          )}${input.reason ? `: ${input.reason}` : ""}`,
           data: {
-            userId: client.coachId,
-            type: "SCHEDULE_REQUEST",
-            title: "New Schedule Request",
-            message: `${
-              client.name
-            } has requested a schedule change for ${format(
-              new Date(fullDateStr),
-              "MMM d, yyyy 'at' h:mm a"
-            )}`,
-            data: {
-              eventId: scheduleRequest.id,
-              clientId: client.id,
-              clientName: client.name,
-              requestedDate: utcDateTime,
-              reason: input.reason,
-            },
+            eventId: scheduleRequest.id,
+            clientId: client.id,
+            clientName: client.name,
+            requestedDate: utcDateTime,
+            reason: input.reason,
           },
-        });
-      }
+        },
+      });
 
       return scheduleRequest;
     }),
@@ -3502,6 +3699,13 @@ export const clientRouterRouter = router({
       },
       include: {
         client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        coach: {
           select: {
             id: true,
             name: true,

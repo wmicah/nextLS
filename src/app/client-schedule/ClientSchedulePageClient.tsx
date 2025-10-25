@@ -51,10 +51,36 @@ function ClientSchedulePageClient() {
     date: "",
     time: "",
     reason: "",
+    coachId: "", // Selected coach ID for organization mode
   });
 
   // Fetch coach's profile first
   const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
+
+  // Fetch organization coaches and their schedules (if in an organization)
+  const { data: orgScheduleData } =
+    trpc.clientRouter.getOrganizationCoachesSchedules.useQuery({
+      month: currentMonth.getMonth(),
+      year: currentMonth.getFullYear(),
+    });
+
+  // Debug logging
+  console.log("📅 CLIENT SCHEDULE FRONTEND:", {
+    hasOrgData: !!orgScheduleData,
+    coachCount: orgScheduleData?.coaches.length || 0,
+    coaches: orgScheduleData?.coaches.map(c => ({
+      id: c.id,
+      name: c.name,
+      workingDays: c.workingDays,
+      workingHoursStart: c.workingHoursStart,
+      workingHoursEnd: c.workingHoursEnd,
+    })),
+    eventCount: orgScheduleData?.events.length || 0,
+  });
+
+  // Determine if client is in an organization
+  const isInOrganization =
+    orgScheduleData && orgScheduleData.coaches.length > 0;
 
   // Fetch coach's schedule for the current month and adjacent months
   const { data: coachSchedule = [] } =
@@ -104,6 +130,41 @@ function ClientSchedulePageClient() {
     ...prevMonthSchedule,
     ...nextMonthSchedule,
   ];
+
+  // Use organization schedule if available, otherwise use single coach schedule
+  const activeSchedule = isInOrganization
+    ? orgScheduleData?.events || []
+    : allCoachSchedule;
+
+  // Coach color mapping for organization view
+  const getCoachColor = (coachId: string) => {
+    if (!isInOrganization) return "bg-sky-500";
+
+    const coaches = orgScheduleData?.coaches || [];
+    const coachIndex = coaches.findIndex(c => c.id === coachId);
+
+    // Colors excluding green (reserved for "My Lessons")
+    const colors = [
+      "bg-blue-500",
+      "bg-purple-500",
+      "bg-orange-500",
+      "bg-pink-500",
+      "bg-yellow-500",
+      "bg-indigo-500",
+      "bg-red-500",
+      "bg-cyan-500",
+    ];
+
+    return colors[coachIndex % colors.length] || "bg-sky-500";
+  };
+
+  const getCoachName = (coachId: string) => {
+    if (!isInOrganization) return coachProfile?.name;
+
+    const coaches = orgScheduleData?.coaches || [];
+    const coach = coaches.find(c => c.id === coachId);
+    return coach?.name || "Unknown Coach";
+  };
 
   // Fetch client's confirmed lessons for the current month and adjacent months
   const { data: clientLessons = [] } =
@@ -299,7 +360,7 @@ function ClientSchedulePageClient() {
         utils.clientRouter.getClientLessons.refetch();
         utils.clientRouter.getClientUpcomingLessons.refetch();
         setShowRequestModal(false);
-        setRequestForm({ date: "", time: "", reason: "" });
+        setRequestForm({ date: "", time: "", reason: "", coachId: "" });
         setSelectedDate(null);
       },
       onError: error => {
@@ -359,7 +420,8 @@ function ClientSchedulePageClient() {
 
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
-    const lessons = allCoachLessons.filter((lesson: { date: string }) => {
+    // Use activeSchedule which includes org schedule if available
+    const lessons = activeSchedule.filter((lesson: { date: string }) => {
       // Convert UTC lesson date to user's timezone for proper date comparison
       const timeZone = getUserTimezone();
       const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
@@ -475,23 +537,43 @@ function ClientSchedulePageClient() {
       requestedTime: requestForm.time,
       reason: requestForm.reason,
       timeZone: timeZone,
+      coachId: requestForm.coachId || undefined, // Include selected coach if in organization
     });
   };
 
-  // Generate time slots based on coach's working hours and interval
+  // Generate time slots based on selected coach's working hours and interval
   const generateTimeSlots = () => {
-    const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
-    const endTime = coachProfile?.workingHours?.endTime || "8:00 PM";
-    const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
-    const workingDays = coachProfile?.workingHours?.workingDays || [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-      "Sunday",
-    ];
+    // Use selected coach if in organization, otherwise use default coach
+    let selectedCoach = coachProfile;
+
+    if (isInOrganization && requestForm.coachId && orgScheduleData) {
+      selectedCoach = orgScheduleData.coaches.find(
+        c => c.id === requestForm.coachId
+      );
+    }
+
+    const startTime =
+      selectedCoach?.workingHoursStart ||
+      selectedCoach?.workingHours?.startTime ||
+      "9:00 AM";
+    const endTime =
+      selectedCoach?.workingHoursEnd ||
+      selectedCoach?.workingHours?.endTime ||
+      "8:00 PM";
+    const interval =
+      selectedCoach?.timeSlotInterval ||
+      selectedCoach?.workingHours?.timeSlotInterval ||
+      60;
+    const workingDays = selectedCoach?.workingDays ||
+      selectedCoach?.workingHours?.workingDays || [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ];
 
     const slots = [];
 
@@ -763,136 +845,71 @@ function ClientSchedulePageClient() {
             </div>
           </div>
 
-          {/* Coach's Working Hours Display */}
-          <div
-            className="mb-6 p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <Clock className="h-5 w-5 text-sky-400" />
-              <h2 className="text-lg font-semibold text-white">
-                Coach&apos;s Working Hours
-              </h2>
-            </div>
-            <p className="text-gray-300">
-              {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
-              {coachProfile?.workingHours?.endTime || "6:00 PM"}
-            </p>
-            <p className="text-gray-400 text-sm mt-1">
-              Working Days:{" "}
-              {coachProfile?.workingHours?.workingDays?.join(", ") ||
-                "Monday - Sunday"}
-            </p>
-          </div>
-
-          {/* Today's Lessons Summary */}
-          {(() => {
-            const today = new Date();
-            const now = new Date();
-            // const todaysLessons = getLessonsForDate(today)
-            const myTodaysLessons = getClientLessonsForDate(today);
-
-            const nextUpcomingLessons = upcomingLessons.slice(0, 5);
-
-            return (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* My Today's Lessons */}
-                <div
-                  className="p-4 rounded-lg border-2"
-                  style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <Calendar className="h-5 w-5 text-emerald-400" />
-                    <h3 className="text-lg font-semibold text-white">
-                      My Lessons Today
-                    </h3>
-                  </div>
-                  {myTodaysLessons.length > 0 ? (
-                    <div className="space-y-2">
-                      {/* Show confirmed lessons first */}
-                      {myTodaysLessons.map((lesson: any, index: number) => (
-                        <div
-                          key={`confirmed-${index}`}
-                          className={`flex items-center justify-between p-3 rounded border-2 ${getStatusColor(
-                            lesson.status
-                          )}`}
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium">
-                              {formatTimeInUserTimezone(lesson.date)}
-                            </div>
-                            <div className="text-sm opacity-80">
-                              {anonymizeLessonTitle(
-                                lesson.title,
-                                lesson.clientId
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(lesson.status)}
-                            <div className="text-xs">{lesson.status}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm">
-                      No lessons scheduled for today
-                    </p>
-                  )}
-                </div>
-
-                {/* Coach's Upcoming Lessons */}
-                <div
-                  className="p-4 rounded-lg border-2"
-                  style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <Users className="h-5 w-5 text-sky-400" />
-                    <h3 className="text-lg font-semibold text-white">
-                      Coach&apos;s Upcoming Lessons
-                    </h3>
-                  </div>
-                  {nextUpcomingLessons.length > 0 ? (
-                    <div className="space-y-2">
-                      {nextUpcomingLessons.map((lesson: any, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 rounded bg-sky-500/10 border border-sky-500/20"
-                        >
-                          <div className="flex-1">
-                            <div className="font-medium text-sky-300">
-                              {format(
-                                toZonedTime(
-                                  lesson.date,
-                                  Intl.DateTimeFormat().resolvedOptions()
-                                    .timeZone || "America/New_York"
-                                ),
-                                "MMM d, h:mm a"
-                              )}
-                            </div>
-                            <div className="text-sm text-sky-200">Client</div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-xs text-sky-400">
-                              {anonymizeLessonTitle(
-                                lesson.title,
-                                lesson.clientId
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm">
-                      No upcoming lessons scheduled
-                    </p>
-                  )}
-                </div>
+          {/* Coach Working Hours - Show all coaches if in organization */}
+          {isInOrganization && orgScheduleData ? (
+            <div
+              className="mb-6 p-4 rounded-lg border-2"
+              style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <Clock className="h-5 w-5 text-sky-400" />
+                <h2 className="text-lg font-semibold text-white">
+                  Organization Coaches&apos; Hours
+                </h2>
               </div>
-            );
-          })()}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {orgScheduleData.coaches.map(coach => (
+                  <div
+                    key={coach.id}
+                    className="p-3 rounded-lg border"
+                    style={{
+                      backgroundColor: "#2A3133",
+                      borderColor: "#4A5A70",
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div
+                        className={`w-3 h-3 rounded-full ${getCoachColor(
+                          coach.id
+                        )}`}
+                      />
+                      <h4 className="font-semibold text-white">{coach.name}</h4>
+                    </div>
+                    <p className="text-gray-300 text-sm">
+                      {coach.workingHoursStart || "9:00 AM"} -{" "}
+                      {coach.workingHoursEnd || "8:00 PM"}
+                    </p>
+                    <p className="text-gray-400 text-xs mt-1">
+                      {coach.workingDays && coach.workingDays.length > 0
+                        ? coach.workingDays.join(", ")
+                        : "Monday - Sunday"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="mb-6 p-4 rounded-lg border-2"
+              style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <Clock className="h-5 w-5 text-sky-400" />
+                <h2 className="text-lg font-semibold text-white">
+                  Coach&apos;s Working Hours
+                </h2>
+              </div>
+              <p className="text-gray-300">
+                {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
+                {coachProfile?.workingHours?.endTime || "6:00 PM"}
+              </p>
+              <p className="text-gray-400 text-sm mt-1">
+                Working Days:{" "}
+                {coachProfile?.workingHours?.workingDays?.join(", ") ||
+                  "Monday - Sunday"}
+              </p>
+            </div>
+          )}
 
           {/* Month Navigation */}
           <div className="flex items-center justify-between mb-6">
@@ -919,16 +936,29 @@ function ClientSchedulePageClient() {
               <div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-400" />
               <span className="text-white font-medium">My Lessons</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-green-600 border-2 border-green-400" />
-              <span className="text-white font-medium">
-                My Organization Lessons
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-sky-500 border-2 border-sky-400" />
-              <span className="text-white font-medium">Other Clients</span>
-            </div>
+            {!isInOrganization && (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-sky-500 border-2 border-sky-400" />
+                  <span className="text-white font-medium">Other Clients</span>
+                </div>
+              </>
+            )}
+            {isInOrganization && orgScheduleData && (
+              <>
+                {orgScheduleData.coaches.map((coach, index) => (
+                  <div key={coach.id} className="flex items-center gap-2">
+                    <div
+                      className={`w-4 h-4 rounded ${getCoachColor(
+                        coach.id
+                      )} border-2`}
+                      style={{ opacity: 0.8 }}
+                    />
+                    <span className="text-white font-medium">{coach.name}</span>
+                  </div>
+                ))}
+              </>
+            )}
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
               <span className="text-white font-medium">Today</span>
@@ -1151,28 +1181,37 @@ function ClientSchedulePageClient() {
                               lesson.clientId !== currentClient?.id
                           )
                           .slice(0, 2)
-                          .map((lesson: any, index: number) => (
-                            <div
-                              key={`coach-${index}`}
-                              className="w-full text-xs p-1.5 md:p-2 rounded border-2 shadow-md overflow-hidden bg-sky-500/40 text-sky-100 border-sky-400"
-                            >
-                              <div className="flex items-start justify-between gap-1">
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-bold text-xs leading-tight">
-                                    {formatTimeInUserTimezone(lesson.date)}
-                                  </div>
-                                  <div className="truncate font-medium text-xs leading-tight flex items-center justify-between gap-1">
-                                    <span className="text-sky-200">Client</span>
-                                    {lesson.coach && (
-                                      <span className="text-[10px] opacity-80 truncate text-sky-300">
-                                        {lesson.coach.name}
-                                      </span>
-                                    )}
+                          .map((lesson: any, index: number) => {
+                            // Get coach-specific color if in organization mode
+                            const coachColorClass =
+                              isInOrganization && lesson.coachId
+                                ? getCoachColor(lesson.coachId)
+                                : "bg-sky-500";
+
+                            return (
+                              <div
+                                key={`coach-${index}`}
+                                className={`w-full text-xs p-1.5 md:p-2 rounded border-2 shadow-md overflow-hidden ${coachColorClass}/40 text-white border-current`}
+                                style={{ borderColor: "rgba(255,255,255,0.4)" }}
+                              >
+                                <div className="flex items-start justify-between gap-1">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-bold text-xs leading-tight">
+                                      {formatTimeInUserTimezone(lesson.date)}
+                                    </div>
+                                    <div className="truncate font-medium text-xs leading-tight flex items-center justify-between gap-1">
+                                      <span className="opacity-90">Client</span>
+                                      {lesson.coach && isInOrganization && (
+                                        <span className="text-[10px] opacity-80 truncate">
+                                          {lesson.coach.name}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         {coachLessonsForDay.filter(
                           (lesson: any) => lesson.clientId !== currentClient?.id
                         ).length > 2 && (
@@ -1224,7 +1263,12 @@ function ClientSchedulePageClient() {
                   <button
                     onClick={() => {
                       setShowRequestModal(false);
-                      setRequestForm({ date: "", time: "", reason: "" });
+                      setRequestForm({
+                        date: "",
+                        time: "",
+                        reason: "",
+                        coachId: "",
+                      });
                     }}
                     className="text-gray-400 hover:text-white transition-colors"
                   >
@@ -1233,6 +1277,42 @@ function ClientSchedulePageClient() {
                 </div>
 
                 <div className="space-y-4">
+                  {/* Coach selector - only show in organization mode */}
+                  {isInOrganization &&
+                    orgScheduleData &&
+                    orgScheduleData.coaches.length > 1 && (
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Select Coach
+                        </label>
+                        <select
+                          value={requestForm.coachId}
+                          onChange={e => {
+                            setRequestForm({
+                              ...requestForm,
+                              coachId: e.target.value,
+                              time: "", // Reset time when coach changes
+                            });
+                          }}
+                          className="w-full p-2 rounded-lg border text-white"
+                          style={{
+                            backgroundColor: "#2A2F2F",
+                            borderColor: "#606364",
+                          }}
+                        >
+                          <option value="">Select a coach</option>
+                          {orgScheduleData.coaches.map(coach => (
+                            <option key={coach.id} value={coach.id}>
+                              {coach.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Choose which coach you'd like to request a lesson from
+                        </p>
+                      </div>
+                    )}
+
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">
                       Date
@@ -1244,6 +1324,7 @@ function ClientSchedulePageClient() {
                         setRequestForm({
                           ...requestForm,
                           date: e.target.value,
+                          time: "", // Reset time when date changes
                         })
                       }
                       className="w-full p-2 rounded-lg border text-white"
@@ -1308,7 +1389,12 @@ function ClientSchedulePageClient() {
                   <button
                     onClick={() => {
                       setShowRequestModal(false);
-                      setRequestForm({ date: "", time: "", reason: "" });
+                      setRequestForm({
+                        date: "",
+                        time: "",
+                        reason: "",
+                        coachId: "",
+                      });
                     }}
                     className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
                     style={{
