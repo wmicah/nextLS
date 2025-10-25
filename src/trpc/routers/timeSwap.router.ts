@@ -191,6 +191,13 @@ export const timeSwapRouter = router({
               name: true,
             },
           },
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
         },
         orderBy: {
           date: "asc",

@@ -545,26 +545,38 @@ function ClientSchedulePageClient() {
   const generateTimeSlots = () => {
     // Use selected coach if in organization, otherwise use default coach
     let selectedCoach = coachProfile;
+    let orgCoach:
+      | {
+          id: string;
+          name: string | null;
+          email: string;
+          workingDays: string[];
+          workingHoursStart: string | null;
+          workingHoursEnd: string | null;
+          timeSlotInterval: number;
+        }
+      | undefined;
 
     if (isInOrganization && requestForm.coachId && orgScheduleData) {
-      selectedCoach = orgScheduleData.coaches.find(
+      orgCoach = orgScheduleData.coaches.find(
         c => c.id === requestForm.coachId
       );
     }
 
+    // Use org coach data if available, otherwise fall back to coachProfile
     const startTime =
-      selectedCoach?.workingHoursStart ||
+      orgCoach?.workingHoursStart ||
       selectedCoach?.workingHours?.startTime ||
       "9:00 AM";
     const endTime =
-      selectedCoach?.workingHoursEnd ||
+      orgCoach?.workingHoursEnd ||
       selectedCoach?.workingHours?.endTime ||
       "8:00 PM";
     const interval =
-      selectedCoach?.timeSlotInterval ||
+      orgCoach?.timeSlotInterval ||
       selectedCoach?.workingHours?.timeSlotInterval ||
       60;
-    const workingDays = selectedCoach?.workingDays ||
+    const workingDays = orgCoach?.workingDays ||
       selectedCoach?.workingHours?.workingDays || [
         "Monday",
         "Tuesday",
