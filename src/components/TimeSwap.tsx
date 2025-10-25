@@ -59,6 +59,22 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
     requesterEventId: string,
     targetEventId: string
   ) => {
+    // Find the events
+    const requesterEvent = myEvents.find(e => e.id === requesterEventId);
+    const targetEvent = targetEvents.find(e => e.id === targetEventId);
+
+    // Validate that both events are with the same coach
+    if (
+      requesterEvent &&
+      targetEvent &&
+      requesterEvent.coach?.id !== targetEvent.coach?.id
+    ) {
+      alert(
+        "⚠️ You can only swap lessons with the same coach. Please select lessons that are both with the same coach."
+      );
+      return;
+    }
+
     setSelectedRequesterEvent(requesterEventId);
     setSelectedTargetEvent(targetEventId);
     setStep("confirm");
@@ -121,13 +137,18 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                           <Users className="h-5 w-5 text-blue-600" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <p className="font-medium text-gray-900">
                             {client.name}
                           </p>
                           <p className="text-sm text-gray-500">
                             {client.email}
                           </p>
+                          {client.coach && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              Coach: {client.coach.name}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -172,7 +193,7 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                         >
                           <div className="flex items-center gap-3">
                             <Clock className="h-4 w-4 text-gray-400" />
-                            <div>
+                            <div className="flex-1">
                               <p className="font-medium">{event.title}</p>
                               <p className="text-sm text-gray-500">
                                 {new Date(event.date).toLocaleDateString()} at{" "}
@@ -181,6 +202,11 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                                   minute: "2-digit",
                                 })}
                               </p>
+                              {event.coach && (
+                                <p className="text-xs text-blue-600 mt-1">
+                                  Coach: {event.coach.name}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -198,34 +224,60 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                       's upcoming lessons:
                     </h4>
                     <div className="space-y-2">
-                      {targetEvents.map(event => (
-                        <button
-                          key={event.id}
-                          onClick={() => {
-                            // For now, let's use the first available event from the user
-                            const myEvent = myEvents[0];
-                            if (myEvent) {
-                              handleEventSelect(myEvent.id, event.id);
-                            }
-                          }}
-                          className="w-full p-3 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors text-left"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Clock className="h-4 w-4 text-gray-400" />
-                            <div>
-                              <p className="font-medium">{event.title}</p>
-                              <p className="text-sm text-gray-500">
-                                {new Date(event.date).toLocaleDateString()} at{" "}
-                                {new Date(event.date).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </p>
+                      {targetEvents.map(event => {
+                        // Only show events that can be swapped with (same coach as myEvents)
+                        const canSwapWith = myEvents.some(
+                          myEvent => myEvent.coach?.id === event.coach?.id
+                        );
+
+                        return (
+                          <button
+                            key={event.id}
+                            onClick={() => {
+                              // Find the matching event with the same coach
+                              const matchingMyEvent = myEvents.find(
+                                myEvent => myEvent.coach?.id === event.coach?.id
+                              );
+                              if (matchingMyEvent) {
+                                handleEventSelect(matchingMyEvent.id, event.id);
+                              }
+                            }}
+                            disabled={!canSwapWith}
+                            className={`w-full p-3 border rounded-lg transition-colors text-left ${
+                              canSwapWith
+                                ? "border-gray-200 hover:border-green-300 hover:bg-green-50"
+                                : "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <div className="flex-1">
+                                <p className="font-medium">{event.title}</p>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(event.date).toLocaleDateString()} at{" "}
+                                  {new Date(event.date).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                                {event.coach && (
+                                  <p className="text-xs text-blue-600 mt-1">
+                                    Coach: {event.coach.name}
+                                  </p>
+                                )}
+                                {!canSwapWith && (
+                                  <p className="text-xs text-red-600 mt-1">
+                                    ⚠️ No matching lesson with this coach
+                                  </p>
+                                )}
+                              </div>
+                              {canSwapWith && (
+                                <ArrowRight className="h-4 w-4 text-gray-400 ml-auto" />
+                              )}
                             </div>
-                            <ArrowRight className="h-4 w-4 text-gray-400 ml-auto" />
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -271,7 +323,7 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                   {myEvents.find(e => e.id === selectedRequesterEvent) && (
                     <div className="flex items-center gap-3">
                       <Clock className="h-4 w-4 text-gray-400" />
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium">
                           {
                             myEvents.find(e => e.id === selectedRequesterEvent)
@@ -292,9 +344,24 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                             minute: "2-digit",
                           })}
                         </p>
+                        {myEvents.find(e => e.id === selectedRequesterEvent)
+                          ?.coach && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Coach:{" "}
+                            {
+                              myEvents.find(
+                                e => e.id === selectedRequesterEvent
+                              )?.coach?.name
+                            }
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="flex items-center justify-center">
+                  <ArrowRight className="h-6 w-6 text-gray-400" />
                 </div>
 
                 <div className="p-4 border border-gray-200 rounded-lg">
@@ -305,7 +372,7 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                   {targetEvents.find(e => e.id === selectedTargetEvent) && (
                     <div className="flex items-center gap-3">
                       <Clock className="h-4 w-4 text-gray-400" />
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium">
                           {
                             targetEvents.find(e => e.id === selectedTargetEvent)
@@ -326,10 +393,36 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
                             minute: "2-digit",
                           })}
                         </p>
+                        {targetEvents.find(e => e.id === selectedTargetEvent)
+                          ?.coach && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Coach:{" "}
+                            {
+                              targetEvents.find(
+                                e => e.id === selectedTargetEvent
+                              )?.coach?.name
+                            }
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
                 </div>
+
+                {/* Coach Validation Message */}
+                {myEvents.find(e => e.id === selectedRequesterEvent)?.coach
+                  ?.id ===
+                  targetEvents.find(e => e.id === selectedTargetEvent)?.coach
+                    ?.id && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <p className="text-sm text-green-800">
+                        ✓ Both lessons are with the same coach - swap is valid
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 mt-6">

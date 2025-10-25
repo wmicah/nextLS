@@ -40,6 +40,15 @@ export const timeSwapRouter = router({
     // Get current client
     const currentClient = await db.client.findFirst({
       where: { userId: user.id },
+      include: {
+        coach: {
+          include: {
+            coachOrganizations: {
+              where: { isActive: true },
+            },
+          },
+        },
+      },
     });
 
     if (!currentClient) {
@@ -49,23 +58,67 @@ export const timeSwapRouter = router({
       });
     }
 
-    // Get all other clients under the same coach
-    const otherClients = await db.client.findMany({
-      where: {
-        coachId: currentClient.coachId,
-        id: { not: currentClient.id },
-        archived: false,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        avatar: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
+    // Check if coach is in an organization
+    const coachOrganization = currentClient.coach?.coachOrganizations?.[0];
+
+    let otherClients;
+
+    if (coachOrganization) {
+      // Get all coaches in the organization
+      const orgCoaches = await db.coachOrganization.findMany({
+        where: {
+          organizationId: coachOrganization.organizationId,
+          isActive: true,
+        },
+        select: {
+          coachId: true,
+        },
+      });
+
+      const orgCoachIds = orgCoaches.map(c => c.coachId);
+
+      // Get all clients from ALL coaches in the organization
+      otherClients = await db.client.findMany({
+        where: {
+          coachId: { in: orgCoachIds },
+          id: { not: currentClient.id },
+          archived: false,
+        },
+        include: {
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+    } else {
+      // Fallback: Get all other clients under the same coach (original behavior)
+      otherClients = await db.client.findMany({
+        where: {
+          coachId: currentClient.coachId,
+          id: { not: currentClient.id },
+          archived: false,
+        },
+        include: {
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+    }
 
     return otherClients;
   }),
@@ -227,6 +280,15 @@ export const timeSwapRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "You cannot swap with your own lesson",
+        });
+      }
+
+      // CRITICAL VALIDATION: Both lessons must be with the SAME coach
+      if (requesterEvent.coachId !== targetEvent.coachId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "You can only swap lessons with the same coach. The lessons you're trying to swap are with different coaches.",
         });
       }
 
