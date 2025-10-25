@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
+import { handleNotificationClick } from "@/lib/notification-routing";
 import {
   format,
   isToday,
