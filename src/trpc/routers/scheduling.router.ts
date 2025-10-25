@@ -325,6 +325,12 @@ export const schedulingRouter = router({
               utcLessonDate,
               "MMM d, yyyy 'at' h:mm a"
             )}`,
+            data: {
+              eventId: lesson.id,
+              clientId: client.id,
+              coachId: ensureUserId(user.id),
+              coachName: coach.name,
+            },
           },
         });
       }
@@ -1416,6 +1422,12 @@ export const schedulingRouter = router({
               utcLessonDate,
               "MMM d, yyyy 'at' h:mm a"
             )}`,
+            data: {
+              eventId: lesson.id,
+              clientId: client.id,
+              coachId: ensureUserId(user.id),
+              coachName: coach.name,
+            },
           },
         });
       }

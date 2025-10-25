@@ -2739,6 +2739,7 @@ export const clientRouterRouter = router({
             )} has been approved!`,
             data: {
               eventId: event.id,
+              clientId: event.clientId,
               coachId: ensureUserId(user.id),
               coachName: coach.name,
             },
@@ -2820,6 +2821,7 @@ export const clientRouterRouter = router({
             }`,
             data: {
               eventId: event.id,
+              clientId: event.clientId,
               coachId: ensureUserId(user.id),
               coachName: coach.name,
               reason: input.reason,
@@ -3027,8 +3029,10 @@ export const clientRouterRouter = router({
             eventId: scheduleRequest.id,
             clientId: client.id,
             clientName: client.name,
+            clientUserId: client.userId,
             requestedDate: utcDateTime,
             reason: input.reason,
+            coachId: targetCoachId,
           },
         },
       });

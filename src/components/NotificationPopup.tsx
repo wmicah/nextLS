@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, RefObject } from "react";
 import { trpc } from "@/app/_trpc/client";
+import { handleNotificationClick } from "@/lib/notification-routing";
 // Removed complex SSE hooks - using simple polling instead
 import { format } from "date-fns";
 import {
@@ -305,11 +306,13 @@ export default function NotificationPopup({
                       : ""
                   }`}
                   onClick={() => {
-                    if (!notification.isRead) {
-                      markAsReadMutation.mutate({
-                        notificationId: notification.id,
-                      });
-                    }
+                    handleNotificationClick(
+                      notification,
+                      {
+                        push: (route: string) => (window.location.href = route),
+                      },
+                      markAsReadMutation
+                    );
                   }}
                   style={{
                     backgroundColor: !notification.isRead
