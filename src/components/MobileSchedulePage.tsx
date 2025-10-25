@@ -735,6 +735,7 @@ export default function MobileSchedulePage() {
                       })),
                     ]}
                     placeholder="Select a client"
+                    searchable={true}
                     style={{
                       backgroundColor: "#2A2F2F",
                       borderColor: "#606364",

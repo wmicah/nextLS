@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Calendar,
@@ -108,6 +108,8 @@ function SchedulePageClient() {
     time: "",
     date: "",
   });
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
 
   // Fetch coach's schedule for the current month and adjacent months
   const { data: coachSchedule = [] } =
@@ -158,6 +160,39 @@ function SchedulePageClient() {
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
   });
+
+  // Filter clients based on search term
+  const filteredClients = useMemo(() => {
+    if (!clientSearch.trim()) return clients;
+    const searchLower = clientSearch.toLowerCase();
+    return clients.filter((client: any) => {
+      return (
+        client.name?.toLowerCase().includes(searchLower) ||
+        client.email?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [clients, clientSearch]);
+
+  // Close dropdown when clicking outside
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowClientDropdown(false);
+      }
+    };
+
+    if (showClientDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showClientDropdown]);
 
   // Fetch pending schedule requests
   const { data: pendingRequests = [] } =
@@ -1767,34 +1802,87 @@ function SchedulePageClient() {
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                      <select
-                                        value={scheduleForm.clientId}
-                                        onChange={e =>
-                                          setScheduleForm({
-                                            ...scheduleForm,
-                                            clientId: e.target.value,
-                                          })
-                                        }
-                                        className="p-2 rounded-md text-white text-sm"
-                                        style={{
-                                          backgroundColor: "#2A2F2F",
-                                          borderColor: "#606364",
-                                        }}
+                                      <div
+                                        className="relative"
+                                        ref={dropdownRef}
                                       >
-                                        <option value="">
-                                          Select client...
-                                        </option>
-                                        {clients.map(client => (
-                                          <option
-                                            key={client.id}
-                                            value={client.id}
+                                        <input
+                                          type="text"
+                                          placeholder="Search for a client..."
+                                          value={clientSearch}
+                                          onChange={e => {
+                                            setClientSearch(e.target.value);
+                                            setShowClientDropdown(true);
+                                          }}
+                                          onFocus={() =>
+                                            setShowClientDropdown(true)
+                                          }
+                                          className="p-2 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          style={{
+                                            backgroundColor: "#2A2F2F",
+                                            borderColor: "#606364",
+                                            minWidth: "200px",
+                                          }}
+                                        />
+
+                                        {/* Dropdown */}
+                                        {showClientDropdown && (
+                                          <div
+                                            className="absolute z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg"
+                                            style={{
+                                              backgroundColor: "#353A3A",
+                                              borderColor: "#606364",
+                                              minWidth: "200px",
+                                            }}
                                           >
-                                            {client.name ||
-                                              client.email ||
-                                              "Unnamed Client"}
-                                          </option>
-                                        ))}
-                                      </select>
+                                            {filteredClients.length > 0 ? (
+                                              filteredClients.map(
+                                                (client: any) => (
+                                                  <button
+                                                    key={client.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                      setScheduleForm({
+                                                        ...scheduleForm,
+                                                        clientId: client.id,
+                                                      });
+                                                      setClientSearch(
+                                                        client.name ||
+                                                          client.email ||
+                                                          ""
+                                                      );
+                                                      setShowClientDropdown(
+                                                        false
+                                                      );
+                                                    }}
+                                                    className="w-full px-3 py-2 text-left hover:bg-[#4A5A70] transition-colors flex items-center gap-3"
+                                                    style={{ color: "#C3BCC2" }}
+                                                  >
+                                                    <div className="flex-1">
+                                                      <div className="font-medium text-sm">
+                                                        {client.name ||
+                                                          "Unnamed"}
+                                                      </div>
+                                                      {client.email && (
+                                                        <div className="text-xs opacity-70">
+                                                          {client.email}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </button>
+                                                )
+                                              )
+                                            ) : (
+                                              <div
+                                                className="px-3 py-2 text-center text-sm"
+                                                style={{ color: "#ABA4AA" }}
+                                              >
+                                                No clients found
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
                                       <button
                                         onClick={() => {
                                           if (
@@ -1912,29 +2000,77 @@ function SchedulePageClient() {
                                 </p>
                               </div>
                               <div className="flex items-center gap-3">
-                                <select
-                                  value={scheduleForm.clientId}
-                                  onChange={e =>
-                                    setScheduleForm({
-                                      ...scheduleForm,
-                                      clientId: e.target.value,
-                                    })
-                                  }
-                                  className="p-2 rounded-md text-white text-sm"
-                                  style={{
-                                    backgroundColor: "#2A2F2F",
-                                    borderColor: "#606364",
-                                  }}
-                                >
-                                  <option value="">Select client...</option>
-                                  {clients.map(client => (
-                                    <option key={client.id} value={client.id}>
-                                      {client.name ||
-                                        client.email ||
-                                        "Unnamed Client"}
-                                    </option>
-                                  ))}
-                                </select>
+                                <div className="relative" ref={dropdownRef}>
+                                  <input
+                                    type="text"
+                                    placeholder="Search for a client..."
+                                    value={clientSearch}
+                                    onChange={e => {
+                                      setClientSearch(e.target.value);
+                                      setShowClientDropdown(true);
+                                    }}
+                                    onFocus={() => setShowClientDropdown(true)}
+                                    className="p-2 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    style={{
+                                      backgroundColor: "#2A2F2F",
+                                      borderColor: "#606364",
+                                      minWidth: "200px",
+                                    }}
+                                  />
+
+                                  {/* Dropdown */}
+                                  {showClientDropdown && (
+                                    <div
+                                      className="absolute z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg"
+                                      style={{
+                                        backgroundColor: "#353A3A",
+                                        borderColor: "#606364",
+                                        minWidth: "200px",
+                                      }}
+                                    >
+                                      {filteredClients.length > 0 ? (
+                                        filteredClients.map((client: any) => (
+                                          <button
+                                            key={client.id}
+                                            type="button"
+                                            onClick={() => {
+                                              setScheduleForm({
+                                                ...scheduleForm,
+                                                clientId: client.id,
+                                              });
+                                              setClientSearch(
+                                                client.name ||
+                                                  client.email ||
+                                                  ""
+                                              );
+                                              setShowClientDropdown(false);
+                                            }}
+                                            className="w-full px-3 py-2 text-left hover:bg-[#4A5A70] transition-colors flex items-center gap-3"
+                                            style={{ color: "#C3BCC2" }}
+                                          >
+                                            <div className="flex-1">
+                                              <div className="font-medium text-sm">
+                                                {client.name || "Unnamed"}
+                                              </div>
+                                              {client.email && (
+                                                <div className="text-xs opacity-70">
+                                                  {client.email}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </button>
+                                        ))
+                                      ) : (
+                                        <div
+                                          className="px-3 py-2 text-center text-sm"
+                                          style={{ color: "#ABA4AA" }}
+                                        >
+                                          No clients found
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                                 <button
                                   onClick={() => {
                                     if (
