@@ -96,14 +96,20 @@ export default function OrganizationScheduleLessonModal({
       staleTime: 5 * 60 * 1000,
     });
 
-  // Filter clients based on search
-  const filteredClients = organizationClients.filter((client: any) => {
-    const searchLower = clientSearch.toLowerCase();
-    return (
-      client.name?.toLowerCase().includes(searchLower) ||
-      client.email?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Filter and sort clients alphabetically based on search
+  const filteredClients = organizationClients
+    .filter((client: any) => {
+      const searchLower = clientSearch.toLowerCase();
+      return (
+        client.name?.toLowerCase().includes(searchLower) ||
+        client.email?.toLowerCase().includes(searchLower)
+      );
+    })
+    .sort((a: any, b: any) => {
+      const nameA = (a.name || a.email || "").toLowerCase();
+      const nameB = (b.name || b.email || "").toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
   // Fetch coach's profile for working hours
   const { data: coachProfile } = trpc.user.getProfile.useQuery();

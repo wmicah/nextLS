@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { ChevronDown, Search } from "lucide-react";
 
 interface CustomSelectProps {
   value: string;
@@ -11,6 +11,7 @@ interface CustomSelectProps {
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
+  searchable?: boolean;
 }
 
 export default function CustomSelect({
@@ -21,11 +22,22 @@ export default function CustomSelect({
   className = "",
   style = {},
   disabled = false,
+  searchable = false,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find(option => option.value === value);
+
+  // Filter options based on search term
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !searchTerm.trim()) return options;
+    const searchLower = searchTerm.toLowerCase();
+    return options.filter(option =>
+      option.label.toLowerCase().includes(searchLower)
+    );
+  }, [options, searchTerm, searchable]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,6 +47,7 @@ export default function CustomSelect({
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
+        setSearchTerm("");
       }
     };
 
@@ -45,6 +58,13 @@ export default function CustomSelect({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, [isOpen]);
+
+  // Reset search when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm("");
+    }
   }, [isOpen]);
 
   return (
@@ -68,28 +88,69 @@ export default function CustomSelect({
 
       {isOpen && !disabled && (
         <div
-          className="absolute z-50 w-full mt-1 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+          className="absolute z-50 w-full mt-1 rounded-lg shadow-lg overflow-hidden"
           style={{ backgroundColor: "#1F2323", border: "1px solid #4A4F4F" }}
         >
-          {options.map(option => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(option.value);
-                setIsOpen(false);
-              }}
-              className={`w-full px-3 py-2 text-left text-white first:rounded-t-lg last:rounded-b-lg transition-colors ${
-                option.value === value ? "" : "hover:opacity-80"
-              }`}
-              style={{
-                backgroundColor:
-                  option.value === value ? "#2A2F2F" : "transparent",
-              }}
+          {/* Search input */}
+          {searchable && (
+            <div
+              className="sticky top-0 p-2 border-b"
+              style={{ borderColor: "#4A4F4F", backgroundColor: "#1F2323" }}
             >
-              {option.label}
-            </button>
-          ))}
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                  style={{ color: "#ABA4AA" }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded text-sm border"
+                  style={{
+                    backgroundColor: "#2A2F2F",
+                    borderColor: "#606364",
+                    color: "#C3BCC2",
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Options list */}
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                  className={`w-full px-3 py-2 text-left text-white transition-colors ${
+                    option.value === value ? "" : "hover:opacity-80"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      option.value === value ? "#2A2F2F" : "transparent",
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))
+            ) : (
+              <div
+                className="px-3 py-2 text-center text-sm"
+                style={{ color: "#ABA4AA" }}
+              >
+                No results found
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -89,9 +89,14 @@ export default function MobileSimpleAssignProgramModal({
   const { data: programs = [] } = trpc.programs.list.useQuery();
 
   // Get all active clients (exclude archived)
-  const { data: clients = [] } = trpc.clients.list.useQuery({
+  const { data: clientsRaw = [] } = trpc.clients.list.useQuery({
     archived: false,
   });
+
+  // Sort clients alphabetically by name
+  const clients = [...clientsRaw].sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "")
+  );
 
   // Get selected program details
   const { data: selectedProgramData } = trpc.programs.getById.useQuery(

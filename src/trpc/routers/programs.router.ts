@@ -125,7 +125,7 @@ export const programsRouter = router({
         },
       },
       orderBy: {
-        createdAt: "desc",
+        title: "asc",
       },
     });
 

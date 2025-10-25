@@ -111,7 +111,7 @@ export const libraryRouter = router({
         // Get paginated resources
         const resources = await db.libraryResource.findMany({
           where,
-          orderBy: { createdAt: "desc" },
+          orderBy: { title: "asc" },
           skip,
           take: input.limit,
           select: {

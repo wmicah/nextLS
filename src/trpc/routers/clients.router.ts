@@ -154,9 +154,9 @@ export const clientsRouter = router({
             },
           },
         },
+        orderBy: { name: "asc" },
       });
 
-      // Return clients in basic order - let frontend handle complex sorting
       return clients;
     }),
 
@@ -809,7 +809,6 @@ export const clientsRouter = router({
           name: true,
           email: true,
           phone: true,
-          notes: true,
           coachId: true,
           createdAt: true,
           updatedAt: true,

@@ -71,7 +71,7 @@ export const routinesRouter = router({
         },
       },
       orderBy: {
-        createdAt: "desc",
+        name: "asc",
       },
     });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
 import {
@@ -32,6 +32,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import CustomSelect from "./ui/CustomSelect";
 
 interface WeekAtAGlanceProps {
   className?: string;
@@ -55,6 +56,8 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
     date: "",
     time: "",
   });
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
 
   const { addToast } = useUIStore();
 
@@ -84,6 +87,29 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
   });
+
+  // Filter and sort clients alphabetically based on search term
+  const filteredClients = useMemo(() => {
+    let filtered = clients;
+
+    // Filter by search term if provided
+    if (clientSearch.trim()) {
+      const searchLower = clientSearch.toLowerCase();
+      filtered = clients.filter((client: any) => {
+        return (
+          client.name?.toLowerCase().includes(searchLower) ||
+          client.email?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    // Sort alphabetically by name
+    return filtered.sort((a: any, b: any) => {
+      const nameA = (a.name || a.email || "").toLowerCase();
+      const nameB = (b.name || b.email || "").toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  }, [clients, clientSearch]);
 
   // Schedule lesson mutation
   const utils = trpc.useUtils();
@@ -154,6 +180,35 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
       });
     },
   });
+
+  // Close dropdown when clicking outside
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowClientDropdown(false);
+      }
+    };
+
+    if (showClientDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showClientDropdown]);
+
+  // Reset search when modal closes
+  useEffect(() => {
+    if (!showScheduleModal) {
+      setClientSearch("");
+      setShowClientDropdown(false);
+    }
+  }, [showScheduleModal]);
 
   // Filter events for the current week
   const weekEvents = useMemo(() => {
@@ -1047,27 +1102,73 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                 <label className="block text-sm font-medium text-white mb-2">
                   Client
                 </label>
-                <select
-                  value={scheduleForm.clientId}
-                  onChange={e =>
-                    setScheduleForm({
-                      ...scheduleForm,
-                      clientId: e.target.value,
-                    })
-                  }
-                  className="w-full p-2 rounded-lg border text-white"
-                  style={{
-                    backgroundColor: "#2A2F2F",
-                    borderColor: "#606364",
-                  }}
-                >
-                  <option value="">Select a client</option>
-                  {clients?.map((client: any) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name || client.email}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative" ref={dropdownRef}>
+                  <input
+                    type="text"
+                    placeholder="Search for a client..."
+                    value={clientSearch}
+                    onChange={e => {
+                      setClientSearch(e.target.value);
+                      setShowClientDropdown(true);
+                    }}
+                    onFocus={() => setShowClientDropdown(true)}
+                    className="w-full px-4 py-2 rounded-lg border text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{
+                      backgroundColor: "#2A2F2F",
+                      borderColor: "#606364",
+                    }}
+                  />
+
+                  {/* Dropdown */}
+                  {showClientDropdown && (
+                    <div
+                      className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg"
+                      style={{
+                        backgroundColor: "#353A3A",
+                        borderColor: "#606364",
+                      }}
+                    >
+                      {filteredClients.length > 0 ? (
+                        filteredClients.map((client: any) => (
+                          <button
+                            key={client.id}
+                            type="button"
+                            onClick={() => {
+                              setScheduleForm({
+                                ...scheduleForm,
+                                clientId: client.id,
+                              });
+                              setClientSearch(
+                                client.name || client.email || ""
+                              );
+                              setShowClientDropdown(false);
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-[#4A5A70] transition-colors flex items-center gap-3"
+                            style={{ color: "#C3BCC2" }}
+                          >
+                            <div className="flex-1">
+                              <div className="font-medium">
+                                {client.name || "Unnamed"}
+                              </div>
+                              {client.email && (
+                                <div className="text-sm opacity-70">
+                                  {client.email}
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div
+                          className="px-4 py-2 text-center"
+                          style={{ color: "#ABA4AA" }}
+                        >
+                          No clients found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1095,27 +1196,27 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                 <label className="block text-sm font-medium text-white mb-2">
                   Time
                 </label>
-                <select
+                <CustomSelect
                   value={scheduleForm.time}
-                  onChange={e =>
+                  onChange={value =>
                     setScheduleForm({
                       ...scheduleForm,
-                      time: e.target.value,
+                      time: value,
                     })
                   }
-                  className="w-full p-2 rounded-lg border text-white"
+                  options={[
+                    { value: "", label: "Select a time" },
+                    ...generateTimeSlots().map(slot => ({
+                      value: slot,
+                      label: slot,
+                    })),
+                  ]}
+                  placeholder="Select a time"
                   style={{
                     backgroundColor: "#2A2F2F",
                     borderColor: "#606364",
                   }}
-                >
-                  <option value="">Select a time</option>
-                  {generateTimeSlots().map(slot => (
-                    <option key={slot} value={slot}>
-                      {slot}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 
