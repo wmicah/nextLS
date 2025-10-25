@@ -1150,6 +1150,7 @@ model ClientNote {
   type        NoteType @default(GENERAL)
   priority    NotePriority @default(NORMAL)
   isPrivate   Boolean  @default(false)
+  isPinned    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

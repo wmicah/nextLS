@@ -34,6 +34,8 @@ import {
   Copy,
   XCircle,
   Loader2,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import { format } from "date-fns";
 import AddClientModal from "./AddClientModal";
@@ -418,27 +420,42 @@ export default function MobileClientsPage() {
   });
   const utils = trpc.useUtils();
 
-  // Mutation to update notes
+  // Fetch notes for the selected client
+  const { data: clientNotes = [], refetch: refetchNotes } =
+    trpc.clients.getClientNotes.useQuery(
+      { clientId: feedbackClient?.id || "" },
+      { enabled: !!feedbackClient }
+    );
+
+  // Mutation to update notes (legacy - keeping for backward compatibility)
   const updateNotes = trpc.clients.updateNotes.useMutation({
     onSuccess: () => {
       utils.clients.list.invalidate();
-      setIsFeedbackOpen(false);
-      setFeedbackText("");
-      setFeedbackClient(null);
+      refetchNotes();
     },
     onError: error => {
       console.error("Failed to update notes:", error);
     },
   });
 
+  // Mutation to toggle pin status
+  const togglePinNote = trpc.clients.togglePinNote.useMutation({
+    onSuccess: () => {
+      refetchNotes();
+    },
+    onError: error => {
+      console.error("Failed to toggle pin:", error);
+    },
+  });
+
   const openFeedback = (client: Client) => {
     setFeedbackClient(client);
-    setFeedbackText(extractNoteContent(client.notes));
+    setFeedbackText("");
     setIsFeedbackOpen(true);
   };
 
   const submitFeedback = () => {
-    if (!feedbackClient) return;
+    if (!feedbackClient || !feedbackText.trim()) return;
     updateNotes.mutate({ clientId: feedbackClient.id, notes: feedbackText });
   };
 
@@ -1267,33 +1284,110 @@ export default function MobileClientsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/60"
-            onClick={() => setIsFeedbackOpen(false)}
+            onClick={() => {
+              setIsFeedbackOpen(false);
+              setFeedbackText("");
+            }}
           />
           <div className="relative w-full max-w-lg rounded-xl shadow-2xl border p-4 max-h-[90vh] overflow-y-auto bg-[#2B3038] border-[#606364]">
-            <h3 className="text-lg font-bold mb-3 text-[#C3BCC2]">
-              Leave feedback for {feedbackClient.name}
-            </h3>
-            <textarea
-              value={feedbackText}
-              onChange={e => setFeedbackText(e.target.value)}
-              className="w-full rounded-lg p-3 border mb-4 text-sm resize-none bg-[#2A3133] border-[#606364] text-[#C3BCC2]"
-              rows={6}
-              placeholder="Type feedback/notes here..."
-            />
-            <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[#C3BCC2]">
+                Notes for {feedbackClient.name}
+              </h3>
               <button
-                onClick={() => setIsFeedbackOpen(false)}
-                className="w-full px-4 py-2 rounded-lg border bg-transparent border-[#606364] text-[#ABA4AA]"
+                onClick={() => {
+                  setIsFeedbackOpen(false);
+                  setFeedbackText("");
+                }}
+                className="p-1 rounded-lg hover:bg-[#4A5A70] transition-colors"
               >
-                Cancel
+                <X className="h-5 w-5 text-[#ABA4AA]" />
               </button>
-              <button
-                onClick={submitFeedback}
-                disabled={updateNotes.isPending}
-                className="w-full px-4 py-2 rounded-lg shadow-lg border disabled:opacity-50 bg-[#4A5A70] border-[#606364] text-[#C3BCC2]"
-              >
-                {updateNotes.isPending ? "Saving..." : "Save"}
-              </button>
+            </div>
+
+            {/* Existing Notes List */}
+            {clientNotes.length > 0 && (
+              <div className="mb-4 space-y-2">
+                {clientNotes.map(note => (
+                  <div
+                    key={note.id}
+                    className={`p-3 rounded-lg border ${
+                      note.isPinned
+                        ? "bg-[#4A5A70]/20 border-[#4A5A70]"
+                        : "bg-[#2A3133] border-[#606364]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        {note.title && (
+                          <p className="font-semibold text-[#C3BCC2] mb-1">
+                            {note.title}
+                          </p>
+                        )}
+                        <p className="text-sm text-[#ABA4AA] whitespace-pre-wrap">
+                          {note.content}
+                        </p>
+                        <p className="text-xs text-[#606364] mt-2">
+                          {format(
+                            new Date(note.createdAt),
+                            "MMM d, yyyy 'at' h:mm a"
+                          )}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() =>
+                          togglePinNote.mutate({ noteId: note.id })
+                        }
+                        disabled={togglePinNote.isPending}
+                        className={`p-2 rounded-lg transition-all ${
+                          note.isPinned
+                            ? "bg-[#4A5A70] text-yellow-400"
+                            : "hover:bg-[#4A5A70] text-[#ABA4AA]"
+                        }`}
+                        title={note.isPinned ? "Unpin note" : "Pin note"}
+                      >
+                        {note.isPinned ? (
+                          <Pin className="h-4 w-4 fill-current" />
+                        ) : (
+                          <PinOff className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add New Note */}
+            <div className="border-t border-[#606364] pt-4">
+              <h4 className="text-sm font-semibold mb-2 text-[#C3BCC2]">
+                Add New Note
+              </h4>
+              <textarea
+                value={feedbackText}
+                onChange={e => setFeedbackText(e.target.value)}
+                className="w-full rounded-lg p-3 border mb-3 text-sm resize-none bg-[#2A3133] border-[#606364] text-[#C3BCC2]"
+                rows={4}
+                placeholder="Type your note here..."
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setIsFeedbackOpen(false);
+                    setFeedbackText("");
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg border bg-transparent border-[#606364] text-[#ABA4AA]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitFeedback}
+                  disabled={updateNotes.isPending || !feedbackText.trim()}
+                  className="flex-1 px-4 py-2 rounded-lg shadow-lg border disabled:opacity-50 bg-[#4A5A70] border-[#606364] text-[#C3BCC2]"
+                >
+                  {updateNotes.isPending ? "Saving..." : "Save Note"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

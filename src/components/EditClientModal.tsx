@@ -18,7 +18,7 @@ interface EditClientModalProps {
     name: string;
     email: string | null;
     phone: string | null;
-    notes:
+    notes?:
       | string
       | null
       | Array<{
@@ -56,7 +56,11 @@ export default function EditClientModal({
     name: client.name,
     email: client.email || "",
     phone: client.phone || "",
-    notes: extractNoteContent(client.notes),
+    notes: client.notes
+      ? Array.isArray(client.notes)
+        ? ""
+        : client.notes
+      : "",
     age: client.age || "",
     height: client.height || "",
     dominantHand: client.dominantHand || "",
@@ -81,7 +85,7 @@ export default function EditClientModal({
       name: client.name,
       email: client.email || "",
       phone: client.phone || "",
-      notes: extractNoteContent(client.notes),
+      notes: Array.isArray(client.notes) ? "" : client.notes || "",
       age: client.age || "",
       height: client.height || "",
       dominantHand: client.dominantHand || "",

@@ -220,12 +220,12 @@ export default function NoteComposer({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
         style={{ backgroundColor: "#1E1E1E" }}
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between p-6 border-b"
+          className="flex items-center justify-between p-6 border-b flex-shrink-0"
           style={{ borderColor: "#2a2a2a" }}
         >
           <div className="flex items-center gap-3">
@@ -247,8 +247,8 @@ export default function NoteComposer({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
             {/* Note Type and Priority */}
             <div className="grid grid-cols-2 gap-4">
@@ -515,9 +515,9 @@ export default function NoteComposer({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer - Always Visible */}
         <div
-          className="flex items-center justify-end gap-3 p-6 border-t"
+          className="flex items-center justify-end gap-3 p-6 border-t flex-shrink-0"
           style={{ borderColor: "#2a2a2a" }}
         >
           <button

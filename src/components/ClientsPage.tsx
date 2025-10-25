@@ -1010,7 +1010,9 @@ function ClientsPage() {
         ? format(new Date(client.nextLessonDate), "MMM d, yyyy")
         : "No lesson scheduled",
       "Created Date": format(new Date(client.createdAt), "MMM d, yyyy"),
-      Notes: client.notes.map(note => note.content).join("; "),
+      Notes: Array.isArray(client.notes)
+        ? client.notes.map((note: any) => note.content).join("; ")
+        : "",
     }));
 
     // Create CSV with proper escaping
@@ -1083,7 +1085,11 @@ function ClientsPage() {
                       : "No lesson scheduled"
                   }</td>
                   <td>${format(new Date(client.createdAt), "MMM d, yyyy")}</td>
-                  <td>${client.notes.map(note => note.content).join("; ")}</td>
+                  <td>${
+                    Array.isArray(client.notes)
+                      ? client.notes.map((note: any) => note.content).join("; ")
+                      : ""
+                  }</td>
                 </tr>
               `
                 )

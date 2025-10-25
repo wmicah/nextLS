@@ -406,20 +406,7 @@ export default function ClientDetailsPage({
                 </div>
               </div>
 
-              {/* Notes */}
-              {client.notes && (
-                <div
-                  className="mt-6 p-4 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <h3 className="text-sm font-semibold text-white mb-2">
-                    Notes
-                  </h3>
-                  <p className="text-sm text-gray-300">
-                    {extractNoteContent(client.notes)}
-                  </p>
-                </div>
-              )}
+              {/* Notes removed - now using NotesDisplay component with pinning functionality */}
             </div>
 
             {/* Softball Pitching Information */}

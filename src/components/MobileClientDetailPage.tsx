@@ -575,18 +575,7 @@ export default function MobileClientDetailPage({
             </div>
           </div>
 
-          {client.notes &&
-            extractNoteContent(client.notes).trim().length > 0 && (
-              <div
-                className="mt-4 p-3 rounded-lg"
-                style={{ backgroundColor: "#2A2F2F" }}
-              >
-                <h3 className="text-sm font-medium text-white mb-2">Notes</h3>
-                <p className="text-sm text-gray-300">
-                  {extractNoteContent(client.notes)}
-                </p>
-              </div>
-            )}
+          {/* Notes removed - now using NotesDisplay component elsewhere */}
         </div>
 
         {/* Compliance Rate */}
