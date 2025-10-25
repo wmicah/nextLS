@@ -1,4 +1,4 @@
-import { AppRouterInstance } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export interface NotificationData {
   eventId?: string;
@@ -109,7 +109,7 @@ export const getNotificationRoute = (notification: Notification): string => {
  */
 export const handleNotificationClick = (
   notification: Notification,
-  router: AppRouterInstance,
+  router: { push: (route: string) => void },
   markAsReadMutation?: { mutate: (params: { notificationId: string }) => void }
 ) => {
   // Mark as read if unread
