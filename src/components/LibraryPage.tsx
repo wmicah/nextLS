@@ -20,7 +20,6 @@ import {
 
 import YouTubePlayer from "./YouTubePlayer";
 import YouTubeImportModal from "./YouTubeImportModal";
-import OnFormImportModal from "./OnFormImportModal";
 import UploadResourceModal from "./UploadResourceModal";
 import VideoViewerModal from "./VideoViewerModal";
 import Sidebar from "./Sidebar";
@@ -48,7 +47,6 @@ function LibraryPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
-  const [isOnFormModalOpen, setIsOnFormModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false);
@@ -427,20 +425,6 @@ function LibraryPage() {
                   Import YouTube
                 </button>
                 <button
-                  onClick={() => setIsOnFormModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                  style={{ backgroundColor: "#F59E0B", color: "#FFFFFF" }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#D97706";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#F59E0B";
-                  }}
-                >
-                  <Video className="h-4 w-4" />
-                  Import OnForm
-                </button>
-                <button
                   onClick={() => setIsUploadModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
                   style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
@@ -570,7 +554,7 @@ function LibraryPage() {
                       e.currentTarget.style.backgroundColor = "#4A5A70";
                     }}
                   >
-                    Upload Resource
+                    Upload Video
                   </button>
                   <button
                     onClick={() => setIsYouTubeModalOpen(true)}
@@ -584,19 +568,6 @@ function LibraryPage() {
                     }}
                   >
                     Import from YouTube
-                  </button>
-                  <button
-                    onClick={() => setIsOnFormModalOpen(true)}
-                    className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                    style={{ backgroundColor: "#F59E0B", color: "#FFFFFF" }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#D97706";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#F59E0B";
-                    }}
-                  >
-                    Import from OnForm
                   </button>
                 </>
               )}
@@ -941,12 +912,6 @@ function LibraryPage() {
       <YouTubeImportModal
         isOpen={isYouTubeModalOpen}
         onClose={() => setIsYouTubeModalOpen(false)}
-        onSuccess={handleUploadSuccess}
-      />
-
-      <OnFormImportModal
-        isOpen={isOnFormModalOpen}
-        onClose={() => setIsOnFormModalOpen(false)}
         onSuccess={handleUploadSuccess}
       />
 

@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import YouTubePlayer from "./YouTubePlayer";
 import YouTubeImportModal from "./YouTubeImportModal";
-import OnFormImportModal from "./OnFormImportModal";
 import UploadResourceModal from "./UploadResourceModal";
 import VideoViewerModal from "./VideoViewerModal";
 import MobileNavigation from "./MobileNavigation";
@@ -44,7 +43,6 @@ export default function MobileLibraryPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
-  const [isOnFormModalOpen, setIsOnFormModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false);
@@ -325,20 +323,13 @@ export default function MobileLibraryPage() {
 
         {/* Action Buttons */}
         {activeTab === "local" && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setIsYouTubeModalOpen(true)}
               className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#DC2626] text-white"
             >
               <Video className="h-5 w-5" />
               <span className="text-xs font-medium">YouTube</span>
-            </button>
-            <button
-              onClick={() => setIsOnFormModalOpen(true)}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#F59E0B] text-white"
-            >
-              <Video className="h-5 w-5" />
-              <span className="text-xs font-medium">OnForm</span>
             </button>
             <button
               onClick={() => setIsUploadModalOpen(true)}
@@ -399,7 +390,7 @@ export default function MobileLibraryPage() {
                 : "Add your first resource to start building your library."}
             </p>
             {!searchTerm && activeTab === "local" && (
-              <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+              <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                 <button
                   onClick={() => setIsYouTubeModalOpen(true)}
                   className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#DC2626] text-white"
@@ -408,18 +399,11 @@ export default function MobileLibraryPage() {
                   <span className="text-xs font-medium">YouTube</span>
                 </button>
                 <button
-                  onClick={() => setIsOnFormModalOpen(true)}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#F59E0B] text-white"
-                >
-                  <Video className="h-5 w-5" />
-                  <span className="text-xs font-medium">OnForm</span>
-                </button>
-                <button
                   onClick={() => setIsUploadModalOpen(true)}
                   className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#4A5A70] text-white"
                 >
                   <Plus className="h-5 w-5" />
-                  <span className="text-xs font-medium">Upload</span>
+                  <span className="text-xs font-medium">Upload Video</span>
                 </button>
               </div>
             )}
@@ -524,12 +508,6 @@ export default function MobileLibraryPage() {
       <YouTubeImportModal
         isOpen={isYouTubeModalOpen}
         onClose={() => setIsYouTubeModalOpen(false)}
-        onSuccess={handleUploadSuccess}
-      />
-
-      <OnFormImportModal
-        isOpen={isOnFormModalOpen}
-        onClose={() => setIsOnFormModalOpen(false)}
         onSuccess={handleUploadSuccess}
       />
 

@@ -129,6 +129,7 @@ export const libraryRouter = router({
             isOnForm: true,
             youtubeId: true,
             onformId: true,
+            isMasterLibrary: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -983,6 +984,13 @@ export const libraryRouter = router({
 
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
+      // Check if user is admin
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id },
+      });
+
+      const isAdmin = dbUser?.isAdmin || false;
+
       const resource = await db.libraryResource.findUnique({
         where: { id: input.id },
       });
@@ -994,7 +1002,8 @@ export const libraryRouter = router({
         });
       }
 
-      if (resource.coachId !== user.id) {
+      // Allow deletion if user is admin OR if user owns the resource
+      if (!isAdmin && resource.coachId !== user.id) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You can only delete your own resources",

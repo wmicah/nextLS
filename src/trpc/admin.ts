@@ -114,6 +114,7 @@ export const adminRouter = {
           isOnForm: true,
           youtubeId: true,
           onformId: true,
+          isMasterLibrary: true,
           createdAt: true,
           updatedAt: true,
         },
