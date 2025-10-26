@@ -21,6 +21,7 @@ import {
   XCircle,
 } from "lucide-react";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
+import CoachPricingModal from "@/components/CoachPricingModal";
 
 type Step = 1 | 2 | 3;
 type Role = "COACH" | "CLIENT" | null;
@@ -33,6 +34,7 @@ export default function RoleSelectionPage() {
   const [useInviteCode, setUseInviteCode] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const [error, setError] = useState("");
   const [emailValidationStatus, setEmailValidationStatus] = useState<
     "idle" | "checking" | "valid" | "invalid"
@@ -161,23 +163,38 @@ export default function RoleSelectionPage() {
   const handleConfirm = async () => {
     if (!selectedRole) return;
 
-    setIsLoading(true);
-    setError("");
+    if (selectedRole === "COACH") {
+      // Show pricing modal for coaches
+      setShowPricingModal(true);
+    } else {
+      // For clients, proceed directly
+      setIsLoading(true);
+      setError("");
 
-    try {
-      if (selectedRole === "COACH") {
-        updateRole.mutate({
-          role: selectedRole,
-          coachId: undefined,
-        });
-      } else {
-        // For clients, include invite code or coach email
+      try {
         updateRole.mutate({
           role: selectedRole,
           inviteCode: useInviteCode ? inviteCode : undefined,
           coachEmail: !useInviteCode ? coachEmail : undefined,
         });
+      } catch (err) {
+        setError("An unexpected error occurred");
+        setIsLoading(false);
       }
+    }
+  };
+
+  const handleSelectPlan = (tier: string, clientLimit: number) => {
+    setShowPricingModal(false);
+    setIsLoading(true);
+    setError("");
+
+    try {
+      updateRole.mutate({
+        role: "COACH",
+        coachId: undefined,
+        // TODO: Add subscription tier and client limit to the mutation
+      });
     } catch (err) {
       setError("An unexpected error occurred");
       setIsLoading(false);
@@ -895,6 +912,13 @@ export default function RoleSelectionPage() {
       <DeleteAccountModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+      />
+
+      {/* Coach Pricing Modal */}
+      <CoachPricingModal
+        isOpen={showPricingModal}
+        onClose={() => setShowPricingModal(false)}
+        onSelectPlan={handleSelectPlan}
       />
     </div>
   );
