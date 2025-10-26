@@ -41,6 +41,8 @@ import {
   Upload,
   Eye,
   EyeOff,
+  Copy,
+  Clipboard,
 } from "lucide-react";
 import {
   format,
@@ -75,6 +77,12 @@ import StreamlinedScheduleLessonModal from "@/components/StreamlinedScheduleLess
 import DayDetailsModal from "@/components/DayDetailsModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientDetailPage from "@/components/MobileClientDetailPage";
+import ConflictResolutionModal from "@/components/ConflictResolutionModal";
+import {
+  ClipboardData,
+  ConflictResolution,
+  CopyPasteMode,
+} from "@/types/clipboard";
 
 interface ClientDetailPageProps {
   clientId: string;
@@ -120,6 +128,17 @@ function ClientDetailPage({
     programTitle: string;
     dayDate?: string;
   } | null>(null);
+
+  // Clipboard state
+  const [clipboardData, setClipboardData] = useState<ClipboardData | null>(
+    null
+  );
+  const [copyPasteMode, setCopyPasteMode] = useState<CopyPasteMode>(null);
+  const [showConflictResolutionModal, setShowConflictResolutionModal] =
+    useState(false);
+  const [conflictData, setConflictData] = useState<ConflictResolution | null>(
+    null
+  );
 
   // Fetch client data
   const {
@@ -282,6 +301,46 @@ function ClientDetailPage({
         });
       },
     });
+
+  // Assign routine mutation for pasting
+  const assignRoutineMutation = trpc.routines.assign.useMutation({
+    onSuccess: () => {
+      // Success will be handled in the pasteAssignments function
+    },
+    onError: error => {
+      console.error("Error assigning routine:", error);
+    },
+  });
+
+  // Assign video mutation for pasting
+  const assignVideoMutation = trpc.library.assignVideoToClient.useMutation({
+    onSuccess: () => {
+      // Success will be handled in the pasteAssignments function
+    },
+    onError: error => {
+      console.error("Error assigning video:", error);
+    },
+  });
+
+  // Create program mutation for pasting program days
+  const createProgramMutation = trpc.programs.create.useMutation({
+    onSuccess: () => {
+      // Success will be handled in the pasteAssignments function
+    },
+    onError: error => {
+      console.error("Error creating program:", error);
+    },
+  });
+
+  // Assign program mutation for pasting
+  const assignProgramMutation = trpc.programs.assignToClients.useMutation({
+    onSuccess: () => {
+      // Success will be handled in the pasteAssignments function
+    },
+    onError: error => {
+      console.error("Error assigning program:", error);
+    },
+  });
 
   // Delete lesson mutation
   const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
@@ -456,6 +515,7 @@ function ClientDetailPage({
                 type: "program",
                 assignment,
                 program,
+                programDay, // Include the full program day data
                 weekNumber,
                 dayNumber,
                 drillCount: programDay.drills.length,
@@ -608,6 +668,338 @@ function ClientDetailPage({
         clientId: clientId,
       });
     }
+  };
+
+  // Clipboard functions
+  const handleCopyDay = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0];
+
+    const routinesForDate = getRoutineAssignmentsForDate(date);
+    const programsForDate = getProgramsForDate(date);
+    const videosForDate = getVideosForDate(date);
+
+    // Check if there are any assignments to copy
+    const totalItems =
+      routinesForDate.length + programsForDate.length + videosForDate.length;
+
+    if (totalItems === 0) {
+      addToast({
+        type: "warning",
+        title: "No Assignments",
+        message: "This day has no assignments to copy.",
+      });
+      return;
+    }
+
+    // Convert to clipboard format
+    const clipboardData: ClipboardData = {
+      type: "assignments",
+      sourceDate: dateStr,
+      sourceClientId: clientId,
+      assignments: {
+        routines: routinesForDate.map((routine: any) => ({
+          id: routine.id,
+          routineId: routine.routine.id,
+          routineName: routine.routine.name,
+          startDate: routine.startDate || routine.assignedAt,
+        })),
+        programs: programsForDate.map((program: any) => ({
+          id: `${program.assignment.id}-${program.weekNumber}-${program.dayNumber}`,
+          programId: program.program.id,
+          programTitle: program.program.title,
+          weekNumber: program.weekNumber,
+          dayNumber: program.dayNumber,
+          isRestDay: program.isRestDay,
+          drillCount: program.drillCount,
+          assignmentId: program.assignment.id,
+          dayTitle: program.programDay.title,
+          dayDescription: program.programDay.description,
+          drills:
+            program.programDay.drills?.map((drill: any) => ({
+              id: drill.id,
+              title: drill.title,
+              description: drill.description,
+              duration: drill.duration,
+              videoUrl: drill.videoUrl,
+              notes: drill.notes,
+              sets: drill.sets || undefined,
+              reps: drill.reps || undefined,
+              tempo: drill.tempo,
+              order: drill.order,
+              routineId: drill.routineId,
+            })) || [],
+        })),
+        videos: videosForDate.map((video: any) => ({
+          id: video.assignment.id,
+          videoId: video.assignment.video?.id || "",
+          videoTitle: video.assignment.video?.title || "Video Assignment",
+          dueDate: video.assignment.dueDate,
+          notes: video.assignment.notes || undefined,
+        })),
+      },
+      copiedAt: new Date(),
+    };
+
+    setClipboardData(clipboardData);
+    setCopyPasteMode("copy");
+
+    addToast({
+      type: "success",
+      title: "Day Copied!",
+      message: `Copied ${totalItems} assignment${
+        totalItems !== 1 ? "s" : ""
+      } from ${format(date, "MMM d, yyyy")}`,
+    });
+  };
+
+  const handlePasteDay = async (targetDate: Date) => {
+    if (!clipboardData) return;
+
+    const targetDateStr = targetDate.toISOString().split("T")[0];
+
+    // Validate target date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (targetDate < today) {
+      addToast({
+        type: "error",
+        title: "Invalid Date",
+        message: "Cannot paste assignments to past dates.",
+      });
+      return;
+    }
+
+    // Check for conflicts
+    const existingRoutines = getRoutineAssignmentsForDate(targetDate);
+    const existingPrograms = getProgramsForDate(targetDate);
+    const existingVideos = getVideosForDate(targetDate);
+
+    const hasConflicts =
+      existingRoutines.length > 0 ||
+      existingPrograms.length > 0 ||
+      existingVideos.length > 0;
+
+    if (hasConflicts) {
+      // Show conflict resolution modal
+      setConflictData({
+        type: "replace", // Default to replace
+        targetDate: targetDateStr,
+        existingAssignments: {
+          routines: existingRoutines.length,
+          programs: existingPrograms.length,
+          videos: existingVideos.length,
+        },
+        clipboardAssignments: {
+          routines: clipboardData.assignments.routines.length,
+          programs: clipboardData.assignments.programs.length,
+          videos: clipboardData.assignments.videos.length,
+        },
+      });
+      setShowConflictResolutionModal(true);
+      return;
+    }
+
+    // No conflicts, proceed with paste
+    await pasteAssignments(targetDate, "merge");
+  };
+
+  const pasteAssignments = async (
+    targetDate: Date,
+    conflictResolution: "replace" | "merge" | "skip" = "merge"
+  ) => {
+    if (!clipboardData) return;
+
+    try {
+      const targetDateStr = targetDate.toISOString().split("T")[0];
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Handle conflict resolution
+      if (conflictResolution === "replace") {
+        // Remove existing assignments first
+        const existingRoutines = getRoutineAssignmentsForDate(targetDate);
+        const existingPrograms = getProgramsForDate(targetDate);
+        const existingVideos = getVideosForDate(targetDate);
+
+        // Remove existing routines
+        for (const routine of existingRoutines) {
+          try {
+            await unassignRoutineMutation.mutateAsync({
+              assignmentId: routine.id,
+            });
+          } catch (error) {
+            console.error("Error removing existing routine:", error);
+          }
+        }
+
+        // Remove existing programs (by deleting the program day)
+        for (const program of existingPrograms) {
+          try {
+            await deleteProgramDayMutation.mutateAsync({
+              assignmentId: program.assignment.id,
+              dayDate: targetDateStr,
+              reason: "Replaced by copy/paste operation",
+            });
+          } catch (error) {
+            console.error("Error removing existing program:", error);
+          }
+        }
+
+        // Remove existing videos
+        for (const video of existingVideos) {
+          try {
+            await removeVideoAssignmentMutation.mutateAsync({
+              assignmentId: video.assignment.id,
+              clientId: clientId,
+            });
+          } catch (error) {
+            console.error("Error removing existing video:", error);
+          }
+        }
+      }
+
+      // Paste routines
+      for (const routine of clipboardData.assignments.routines) {
+        try {
+          // Check if routine already exists (for merge/skip modes)
+          if (conflictResolution === "skip") {
+            const existingRoutines = getRoutineAssignmentsForDate(targetDate);
+            const alreadyExists = existingRoutines.some(
+              (existing: any) => existing.routine.id === routine.routineId
+            );
+            if (alreadyExists) continue;
+          }
+
+          await assignRoutineMutation.mutateAsync({
+            routineId: routine.routineId,
+            clientIds: [clientId],
+            startDate: targetDateStr,
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Error pasting routine:", error);
+          errorCount++;
+        }
+      }
+
+      // Paste videos
+      for (const video of clipboardData.assignments.videos) {
+        try {
+          // Check if video already exists (for merge/skip modes)
+          if (conflictResolution === "skip") {
+            const existingVideos = getVideosForDate(targetDate);
+            const alreadyExists = existingVideos.some(
+              (existing: any) => existing.assignment.video?.id === video.videoId
+            );
+            if (alreadyExists) continue;
+          }
+
+          await assignVideoMutation.mutateAsync({
+            videoId: video.videoId,
+            clientId: clientId,
+            dueDate: targetDateStr,
+            notes: video.notes || undefined,
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Error pasting video:", error);
+          errorCount++;
+        }
+      }
+
+      // Paste programs (create new program with copied day content)
+      for (const program of clipboardData.assignments.programs) {
+        try {
+          if (conflictResolution === "skip") {
+            const existingPrograms = getProgramsForDate(targetDate);
+            const alreadyExists = existingPrograms.some(
+              (existing: any) => existing.program.title === program.programTitle
+            );
+            if (alreadyExists) continue;
+          }
+
+          // Create a new program with the copied day's content
+          const newProgram = await createProgramMutation.mutateAsync({
+            title: `${program.programTitle} - Day ${program.dayNumber}`,
+            description: `Copied from ${program.programTitle} Week ${program.weekNumber} Day ${program.dayNumber}`,
+            level: "Drive", // Default level
+            duration: 1, // Single day program
+            weeks: [
+              {
+                weekNumber: 1,
+                title: "Week 1",
+                days: [
+                  {
+                    dayNumber: 1,
+                    title: program.dayTitle,
+                    description: program.dayDescription,
+                    drills: program.drills.map((drill, index) => ({
+                      order: index + 1,
+                      title: drill.title,
+                      description: drill.description,
+                      duration: drill.duration,
+                      videoUrl: drill.videoUrl,
+                      notes: drill.notes,
+                      sets: drill.sets || undefined,
+                      reps: drill.reps || undefined,
+                      tempo: drill.tempo,
+                      routineId: drill.routineId,
+                    })),
+                  },
+                ],
+              },
+            ],
+          });
+
+          // Assign the new program to the client
+          await assignProgramMutation.mutateAsync({
+            programId: newProgram.id,
+            clientIds: [clientId],
+            startDate: targetDateStr,
+            repetitions: 1,
+          });
+
+          successCount++;
+        } catch (error) {
+          console.error("Error pasting program:", error);
+          errorCount++;
+        }
+      }
+
+      addToast({
+        type: successCount > 0 ? "success" : "error",
+        title: successCount > 0 ? "Assignments Pasted!" : "Paste Failed",
+        message:
+          successCount > 0
+            ? `Successfully pasted ${successCount} assignment${
+                successCount !== 1 ? "s" : ""
+              }${errorCount > 0 ? ` (${errorCount} failed)` : ""}`
+            : "No assignments could be pasted",
+      });
+
+      if (successCount > 0) {
+        refreshAllData();
+      }
+    } catch (error) {
+      console.error("Error in pasteAssignments:", error);
+      addToast({
+        type: "error",
+        title: "Paste Failed",
+        message: "An error occurred while pasting assignments",
+      });
+    }
+  };
+
+  const handleConflictResolution = (
+    resolution: "replace" | "merge" | "skip"
+  ) => {
+    if (!conflictData) return;
+
+    const targetDate = new Date(conflictData.targetDate);
+    pasteAssignments(targetDate, resolution);
+
+    setShowConflictResolutionModal(false);
+    setConflictData(null);
   };
 
   const getStatusIcon = (status: string) => {
@@ -967,6 +1359,25 @@ function ClientDetailPage({
                     Week
                   </button>
                 </div>
+
+                {/* Clipboard Indicator */}
+                {clipboardData && (
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                    <Clipboard className="h-4 w-4 text-cyan-400" />
+                    <span className="text-sm text-cyan-300">
+                      {clipboardData.assignments.routines.length +
+                        clipboardData.assignments.programs.length +
+                        clipboardData.assignments.videos.length}{" "}
+                      items copied
+                    </span>
+                    <button
+                      onClick={() => setClipboardData(null)}
+                      className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-4">
@@ -1043,11 +1454,10 @@ function ClientDetailPage({
                 return (
                   <div
                     key={day.toISOString()}
-                    onClick={() => handleDateClick(day)}
                     className={`
                       ${
                         viewMode === "week" ? "min-h-[200px]" : "min-h-[120px]"
-                      } p-2 rounded-lg transition-all duration-200 cursor-pointer border-2
+                      } p-2 rounded-lg transition-all duration-200 border-2 relative group
                       ${
                         isToday
                           ? "bg-blue-500/20 text-blue-300 border-blue-400"
@@ -1059,71 +1469,106 @@ function ClientDetailPage({
                       }
                     `}
                   >
-                    <div className="font-bold text-sm mb-2">
-                      {format(day, "d")}
+                    {/* Hover Overlay with Copy/Paste Buttons */}
+                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 z-10">
+                      {/* Copy Button */}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleCopyDay(day);
+                        }}
+                        className="p-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 hover:border-cyan-500/50 transition-all duration-200"
+                        title="Copy day assignments"
+                      >
+                        <Copy className="h-3 w-3 text-cyan-400" />
+                      </button>
+
+                      {/* Paste Button - only show if clipboard has data */}
+                      {clipboardData && (
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            handlePasteDay(day);
+                          }}
+                          className="p-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-500/50 transition-all duration-200"
+                          title="Paste assignments to this day"
+                        >
+                          <Clipboard className="h-3 w-3 text-emerald-400" />
+                        </button>
+                      )}
                     </div>
 
-                    {/* Lessons */}
-                    {lessonsForDay.map((lesson: any, index: number) => (
-                      <div
-                        key={`lesson-${index}`}
-                        className={`text-xs p-1 rounded border mb-1 ${getStatusColor(
-                          lesson.status
-                        )}`}
-                      >
-                        <div className="flex items-center gap-1">
-                          {getStatusIcon(lesson.status)}
-                          <span className="truncate">
-                            {formatTimeInUserTimezone(lesson.date)}
-                          </span>
-                        </div>
+                    {/* Day Content - clickable area */}
+                    <div
+                      onClick={() => handleDateClick(day)}
+                      className="cursor-pointer h-full"
+                    >
+                      <div className="font-bold text-sm mb-2">
+                        {format(day, "d")}
                       </div>
-                    ))}
 
-                    {/* Programs */}
-                    {programsForDay.map((program: any, index: number) => (
-                      <div
-                        key={`program-${index}`}
-                        className="text-xs p-1 rounded border mb-1 bg-blue-500/20 text-blue-100 border-blue-400"
-                      >
-                        <div className="flex items-center gap-1">
-                          <BookOpen className="h-3 w-3" />
-                          <span className="truncate">{program.title}</span>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Videos */}
-                    {videosForDay.map((video: any, index: number) => (
-                      <div
-                        key={`video-${index}`}
-                        className="text-xs p-1 rounded bg-purple-500/20 text-purple-100 border border-purple-400 mb-1"
-                      >
-                        <div className="flex items-center gap-1">
-                          <Video className="h-3 w-3" />
-                          <span className="truncate">{video.title}</span>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Routine Assignments */}
-                    {routineAssignmentsForDay.map(
-                      (assignment: any, index: number) => (
+                      {/* Lessons */}
+                      {lessonsForDay.map((lesson: any, index: number) => (
                         <div
-                          key={`routine-${index}`}
-                          className="text-xs p-1.5 rounded-lg bg-green-500/5 text-green-100 border border-green-500/20 mb-1 transition-all duration-200 hover:bg-green-500/10"
+                          key={`lesson-${index}`}
+                          className={`text-xs p-1 rounded border mb-1 ${getStatusColor(
+                            lesson.status
+                          )}`}
                         >
-                          <div className="flex items-center gap-1.5">
-                            <div className="p-0.5 rounded bg-green-500/10">
-                              <Target className="h-2.5 w-2.5 text-green-400" />
-                            </div>
-                            <span className="truncate font-medium">
-                              {assignment.routine.name}
+                          <div className="flex items-center gap-1">
+                            {getStatusIcon(lesson.status)}
+                            <span className="truncate">
+                              {formatTimeInUserTimezone(lesson.date)}
                             </span>
                           </div>
                         </div>
-                      )
-                    )}
+                      ))}
+
+                      {/* Programs */}
+                      {programsForDay.map((program: any, index: number) => (
+                        <div
+                          key={`program-${index}`}
+                          className="text-xs p-1 rounded border mb-1 bg-blue-500/20 text-blue-100 border-blue-400"
+                        >
+                          <div className="flex items-center gap-1">
+                            <BookOpen className="h-3 w-3" />
+                            <span className="truncate">{program.title}</span>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Videos */}
+                      {videosForDay.map((video: any, index: number) => (
+                        <div
+                          key={`video-${index}`}
+                          className="text-xs p-1 rounded bg-purple-500/20 text-purple-100 border border-purple-400 mb-1"
+                        >
+                          <div className="flex items-center gap-1">
+                            <Video className="h-3 w-3" />
+                            <span className="truncate">{video.title}</span>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Routine Assignments */}
+                      {routineAssignmentsForDay.map(
+                        (assignment: any, index: number) => (
+                          <div
+                            key={`routine-${index}`}
+                            className="text-xs p-1.5 rounded-lg bg-green-500/5 text-green-100 border border-green-500/20 mb-1 transition-all duration-200 hover:bg-green-500/10"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <div className="p-0.5 rounded bg-green-500/10">
+                                <Target className="h-2.5 w-2.5 text-green-400" />
+                              </div>
+                              <span className="truncate font-medium">
+                                {assignment.routine.name}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -1324,6 +1769,17 @@ function ClientDetailPage({
               </div>
             </div>
           )}
+
+          {/* Conflict Resolution Modal */}
+          <ConflictResolutionModal
+            isOpen={showConflictResolutionModal}
+            onClose={() => {
+              setShowConflictResolutionModal(false);
+              setConflictData(null);
+            }}
+            onResolve={handleConflictResolution}
+            conflictData={conflictData}
+          />
         </div>
       </div>
     </SidebarWrapper>
