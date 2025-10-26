@@ -52,6 +52,14 @@ function LibraryPage() {
   const [isVideoViewerOpen, setIsVideoViewerOpen] = useState(false);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
 
+  // Pagination state - separate for each tab
+  const [currentPage, setCurrentPage] = useState(1);
+  const [masterItems, setMasterItems] = useState<any[]>([]);
+  const [localItems, setLocalItems] = useState<any[]>([]);
+  const [masterHasMore, setMasterHasMore] = useState(true);
+  const [localHasMore, setLocalHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   // Fetch user's custom categories
   const { data: userCategoriesData = [] } =
     trpc.libraryResources.getCategories.useQuery();
@@ -101,7 +109,21 @@ function LibraryPage() {
     setSelectedItem(libraryItems[newIndex]);
   };
 
-  // Use tRPC queries with refetch
+  // Load more function
+  const loadMore = () => {
+    if (hasMore && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  // Handle tab switching with better state management
+  const handleTabChange = (tab: "master" | "local") => {
+    setActiveTab(tab);
+    // Don't reset currentPage - let each tab maintain its own state
+  };
+
+  // Use tRPC queries with pagination and better caching
   const {
     data: masterLibraryItems,
     isLoading: masterLoading,
@@ -111,11 +133,13 @@ function LibraryPage() {
     {
       search: debouncedSearchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
+      page: currentPage,
+      limit: 24, // Load 24 items per page
     },
     {
-      enabled: activeTab === "master",
       placeholderData: previousData => previousData, // Prevent flash when switching tabs
-      staleTime: 30000, // Keep data fresh for 30 seconds
+      staleTime: 0, // Always refetch when search changes
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
     }
   );
 
@@ -128,30 +152,147 @@ function LibraryPage() {
     {
       search: debouncedSearchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
+      page: currentPage,
+      limit: 24, // Load 24 items per page
     },
     {
-      enabled: activeTab === "local",
       placeholderData: previousData => previousData, // Prevent flash when search changes
-      staleTime: 30000, // Keep data fresh for 30 seconds
+      staleTime: 0, // Always refetch when search changes
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
     }
   );
 
-  // Combine data based on active tab - handle paginated response
-  const libraryItems =
-    activeTab === "master"
-      ? masterLibraryItems?.items || []
-      : localLibraryItems?.items || [];
+  // Handle master library data
+  useEffect(() => {
+    if (masterLibraryItems?.items) {
+      if (currentPage === 1) {
+        setMasterItems(masterLibraryItems.items);
+      } else {
+        setMasterItems(prev => [...prev, ...masterLibraryItems.items]);
+      }
+      setMasterHasMore(masterLibraryItems.pagination?.hasNextPage || false);
+    } else if (masterLibraryItems && masterLibraryItems.items?.length === 0) {
+      if (currentPage === 1) {
+        setMasterItems([]);
+      }
+      setMasterHasMore(false);
+    }
+  }, [masterLibraryItems, currentPage]);
+
+  // Force update when search changes to ensure data is refreshed
+  useEffect(() => {
+    if (masterLibraryItems?.items && currentPage === 1) {
+      setMasterItems(masterLibraryItems.items);
+      setMasterHasMore(masterLibraryItems.pagination?.hasNextPage || false);
+    }
+  }, [debouncedSearchTerm, selectedCategory, masterLibraryItems]);
+
+  // Debug logging for search issues
+  useEffect(() => {
+    console.log("🔍 Search Debug:", {
+      searchTerm,
+      debouncedSearchTerm,
+      selectedCategory,
+      masterItems: masterItems.length,
+      localItems: localItems.length,
+      currentPage,
+      masterLibraryItems: masterLibraryItems?.items?.length,
+      localLibraryItems: localLibraryItems?.items?.length,
+    });
+  }, [
+    searchTerm,
+    debouncedSearchTerm,
+    selectedCategory,
+    masterItems.length,
+    localItems.length,
+    currentPage,
+    masterLibraryItems,
+    localLibraryItems,
+  ]);
+
+  // Handle local library data
+  useEffect(() => {
+    if (localLibraryItems?.items) {
+      if (currentPage === 1) {
+        setLocalItems(localLibraryItems.items);
+      } else {
+        setLocalItems(prev => [...prev, ...localLibraryItems.items]);
+      }
+      setLocalHasMore(localLibraryItems.pagination?.hasNextPage || false);
+    } else if (localLibraryItems && localLibraryItems.items?.length === 0) {
+      if (currentPage === 1) {
+        setLocalItems([]);
+      }
+      setLocalHasMore(false);
+    }
+  }, [localLibraryItems, currentPage]);
+
+  // Force update when search changes to ensure data is refreshed
+  useEffect(() => {
+    if (localLibraryItems?.items && currentPage === 1) {
+      setLocalItems(localLibraryItems.items);
+      setLocalHasMore(localLibraryItems.pagination?.hasNextPage || false);
+    }
+  }, [debouncedSearchTerm, selectedCategory, localLibraryItems]);
+
+  // Reset items when search/category changes
+  useEffect(() => {
+    setMasterItems([]);
+    setLocalItems([]);
+    setCurrentPage(1);
+    setMasterHasMore(true);
+    setLocalHasMore(true);
+  }, [debouncedSearchTerm, selectedCategory]);
+
+  // Use accumulated items based on active tab
+  const libraryItems = activeTab === "master" ? masterItems : localItems;
   const isLoading = activeTab === "master" ? masterLoading : localLoading;
   const error = activeTab === "master" ? masterError : localError;
+  const hasMore = activeTab === "master" ? masterHasMore : localHasMore;
+
+  // Show loading when switching tabs and no items are loaded yet
+  const isInitialLoading = isLoading && libraryItems.length === 0;
+
+  // Reset loading more state when new data arrives
+  useEffect(() => {
+    if (isLoadingMore && !isLoading) {
+      setIsLoadingMore(false);
+    }
+  }, [isLoading, isLoadingMore]);
+
+  // Auto-load more when scrolling near bottom
+  useEffect(() => {
+    const handleScroll = () => {
+      if (hasMore && !isLoadingMore && !isLoading) {
+        const scrollTop =
+          window.pageYOffset || document.documentElement.scrollTop;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+
+        // Load more when user is within 200px of bottom
+        if (scrollTop + windowHeight >= documentHeight - 200) {
+          loadMore();
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [hasMore, isLoadingMore, isLoading, loadMore]);
 
   // Debug logging with useEffect to monitor changes
   useEffect(() => {
     console.log("🔍 LibraryPage Debug:", {
       activeTab,
+      currentPage,
       localLibraryItems: localLibraryItems?.items?.length,
       masterLibraryItems: masterLibraryItems?.items?.length,
       libraryItems: libraryItems?.length,
+      hasMore,
+      pagination:
+        activeTab === "master"
+          ? masterLibraryItems?.pagination
+          : localLibraryItems?.pagination,
       localLoading,
       localError: localError?.message,
       searchTerm,
@@ -238,7 +379,7 @@ function LibraryPage() {
     refetchStats(); // Refresh stats
   };
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return (
       <Sidebar>
         <div className="flex items-center justify-center h-64">
@@ -377,7 +518,7 @@ function LibraryPage() {
           {/* Left: Tabs */}
           <div className="flex gap-2">
             <button
-              onClick={() => setActiveTab("master")}
+              onClick={() => handleTabChange("master")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all duration-200 font-medium ${
                 activeTab === "master"
                   ? "bg-[#4A5A70] text-white shadow-lg"
@@ -391,7 +532,7 @@ function LibraryPage() {
               </div>
             </button>
             <button
-              onClick={() => setActiveTab("local")}
+              onClick={() => handleTabChange("local")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all duration-200 font-medium ${
                 activeTab === "local"
                   ? "bg-[#4A5A70] text-white shadow-lg"
@@ -894,6 +1035,44 @@ function LibraryPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className="text-sm transition-all duration-200 hover:opacity-70 disabled:opacity-50 disabled:cursor-not-allowed underline decoration-dotted underline-offset-4"
+                style={{
+                  color: "#ABA4AA",
+                }}
+              >
+                {isLoadingMore ? "Loading more..." : "Load more"}
+              </button>
+            </div>
+          )}
+
+          {/* Auto-loading indicator */}
+          {isLoadingMore && (
+            <div className="mt-4 text-center">
+              <div
+                className="inline-flex items-center gap-2 text-sm"
+                style={{ color: "#ABA4AA" }}
+              >
+                <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin"></div>
+                Loading more content...
+              </div>
+            </div>
+          )}
+
+          {/* End of results indicator */}
+          {!hasMore && libraryItems.length > 0 && (
+            <div className="mt-8 text-center">
+              <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                You've reached the end of the results
+              </p>
             </div>
           )}
         </div>

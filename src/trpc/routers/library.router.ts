@@ -20,6 +20,157 @@ import { CompleteEmailService } from "@/lib/complete-email-service";
  * Library Router
  */
 export const libraryRouter = router({
+  // Infinite query for optimized pagination
+  listInfinite: publicProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        category: z.string().optional(),
+        type: z.enum(["video", "document", "all"]).optional(),
+        limit: z.number().min(1).max(100).optional().default(24),
+        cursor: z.number().min(1).optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        console.log("🔍 Library listInfinite query called with input:", input);
+
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+
+        if (!user?.id) {
+          console.error("❌ Library listInfinite: No user ID");
+          throw new TRPCError({ code: "UNAUTHORIZED" });
+        }
+
+        // Verify user is a COACH or CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: { in: ["COACH", "CLIENT"] } },
+        });
+
+        if (!dbUser) {
+          console.error(
+            "❌ Library listInfinite: User is not a coach or client"
+          );
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only coaches and clients can view library",
+          });
+        }
+
+        const where: any = {};
+
+        // If user is a COACH, show their own library items
+        if (dbUser.role === "COACH") {
+          where.coachId = user.id;
+        } else if (dbUser.role === "CLIENT") {
+          // If user is a CLIENT, find their assigned coach and show that coach's library items
+          const client = await db.client.findFirst({
+            where: { userId: user.id },
+            select: { coachId: true },
+          });
+
+          if (!client) {
+            console.error("❌ Library listInfinite: Client not found");
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Client profile not found",
+            });
+          }
+
+          where.coachId = client.coachId || undefined;
+        }
+
+        if (input.search) {
+          where.OR = [
+            { title: { contains: input.search, mode: "insensitive" } },
+            { description: { contains: input.search, mode: "insensitive" } },
+          ];
+        }
+
+        if (input.category && input.category !== "All") {
+          where.category = input.category;
+        }
+
+        if (input.type && input.type !== "all") {
+          where.type = input.type;
+        }
+
+        // Calculate pagination
+        const skip = ((input.cursor || 1) - 1) * input.limit;
+
+        // Get total count for pagination
+        const totalCount = await db.libraryResource.count({ where });
+
+        // Get paginated resources
+        const resources = await db.libraryResource.findMany({
+          where,
+          orderBy: { title: "asc" },
+          skip,
+          take: input.limit,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            category: true,
+            type: true,
+            url: true,
+            thumbnail: true,
+            duration: true,
+            views: true,
+            rating: true,
+            isYoutube: true,
+            isOnForm: true,
+            youtubeId: true,
+            onformId: true,
+            isMasterLibrary: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+
+        const totalPages = Math.ceil(totalCount / input.limit);
+        const currentPage = input.cursor || 1;
+        const hasNextPage = currentPage < totalPages;
+
+        console.log(
+          `✅ Library listInfinite: Found ${resources.length} resources (page ${currentPage}/${totalPages})`
+        );
+
+        return {
+          items: resources,
+          pagination: {
+            currentPage,
+            totalPages,
+            totalCount,
+            hasNextPage,
+            hasPreviousPage: currentPage > 1,
+          },
+          nextCursor: hasNextPage ? currentPage + 1 : undefined,
+        };
+      } catch (error) {
+        console.error("❌ Library listInfinite query failed:", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          input,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Re-throw TRPC errors as-is
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        // Wrap other errors
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Library listInfinite failed: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        });
+      }
+    }),
+
   list: publicProcedure
     .input(
       z.object({
@@ -27,7 +178,7 @@ export const libraryRouter = router({
         category: z.string().optional(),
         type: z.enum(["video", "document", "all"]).optional(),
         page: z.number().min(1).optional().default(1),
-        limit: z.number().min(1).max(10000).optional().default(1000),
+        limit: z.number().min(1).max(10000).optional().default(24),
       })
     )
     .query(async ({ input }) => {
