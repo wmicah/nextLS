@@ -40,7 +40,7 @@ export const adminRouter = {
     .input(
       z.object({
         page: z.number().min(1).optional().default(1),
-        limit: z.number().min(1).max(10000).optional().default(1000),
+        limit: z.number().min(1).max(10000).optional().default(24),
         search: z.string().optional(),
         category: z.string().optional(),
       })
