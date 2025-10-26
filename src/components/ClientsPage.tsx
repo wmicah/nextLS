@@ -833,7 +833,7 @@ function ClientsPage() {
     archived: activeTab === "archived",
   });
 
-  // Get counts for both tabs
+  // Get counts for both tabs (keep these for the tab badges)
   const { data: activeClientsData = [] } = trpc.clients.list.useQuery({
     archived: false,
   });
@@ -1785,10 +1785,11 @@ function ClientsPage() {
                     (client: Client, index: number) => (
                       <div
                         key={client.id}
-                        className="rounded-xl border transition-all duration-200 hover:shadow-lg cursor-pointer relative overflow-hidden group"
+                        className="rounded-xl border transition-all duration-300 hover:shadow-lg cursor-pointer relative overflow-hidden group animate-fadeIn"
                         style={{
                           backgroundColor: "#353A3A",
                           borderColor: "#606364",
+                          animationDelay: `${index * 50}ms`,
                         }}
                         onClick={() => {
                           if (!isBulkMode) {
