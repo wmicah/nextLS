@@ -53,7 +53,8 @@ function LibraryPage() {
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
 
   // Pagination state - separate for each tab
-  const [currentPage, setCurrentPage] = useState(1);
+  const [masterCurrentPage, setMasterCurrentPage] = useState(1);
+  const [localCurrentPage, setLocalCurrentPage] = useState(1);
   const [masterItems, setMasterItems] = useState<any[]>([]);
   const [localItems, setLocalItems] = useState<any[]>([]);
   const [masterHasMore, setMasterHasMore] = useState(true);
@@ -111,16 +112,28 @@ function LibraryPage() {
 
   // Load more function
   const loadMore = () => {
+    console.log("🔍 Load More Called:", {
+      activeTab,
+      hasMore,
+      isLoadingMore,
+      masterCurrentPage,
+      localCurrentPage,
+    });
+
     if (hasMore && !isLoadingMore) {
       setIsLoadingMore(true);
-      setCurrentPage(prev => prev + 1);
+      if (activeTab === "master") {
+        setMasterCurrentPage(prev => prev + 1);
+      } else {
+        setLocalCurrentPage(prev => prev + 1);
+      }
     }
   };
 
   // Handle tab switching with better state management
   const handleTabChange = (tab: "master" | "local") => {
     setActiveTab(tab);
-    // Don't reset currentPage - let each tab maintain its own state
+    // Each tab maintains its own pagination state
   };
 
   // Use tRPC queries with pagination and better caching
@@ -133,7 +146,7 @@ function LibraryPage() {
     {
       search: debouncedSearchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
-      page: currentPage,
+      page: masterCurrentPage,
       limit: 24, // Load 24 items per page
     },
     {
@@ -152,7 +165,7 @@ function LibraryPage() {
     {
       search: debouncedSearchTerm || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
-      page: currentPage,
+      page: localCurrentPage,
       limit: 24, // Load 24 items per page
     },
     {
@@ -165,23 +178,38 @@ function LibraryPage() {
   // Handle master library data
   useEffect(() => {
     if (masterLibraryItems?.items) {
-      if (currentPage === 1) {
+      if (masterCurrentPage === 1) {
         setMasterItems(masterLibraryItems.items);
       } else {
-        setMasterItems(prev => [...prev, ...masterLibraryItems.items]);
+        setMasterItems(prev => {
+          // Prevent duplicates by checking if item already exists
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = masterLibraryItems.items.filter(
+            item => !existingIds.has(item.id)
+          );
+          return [...prev, ...newItems];
+        });
       }
-      setMasterHasMore(masterLibraryItems.pagination?.hasNextPage || false);
+      const hasNextPage = masterLibraryItems.pagination?.hasNextPage || false;
+      console.log("🔍 Master Library Pagination:", {
+        currentPage: masterCurrentPage,
+        totalPages: masterLibraryItems.pagination?.totalPages,
+        totalCount: masterLibraryItems.pagination?.totalCount,
+        hasNextPage,
+        itemsInThisPage: masterLibraryItems.items.length,
+      });
+      setMasterHasMore(hasNextPage);
     } else if (masterLibraryItems && masterLibraryItems.items?.length === 0) {
-      if (currentPage === 1) {
+      if (masterCurrentPage === 1) {
         setMasterItems([]);
       }
       setMasterHasMore(false);
     }
-  }, [masterLibraryItems, currentPage]);
+  }, [masterLibraryItems, masterCurrentPage]);
 
   // Force update when search changes to ensure data is refreshed
   useEffect(() => {
-    if (masterLibraryItems?.items && currentPage === 1) {
+    if (masterLibraryItems?.items && masterCurrentPage === 1) {
       setMasterItems(masterLibraryItems.items);
       setMasterHasMore(masterLibraryItems.pagination?.hasNextPage || false);
     }
@@ -195,7 +223,8 @@ function LibraryPage() {
       selectedCategory,
       masterItems: masterItems.length,
       localItems: localItems.length,
-      currentPage,
+      masterCurrentPage,
+      localCurrentPage,
       masterLibraryItems: masterLibraryItems?.items?.length,
       localLibraryItems: localLibraryItems?.items?.length,
     });
@@ -205,7 +234,8 @@ function LibraryPage() {
     selectedCategory,
     masterItems.length,
     localItems.length,
-    currentPage,
+    masterCurrentPage,
+    localCurrentPage,
     masterLibraryItems,
     localLibraryItems,
   ]);
@@ -213,23 +243,38 @@ function LibraryPage() {
   // Handle local library data
   useEffect(() => {
     if (localLibraryItems?.items) {
-      if (currentPage === 1) {
+      if (localCurrentPage === 1) {
         setLocalItems(localLibraryItems.items);
       } else {
-        setLocalItems(prev => [...prev, ...localLibraryItems.items]);
+        setLocalItems(prev => {
+          // Prevent duplicates by checking if item already exists
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = localLibraryItems.items.filter(
+            item => !existingIds.has(item.id)
+          );
+          return [...prev, ...newItems];
+        });
       }
-      setLocalHasMore(localLibraryItems.pagination?.hasNextPage || false);
+      const hasNextPage = localLibraryItems.pagination?.hasNextPage || false;
+      console.log("🔍 Local Library Pagination:", {
+        currentPage: localCurrentPage,
+        totalPages: localLibraryItems.pagination?.totalPages,
+        totalCount: localLibraryItems.pagination?.totalCount,
+        hasNextPage,
+        itemsInThisPage: localLibraryItems.items.length,
+      });
+      setLocalHasMore(hasNextPage);
     } else if (localLibraryItems && localLibraryItems.items?.length === 0) {
-      if (currentPage === 1) {
+      if (localCurrentPage === 1) {
         setLocalItems([]);
       }
       setLocalHasMore(false);
     }
-  }, [localLibraryItems, currentPage]);
+  }, [localLibraryItems, localCurrentPage]);
 
   // Force update when search changes to ensure data is refreshed
   useEffect(() => {
-    if (localLibraryItems?.items && currentPage === 1) {
+    if (localLibraryItems?.items && localCurrentPage === 1) {
       setLocalItems(localLibraryItems.items);
       setLocalHasMore(localLibraryItems.pagination?.hasNextPage || false);
     }
@@ -239,7 +284,8 @@ function LibraryPage() {
   useEffect(() => {
     setMasterItems([]);
     setLocalItems([]);
-    setCurrentPage(1);
+    setMasterCurrentPage(1);
+    setLocalCurrentPage(1);
     setMasterHasMore(true);
     setLocalHasMore(true);
   }, [debouncedSearchTerm, selectedCategory]);
@@ -284,7 +330,8 @@ function LibraryPage() {
   useEffect(() => {
     console.log("🔍 LibraryPage Debug:", {
       activeTab,
-      currentPage,
+      masterCurrentPage,
+      localCurrentPage,
       localLibraryItems: localLibraryItems?.items?.length,
       masterLibraryItems: masterLibraryItems?.items?.length,
       libraryItems: libraryItems?.length,
@@ -748,7 +795,7 @@ function LibraryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-6 w-full">
               {libraryItems.map((item: any, index: number) => (
                 <div
-                  key={item.id}
+                  key={`${item.id}-${index}`}
                   className="rounded-xl shadow-2xl border-2 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group w-full h-full"
                   style={{
                     backgroundColor: "#1A1D1E",
@@ -869,7 +916,7 @@ function LibraryPage() {
             <div className="space-y-4 max-w-6xl mx-auto">
               {libraryItems.map((item: any, index: number) => (
                 <div
-                  key={item.id}
+                  key={`${item.id}-${index}`}
                   className="rounded-xl shadow-2xl p-5 border-2 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group w-full"
                   style={{
                     backgroundColor: "#1A1D1E",
