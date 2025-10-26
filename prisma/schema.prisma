@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  //directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -28,6 +28,11 @@ model User {
   workingDays              String[]                @default(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) @map("working_days")
   timeSlotInterval         Int                     @default(60) @map("time_slot_interval")
   lastLoginAt              DateTime?               @map("last_login_at")
+  // Subscription fields
+  subscriptionTier         SubscriptionTier        @default(STANDARD) @map("subscription_tier")
+  subscriptionStatus       SubscriptionStatus      @default(ACTIVE) @map("subscription_status")
+  clientLimit              Int                     @default(10) @map("client_limit")
+  subscription             Subscription?           @relation("UserSubscription")
   client1Conversations     Conversation[]          @relation("Client1Conversations")
   client2Conversations     Conversation[]          @relation("Client2Conversations")
   clientConversations      Conversation[]          @relation("ClientConversations")
@@ -1210,4 +1215,85 @@ enum NoteAction {
   CREATED
   UPDATED
   DELETED
+}
+
+// Subscription and Billing Models
+model Subscription {
+  id                    String                @id @default(cuid())
+  userId                String                @unique @map("user_id")
+  user                  User                  @relation("UserSubscription", fields: [userId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId  String                @unique @map("stripe_subscription_id")
+  stripeCustomerId      String                @map("stripe_customer_id")
+  stripePriceId         String                @map("stripe_price_id")
+  tier                  SubscriptionTier      @default(STANDARD)
+  status                SubscriptionStatus    @default(ACTIVE)
+  clientLimit           Int                   @default(10) @map("client_limit")
+  currentPeriodStart    DateTime              @map("current_period_start")
+  currentPeriodEnd      DateTime              @map("current_period_end")
+  cancelAtPeriodEnd     Boolean               @default(false) @map("cancel_at_period_end")
+  canceledAt            DateTime?             @map("canceled_at")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+  usageRecords          UsageRecord[]
+  invoices              Invoice[]
+}
+
+model UsageRecord {
+  id             String       @id @default(cuid())
+  subscriptionId String       @map("subscription_id")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  metric         UsageMetric
+  value          Int
+  recordedAt     DateTime     @default(now()) @map("recorded_at")
+  
+  @@index([subscriptionId, metric, recordedAt])
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  subscriptionId String       @map("subscription_id")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  stripeInvoiceId String      @unique @map("stripe_invoice_id")
+  amount         Int          // Amount in cents
+  currency       String       @default("usd")
+  status         InvoiceStatus @default(DRAFT)
+  paidAt         DateTime?    @map("paid_at")
+  dueDate        DateTime?    @map("due_date")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+}
+
+// Subscription Enums
+enum SubscriptionTier {
+  STANDARD
+  MASTER_LIBRARY
+  PREMADE_ROUTINES
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  PAUSED
+}
+
+enum UsageMetric {
+  CLIENT_COUNT
+  PROGRAM_CREATED
+  VIDEO_UPLOADED
+  MESSAGE_SENT
+  LIBRARY_ACCESS
+  ROUTINE_ACCESS
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
 }

@@ -24,6 +24,11 @@ const envSchema = z.object({
   // Email
   RESEND_API_KEY: z.string().min(1),
 
+  // Stripe
+  STRIPE_SECRET_KEY: z.string().min(1),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1),
+
   // App
   NODE_ENV: z
     .enum(["development", "production", "test"])
@@ -103,6 +108,11 @@ export const config = {
     resend: {
       apiKey: env.RESEND_API_KEY,
     },
+  },
+  stripe: {
+    secretKey: env.STRIPE_SECRET_KEY,
+    webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+    publishableKey: env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   },
   analytics: {
     id: env.NEXT_PUBLIC_ANALYTICS_ID,
