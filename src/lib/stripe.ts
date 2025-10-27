@@ -8,7 +8,7 @@ import { config } from "./env";
 
 // Initialize Stripe
 export const stripe = new Stripe(config.stripe.secretKey, {
-  apiVersion: "2024-06-20",
+  apiVersion: "2025-09-30.clover",
   typescript: true,
 });
 
