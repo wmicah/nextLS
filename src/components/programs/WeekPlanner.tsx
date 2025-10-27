@@ -329,6 +329,7 @@ export default function WeekPlanner({
         videoUrl: drill.videoUrl || "",
         notes: drill.notes || "",
         tempo: drill.tempo || "",
+        routineId: drill.routineId || "",
         supersetWithId: drill.supersetWithId || "",
       })),
     }));
@@ -478,6 +479,7 @@ export default function WeekPlanner({
                     sets: drill.sets || 0,
                     reps: drill.reps || 0,
                     tempo: drill.tempo || "",
+                    routineId: drill.routineId || "",
                     supersetWithId: drill.supersetWithId || "",
                   })) || [],
               };
@@ -509,6 +511,7 @@ export default function WeekPlanner({
                     sets: drill.sets || 0,
                     reps: drill.reps || 0,
                     tempo: drill.tempo || "",
+                    routineId: drill.routineId || "",
                     supersetWithId: drill.supersetWithId || "",
                   })) || [],
               },
@@ -551,6 +554,7 @@ export default function WeekPlanner({
                     sets: drill.sets || 0,
                     reps: drill.reps || 0,
                     tempo: drill.tempo || "",
+                    routineId: drill.routineId || "",
                     supersetWithId: drill.supersetWithId || "",
                   })) || [],
               };
@@ -595,6 +599,7 @@ export default function WeekPlanner({
                     sets: drill.sets || 0,
                     reps: drill.reps || 0,
                     tempo: drill.tempo || "",
+                    routineId: drill.routineId || "",
                     supersetWithId: drill.supersetWithId || "",
                   })) || [],
               },
@@ -723,6 +728,7 @@ export default function WeekPlanner({
                     sets: item.sets || 0,
                     reps: item.reps || 0,
                     tempo: item.tempo || "",
+                    routineId: item.routineId || "",
                     supersetWithId: item.supersetWithId || "",
                     order: drillIndex + 1,
                   })
