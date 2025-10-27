@@ -50,9 +50,26 @@ export default function VideoUpload({
   });
 
   const handleUploadComplete = (res: any) => {
-    console.log("Upload complete:", res);
+    console.log("🎥 Upload complete:", res);
     if (res?.[0]) {
-      setUploadedFile(res[0]);
+      const file = res[0];
+      console.log("📁 Uploaded file details:", {
+        name: file.name,
+        url: file.url,
+        size: file.size,
+        type: file.type,
+        key: file.key,
+      });
+
+      // Validate URL format
+      try {
+        new URL(file.url);
+        console.log("✅ UploadThing URL is valid:", file.url);
+      } catch (error) {
+        console.error("❌ Invalid UploadThing URL:", file.url, error);
+      }
+
+      setUploadedFile(file);
       setIsUploading(false);
     }
   };

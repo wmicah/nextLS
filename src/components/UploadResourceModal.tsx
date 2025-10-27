@@ -228,6 +228,29 @@ export default function UploadResourceModal({
                   }}
                   onClientUploadComplete={async res => {
                     const file = res[0];
+                    console.log("🎥 UploadResourceModal - Upload complete:", {
+                      name: file.name,
+                      url: file.url,
+                      size: file.size,
+                      type: file.type,
+                      key: file.key,
+                    });
+
+                    // Validate URL format
+                    try {
+                      new URL(file.url);
+                      console.log(
+                        "✅ UploadResourceModal - UploadThing URL is valid:",
+                        file.url
+                      );
+                    } catch (error) {
+                      console.error(
+                        "❌ UploadResourceModal - Invalid UploadThing URL:",
+                        file.url,
+                        error
+                      );
+                    }
+
                     const uploadedFileData = {
                       url: file.url,
                       name: file.name,

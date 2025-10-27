@@ -90,6 +90,11 @@ const nextConfig: NextConfig = {
     esmExternals: true,
   },
 
+  // Turbopack configuration to fix workspace root warning
+  turbopack: {
+    root: process.cwd(),
+  },
+
   // Webpack configuration for production builds
   webpack: (config, { isServer }) => {
     if (!isServer) {

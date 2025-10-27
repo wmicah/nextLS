@@ -326,6 +326,44 @@ export default function VideoViewerModal({
         );
       } else {
         // Regular uploaded video with protection
+        console.log("🎥 Rendering uploaded video:", {
+          url: item.url,
+          title: item.title,
+          type: item.type,
+          filename: item.filename,
+        });
+
+        // Validate URL format
+        const isValidUrl = (url: string) => {
+          try {
+            new URL(url);
+            return true;
+          } catch {
+            return false;
+          }
+        };
+
+        if (!isValidUrl(item.url)) {
+          console.error("❌ Invalid video URL:", item.url);
+          return (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center p-8 max-w-lg">
+                <div className="text-8xl mb-6">⚠️</div>
+                <h3 className="text-2xl font-bold text-white mb-4">
+                  Invalid Video URL
+                </h3>
+                <p className="text-gray-300 mb-6 text-lg">
+                  The video URL is not valid. Please contact support if this
+                  issue persists.
+                </p>
+                <div className="text-sm text-gray-400 break-all">
+                  URL: {item.url}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="w-full h-full relative">
             {isVideoLoading && (
@@ -348,16 +386,25 @@ export default function VideoViewerModal({
               onContextMenu={e => e.preventDefault()} // Disable right-click
               onError={e => {
                 console.error("Video load error:", e);
+                console.error("Video URL:", item.url);
+                console.error("Video element:", e.target);
+                setVideoError(`Failed to load video. URL: ${item.url}`);
                 setIsVideoLoading(false);
               }}
               onLoadStart={() => {
+                console.log("Video loading started for URL:", item.url);
                 setVideoError(null);
               }}
               onLoadedData={() => {
+                console.log(
+                  "Video data loaded successfully for URL:",
+                  item.url
+                );
                 setVideoError(null);
                 setIsVideoLoading(false);
               }}
               onCanPlay={() => {
+                console.log("Video can play for URL:", item.url);
                 setIsVideoLoading(false);
               }}
             >
