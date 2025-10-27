@@ -33,7 +33,7 @@ export default function FeatureGate({
     );
   }
 
-  if (hasAccess?.hasAccess) {
+  if (hasAccess) {
     return <>{children}</>;
   }
 
