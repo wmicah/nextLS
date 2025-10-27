@@ -12,10 +12,19 @@ import {
   type ClientLimit,
 } from "./pricing";
 import {
-  SubscriptionStatus,
+  // SubscriptionStatus,
   SubscriptionTier as PrismaSubscriptionTier,
   UsageMetric,
 } from "@prisma/client";
+
+// Define SubscriptionStatus locally to avoid Prisma client issues
+const SubscriptionStatus = {
+  ACTIVE: "ACTIVE",
+  CANCELED: "CANCELED",
+  PAST_DUE: "PAST_DUE",
+  UNPAID: "UNPAID",
+  INCOMPLETE: "INCOMPLETE",
+} as const;
 
 export class SubscriptionService {
   /**

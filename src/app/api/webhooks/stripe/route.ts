@@ -1,15 +1,26 @@
 /**
  * Stripe Webhook Handler
  * Handles Stripe webhook events for subscription management
+ *
+ * TEMPORARILY DISABLED - Stripe implementation not ready
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { stripe, verifyStripeWebhook } from "@/lib/stripe";
-import { SubscriptionService } from "@/lib/subscription-service";
-import { db } from "@/db";
-import { SubscriptionStatus } from "@prisma/client";
+// import { headers } from "next/headers";
+// import { stripe, verifyStripeWebhook } from "@/lib/stripe";
+// import { SubscriptionService } from "@/lib/subscription-service";
+// import { db } from "@/db";
+// import { SubscriptionStatus } from "@prisma/client";
 
+export async function POST(req: NextRequest) {
+  // TEMPORARILY DISABLED - Return success to prevent webhook failures
+  return NextResponse.json({
+    received: true,
+    message: "Stripe webhook temporarily disabled",
+  });
+}
+
+/*
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text();
@@ -113,7 +124,7 @@ async function handleSubscriptionDeleted(subscription: any) {
 
     if (dbSubscription) {
       await SubscriptionService.updateSubscription(dbSubscription.id, {
-        status: SubscriptionStatus.CANCELED,
+        status: "CANCELED" as any,
         canceledAt: new Date(),
       });
 
@@ -121,7 +132,7 @@ async function handleSubscriptionDeleted(subscription: any) {
       await db.user.update({
         where: { id: dbSubscription.userId },
         data: {
-          subscriptionStatus: SubscriptionStatus.CANCELED,
+          subscriptionStatus: "CANCELED" as any,
         },
       });
     }
@@ -152,9 +163,9 @@ async function handleInvoicePaymentSucceeded(invoice: any) {
       });
 
       // Update subscription status if it was past due
-      if (subscription.status === SubscriptionStatus.PAST_DUE) {
+      if (subscription.status === "PAST_DUE") {
         await SubscriptionService.updateSubscription(subscription.id, {
-          status: SubscriptionStatus.ACTIVE,
+          status: "ACTIVE" as any,
         });
       }
     }
@@ -186,7 +197,7 @@ async function handleInvoicePaymentFailed(invoice: any) {
 
       // Update subscription status to past due
       await SubscriptionService.updateSubscription(subscription.id, {
-        status: SubscriptionStatus.PAST_DUE,
+        status: "PAST_DUE" as any,
       });
     }
 
@@ -217,3 +228,4 @@ async function handleTrialWillEnd(subscription: any) {
     console.error("Error handling trial will end:", error);
   }
 }
+*/
