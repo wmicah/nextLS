@@ -11,11 +11,10 @@ import {
   type SubscriptionTier,
   type ClientLimit,
 } from "./pricing";
-import {
-  // SubscriptionStatus,
-  // SubscriptionTier as PrismaSubscriptionTier,
-  UsageMetric,
-} from "@prisma/client";
+import // SubscriptionStatus,
+// SubscriptionTier as PrismaSubscriptionTier,
+// UsageMetric,
+"@prisma/client";
 
 // Define SubscriptionStatus locally to avoid Prisma client issues
 const SubscriptionStatus = {
@@ -31,6 +30,16 @@ const PrismaSubscriptionTier = {
   STANDARD: "STANDARD",
   MASTER_LIBRARY: "MASTER_LIBRARY",
   PREMADE_ROUTINES: "PREMADE_ROUTINES",
+} as const;
+
+// Define UsageMetric locally to avoid Prisma client issues
+const UsageMetric = {
+  CLIENT_COUNT: "CLIENT_COUNT",
+  PROGRAM_CREATED: "PROGRAM_CREATED",
+  VIDEO_UPLOADED: "VIDEO_UPLOADED",
+  MESSAGE_SENT: "MESSAGE_SENT",
+  LIBRARY_ACCESS: "LIBRARY_ACCESS",
+  ROUTINE_ACCESS: "ROUTINE_ACCESS",
 } as const;
 
 export class SubscriptionService {
