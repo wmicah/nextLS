@@ -224,7 +224,7 @@ export default function PaywallModal({
                           {tier.clientLimits.map(limit => (
                             <option key={limit} value={limit}>
                               {limit} clients - $
-                              {tier.pricing[limit as keyof typeof tier.pricing]}
+                              {(tier.pricing as any)[limit] || 0}
                               /month
                             </option>
                           ))}
@@ -285,12 +285,14 @@ export default function PaywallModal({
                   }
                   <span className="ml-2">
                     $
-                    {
-                      pricing.tiers[selectedTier as keyof typeof pricing.tiers]
-                        ?.pricing[
-                        selectedClientLimit as keyof (typeof pricing.tiers)[typeof selectedTier]["pricing"]
-                      ]
-                    }
+                    {(() => {
+                      const tier =
+                        pricing?.tiers[
+                          selectedTier as keyof typeof pricing.tiers
+                        ];
+                      if (!tier) return 0;
+                      return (tier.pricing as any)[selectedClientLimit] || 0;
+                    })()}
                     /month
                   </span>
                 </>
