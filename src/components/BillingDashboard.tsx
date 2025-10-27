@@ -33,7 +33,7 @@ export default function BillingDashboard() {
   const subscriptionLoading = false;
   const usageStats = null;
   const usageLoading = false;
-  const recommendations = [];
+  const recommendations: any[] = [];
 
   // Subscription mutations temporarily disabled
   const createBillingPortalSession = {
