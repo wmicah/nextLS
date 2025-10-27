@@ -23,33 +23,32 @@ import {
   Crown,
   Library,
 } from "lucide-react";
-import PaywallModal from "./PaywallModal";
+// import PaywallModal from "./PaywallModal";
 
 export default function BillingDashboard() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  const { data: subscription, isLoading: subscriptionLoading } =
-    trpc.subscription.getCurrentSubscription.useQuery();
-  const { data: usageStats, isLoading: usageLoading } =
-    trpc.subscription.getUsageStats.useQuery();
-  const { data: recommendations } =
-    trpc.subscription.getUpgradeRecommendations.useQuery();
+  // Subscription functionality temporarily disabled
+  const subscription = null;
+  const subscriptionLoading = false;
+  const usageStats = null;
+  const usageLoading = false;
+  const recommendations = [];
 
-  const createBillingPortalSession =
-    trpc.subscription.createBillingPortalSession.useMutation({
-      onSuccess: data => {
-        if (data.url) {
-          window.location.href = data.url;
-        }
-      },
-    });
-
-  const cancelSubscription = trpc.subscription.cancelSubscription.useMutation({
-    onSuccess: () => {
-      // Refetch subscription data
-      window.location.reload();
+  // Subscription mutations temporarily disabled
+  const createBillingPortalSession = {
+    mutate: () => {
+      console.log("Billing portal not available");
     },
-  });
+    isLoading: false,
+  };
+
+  const cancelSubscription = {
+    mutate: () => {
+      console.log("Cancel subscription not available");
+    },
+    isLoading: false,
+  };
 
   if (subscriptionLoading || usageLoading) {
     return (
@@ -311,14 +310,26 @@ export default function BillingDashboard() {
         </Card>
       )}
 
-      {/* Paywall Modal */}
-      <PaywallModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        feature="upgrade"
-        currentTier={subscription.tier}
-        currentClientCount={usageStats.currentUsage.CLIENT_COUNT}
-      />
+      {/* Paywall Modal temporarily disabled */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              Upgrade Not Available
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Upgrade functionality is currently not available. Please check
+              back later.
+            </p>
+            <button
+              onClick={() => setShowUpgradeModal(false)}
+              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

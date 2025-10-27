@@ -43,7 +43,7 @@ import { organizationRouter } from "./routers/organization.router";
 import { sidebarRouter } from "./routers/sidebar.router";
 import { blockedTimesRouter } from "./routers/blockedTimes.router";
 import { notesRouter } from "./routers/notes.router";
-import { subscriptionRouter } from "./routers/subscription.router";
+// import { subscriptionRouter } from "./routers/subscription.router";
 
 /**
  * Merge all routers together
@@ -83,7 +83,7 @@ export const appRouter = router({
   sidebar: sidebarRouter,
   blockedTimes: blockedTimesRouter,
   notes: notesRouter,
-  subscription: subscriptionRouter,
+  // subscription: subscriptionRouter,
 
   // Admin router
   admin: adminRouter,
