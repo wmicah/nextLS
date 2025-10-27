@@ -13,7 +13,7 @@ import {
 } from "./pricing";
 import {
   // SubscriptionStatus,
-  SubscriptionTier as PrismaSubscriptionTier,
+  // SubscriptionTier as PrismaSubscriptionTier,
   UsageMetric,
 } from "@prisma/client";
 
@@ -24,6 +24,13 @@ const SubscriptionStatus = {
   PAST_DUE: "PAST_DUE",
   UNPAID: "UNPAID",
   INCOMPLETE: "INCOMPLETE",
+} as const;
+
+// Define SubscriptionTier locally to avoid Prisma client issues
+const PrismaSubscriptionTier = {
+  STANDARD: "STANDARD",
+  MASTER_LIBRARY: "MASTER_LIBRARY",
+  PREMADE_ROUTINES: "PREMADE_ROUTINES",
 } as const;
 
 export class SubscriptionService {
