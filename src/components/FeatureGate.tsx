@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
-import PaywallModal from "./PaywallModal";
+// import PaywallModal from "./PaywallModal";
 import { Loader2, Lock } from "lucide-react";
 
 interface FeatureGateProps {
@@ -20,16 +20,10 @@ export default function FeatureGate({
 }: FeatureGateProps) {
   const [showModal, setShowModal] = useState(false);
 
-  const { data: hasAccess, isLoading } =
-    trpc.subscription.hasFeatureAccess.useQuery(
-      { feature },
-      {
-        retry: false,
-        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-      }
-    );
-
-  const { data: clientCount } = trpc.subscription.getClientCount.useQuery();
+  // Subscription functionality temporarily disabled - allow all features
+  const hasAccess = true;
+  const isLoading = false;
+  const clientCount = { clientCount: 0 };
 
   if (isLoading) {
     return (
@@ -82,12 +76,26 @@ export default function FeatureGate({
         </div>
       </div>
 
-      <PaywallModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        feature={feature}
-        currentClientCount={clientCount?.clientCount || 0}
-      />
+      {/* PaywallModal temporarily disabled */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              Feature Not Available
+            </h3>
+            <p className="text-gray-600 mb-4">
+              The {feature} feature is currently not available. Please check
+              back later.
+            </p>
+            <button
+              onClick={() => setShowModal(false)}
+              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -109,31 +117,19 @@ export function withFeatureGate<T extends object>(
 
 // Hook for checking feature access
 export function useFeatureAccess(feature: string) {
-  const { data: hasAccess, isLoading } =
-    trpc.subscription.hasFeatureAccess.useQuery(
-      { feature },
-      {
-        retry: false,
-        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-      }
-    );
-
+  // Subscription functionality temporarily disabled - allow all features
   return {
-    hasAccess: hasAccess?.hasAccess || false,
-    isLoading,
+    hasAccess: true,
+    isLoading: false,
   };
 }
 
 // Hook for checking client limit
 export function useClientLimit() {
-  const { data: canAdd, isLoading: canAddLoading } =
-    trpc.subscription.canAddClient.useQuery();
-  const { data: clientCount, isLoading: countLoading } =
-    trpc.subscription.getClientCount.useQuery();
-
+  // Subscription functionality temporarily disabled - allow unlimited clients
   return {
-    canAddClient: canAdd?.canAdd || false,
-    clientCount: clientCount?.clientCount || 0,
-    isLoading: canAddLoading || countLoading,
+    canAddClient: true,
+    clientCount: 0,
+    isLoading: false,
   };
 }
