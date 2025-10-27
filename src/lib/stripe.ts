@@ -3,14 +3,42 @@
  * Handles Stripe integration for subscription management
  */
 
-import Stripe from "stripe";
-import { config } from "./env";
+// Stripe functionality temporarily disabled
+// import Stripe from "stripe";
+// import { config } from "./env";
 
 // Initialize Stripe
-export const stripe = new Stripe(config.stripe.secretKey, {
-  apiVersion: "2025-09-30.clover",
-  typescript: true,
-});
+// export const stripe = new Stripe(config.stripe.secretKey, {
+//   apiVersion: "2025-09-30.clover",
+//   typescript: true,
+// });
+
+// Mock stripe object
+export const stripe = {
+  customers: {
+    list: () => Promise.resolve({ data: [] }),
+    create: () => Promise.resolve({ id: "mock-customer" }),
+    retrieve: () => Promise.resolve({ id: "mock-customer" }),
+  },
+  subscriptions: {
+    create: () => Promise.resolve({ id: "mock-subscription" }),
+    retrieve: () => Promise.resolve({ id: "mock-subscription" }),
+    update: () => Promise.resolve({ id: "mock-subscription" }),
+  },
+  checkout: {
+    sessions: {
+      create: () => Promise.resolve({ id: "mock-session", url: "mock-url" }),
+    },
+  },
+  billingPortal: {
+    sessions: {
+      create: () => Promise.resolve({ id: "mock-session", url: "mock-url" }),
+    },
+  },
+  webhooks: {
+    constructEvent: () => ({}),
+  },
+} as any;
 
 // Stripe Price IDs for different tiers and client limits
 export const STRIPE_PRICE_IDS = {
@@ -54,7 +82,7 @@ export async function getOrCreateStripeCustomer(
   email: string,
   name?: string,
   userId?: string
-): Promise<Stripe.Customer> {
+): Promise<any> {
   try {
     // First, try to find existing customer by email
     const existingCustomers = await stripe.customers.list({
@@ -87,9 +115,9 @@ export async function createStripeSubscription(
   customerId: string,
   priceId: string,
   trialDays?: number
-): Promise<Stripe.Subscription> {
+): Promise<any> {
   try {
-    const subscriptionData: Stripe.SubscriptionCreateParams = {
+    const subscriptionData: any = {
       customer: customerId,
       items: [{ price: priceId }],
       payment_behavior: "default_incomplete",
@@ -113,7 +141,7 @@ export async function createStripeSubscription(
 export async function updateStripeSubscription(
   subscriptionId: string,
   newPriceId: string
-): Promise<Stripe.Subscription> {
+): Promise<any> {
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
@@ -141,7 +169,7 @@ export async function updateStripeSubscription(
 export async function cancelStripeSubscription(
   subscriptionId: string,
   cancelAtPeriodEnd: boolean = true
-): Promise<Stripe.Subscription> {
+): Promise<any> {
   try {
     const subscription = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: cancelAtPeriodEnd,
@@ -161,9 +189,9 @@ export async function createCheckoutSession(
   successUrl: string,
   cancelUrl: string,
   trialDays?: number
-): Promise<Stripe.Checkout.Session> {
+): Promise<any> {
   try {
-    const sessionData: Stripe.Checkout.SessionCreateParams = {
+    const sessionData: any = {
       customer: customerId,
       payment_method_types: ["card"],
       line_items: [
@@ -196,7 +224,7 @@ export async function createCheckoutSession(
 export async function createBillingPortalSession(
   customerId: string,
   returnUrl: string
-): Promise<Stripe.BillingPortal.Session> {
+): Promise<any> {
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
@@ -214,12 +242,12 @@ export async function createBillingPortalSession(
 export function verifyStripeWebhook(
   payload: string | Buffer,
   signature: string
-): Stripe.Event {
+): any {
   try {
     const event = stripe.webhooks.constructEvent(
       payload,
       signature,
-      config.stripe.webhookSecret
+      "mock-webhook-secret"
     );
     return event;
   } catch (error) {
@@ -231,7 +259,7 @@ export function verifyStripeWebhook(
 // Get subscription status from Stripe
 export async function getStripeSubscriptionStatus(
   subscriptionId: string
-): Promise<Stripe.Subscription.Status> {
+): Promise<any> {
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     return subscription.status;
