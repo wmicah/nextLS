@@ -27,7 +27,7 @@ interface DayDetailsModalProps {
   onAssignRoutine: () => void;
   onAssignVideo: () => void;
   onReplaceWithLesson: (replacementData: any) => void;
-  onRemoveProgram?: (programData: any) => void;
+  onRemoveProgram?: (programData: any, action: "entire" | "day") => void;
   onRemoveRoutine?: (routineData: any) => void;
   onRemoveLesson?: (lessonData: any) => void;
   onRemoveVideo?: (videoData: any) => void;
@@ -59,6 +59,7 @@ export default function DayDetailsModal({
 
   const handleReplaceWithLesson = (program: any) => {
     const replacementData = {
+      assignmentId: program.assignment.id,
       programId: program.assignment.programId,
       programTitle: program.title,
       dayDate: selectedDate.toISOString().split("T")[0],
@@ -86,7 +87,7 @@ export default function DayDetailsModal({
     return new Date() > endDate;
   };
 
-  const handleRemoveProgram = (program: any) => {
+  const handleRemoveProgram = (program: any, action: "entire" | "day") => {
     if (onRemoveProgram && !isProgramFinished(program)) {
       const programData = {
         assignmentId: program.assignment.id,
@@ -94,7 +95,7 @@ export default function DayDetailsModal({
         programTitle: program.title,
         dayDate: selectedDate.toISOString().split("T")[0],
       };
-      onRemoveProgram(programData);
+      onRemoveProgram(programData, action);
     }
   };
 
@@ -333,18 +334,36 @@ export default function DayDetailsModal({
                           </div>
                           <div className="flex items-center gap-2">
                             {onRemoveProgram && !isProgramFinished(program) && (
-                              <button
-                                onClick={() => handleRemoveProgram(program)}
-                                className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1"
-                                style={{
-                                  backgroundColor: "#EF4444",
-                                  color: "#FFFFFF",
-                                }}
-                                title="Remove Program"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                                Remove Program
-                              </button>
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleRemoveProgram(program, "entire")
+                                  }
+                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1"
+                                  style={{
+                                    backgroundColor: "#EF4444",
+                                    color: "#FFFFFF",
+                                  }}
+                                  title="Remove entire program from client"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Remove Entire Program
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleRemoveProgram(program, "day")
+                                  }
+                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1"
+                                  style={{
+                                    backgroundColor: "#F59E0B",
+                                    color: "#FFFFFF",
+                                  }}
+                                  title="Remove just this program day"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Remove Just This Day
+                                </button>
+                              </>
                             )}
                             {onRemoveProgram && isProgramFinished(program) && (
                               <div

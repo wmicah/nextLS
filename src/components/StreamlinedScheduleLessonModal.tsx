@@ -37,6 +37,12 @@ interface StreamlinedScheduleLessonModalProps {
   clientEmail?: string | null;
   selectedDate?: Date | null; // Pre-selected date from calendar click
   overrideWorkingDays?: boolean; // Allow overriding working day restrictions (e.g., in organization view)
+  replacementData?: {
+    assignmentId: string;
+    programId: string;
+    programTitle: string;
+    dayDate: string;
+  } | null; // Data for replacing a program day with a lesson
 }
 
 export default function StreamlinedScheduleLessonModal({
@@ -47,6 +53,7 @@ export default function StreamlinedScheduleLessonModal({
   clientEmail,
   selectedDate: propSelectedDate,
   overrideWorkingDays = false,
+  replacementData = null,
 }: StreamlinedScheduleLessonModalProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(
     propSelectedDate || null
@@ -92,8 +99,8 @@ export default function StreamlinedScheduleLessonModal({
       let currentDate = new Date(start);
 
       while (currentDate <= end) {
-        // Check if the date is on a working day
-        if (coachProfile?.workingDays) {
+        // Check if the date is on a working day (skip check if replacing a program day)
+        if (coachProfile?.workingDays && !replacementData) {
           const dayName = format(currentDate, "EEEE");
           if (coachProfile.workingDays.includes(dayName)) {
             dates.push(new Date(currentDate));
@@ -278,6 +285,15 @@ export default function StreamlinedScheduleLessonModal({
   // Schedule lesson mutation
   const scheduleLessonMutation = trpc.scheduling.scheduleLesson.useMutation({
     onSuccess: () => {
+      // If this is replacing a program day, delete the program day
+      if (replacementData) {
+        deleteProgramDayMutation.mutate({
+          assignmentId: replacementData.assignmentId,
+          dayDate: replacementData.dayDate,
+          reason: "Program day replaced with lesson",
+        });
+      }
+
       setIsScheduling(false);
       onClose();
       setSelectedDate(null);
@@ -299,6 +315,15 @@ export default function StreamlinedScheduleLessonModal({
   const scheduleRecurringLessonsMutation =
     trpc.scheduling.scheduleRecurringLessons.useMutation({
       onSuccess: data => {
+        // If this is replacing a program day, delete the program day
+        if (replacementData) {
+          deleteProgramDayMutation.mutate({
+            assignmentId: replacementData.programId, // This should be the assignment ID, not program ID
+            dayDate: replacementData.dayDate,
+            reason: "Program day replaced with lesson",
+          });
+        }
+
         setIsScheduling(false);
         onClose();
         setSelectedDate(null);
@@ -314,6 +339,16 @@ export default function StreamlinedScheduleLessonModal({
         alert(`Error scheduling recurring lessons: ${error.message}`);
       },
     });
+
+  // Delete program day mutation (for replacing program days with lessons)
+  const deleteProgramDayMutation = trpc.programs.deleteProgramDay.useMutation({
+    onSuccess: () => {
+      console.log("Program day deleted successfully");
+    },
+    onError: error => {
+      console.error("Error deleting program day:", error);
+    },
+  });
 
   const handleSchedule = async () => {
     if (!selectedDate || !selectedTime) {
@@ -358,7 +393,7 @@ export default function StreamlinedScheduleLessonModal({
         recurrencePattern,
         recurrenceInterval,
         sendEmail: true,
-        overrideWorkingDays,
+        overrideWorkingDays: overrideWorkingDays || !!replacementData,
         timeZone: getUserTimezone(),
       });
     } else {
@@ -367,7 +402,7 @@ export default function StreamlinedScheduleLessonModal({
         clientId,
         lessonDate: fullDateStr,
         sendEmail: true,
-        overrideWorkingDays,
+        overrideWorkingDays: overrideWorkingDays || !!replacementData,
         timeZone: getUserTimezone(),
       });
     }

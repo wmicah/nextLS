@@ -88,6 +88,12 @@ export default function MobileClientDetailPage({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [replacementData, setReplacementData] = useState<{
+    assignmentId: string;
+    programId: string;
+    programTitle: string;
+    dayDate: string;
+  } | null>(null);
   const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
   const [showQuickAssignProgramModal, setShowQuickAssignProgramModal] =
     useState(false);
@@ -162,6 +168,12 @@ export default function MobileClientDetailPage({
       clientId,
     });
 
+  // Fetch temporary program day replacements for this client
+  const { data: temporaryReplacements = [] } =
+    trpc.programs.getTemporaryReplacements.useQuery({
+      clientId,
+    });
+
   // Fetch client compliance data
   const [compliancePeriod, setCompliancePeriod] = useState<
     "4" | "6" | "8" | "all"
@@ -187,6 +199,7 @@ export default function MobileClientDetailPage({
         clientId,
         period: compliancePeriod,
       }),
+      utils.programs.getTemporaryReplacements.invalidate({ clientId }),
     ]);
   };
 
@@ -242,6 +255,18 @@ export default function MobileClientDetailPage({
       },
     });
 
+  // Remove temporary program day mutation
+  const removeTemporaryProgramDayMutation =
+    trpc.programs.removeTemporaryProgramDay.useMutation({
+      onSuccess: async () => {
+        await refreshClientData();
+        setShowDayOverviewModal(false);
+      },
+      onError: error => {
+        console.error("Failed to remove temporary program day:", error);
+      },
+    });
+
   // Delete lesson mutation
   const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
     onSuccess: () => {
@@ -252,6 +277,17 @@ export default function MobileClientDetailPage({
     },
     onError: error => {
       console.error("Failed to remove lesson:", error);
+    },
+  });
+
+  // Delete program day mutation
+  const deleteProgramDayMutation = trpc.programs.deleteProgramDay.useMutation({
+    onSuccess: async () => {
+      await refreshClientData();
+      setShowDayOverviewModal(false);
+    },
+    onError: error => {
+      console.error("Failed to delete program day:", error);
     },
   });
 
@@ -316,68 +352,113 @@ export default function MobileClientDetailPage({
 
   const getProgramsForDate = (date: Date) => {
     const programsForDate: any[] = [];
+    const targetDateStr = date.toISOString().split("T")[0];
 
-    assignedPrograms.forEach((assignment: any) => {
-      const program = assignment.program;
-      const startDate = new Date(assignment.startDate || assignment.assignedAt);
-
-      // Calculate which week and day this date falls on
-      const daysSinceStart = Math.floor(
-        (date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      // Only show if the date is within the program duration
-      if (daysSinceStart >= 0 && daysSinceStart < program.duration * 7) {
-        const weekNumber = Math.floor(daysSinceStart / 7) + 1;
-        const dayNumber = (daysSinceStart % 7) + 1;
-
-        // Find the corresponding program day
-        const week = program.weeks?.find(
-          (w: any) => w.weekNumber === weekNumber
+    // First, check for temporary program day replacements
+    const hasTemporaryReplacement = temporaryReplacements.some(
+      (replacement: any) => {
+        const replacementDate = new Date(replacement.replacedDate);
+        const replacementDateStr = replacementDate.toISOString().split("T")[0];
+        return (
+          replacementDateStr === targetDateStr &&
+          replacement.data.type === "temporary_program_day"
         );
-        if (week) {
-          const programDay = week.days?.find(
-            (d: any) => d.dayNumber === dayNumber
-          );
+      }
+    );
 
-          if (programDay) {
-            // Check if it's a rest day
-            if (programDay.isRestDay || programDay.drills?.length === 0) {
-              // Show rest day indicator
-              programsForDate.push({
-                id: `${assignment.id}-${weekNumber}-${dayNumber}-rest`,
-                title: `${program.title} - Rest Day`,
-                description: "Recovery day",
-                type: "rest",
-                assignment,
-                program,
-                weekNumber,
-                dayNumber,
-                isRestDay: true,
-              });
-            } else {
-              // Show workout day with program title and day info
-              programsForDate.push({
-                id: `${assignment.id}-${weekNumber}-${dayNumber}`,
-                title: `${program.title} - ${
-                  programDay.title
-                    ? programDay.title.substring(0, 8)
-                    : "Workout"
-                }`,
-                description: `${programDay.drills.length} drills`,
-                type: "program",
-                assignment,
-                program,
-                weekNumber,
-                dayNumber,
-                drillCount: programDay.drills.length,
-                isRestDay: false,
-              });
+    // Add temporary replacements if they exist
+    temporaryReplacements.forEach((replacement: any) => {
+      const replacementDate = new Date(replacement.replacedDate);
+      const replacementDateStr = replacementDate.toISOString().split("T")[0];
+
+      if (
+        replacementDateStr === targetDateStr &&
+        replacement.data.type === "temporary_program_day"
+      ) {
+        programsForDate.push({
+          id: `temp-${replacement.id}`,
+          title: replacement.data.programTitle,
+          description: `${replacement.data.drills.length} drills`,
+          type: "temporary_program",
+          isTemporary: true,
+          replacementId: replacement.id, // This is now the assignment ID
+          programDay: {
+            title: replacement.data.dayTitle,
+            description: replacement.data.dayDescription,
+            drills: replacement.data.drills,
+          },
+          drillCount: replacement.data.drills.length,
+          isRestDay: false,
+        });
+      }
+    });
+
+    // Only show regular program assignments if there's no temporary replacement for this date
+    if (!hasTemporaryReplacement) {
+      assignedPrograms.forEach((assignment: any) => {
+        const program = assignment.program;
+        const startDate = new Date(
+          assignment.startDate || assignment.assignedAt
+        );
+
+        // Calculate which week and day this date falls on
+        const daysSinceStart = Math.floor(
+          (date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        // Only show if the date is within the program duration
+        if (daysSinceStart >= 0 && daysSinceStart < program.duration * 7) {
+          const weekNumber = Math.floor(daysSinceStart / 7) + 1;
+          const dayNumber = (daysSinceStart % 7) + 1;
+
+          // Find the corresponding program day
+          const week = program.weeks?.find(
+            (w: any) => w.weekNumber === weekNumber
+          );
+          if (week) {
+            const programDay = week.days?.find(
+              (d: any) => d.dayNumber === dayNumber
+            );
+
+            if (programDay) {
+              // Check if it's a rest day
+              if (programDay.isRestDay || programDay.drills?.length === 0) {
+                // Show rest day indicator
+                programsForDate.push({
+                  id: `${assignment.id}-${weekNumber}-${dayNumber}-rest`,
+                  title: `${program.title} - Rest Day`,
+                  description: "Recovery day",
+                  type: "rest",
+                  assignment,
+                  program,
+                  weekNumber,
+                  dayNumber,
+                  isRestDay: true,
+                });
+              } else {
+                // Show workout day with program title and day info
+                programsForDate.push({
+                  id: `${assignment.id}-${weekNumber}-${dayNumber}`,
+                  title: `${program.title} - ${
+                    programDay.title
+                      ? programDay.title.substring(0, 8)
+                      : "Workout"
+                  }`,
+                  description: `${programDay.drills.length} drills`,
+                  type: "program",
+                  assignment,
+                  program,
+                  weekNumber,
+                  dayNumber,
+                  drillCount: programDay.drills.length,
+                  isRestDay: false,
+                });
+              }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     return programsForDate;
   };
@@ -433,15 +514,48 @@ export default function MobileClientDetailPage({
   };
 
   // Remove handlers
-  const handleRemoveProgram = (programData: any) => {
-    if (
-      confirm(
-        `Are you sure you want to remove "${programData.programTitle}" from this client?`
-      )
-    ) {
-      removeProgramMutation.mutate({
-        assignmentId: programData.assignmentId,
-      });
+  const handleRemoveProgram = (
+    programData: any,
+    action: "entire" | "day" = "entire"
+  ) => {
+    // Check if this is a temporary program day
+    if (programData.isTemporary && programData.replacementId) {
+      if (
+        confirm(
+          `Are you sure you want to remove the temporary program day "${programData.title}"?`
+        )
+      ) {
+        removeTemporaryProgramDayMutation.mutate({
+          replacementId: programData.replacementId,
+        });
+      }
+      return;
+    }
+
+    // Handle regular program removal with direct confirmation
+    if (action === "entire") {
+      if (
+        confirm(
+          `Are you sure you want to remove the entire program "${programData.programTitle}" from this client?`
+        )
+      ) {
+        removeProgramMutation.mutate({
+          assignmentId: programData.assignmentId,
+        });
+      }
+    } else if (action === "day") {
+      if (
+        confirm(
+          `Are you sure you want to remove just this program day "${programData.programTitle}"?`
+        )
+      ) {
+        // Remove just this specific program day using the deleteProgramDay mutation
+        deleteProgramDayMutation.mutate({
+          assignmentId: programData.assignmentId,
+          dayDate: programData.dayDate,
+          reason: "Program day deleted by coach",
+        });
+      }
     }
   };
 
@@ -818,6 +932,11 @@ export default function MobileClientDetailPage({
                             ) && (
                               <div className="w-2 h-2 rounded-full bg-blue-400" />
                             )}
+                            {programsForDay.some(
+                              (p: any) => p.type === "temporary_program"
+                            ) && (
+                              <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                            )}
                           </>
                         )}
                         {hasRoutines && (
@@ -873,6 +992,11 @@ export default function MobileClientDetailPage({
                                 (p: any) => p.type === "program"
                               ) && (
                                 <div className="w-3 h-3 rounded-full bg-blue-400" />
+                              )}
+                              {programsForDay.some(
+                                (p: any) => p.type === "temporary_program"
+                              ) && (
+                                <div className="w-3 h-3 rounded-full bg-cyan-400" />
                               )}
                             </>
                           )}
@@ -942,6 +1066,10 @@ export default function MobileClientDetailPage({
               <span className="text-xs text-gray-300">Programs</span>
             </div>
             <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-cyan-400" />
+              <span className="text-xs text-gray-300">Temporary</span>
+            </div>
+            <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-orange-400" />
               <span className="text-xs text-gray-300">Rest Days</span>
             </div>
@@ -956,11 +1084,15 @@ export default function MobileClientDetailPage({
         {showScheduleModal && client && (
           <StreamlinedScheduleLessonModal
             isOpen={showScheduleModal}
-            onClose={() => setShowScheduleModal(false)}
+            onClose={() => {
+              setShowScheduleModal(false);
+              setReplacementData(null);
+            }}
             clientId={clientId}
             clientName={client.name}
             clientEmail={client.user?.email}
             selectedDate={selectedDate}
+            replacementData={replacementData} // Pass replacement data to override restrictions
           />
         )}
 
@@ -1160,6 +1292,8 @@ export default function MobileClientDetailPage({
                                 className={`flex items-center justify-between p-4 rounded-lg border group ${
                                   program.type === "rest"
                                     ? "bg-orange-500/10 border-orange-500/20"
+                                    : program.type === "temporary_program"
+                                    ? "bg-cyan-500/10 border-cyan-500/20"
                                     : "bg-blue-500/10 border-blue-500/20"
                                 }`}
                               >
@@ -1168,6 +1302,8 @@ export default function MobileClientDetailPage({
                                     className={`font-medium ${
                                       program.type === "rest"
                                         ? "text-orange-300"
+                                        : program.type === "temporary_program"
+                                        ? "text-cyan-300"
                                         : "text-blue-300"
                                     }`}
                                   >
@@ -1177,39 +1313,115 @@ export default function MobileClientDetailPage({
                                     className={`text-sm ${
                                       program.type === "rest"
                                         ? "text-orange-200"
+                                        : program.type === "temporary_program"
+                                        ? "text-cyan-200"
                                         : "text-blue-200"
                                     }`}
                                   >
                                     {program.description}
                                   </div>
                                 </div>
-                                <button
-                                  onClick={() => {
-                                    // Create programData object like desktop version
-                                    const programData = {
-                                      assignmentId:
-                                        program.assignment?.id || program.id,
-                                      programId:
-                                        program.assignment?.programId ||
-                                        program.programId,
-                                      programTitle: program.title,
-                                      dayDate:
-                                        selectedDate
-                                          ?.toISOString()
-                                          .split("T")[0] ||
-                                        new Date().toISOString().split("T")[0],
-                                    };
-                                    handleRemoveProgram(programData);
-                                  }}
-                                  className={`p-2 transition-colors ${
-                                    program.type === "rest"
-                                      ? "text-orange-400 hover:text-red-400"
-                                      : "text-blue-400 hover:text-red-400"
-                                  }`}
-                                  title="Remove program"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => {
+                                      // Handle temporary program days
+                                      if (
+                                        program.isTemporary &&
+                                        program.replacementId
+                                      ) {
+                                        handleRemoveProgram(program);
+                                        return;
+                                      }
+
+                                      // Create programData object like desktop version
+                                      const programData = {
+                                        assignmentId:
+                                          program.assignment?.id || program.id,
+                                        programId:
+                                          program.assignment?.programId ||
+                                          program.programId,
+                                        programTitle: program.title,
+                                        dayDate:
+                                          selectedDate
+                                            ?.toISOString()
+                                            .split("T")[0] ||
+                                          new Date()
+                                            .toISOString()
+                                            .split("T")[0],
+                                      };
+                                      handleRemoveProgram(
+                                        programData,
+                                        "entire"
+                                      );
+                                    }}
+                                    className="px-2 py-1 text-xs font-medium rounded transition-colors bg-red-500/20 text-red-300 hover:bg-red-500/30"
+                                    title="Remove entire program"
+                                  >
+                                    Entire
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      // Handle temporary program days
+                                      if (
+                                        program.isTemporary &&
+                                        program.replacementId
+                                      ) {
+                                        handleRemoveProgram(program);
+                                        return;
+                                      }
+
+                                      // Create programData object like desktop version
+                                      const programData = {
+                                        assignmentId:
+                                          program.assignment?.id || program.id,
+                                        programId:
+                                          program.assignment?.programId ||
+                                          program.programId,
+                                        programTitle: program.title,
+                                        dayDate:
+                                          selectedDate
+                                            ?.toISOString()
+                                            .split("T")[0] ||
+                                          new Date()
+                                            .toISOString()
+                                            .split("T")[0],
+                                      };
+                                      handleRemoveProgram(programData, "day");
+                                    }}
+                                    className="px-2 py-1 text-xs font-medium rounded transition-colors bg-orange-500/20 text-orange-300 hover:bg-orange-500/30"
+                                    title="Remove just this day"
+                                  >
+                                    Day
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      // Replace with lesson functionality
+                                      const replacementData = {
+                                        assignmentId:
+                                          program.assignment?.id ||
+                                          program.assignmentId,
+                                        programId:
+                                          program.assignment?.programId ||
+                                          program.programId,
+                                        programTitle: program.title,
+                                        dayDate:
+                                          selectedDate
+                                            ?.toISOString()
+                                            .split("T")[0] ||
+                                          new Date()
+                                            .toISOString()
+                                            .split("T")[0],
+                                      };
+                                      setReplacementData(replacementData);
+                                      setShowScheduleModal(true);
+                                      setShowDayOverviewModal(false);
+                                    }}
+                                    className="px-2 py-1 text-xs font-medium rounded transition-colors bg-green-500/20 text-green-300 hover:bg-green-500/30"
+                                    title="Replace with lesson"
+                                  >
+                                    Lesson
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>
