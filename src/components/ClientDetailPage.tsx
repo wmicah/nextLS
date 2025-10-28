@@ -118,15 +118,10 @@ function ClientDetailPage({
     "4" | "6" | "8" | "all"
   >("4");
   const [replacementData, setReplacementData] = useState<{
+    assignmentId: string;
     programId: string;
     programTitle: string;
     dayDate: string;
-  } | null>(null);
-  const [showProgramDeleteChoice, setShowProgramDeleteChoice] = useState(false);
-  const [selectedProgramForDeletion, setSelectedProgramForDeletion] = useState<{
-    assignmentId: string;
-    programTitle: string;
-    dayDate?: string;
   } | null>(null);
 
   // Clipboard state
@@ -236,6 +231,12 @@ function ClientDetailPage({
       period: compliancePeriod,
     });
 
+  // Fetch temporary program day replacements for this client
+  const { data: temporaryReplacements = [] } =
+    trpc.programs.getTemporaryReplacements.useQuery({
+      clientId,
+    });
+
   const utils = trpc.useUtils();
 
   // Remove program mutation - using specific assignment ID
@@ -322,25 +323,36 @@ function ClientDetailPage({
     },
   });
 
-  // Create program mutation for pasting program days
-  const createProgramMutation = trpc.programs.create.useMutation({
-    onSuccess: () => {
-      // Success will be handled in the pasteAssignments function
-    },
-    onError: error => {
-      console.error("Error creating program:", error);
-    },
-  });
+  // Create temporary program day mutation for pasting program days
+  const createTemporaryProgramDayMutation =
+    trpc.programs.createTemporaryProgramDay.useMutation({
+      onSuccess: () => {
+        // Success will be handled in the pasteAssignments function
+      },
+      onError: error => {
+        console.error("Error creating temporary program day:", error);
+      },
+    });
 
-  // Assign program mutation for pasting
-  const assignProgramMutation = trpc.programs.assignToClients.useMutation({
-    onSuccess: () => {
-      // Success will be handled in the pasteAssignments function
-    },
-    onError: error => {
-      console.error("Error assigning program:", error);
-    },
-  });
+  // Remove temporary program day mutation
+  const removeTemporaryProgramDayMutation =
+    trpc.programs.removeTemporaryProgramDay.useMutation({
+      onSuccess: () => {
+        addToast({
+          type: "success",
+          title: "Temporary Program Day Removed!",
+          message: "Temporary program day has been removed from the client.",
+        });
+        refreshAllData();
+      },
+      onError: error => {
+        addToast({
+          type: "error",
+          title: "Removal Failed",
+          message: error.message || "Failed to remove temporary program day.",
+        });
+      },
+    });
 
   // Delete lesson mutation
   const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
@@ -399,6 +411,7 @@ function ClientDetailPage({
       clientId,
       period: compliancePeriod,
     });
+    utils.programs.getTemporaryReplacements.invalidate({ clientId });
     // Force refresh of all program-related queries
     utils.programs.getProgramAssignments.invalidate();
   };
@@ -459,73 +472,117 @@ function ClientDetailPage({
 
   const getProgramsForDate = (date: Date) => {
     const programsForDate: any[] = [];
+    const targetDateStr = date.toISOString().split("T")[0];
 
-    assignedPrograms.forEach((assignment: any) => {
-      // Check if this specific date has been replaced with a lesson or deleted
-      const hasReplacement = assignment.replacements?.some(
-        (replacement: any) => {
-          const replacementDate = new Date(replacement.replacedDate);
-
-          // Normalize both dates to the same timezone for comparison
-          // Convert both to date strings (YYYY-MM-DD) to avoid timezone issues
-          const replacementDateStr = replacementDate
-            .toISOString()
-            .split("T")[0];
-          const targetDateStr = date.toISOString().split("T")[0];
-          const isSame = replacementDateStr === targetDateStr;
-
-          return isSame;
-        }
-      );
-
-      // Skip this assignment if the date has been replaced or deleted
-      if (hasReplacement) {
-        return;
-      }
-      const program = assignment.program;
-      const startDate = new Date(assignment.startDate || assignment.assignedAt);
-
-      // Calculate which week and day this date falls on
-      const daysSinceStart = Math.floor(
-        (date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      // Only show if the date is within the program duration
-      if (daysSinceStart >= 0 && daysSinceStart < program.duration * 7) {
-        const weekNumber = Math.floor(daysSinceStart / 7) + 1;
-        const dayNumber = (daysSinceStart % 7) + 1;
-
-        // Find the corresponding program day
-        const week = program.weeks?.find(
-          (w: any) => w.weekNumber === weekNumber
+    // First, check for temporary program day replacements
+    const hasTemporaryReplacement = temporaryReplacements.some(
+      (replacement: any) => {
+        const replacementDate = new Date(replacement.replacedDate);
+        const replacementDateStr = replacementDate.toISOString().split("T")[0];
+        return (
+          replacementDateStr === targetDateStr &&
+          replacement.data.type === "temporary_program_day"
         );
-        if (week) {
-          const programDay = week.days?.find(
-            (d: any) => d.dayNumber === dayNumber
-          );
+      }
+    );
 
-          if (programDay) {
-            // Only show workout days, skip rest days
-            if (!programDay.isRestDay && programDay.drills?.length > 0) {
-              // Show workout day with just program title
-              programsForDate.push({
-                id: `${assignment.id}-${weekNumber}-${dayNumber}`,
-                title: program.title,
-                description: `${programDay.drills.length} drills`,
-                type: "program",
-                assignment,
-                program,
-                programDay, // Include the full program day data
-                weekNumber,
-                dayNumber,
-                drillCount: programDay.drills.length,
-                isRestDay: false,
-              });
+    // Add temporary replacements if they exist
+    temporaryReplacements.forEach((replacement: any) => {
+      const replacementDate = new Date(replacement.replacedDate);
+      const replacementDateStr = replacementDate.toISOString().split("T")[0];
+
+      if (
+        replacementDateStr === targetDateStr &&
+        replacement.data.type === "temporary_program_day"
+      ) {
+        programsForDate.push({
+          id: `temp-${replacement.id}`,
+          title: replacement.data.programTitle,
+          description: `${replacement.data.drills.length} drills`,
+          type: "temporary_program",
+          isTemporary: true,
+          replacementId: replacement.id, // This is now the assignment ID
+          programDay: {
+            title: replacement.data.dayTitle,
+            description: replacement.data.dayDescription,
+            drills: replacement.data.drills,
+          },
+          drillCount: replacement.data.drills.length,
+          isRestDay: false,
+        });
+      }
+    });
+
+    // Only show regular program assignments if there's no temporary replacement for this date
+    if (!hasTemporaryReplacement) {
+      assignedPrograms.forEach((assignment: any) => {
+        // Check if this specific date has been replaced with a lesson or deleted
+        const hasReplacement = assignment.replacements?.some(
+          (replacement: any) => {
+            const replacementDate = new Date(replacement.replacedDate);
+
+            // Normalize both dates to the same timezone for comparison
+            // Convert both to date strings (YYYY-MM-DD) to avoid timezone issues
+            const replacementDateStr = replacementDate
+              .toISOString()
+              .split("T")[0];
+            const isSame = replacementDateStr === targetDateStr;
+
+            return isSame;
+          }
+        );
+
+        // Skip this assignment if the date has been replaced or deleted
+        if (hasReplacement) {
+          return;
+        }
+        const program = assignment.program;
+        const startDate = new Date(
+          assignment.startDate || assignment.assignedAt
+        );
+
+        // Calculate which week and day this date falls on
+        const daysSinceStart = Math.floor(
+          (date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        // Only show if the date is within the program duration
+        if (daysSinceStart >= 0 && daysSinceStart < program.duration * 7) {
+          const weekNumber = Math.floor(daysSinceStart / 7) + 1;
+          const dayNumber = (daysSinceStart % 7) + 1;
+
+          // Find the corresponding program day
+          const week = program.weeks?.find(
+            (w: any) => w.weekNumber === weekNumber
+          );
+          if (week) {
+            const programDay = week.days?.find(
+              (d: any) => d.dayNumber === dayNumber
+            );
+
+            if (programDay) {
+              // Only show workout days, skip rest days
+              if (!programDay.isRestDay && programDay.drills?.length > 0) {
+                // Show workout day with just program title
+                programsForDate.push({
+                  id: `${assignment.id}-${weekNumber}-${dayNumber}`,
+                  title: program.title,
+                  description: `${programDay.drills.length} drills`,
+                  type: "program",
+                  assignment,
+                  program,
+                  programDay, // Include the full program day data
+                  weekNumber,
+                  dayNumber,
+                  drillCount: programDay.drills.length,
+                  isRestDay: false,
+                });
+              }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     return programsForDate;
   };
@@ -602,34 +659,48 @@ function ClientDetailPage({
     setShowDayDetailsModal(true);
   };
 
-  const handleRemoveProgram = (programData: any) => {
-    setSelectedProgramForDeletion({
-      assignmentId: programData.assignmentId,
-      programTitle: programData.programTitle,
-      dayDate: programData.dayDate,
-    });
-    setShowProgramDeleteChoice(true);
-  };
-
-  const handleDeleteEntireProgram = () => {
-    if (selectedProgramForDeletion) {
-      removeProgramMutation.mutate({
-        assignmentId: selectedProgramForDeletion.assignmentId,
-      });
-      setShowProgramDeleteChoice(false);
-      setSelectedProgramForDeletion(null);
+  const handleRemoveProgram = (
+    programData: any,
+    action: "entire" | "day" = "entire"
+  ) => {
+    // Check if this is a temporary program day
+    if (programData.isTemporary && programData.replacementId) {
+      if (
+        confirm(
+          `Are you sure you want to remove the temporary program day "${programData.title}"?`
+        )
+      ) {
+        removeTemporaryProgramDayMutation.mutate({
+          replacementId: programData.replacementId,
+        });
+      }
+      return;
     }
-  };
 
-  const handleDeleteProgramDay = () => {
-    if (selectedProgramForDeletion && selectedProgramForDeletion.dayDate) {
-      deleteProgramDayMutation.mutate({
-        assignmentId: selectedProgramForDeletion.assignmentId,
-        dayDate: selectedProgramForDeletion.dayDate,
-        reason: "Program day deleted by coach",
-      });
-      setShowProgramDeleteChoice(false);
-      setSelectedProgramForDeletion(null);
+    // Handle regular program removal with direct confirmation
+    if (action === "entire") {
+      if (
+        confirm(
+          `Are you sure you want to remove the entire program "${programData.programTitle}" from this client?`
+        )
+      ) {
+        removeProgramMutation.mutate({
+          assignmentId: programData.assignmentId,
+        });
+      }
+    } else if (action === "day") {
+      if (
+        confirm(
+          `Are you sure you want to remove just this program day "${programData.programTitle}"?`
+        )
+      ) {
+        // Remove just this specific program day using the deleteProgramDay mutation
+        deleteProgramDayMutation.mutate({
+          assignmentId: programData.assignmentId,
+          dayDate: programData.dayDate,
+          reason: "Program day deleted by coach",
+        });
+      }
     }
   };
 
@@ -907,56 +978,40 @@ function ClientDetailPage({
         }
       }
 
-      // Paste programs (create new program with copied day content)
+      // Paste programs (create temporary program day replacement instead of permanent program)
       for (const program of clipboardData.assignments.programs) {
         try {
           if (conflictResolution === "skip") {
             const existingPrograms = getProgramsForDate(targetDate);
             const alreadyExists = existingPrograms.some(
-              (existing: any) => existing.program.title === program.programTitle
+              (existing: any) => existing.title === program.programTitle
             );
             if (alreadyExists) continue;
           }
 
-          // Create a new program with the copied day's content
-          const newProgram = await createProgramMutation.mutateAsync({
-            title: `${program.programTitle} - Day ${program.dayNumber}`,
-            description: `Copied from ${program.programTitle} Week ${program.weekNumber} Day ${program.dayNumber}`,
-            level: "Drive", // Default level
-            duration: 1, // Single day program
-            weeks: [
-              {
-                weekNumber: 1,
-                title: "Week 1",
-                days: [
-                  {
-                    dayNumber: 1,
-                    title: program.dayTitle,
-                    description: program.dayDescription,
-                    drills: program.drills.map((drill, index) => ({
-                      order: index + 1,
-                      title: drill.title,
-                      description: drill.description,
-                      duration: drill.duration,
-                      videoUrl: drill.videoUrl,
-                      notes: drill.notes,
-                      sets: drill.sets || undefined,
-                      reps: drill.reps || undefined,
-                      tempo: drill.tempo || "",
-                      routineId: drill.routineId || "",
-                    })),
-                  },
-                ],
-              },
-            ],
-          });
-
-          // Assign the new program to the client
-          await assignProgramMutation.mutateAsync({
-            programId: newProgram.id,
-            clientIds: [clientId],
-            startDate: targetDateStr,
-            repetitions: 1,
+          // Create a temporary program day replacement instead of a permanent program
+          await createTemporaryProgramDayMutation.mutateAsync({
+            clientId: clientId,
+            dayDate: targetDateStr,
+            programTitle: program.programTitle,
+            dayTitle: program.dayTitle,
+            dayDescription: program.dayDescription,
+            drills: program.drills.map((drill, index) => ({
+              order: index + 1,
+              title: drill.title,
+              description: drill.description,
+              duration:
+                typeof drill.duration === "string"
+                  ? parseInt(drill.duration) || undefined
+                  : drill.duration,
+              videoUrl: drill.videoUrl,
+              notes: drill.notes,
+              sets: drill.sets || undefined,
+              reps: drill.reps || undefined,
+              tempo: drill.tempo || "",
+              routineId: drill.routineId || "",
+            })),
+            reason: `Copied from ${program.programTitle} Week ${program.weekNumber} Day ${program.dayNumber}`,
           });
 
           successCount++;
@@ -1423,6 +1478,12 @@ function ClientDetailPage({
                 <span className="text-white font-medium">Program Days</span>
               </div>
               <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-cyan-500 border-2 border-cyan-400" />
+                <span className="text-white font-medium">
+                  Temporary Programs
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-green-500/20 border-2 border-green-500/40" />
                 <span className="text-white font-medium">
                   Routine Assignments
@@ -1528,7 +1589,11 @@ function ClientDetailPage({
                       {programsForDay.map((program: any, index: number) => (
                         <div
                           key={`program-${index}`}
-                          className="text-xs p-1 rounded border mb-1 bg-blue-500/20 text-blue-100 border-blue-400"
+                          className={`text-xs p-1 rounded border mb-1 ${
+                            program.isTemporary
+                              ? "bg-cyan-500/20 text-cyan-100 border-cyan-400"
+                              : "bg-blue-500/20 text-blue-100 border-blue-400"
+                          }`}
                         >
                           <div className="flex items-center gap-1">
                             <BookOpen className="h-3 w-3" />
@@ -1687,6 +1752,7 @@ function ClientDetailPage({
               clientEmail={client.user?.email}
               selectedDate={selectedDate}
               overrideWorkingDays={noSidebar} // Override working days in organization context
+              replacementData={replacementData} // Pass replacement data to override restrictions
             />
           )}
 
@@ -1731,44 +1797,6 @@ function ClientDetailPage({
             getStatusIcon={getStatusIcon}
             getStatusColor={getStatusColor}
           />
-
-          {/* Program Delete Choice Modal */}
-          {showProgramDeleteChoice && selectedProgramForDeletion && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-                <h3 className="text-xl font-bold text-white mb-4">
-                  Delete Program
-                </h3>
-                <p className="text-gray-300 mb-6">
-                  What would you like to do with "
-                  {selectedProgramForDeletion.programTitle}"?
-                </p>
-                <div className="space-y-3">
-                  <button
-                    onClick={handleDeleteEntireProgram}
-                    className="w-full px-4 py-2 bg-red-600/80 hover:bg-red-700/80 text-white rounded-lg transition-colors"
-                  >
-                    Delete Entire Program
-                  </button>
-                  <button
-                    onClick={handleDeleteProgramDay}
-                    className="w-full px-4 py-2 bg-amber-600/80 hover:bg-amber-700/80 text-white rounded-lg transition-colors"
-                  >
-                    Delete Just This Day
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProgramDeleteChoice(false);
-                      setSelectedProgramForDeletion(null);
-                    }}
-                    className="w-full px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Conflict Resolution Modal */}
           <ConflictResolutionModal

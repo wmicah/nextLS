@@ -82,19 +82,34 @@ export const programsRouter = router({
     });
 
     // Build where clause - include own programs and organization-shared programs
+    // Exclude temporary programs (those with [TEMP] in the title)
     let whereClause: any = {
-      OR: [
-        { coachId: user.id }, // Own programs
+      AND: [
+        {
+          OR: [
+            { coachId: user.id }, // Own programs
+          ],
+        },
+        {
+          NOT: {
+            title: {
+              startsWith: "[TEMP]",
+            },
+          },
+        },
       ],
     };
 
     // If in an organization, also include shared programs
     if (coachOrganization?.organizationId) {
-      whereClause.OR.push({
+      whereClause.AND[0].OR.push({
         organizationId: coachOrganization.organizationId,
         sharedWithOrg: true,
       });
     }
+
+    // Note: Cleanup of old temporary programs is handled in createTemporaryProgramDay
+    // to avoid running cleanup on every program list view
 
     // Get all programs created by this coach and shared with organization
     const programs = await db.program.findMany({
@@ -1940,6 +1955,424 @@ export const programsRouter = router({
         message: `Program day for ${assignment.client.name} on ${input.dayDate} has been deleted`,
       };
     }),
+
+  // Create temporary program day replacement (for copy/paste functionality)
+  createTemporaryProgramDay: publicProcedure
+    .input(
+      z.object({
+        clientId: z.string(),
+        dayDate: z.string(), // The specific date to create the replacement for (YYYY-MM-DD format)
+        programTitle: z.string(),
+        dayTitle: z.string(),
+        dayDescription: z.string().optional(),
+        drills: z.array(
+          z.object({
+            order: z.number(),
+            title: z.string(),
+            description: z.string().optional(),
+            duration: z.number().optional(),
+            videoUrl: z.string().optional(),
+            notes: z.string().optional(),
+            sets: z.number().optional(),
+            reps: z.number().optional(),
+            tempo: z.string().optional(),
+            routineId: z.string().optional(),
+          })
+        ),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can create temporary program days",
+        });
+      }
+
+      // Verify the client exists and belongs to the coach
+      const client = await db.client.findFirst({
+        where: {
+          id: input.clientId,
+          coachId: user.id,
+        },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client not found or not assigned to you",
+        });
+      }
+
+      // Parse the day date
+      const [year, month, day] = input.dayDate.split("-").map(Number);
+      const dayDate = new Date(year, month - 1, day);
+
+      // Clean up old temporary programs (older than 30 days) before creating new ones
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      console.log(
+        `[TEMP CLEANUP] Looking for temporary programs older than: ${thirtyDaysAgo.toISOString()}`
+      );
+
+      const oldTemporaryPrograms = await db.program.findMany({
+        where: {
+          title: {
+            startsWith: "[TEMP]",
+          },
+          coachId: user.id,
+          createdAt: {
+            lt: thirtyDaysAgo,
+          },
+        },
+        include: {
+          assignments: true,
+        },
+      });
+
+      console.log(
+        `[TEMP CLEANUP] Found ${oldTemporaryPrograms.length} old temporary programs to clean up`
+      );
+
+      // Delete old temporary programs
+      for (const program of oldTemporaryPrograms) {
+        console.log(
+          `[TEMP CLEANUP] Deleting temporary program: ${
+            program.title
+          } (created: ${program.createdAt.toISOString()})`
+        );
+        await db.programAssignment.deleteMany({
+          where: {
+            programId: program.id,
+          },
+        });
+        await db.program.delete({
+          where: {
+            id: program.id,
+          },
+        });
+      }
+
+      // Create a program with a special naming convention to indicate it's temporary
+      // We'll filter these out from the main program list by checking the title
+      console.log(
+        `[TEMP CREATE] Creating temporary program: [TEMP] ${input.programTitle} - ${input.dayTitle}`
+      );
+      const tempProgram = await db.program.create({
+        data: {
+          title: `[TEMP] ${input.programTitle} - ${input.dayTitle}`,
+          description: `Temporary program day copied from ${input.programTitle}`,
+          level: "Drive", // Default level
+          duration: 1, // Single day program
+          coachId: user.id,
+          weeks: {
+            create: [
+              {
+                weekNumber: 1,
+                title: "Week 1",
+                days: {
+                  create: [
+                    {
+                      dayNumber: 1,
+                      title: input.dayTitle,
+                      description: input.dayDescription || "",
+                      isRestDay: false,
+                      drills: {
+                        create: input.drills.map((drill, index) => ({
+                          order: index + 1,
+                          title: drill.title,
+                          description: drill.description || "",
+                          duration: drill.duration?.toString() || "0",
+                          videoUrl: drill.videoUrl || "",
+                          notes: drill.notes || "",
+                          sets: drill.sets || 0,
+                          reps: drill.reps || 0,
+                          tempo: drill.tempo || "",
+                          routineId: drill.routineId || "",
+                        })),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      });
+
+      // Create a program assignment for this temporary program
+      const assignment = await db.programAssignment.create({
+        data: {
+          programId: tempProgram.id,
+          clientId: input.clientId,
+          startDate: dayDate,
+          repetitions: 1,
+          currentCycle: 1,
+        },
+      });
+
+      return {
+        success: true,
+        program: tempProgram,
+        assignment: assignment,
+        message: `Temporary program day created for ${client.name} on ${input.dayDate}`,
+      };
+    }),
+
+  // Get temporary program day replacements for a client
+  getTemporaryReplacements: publicProcedure
+    .input(
+      z.object({
+        clientId: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view temporary replacements",
+        });
+      }
+
+      // Get temporary program assignments for this client
+      console.log(
+        `[TEMP FETCH] Fetching temporary programs for client: ${input.clientId}`
+      );
+      const temporaryAssignments = await db.programAssignment.findMany({
+        where: {
+          clientId: input.clientId,
+          program: {
+            title: {
+              startsWith: "[TEMP]",
+            },
+            coachId: user.id,
+          },
+        },
+        include: {
+          program: {
+            include: {
+              weeks: {
+                include: {
+                  days: {
+                    include: {
+                      drills: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          startDate: "asc",
+        },
+      });
+
+      console.log(
+        `[TEMP FETCH] Found ${temporaryAssignments.length} temporary program assignments`
+      );
+
+      // Transform the data to match the expected format
+      return temporaryAssignments.map(assignment => {
+        const program = assignment.program;
+        const firstWeek = program.weeks[0];
+        const firstDay = firstWeek?.days[0];
+
+        if (!firstDay) {
+          return {
+            id: assignment.id,
+            replacedDate: assignment.startDate || new Date(),
+            data: {
+              type: "temporary_program_day",
+              programTitle: "Unknown Program",
+              dayTitle: "Unknown Day",
+              dayDescription: "",
+              drills: [],
+            },
+          };
+        }
+
+        return {
+          id: assignment.id,
+          replacedDate: assignment.startDate || new Date(),
+          data: {
+            type: "temporary_program_day",
+            programTitle: program.title.replace("[TEMP] ", "").split(" - ")[0],
+            dayTitle: firstDay.title,
+            dayDescription: firstDay.description || "",
+            drills: firstDay.drills.map(drill => ({
+              order: drill.order,
+              title: drill.title,
+              description: drill.description || "",
+              duration: drill.duration ? parseInt(drill.duration) : undefined,
+              videoUrl: drill.videoUrl || "",
+              notes: drill.notes || "",
+              sets: drill.sets || undefined,
+              reps: drill.reps || undefined,
+              tempo: drill.tempo || "",
+              routineId: drill.routineId || "",
+            })),
+          },
+        };
+      });
+    }),
+
+  // Remove temporary program day replacement
+  removeTemporaryProgramDay: publicProcedure
+    .input(
+      z.object({
+        replacementId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can remove temporary program days",
+        });
+      }
+
+      // Find the temporary program assignment
+      const assignment = await db.programAssignment.findFirst({
+        where: {
+          id: input.replacementId,
+          program: {
+            title: {
+              startsWith: "[TEMP]",
+            },
+            coachId: user.id,
+          },
+        },
+        include: {
+          program: true,
+        },
+      });
+
+      if (!assignment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Temporary program day not found or not assigned to you",
+        });
+      }
+
+      // Delete the program assignment first (this will cascade delete related records)
+      await db.programAssignment.delete({
+        where: {
+          id: input.replacementId,
+        },
+      });
+
+      // Delete the temporary program
+      await db.program.delete({
+        where: {
+          id: assignment.program.id,
+        },
+      });
+
+      return {
+        success: true,
+        message: "Temporary program day removed successfully",
+      };
+    }),
+
+  // Clean up old temporary programs (older than 30 days)
+  cleanupOldTemporaryPrograms: publicProcedure.mutation(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    // Verify user is a COACH
+    const coach = await db.user.findFirst({
+      where: { id: user.id, role: "COACH" },
+    });
+
+    if (!coach) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only coaches can clean up temporary programs",
+      });
+    }
+
+    // Calculate date 30 days ago
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Find old temporary programs
+    const oldTemporaryPrograms = await db.program.findMany({
+      where: {
+        title: {
+          startsWith: "[TEMP]",
+        },
+        coachId: user.id,
+        createdAt: {
+          lt: thirtyDaysAgo,
+        },
+      },
+      include: {
+        assignments: true,
+      },
+    });
+
+    let deletedCount = 0;
+
+    // Delete each old temporary program and its assignments
+    for (const program of oldTemporaryPrograms) {
+      // Delete all assignments first
+      await db.programAssignment.deleteMany({
+        where: {
+          programId: program.id,
+        },
+      });
+
+      // Delete the program
+      await db.program.delete({
+        where: {
+          id: program.id,
+        },
+      });
+
+      deletedCount++;
+    }
+
+    return {
+      success: true,
+      deletedCount,
+      message: `Cleaned up ${deletedCount} old temporary programs`,
+    };
+  }),
 
   // Unassign multiple program assignments (by assignment IDs)
   unassignMultiplePrograms: publicProcedure
