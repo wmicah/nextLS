@@ -1,39 +1,66 @@
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
-import { redirect } from "next/navigation"
-import { db } from "@/db"
-import VideosPage from "@/components/VideosPage"
+"use client";
 
-export default async function Videos() {
-	const { getUser } = getKindeServerSession()
-	const user = await getUser()
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@kinde-oss/kinde-auth-nextjs";
+import { trpc } from "@/app/_trpc/client";
+import VideosPage from "@/components/VideosPage";
 
-	if (!user?.id) {
-		redirect("/auth-callback?origin=videos")
-	}
+export default function Videos() {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
 
-	const dbUser = await db.user.findFirst({
-		where: {
-			id: user.id,
-		},
-	})
+  // Get user profile from database
+  const { data: dbUser, isLoading: userLoading } =
+    trpc.user.getProfile.useQuery(undefined, {
+      enabled: !!user?.id,
+    });
 
-	if (!dbUser) redirect("/auth-callback?origin=videos")
+  useEffect(() => {
+    if (!isLoaded || userLoading) return;
 
-	// 🛡️ ADD ROLE PROTECTION HERE
-	// If user is a CLIENT, redirect them to client dashboard
-	if (dbUser.role === "CLIENT") {
-		redirect("/client-dashboard")
-	}
+    if (!user?.id) {
+      router.push("/auth-callback?origin=videos");
+      return;
+    }
 
-	// If user has no role set, send them to role selection
-	if (!dbUser.role) {
-		redirect("/role-selection")
-	}
+    if (!dbUser) {
+      router.push("/auth-callback?origin=videos");
+      return;
+    }
 
-	// Only allow COACH users to see videos page
-	if (dbUser.role !== "COACH") {
-		redirect("/auth-callback?origin=videos")
-	}
+    // If user is a CLIENT, redirect them to client dashboard
+    if (dbUser.role === "CLIENT") {
+      router.push("/client-dashboard");
+      return;
+    }
 
-	return <VideosPage />
+    // If user has no role set, send them to role selection
+    if (!dbUser.role) {
+      router.push("/role-selection");
+      return;
+    }
+
+    // Only allow COACH users to see videos page
+    if (dbUser.role !== "COACH") {
+      router.push("/auth-callback?origin=videos");
+      return;
+    }
+  }, [user, isLoaded, dbUser, userLoading, router]);
+
+  // Show loading while checking authentication
+  if (!isLoaded || userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="rounded-full h-8 w-8 border-b-2 border-blue-500 animate-spin"></div>
+      </div>
+    );
+  }
+
+  // Don't render VideosPage until auth is confirmed
+  if (!user?.id || !dbUser || dbUser.role !== "COACH") {
+    return null;
+  }
+
+  return <VideosPage />;
 }

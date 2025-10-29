@@ -29,6 +29,7 @@ import {
   Upload,
   Video,
   Send,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,7 @@ import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 import ClientProgramDayModal from "./ClientProgramDayModal";
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
+import { useExerciseCompletion } from "@/hooks/useExerciseCompletion";
 
 interface Drill {
   id: string;
@@ -81,12 +83,12 @@ interface ProgramData {
 
 interface DayData {
   date: string;
-  programs: ProgramData[];
+  drills: Drill[]; // Keep for backward compatibility
+  programs?: ProgramData[]; // New: array of programs for this day
   isRestDay: boolean;
-  totalDrills: number;
-  completedDrills: number;
-  drills: Drill[];
   expectedTime: number;
+  completedDrills: number;
+  totalDrills: number;
   videoAssignments?: any[];
 }
 
@@ -97,9 +99,9 @@ export default function MobileClientProgramPage() {
   const [isDayModalOpen, setIsDayModalOpen] = useState(false);
   const [selectedDayRoutineAssignments, setSelectedDayRoutineAssignments] =
     useState<any[]>([]);
-  const [completedProgramDrills, setCompletedProgramDrills] = useState<
-    Set<string>
-  >(new Set());
+  // Use the new completion system
+  const { isExerciseCompleted, markExerciseComplete } = useExerciseCompletion();
+
   const [completedVideoAssignments, setCompletedVideoAssignments] = useState<
     Set<string>
   >(new Set());
@@ -122,6 +124,7 @@ export default function MobileClientProgramPage() {
   } | null>(null);
   const [commentText, setCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isCoachNotesModalOpen, setIsCoachNotesModalOpen] = useState(false);
 
   // Get client's assigned program
   const {
@@ -131,36 +134,6 @@ export default function MobileClientProgramPage() {
   } = trpc.clientRouter.getAssignedProgram.useQuery();
 
   // Mutations for day modal functionality
-  const markProgramDrillCompleteMutation =
-    trpc.clientRouter.markProgramDrillComplete.useMutation({
-      onSuccess: data => {
-        console.log("✅ markDrillComplete SUCCESS:", data);
-      },
-      onError: error => {
-        console.error("❌ markDrillComplete ERROR:", error);
-        console.error("❌ Error message:", error.message);
-        console.error("❌ Error code:", error.data?.code);
-        console.error("❌ Full error:", error);
-      },
-    });
-
-  const markDrillCompleteMutation =
-    trpc.clientRouter.markDrillComplete.useMutation({
-      // For routine exercises within programs
-    });
-
-  const markRoutineExerciseCompleteMutation =
-    trpc.clientRouter.markRoutineExerciseComplete.useMutation({
-      onSuccess: data => {
-        console.log("✅ markRoutineExerciseComplete SUCCESS:", data);
-      },
-      onError: error => {
-        console.error("❌ markRoutineExerciseComplete ERROR:", error);
-        console.error("❌ Error message:", error.message);
-        console.error("❌ Error code:", error.data?.code);
-        console.error("❌ Full error:", error);
-      },
-    });
   const sendNoteToCoachMutation =
     trpc.clientRouter.sendNoteToCoach.useMutation();
   const addCommentToDrillMutation =
@@ -185,6 +158,9 @@ export default function MobileClientProgramPage() {
       staleTime: 10 * 60 * 1000, // 10 minutes
       gcTime: 15 * 60 * 1000, // 15 minutes
     });
+
+  // Get coach notes
+  const { data: coachNotes } = trpc.notes.getMyNotes.useQuery();
 
   // Debug logging
   console.log("MobileClientProgramPage - programInfo:", programInfo);
@@ -225,43 +201,8 @@ export default function MobileClientProgramPage() {
       viewMode: "week",
     });
 
-  // Initialize completion state from server data when selectedDay changes (exact replica of desktop)
+  // Initialize video assignments completion state
   React.useEffect(() => {
-    console.log(
-      "🔄 useEffect running - selectedDay changed:",
-      selectedDay?.date
-    );
-    if (selectedDay?.programs) {
-      const serverCompletedDrills = new Set<string>();
-      selectedDay.programs.forEach(program => {
-        program.drills.forEach(drill => {
-          if (drill.completed) {
-            serverCompletedDrills.add(drill.id);
-          }
-        });
-      });
-      console.log(
-        "🔄 Setting completedProgramDrills from server:",
-        Array.from(serverCompletedDrills)
-      );
-
-      // Only reset if we don't have any optimistic updates
-      // This prevents overriding optimistic updates during refetch
-      setCompletedProgramDrills(prev => {
-        // If we have optimistic updates, merge with server data instead of replacing
-        if (prev.size > 0) {
-          console.log("🔄 Merging server data with optimistic updates");
-          const merged = new Set(prev);
-          serverCompletedDrills.forEach(id => merged.add(id));
-          return merged;
-        } else {
-          console.log("🔄 Setting fresh server data");
-          return serverCompletedDrills;
-        }
-      });
-    }
-
-    // Initialize video assignments completion state
     if (selectedDay?.videoAssignments) {
       const serverCompletedVideoAssignments = new Set<string>();
       selectedDay.videoAssignments.forEach(assignment => {
@@ -273,67 +214,44 @@ export default function MobileClientProgramPage() {
     }
   }, [selectedDay]);
 
-  // Update drill completion status based on our tracked state
+  // Update drill completion status based on the new completion system
   const updateDrillCompletionStatus = (dayData: DayData | null) => {
     if (!dayData?.programs) return dayData;
-
-    console.log(
-      "🔄 MOBILE updateDrillCompletionStatus called with completedProgramDrills:",
-      Array.from(completedProgramDrills)
-    );
 
     const updatedDayData = {
       ...dayData,
       programs: dayData.programs.map(program => ({
         ...program,
         drills: program.drills.map(drill => {
-          const isCompleted = completedProgramDrills.has(drill.id);
-          console.log(
-            `🔄 MOBILE Drill ${drill.id} (${drill.title}): server completed=${drill.completed}, state completed=${isCompleted}`
-          );
+          // Use the new completion system to check if drill is completed
+          let isCompleted;
+          const dateKey = dayData.date
+            ? new Date(dayData.date).toISOString().split("T")[0]
+            : undefined;
+          if (drill.id.includes("-routine-")) {
+            // This is a routine exercise within a program
+            const exerciseId = drill.id.split("-routine-")[1];
+            const programDrillId = drill.id.split("-routine-")[0];
+            isCompleted = isExerciseCompleted(
+              exerciseId,
+              programDrillId,
+              dateKey
+            );
+          } else {
+            // This is a regular drill
+            isCompleted = isExerciseCompleted(drill.id, undefined, dateKey);
+          }
+
           return {
             ...drill,
-            completed: isCompleted, // Use our tracked state, not server data
+            completed: isCompleted,
           };
         }),
       })),
     };
 
-    console.log("🔄 MOBILE Updated dayData:", updatedDayData);
     return updatedDayData;
   };
-
-  // Initialize routine exercise completion state from server data when selectedDate changes (exact replica of desktop)
-  React.useEffect(() => {
-    if (selectedDate && routineAssignments) {
-      const serverCompletedRoutineExercises = new Set<string>();
-
-      const routinesForDate = getRoutinesForDate(selectedDate);
-
-      // Load routine exercise completions from the routine assignments
-      routinesForDate.forEach(routineAssignment => {
-        if ((routineAssignment as any).completions) {
-          (routineAssignment as any).completions.forEach((completion: any) => {
-            const routineExerciseKey = `${routineAssignment.id}-${completion.exerciseId}`;
-            serverCompletedRoutineExercises.add(routineExerciseKey);
-          });
-        }
-      });
-
-      console.log(
-        "🔄 Routine exercise completions from server:",
-        Array.from(serverCompletedRoutineExercises)
-      );
-
-      // Update completion state with server data
-      setCompletedProgramDrills(prev => {
-        const newSet = new Set(prev);
-        serverCompletedRoutineExercises.forEach(id => newSet.add(id));
-        console.log("🔄 Updated completion state:", Array.from(newSet));
-        return newSet;
-      });
-    }
-  }, [selectedDate, routineAssignments]);
 
   // Get routine assignments for a specific date (exact replica of desktop)
   const getRoutinesForDate = (date: Date) => {
@@ -534,7 +452,7 @@ export default function MobileClientProgramPage() {
     }
   };
 
-  // Handler functions for day modal - exact replica of desktop version
+  // Handler functions for day modal - using new completion system
   const handleMarkDrillComplete = async (
     drillId: string,
     completed: boolean,
@@ -545,91 +463,29 @@ export default function MobileClientProgramPage() {
       completed,
     });
 
-    // Update the completion state immediately for real-time UI updates
-    setCompletedProgramDrills(prev => {
-      const newSet = new Set(prev);
-      if (completed) {
-        newSet.add(drillId);
-        console.log(
-          "🎯 MOBILE Added drill to completedProgramDrills:",
-          drillId
-        );
-      } else {
-        newSet.delete(drillId);
-        console.log(
-          "🎯 MOBILE Removed drill from completedProgramDrills:",
-          drillId
-        );
-      }
-      console.log("🎯 MOBILE New completedProgramDrills:", Array.from(newSet));
-      return newSet;
-    });
-
-    // Then perform the actual mutation
     try {
-      console.log("🎯 MOBILE Calling markProgramDrillCompleteMutation with:", {
-        drillId,
-        completed,
-      });
-
-      // Add timeout to catch hanging mutations
-      if (!programAssignmentId) {
-        throw new Error(
-          "Program assignment ID is required for drill completion"
-        );
-      }
-
-      const mutationPromise = markProgramDrillCompleteMutation.mutateAsync({
-        drillId: drillId,
-        programAssignmentId: programAssignmentId,
-        completed,
-      });
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Mutation timeout after 10 seconds")),
-          10000
-        )
-      );
-
-      await Promise.race([mutationPromise, timeoutPromise]);
-      console.log(
-        "🎯 MOBILE markProgramDrillCompleteMutation completed successfully"
-      );
-
-      // Subtle refetch to ensure UI stays in sync - with delay to let server process
-      console.log("🎯 MOBILE Refetching calendar data...");
-      setTimeout(async () => {
-        await refetchCalendar();
-        console.log("🎯 MOBILE Calendar data refetched");
-      }, 1000);
+      // Use the new completion system
+      const dateKey = selectedDate
+        ? selectedDate.toISOString().split("T")[0]
+        : undefined;
+      await markExerciseComplete(drillId, undefined, completed, dateKey);
+      console.log("✅ MOBILE Drill completion updated successfully");
     } catch (error) {
       console.error(
-        "🎯 MOBILE ERROR: markProgramDrillCompleteMutation failed:",
+        "❌ MOBILE ERROR: Failed to update drill completion:",
         error
       );
-      // Revert optimistic update on error
-      setCompletedProgramDrills(prev => {
-        const newSet = new Set(prev);
-        if (completed) {
-          newSet.delete(drillId); // Remove if we were trying to mark complete
-        } else {
-          newSet.add(drillId); // Add if we were trying to mark incomplete
-        }
-        return newSet;
-      });
-      console.error("Failed to update drill completion:", error);
     }
   };
 
-  // Handle routine exercise completion - exact replica of desktop version
+  // Handle routine exercise completion - using new system
   const handleMarkRoutineExerciseComplete = async (
     exerciseId: string,
     routineAssignmentId: string,
     completed: boolean
   ) => {
     console.log(
-      "🔍 handleMarkRoutineExerciseComplete called - exerciseId:",
+      "🔍 MOBILE handleMarkRoutineExerciseComplete called - exerciseId:",
       exerciseId,
       "routineAssignmentId:",
       routineAssignmentId,
@@ -637,42 +493,23 @@ export default function MobileClientProgramPage() {
       completed
     );
 
-    // Use exercise ID directly for routine exercises
-    const routineExerciseKey = `${routineAssignmentId}-${exerciseId}`;
-
-    // Update the completion state immediately for real-time UI updates
-    setCompletedProgramDrills(prev => {
-      const newSet = new Set(prev);
-      if (completed) {
-        newSet.add(routineExerciseKey);
-      } else {
-        newSet.delete(routineExerciseKey);
-      }
-      return newSet;
-    });
-
-    // Call the backend mutation for drill completion (works for both regular drills and routine exercises)
     try {
-      await markDrillCompleteMutation.mutateAsync({
-        drillId: exerciseId,
+      // Use the new completion system for standalone routine exercises
+      const dateKey = selectedDate
+        ? selectedDate.toISOString().split("T")[0]
+        : undefined;
+      await markExerciseComplete(
+        exerciseId,
+        routineAssignmentId,
         completed,
-      });
-
-      // Refresh calendar data to sync with server - with delay
-      setTimeout(async () => {
-        await refetchCalendar();
-      }, 1000);
+        dateKey
+      );
+      console.log("✅ MOBILE Routine exercise completion updated successfully");
     } catch (error) {
-      // Revert optimistic update on error
-      setCompletedProgramDrills(prev => {
-        const newSet = new Set(prev);
-        if (completed) {
-          newSet.delete(routineExerciseKey); // Remove if we were trying to mark complete
-        } else {
-          newSet.add(routineExerciseKey); // Add if we were trying to mark incomplete
-        }
-        return newSet;
-      });
+      console.error(
+        "❌ MOBILE ERROR: Failed to update routine exercise completion:",
+        error
+      );
     }
   };
 
@@ -798,6 +635,12 @@ export default function MobileClientProgramPage() {
     return eachDayOfInterval({ start: startDate, end: endDate });
   };
 
+  // Extract note content from coach notes
+  const extractNoteContent = (notes: any[]) => {
+    if (!notes || notes.length === 0) return "";
+    return notes[0]?.content || "";
+  };
+
   if (programLoading || calendarLoading) {
     return (
       <div
@@ -886,83 +729,60 @@ export default function MobileClientProgramPage() {
             </button>
           </div>
 
-          {/* Quick Stats Summary */}
-          <div className="mb-4 grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-blue-500/30">
-                  <CheckCircle2 className="h-4 w-4 text-blue-400" />
+          {/* Coach Notes */}
+          <div className="mb-4">
+            <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-purple-500/30">
+                  <FileText className="h-5 w-5 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-xs text-blue-300">This Week</p>
-                  <p className="text-lg font-bold text-white">
-                    {(() => {
-                      const weekStart = startOfWeek(new Date(), {
-                        weekStartsOn: 1,
-                      });
-                      const weekEnd = addDays(weekStart, 6);
-                      // Handle both array and object formats for calendarData
-                      const calendarArray = Array.isArray(calendarData)
-                        ? calendarData
-                        : calendarData
-                        ? Object.values(calendarData as Record<string, DayData>)
-                        : [];
-
-                      const weekDrills = calendarArray.filter(
-                        (day: DayData) => {
-                          const dayDate = new Date(day.date);
-                          return dayDate >= weekStart && dayDate <= weekEnd;
-                        }
-                      );
-                      const weekCompleted = weekDrills.reduce(
-                        (sum: number, day: DayData) =>
-                          sum + day.completedDrills,
-                        0
-                      );
-                      const weekTotal = weekDrills.reduce(
-                        (sum: number, day: DayData) => sum + day.totalDrills,
-                        0
-                      );
-                      return `${weekCompleted}/${weekTotal}`;
-                    })()}
+                  <p className="text-sm font-semibold text-purple-300">
+                    Coach Notes
+                  </p>
+                  <p className="text-xs text-purple-200/80">
+                    {coachNotes?.length || 0} note
+                    {(coachNotes?.length || 0) !== 1 ? "s" : ""}
                   </p>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-green-500/30">
-                  <Target className="h-4 w-4 text-green-400" />
+              {coachNotes && coachNotes.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-400/20">
+                    <p className="text-sm text-purple-100 leading-relaxed">
+                      {(() => {
+                        const content = extractNoteContent(coachNotes);
+                        return content.length > 60
+                          ? `${content.substring(0, 60)}...`
+                          : content;
+                      })()}
+                    </p>
+                    <button
+                      onClick={() => setIsCoachNotesModalOpen(true)}
+                      className="mt-2 text-xs font-semibold text-purple-300 hover:text-purple-200"
+                    >
+                      Read Full Note
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                    <p className="text-xs text-purple-200/80 font-medium">
+                      Updated{" "}
+                      {new Date(
+                        coachNotes[0]?.updatedAt ||
+                          coachNotes[0]?.createdAt ||
+                          new Date()
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-green-300">Completion</p>
-                  <p className="text-lg font-bold text-white">
-                    {(() => {
-                      // Handle both array and object formats for calendarData
-                      const calendarArray = Array.isArray(calendarData)
-                        ? calendarData
-                        : calendarData
-                        ? Object.values(calendarData as Record<string, DayData>)
-                        : [];
-
-                      const totalDrills = calendarArray.reduce(
-                        (sum: number, day: DayData) => sum + day.totalDrills,
-                        0
-                      );
-                      const completedDrills = calendarArray.reduce(
-                        (sum: number, day: DayData) =>
-                          sum + day.completedDrills,
-                        0
-                      );
-                      return totalDrills > 0
-                        ? Math.round((completedDrills / totalDrills) * 100)
-                        : 0;
-                    })()}
-                    %
-                  </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  <p className="text-sm text-gray-400">No feedback yet</p>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -1166,13 +986,76 @@ export default function MobileClientProgramPage() {
           noteToCoach={noteToCoach}
           setNoteToCoach={setNoteToCoach}
           isSubmittingNote={isSubmittingNote}
-          completedProgramDrills={completedProgramDrills}
           calculateDayCompletionCounts={(dayData, selectedDate) => {
-            if (!dayData) return { totalDrills: 0, completedDrills: 0 };
-            return {
-              totalDrills: dayData.totalDrills,
-              completedDrills: dayData.completedDrills,
-            };
+            if (!dayData && !selectedDate)
+              return { totalDrills: 0, completedDrills: 0 };
+
+            let totalDrills = 0;
+            let completedDrills = 0;
+
+            // Count program drills (excluding rest days)
+            if (dayData && "programs" in dayData && dayData.programs) {
+              (dayData as any).programs.forEach((program: ProgramData) => {
+                if (!program.isRestDay) {
+                  program.drills.forEach((drill: Drill) => {
+                    totalDrills++;
+                    // Use the new completion system to check if drill is completed
+                    let isCompleted;
+                    const dateKey = selectedDate
+                      ? selectedDate.toISOString().split("T")[0]
+                      : undefined;
+                    if (drill.id.includes("-routine-")) {
+                      // This is a routine exercise within a program
+                      const exerciseId = drill.id.split("-routine-")[1];
+                      const programDrillId = drill.id.split("-routine-")[0];
+                      isCompleted = isExerciseCompleted(
+                        exerciseId,
+                        programDrillId,
+                        dateKey
+                      );
+                    } else {
+                      // This is a regular drill
+                      isCompleted = isExerciseCompleted(
+                        drill.id,
+                        undefined,
+                        dateKey
+                      );
+                    }
+                    if (isCompleted) {
+                      completedDrills++;
+                    }
+                  });
+                }
+              });
+            }
+
+            // Count routine exercises for the selected date
+            if (selectedDate) {
+              const routinesForDate = getRoutinesForDate(selectedDate);
+              routinesForDate.forEach(routineAssignment => {
+                if ((routineAssignment as any).routine?.exercises) {
+                  (routineAssignment as any).routine.exercises.forEach(
+                    (exercise: any) => {
+                      totalDrills++;
+                      // Use the new completion system for standalone routine exercises
+                      const dateKey = selectedDate
+                        ? selectedDate.toISOString().split("T")[0]
+                        : undefined;
+                      const isCompleted = isExerciseCompleted(
+                        exercise.id,
+                        (routineAssignment as any).id,
+                        dateKey
+                      );
+                      if (isCompleted) {
+                        completedDrills++;
+                      }
+                    }
+                  );
+                }
+              });
+            }
+
+            return { totalDrills, completedDrills };
           }}
           calculateDayAssignmentCounts={(dayData, selectedDate) => {
             if (!dayData)
@@ -1185,7 +1068,6 @@ export default function MobileClientProgramPage() {
           onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
           onMarkVideoAssignmentComplete={handleMarkVideoAssignmentComplete}
           completedVideoAssignments={completedVideoAssignments}
-          completedIndividualExercises={new Set()}
         />
       )}
 
@@ -1307,6 +1189,74 @@ export default function MobileClientProgramPage() {
                   {isSubmittingComment ? "Submitting..." : "Submit"}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coach Notes Modal */}
+      {isCoachNotesModalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-purple-500/20 rounded-2xl p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-purple-400/30">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-purple-500/20">
+                  <FileText className="h-6 w-6 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Coach Notes</h3>
+                  <p className="text-sm text-purple-200/80">
+                    {coachNotes?.length || 0} note
+                    {(coachNotes?.length || 0) !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCoachNotesModalOpen(false)}
+                className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {coachNotes && coachNotes.length > 0 ? (
+                coachNotes.map((note, index) => (
+                  <div
+                    key={note.id}
+                    className="bg-purple-500/10 rounded-2xl p-4 border border-purple-400/30"
+                  >
+                    {/* Note Date */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                      <p className="text-sm text-purple-200/80 font-medium">
+                        {new Date(
+                          note.updatedAt || note.createdAt
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+
+                    {/* Note Content */}
+                    <div className="prose prose-invert max-w-none">
+                      <p className="text-purple-100 leading-relaxed whitespace-pre-wrap">
+                        {note.content || "No content available"}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <div className="p-4 rounded-full bg-purple-500/10 w-fit mx-auto mb-4">
+                    <FileText className="h-8 w-8 text-purple-400" />
+                  </div>
+                  <p className="text-lg font-semibold text-purple-200 mb-2">
+                    No Notes Yet
+                  </p>
+                  <p className="text-sm text-purple-200/80">
+                    Your coach hasn't added any notes yet.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
