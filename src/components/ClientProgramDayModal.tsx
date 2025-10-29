@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { extractYouTubeId, isYouTubeUrl } from "@/lib/youtube-utils";
 import { trpc } from "@/app/_trpc/client";
+import { useExerciseCompletion } from "@/hooks/useExerciseCompletion";
 
 interface ProgramData {
   programId: string;
@@ -179,7 +180,6 @@ interface ClientProgramDayModalProps {
   noteToCoach: string;
   setNoteToCoach: (note: string) => void;
   isSubmittingNote: boolean;
-  completedProgramDrills: Set<string>;
   completedVideoAssignments: Set<string>;
   calculateDayCompletionCounts: (
     dayData: DayData | null,
@@ -194,7 +194,6 @@ interface ClientProgramDayModalProps {
     programDrillId: string,
     completed: boolean
   ) => void;
-  completedIndividualExercises: Set<string>;
 }
 
 interface Tab {
@@ -225,15 +224,16 @@ export default function ClientProgramDayModal({
   noteToCoach,
   setNoteToCoach,
   isSubmittingNote,
-  completedProgramDrills,
   completedVideoAssignments,
   calculateDayCompletionCounts,
   calculateDayAssignmentCounts,
   onMarkRoutineExerciseComplete,
-  completedIndividualExercises,
 }: ClientProgramDayModalProps) {
   const [activeTab, setActiveTab] = useState<string>("");
   const [viewedTabs, setViewedTabs] = useState<Set<string>>(new Set());
+
+  // Use the new completion system
+  const { isExerciseCompleted, markExerciseComplete } = useExerciseCompletion();
 
   // Calculate total completion counts for the day
   const { totalDrills, completedDrills } = calculateDayCompletionCounts(
@@ -355,16 +355,26 @@ export default function ClientProgramDayModal({
                   return formattedDate;
                 })()}
               </h2>
-              <div className="flex items-center gap-4 text-sm text-gray-400">
-                <span>Multiple Programs Assigned</span>
-                {totalAssignments > 0 && (
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="h-4 w-4 text-green-400" />
-                    {completedAssignments}/{totalAssignments} assignments
-                    completed
-                  </span>
-                )}
-              </div>
+              {/* Completion Counter */}
+              {totalDrills > 0 && (
+                <div className="flex items-center gap-2 text-sm mt-1">
+                  {completedDrills === totalDrills ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-400" />
+                      <span className="text-green-400 font-semibold">
+                        Great, you've completed them all!
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-400">
+                        {completedDrills}/{totalDrills} exercises completed
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <Button
               variant="ghost"
@@ -403,12 +413,6 @@ export default function ClientProgramDayModal({
                   >
                     {tab.icon}
                     <span>{tab.title}</span>
-                    {!isViewed && (
-                      <div className="w-2 h-2 bg-orange-400 rounded-full" />
-                    )}
-                    {isViewed && (
-                      <CheckCircle2 className="h-4 w-4 text-green-400" />
-                    )}
                   </button>
                 );
               })}
@@ -527,10 +531,11 @@ export default function ClientProgramDayModal({
                   onOpenVideo={onOpenVideo}
                   onOpenCommentModal={onOpenCommentModal}
                   onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
-                  completedProgramDrills={completedProgramDrills}
                   routineAssignments={routineAssignments}
                   onMarkRoutineExerciseComplete={onMarkRoutineExerciseComplete}
-                  completedIndividualExercises={completedIndividualExercises}
+                  isExerciseCompleted={isExerciseCompleted}
+                  markExerciseComplete={markExerciseComplete}
+                  selectedDate={selectedDate}
                 />
               );
             })()
@@ -558,8 +563,9 @@ export default function ClientProgramDayModal({
                   onOpenVideo={onOpenVideo}
                   onOpenCommentModal={onOpenCommentModal}
                   onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
-                  completedProgramDrills={completedProgramDrills}
-                  completedIndividualExercises={completedIndividualExercises}
+                  isExerciseCompleted={isExerciseCompleted}
+                  markExerciseComplete={markExerciseComplete}
+                  selectedDate={selectedDate}
                 />
               );
             })()
@@ -631,52 +637,6 @@ export default function ClientProgramDayModal({
         {/* Actions Footer */}
         <div className="p-4 pb-6 border-t border-gray-700 bg-gray-900/50 flex-shrink-0">
           <div className="space-y-3">
-            {/* Mark All Complete Button */}
-            {totalDrills > 0 && (
-              <Button
-                onClick={onMarkAllComplete}
-                className="w-full py-3 text-base font-semibold rounded-xl"
-                disabled={completedDrills === totalDrills}
-                style={{
-                  backgroundColor:
-                    completedDrills === totalDrills ? "#10B981" : "#4A5A70",
-                }}
-              >
-                <Check className="h-4 w-4 mr-2" />
-                {completedDrills === totalDrills
-                  ? "All Complete! 🎉"
-                  : `Mark All Complete (${completedDrills}/${totalDrills})`}
-              </Button>
-            )}
-
-            {/* Note to Coach - Show if there are programs/routines OR video assignments */}
-            {(tabs.length > 0 ||
-              (selectedDay?.videoAssignments &&
-                selectedDay.videoAssignments.length > 0)) && (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-white text-base flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-blue-400" />
-                  Note to Coach
-                </h4>
-                <Textarea
-                  placeholder="Add a note about your workout..."
-                  value={noteToCoach}
-                  onChange={e => setNoteToCoach(e.target.value)}
-                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-lg"
-                  rows={2}
-                />
-                <Button
-                  onClick={() => onSendNote(noteToCoach)}
-                  disabled={!noteToCoach.trim() || isSubmittingNote}
-                  className="w-full py-2 rounded-lg"
-                  style={{ backgroundColor: "#10B981" }}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {isSubmittingNote ? "Sending..." : "Send Note"}
-                </Button>
-              </div>
-            )}
-
             {/* Progress Footer */}
             {tabs.length > 1 && (
               <div className="border-t border-gray-700 pt-3 mt-3">
@@ -729,10 +689,11 @@ function ProgramContent({
   onOpenVideo,
   onOpenCommentModal,
   onOpenVideoSubmissionModal,
-  completedProgramDrills,
   routineAssignments = [],
   onMarkRoutineExerciseComplete,
-  completedIndividualExercises,
+  isExerciseCompleted,
+  markExerciseComplete,
+  selectedDate,
 }: {
   program: ProgramData;
   onMarkDrillComplete: (
@@ -743,14 +704,24 @@ function ProgramContent({
   onOpenVideo: (videoUrl: string, drill: Drill) => void;
   onOpenCommentModal: (drill: Drill) => void;
   onOpenVideoSubmissionModal: (drillId: string, drillTitle: string) => void;
-  completedProgramDrills: Set<string>;
   routineAssignments?: any[];
   onMarkRoutineExerciseComplete?: (
     exerciseId: string,
     routineAssignmentId: string,
     completed: boolean
   ) => void;
-  completedIndividualExercises?: Set<string>;
+  isExerciseCompleted: (
+    exerciseId: string,
+    programDrillId?: string,
+    date?: string
+  ) => boolean;
+  markExerciseComplete: (
+    exerciseId: string,
+    programDrillId: string | undefined,
+    completed: boolean,
+    date?: string
+  ) => Promise<void>;
+  selectedDate?: Date | null;
 }) {
   // Combine program drills with routine exercises
   const allExercises: Drill[] = [];
@@ -775,7 +746,7 @@ function ProgramContent({
         reps: drill.reps || undefined,
         tempo: drill.tempo || undefined,
         tags: drill.tags || undefined,
-        completed: completedProgramDrills.has(drill.id),
+        completed: isExerciseCompleted(drill.id),
         videoUrl: drill.videoUrl || undefined,
         isYoutube: isYouTubeUrl(drill.videoUrl || ""),
         youtubeId: extractYouTubeId(drill.videoUrl || "") || undefined,
@@ -797,8 +768,7 @@ function ProgramContent({
           reps: exercise.reps || undefined,
           tempo: exercise.tempo || undefined,
           tags: exercise.type ? [exercise.type] : undefined,
-          completed:
-            completedIndividualExercises?.has(routineExerciseKey) || false,
+          completed: isExerciseCompleted(exercise.id, assignment.id),
           videoUrl: exercise.videoUrl || undefined,
           isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
           youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
@@ -809,51 +779,15 @@ function ProgramContent({
     }
   });
 
-  // Check if backend expanded routine exercises, if not, do it in frontend
-
-  // Debug: Log drill structure for troubleshooting
-  if (process.env.NODE_ENV === "development") {
-    console.log("🔍 All program drills:", program.drills);
-    program.drills.forEach((drill: any, index: number) => {
-      console.log(`🔍 Drill ${index}:`, {
-        id: drill.id,
-        title: drill.title,
-        routineId: drill.routineId,
-        hasRoutine: !!drill.routine,
-        routineExercises: drill.routine?.exercises?.length || 0,
-        routineName: drill.routine?.name,
-      });
-    });
-  }
-
   // Check if any drill has a routine property (from the relation we added)
   const drillsWithRoutines = program.drills.filter(
     (drill: any) => drill.routine && drill.routine.exercises
   );
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("🔍 Drills with routines:", drillsWithRoutines);
-    console.log(
-      "🔍 Drills with routineId:",
-      program.drills.filter((drill: any) => drill.routineId)
-    );
-  }
-
   if (drillsWithRoutines.length > 0) {
     drillsWithRoutines.forEach((drill: any) => {
-      console.log("🎯 Processing drill with routine:", {
-        drillId: drill.id,
-        drillTitle: drill.title,
-        routineName: drill.routine?.name,
-        exerciseCount: drill.routine?.exercises?.length,
-      });
-
       drill.routine.exercises.forEach((exercise: any) => {
         const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
-        console.log(
-          "🎯 Creating routine exercise drill with key:",
-          routineExerciseKey
-        );
 
         const drillLikeExercise: Drill = {
           id: routineExerciseKey,
@@ -863,8 +797,7 @@ function ProgramContent({
           reps: exercise.reps || undefined,
           tempo: exercise.tempo || undefined,
           tags: exercise.type ? [exercise.type] : undefined,
-          completed:
-            completedIndividualExercises?.has(routineExerciseKey) || false,
+          completed: isExerciseCompleted(exercise.id, drill.id),
           videoUrl: exercise.videoUrl || undefined,
           isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
           youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
@@ -872,128 +805,6 @@ function ProgramContent({
         allExercises.push(drillLikeExercise);
       });
     });
-  } else {
-    // Backend didn't expand routines, but we might have drills that ARE routines
-    // Check if any drill should be treated as a routine (has routineId but no routine data)
-    const drillsThatShouldBeRoutines = program.drills.filter(
-      (drill: any) => drill.routineId && !drill.routine
-    );
-
-    if (drillsThatShouldBeRoutines.length > 0) {
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          "⚠️ Found drills with routineId but no routine data:",
-          drillsThatShouldBeRoutines
-        );
-        console.log(
-          "🔧 TODO: Implement manual routine fetching for drills:",
-          drillsThatShouldBeRoutines.map(d => d.id)
-        );
-      }
-    }
-
-    // Check for drills that should be routines but aren't properly linked
-    const unlinkedRoutineDrills = program.drills.filter(
-      (drill: any) =>
-        !drill.routineId &&
-        !drill.routine &&
-        (drill.title.toLowerCase().includes("routine") ||
-          drill.title.toLowerCase().includes("workout") ||
-          drill.title.toLowerCase().includes("session"))
-    );
-
-    if (unlinkedRoutineDrills.length > 0) {
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          "⚠️ Found drills that should be routines but aren't properly linked:",
-          unlinkedRoutineDrills.map(d => ({ id: d.id, title: d.title }))
-        );
-        console.log(
-          "🔧 These drills need to be properly linked to routines in the database"
-        );
-      }
-
-      // Handle drills that have routine data (properly linked routines)
-      const drillsWithRoutineData = program.drills.filter(
-        (drill: any) =>
-          drill.routineId && drill.routine && drill.routine.exercises
-      );
-
-      if (drillsWithRoutineData.length > 0) {
-        if (process.env.NODE_ENV === "development") {
-          console.log(
-            "🎯 Found drills with routine data:",
-            drillsWithRoutineData
-          );
-        }
-
-        drillsWithRoutineData.forEach((drill: any) => {
-          if (process.env.NODE_ENV === "development") {
-            console.log(
-              `🎯 Expanding routine "${drill.routine.name}" with ${drill.routine.exercises.length} exercises`
-            );
-          }
-
-          // Add each exercise from the routine
-          drill.routine.exercises.forEach((exercise: any) => {
-            const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
-            const drillLikeExercise: Drill = {
-              id: routineExerciseKey,
-              title: exercise.title,
-              description: exercise.description || undefined,
-              sets: exercise.sets || undefined,
-              reps: exercise.reps || undefined,
-              tempo: exercise.tempo || undefined,
-              tags: exercise.type ? [exercise.type] : undefined,
-              completed:
-                completedIndividualExercises?.has(routineExerciseKey) || false,
-              videoUrl: exercise.videoUrl || undefined,
-              isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
-              youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
-              isRoutineExercise: true,
-              originalExerciseId: exercise.id,
-              routineAssignmentId: drill.id,
-            };
-            allExercises.push(drillLikeExercise);
-
-            if (process.env.NODE_ENV === "development") {
-              console.log(
-                `🎯 Added routine exercise: ${exercise.title} with key: ${routineExerciseKey}`
-              );
-            }
-          });
-        });
-      }
-
-      // Handle unlinked routine drills (fallback)
-      unlinkedRoutineDrills.forEach((drill: any) => {
-        const regularDrill: Drill = {
-          id: drill.id,
-          title: drill.title,
-          description: drill.description || undefined,
-          sets: drill.sets || undefined,
-          reps: drill.reps || undefined,
-          tempo: drill.tempo || undefined,
-          tags: drill.tags || undefined,
-          completed: completedProgramDrills.has(drill.id),
-          videoUrl: drill.videoUrl || undefined,
-          isYoutube: isYouTubeUrl(drill.videoUrl || ""),
-          youtubeId: extractYouTubeId(drill.videoUrl || "") || undefined,
-        };
-        allExercises.push(regularDrill);
-
-        if (process.env.NODE_ENV === "development") {
-          console.log(
-            `🎯 Added unlinked routine drill as regular drill: ${drill.title}`
-          );
-        }
-      });
-    }
-  }
-
-  if (process.env.NODE_ENV === "development") {
-    console.log("🎯 Final allExercises array:", allExercises);
-    console.log("🎯 Total exercises:", allExercises.length);
   }
 
   if (allExercises.length === 0) {
@@ -1083,32 +894,27 @@ function ProgramContent({
                 if (item.type === "regular") {
                   const drill = item.data as Drill;
 
-                  // For routine exercises within programs, check individual exercise completion state
-                  let isCompleted;
+                  // Use the new completion system - check completion state dynamically
+                  let isCompleted = false;
+                  const dateKey = selectedDate
+                    ? selectedDate.toISOString().split("T")[0]
+                    : undefined;
+
                   if (drill.id.includes("-routine-")) {
                     // This is a routine exercise within a program
-                    isCompleted = drill.completed || false;
-                    console.log(
-                      `🎯 Modal: Checking routine exercise completion for ${drill.id}:`,
-                      {
-                        isCompleted,
-                        completedIndividualExercises:
-                          completedIndividualExercises
-                            ? Array.from(completedIndividualExercises)
-                            : [],
-                      }
+                    const originalDrillId = drill.id.split("-routine-")[0];
+                    const exerciseId = drill.id.split("-routine-")[1];
+                    isCompleted = isExerciseCompleted(
+                      exerciseId,
+                      originalDrillId,
+                      dateKey
                     );
                   } else {
                     // This is a regular drill
-                    isCompleted = completedProgramDrills.has(drill.id);
-                    console.log(
-                      `🎯 Modal: Checking regular drill completion for ${drill.id}:`,
-                      {
-                        isCompleted,
-                        completedProgramDrills: Array.from(
-                          completedProgramDrills
-                        ),
-                      }
+                    isCompleted = isExerciseCompleted(
+                      drill.id,
+                      undefined,
+                      dateKey
                     );
                   }
 
@@ -1122,29 +928,50 @@ function ProgramContent({
                       key={drill.id}
                       drill={drillWithCompletion}
                       index={globalIndex++}
-                      onMarkComplete={completed => {
+                      onMarkComplete={async completed => {
+                        const dateKey = selectedDate
+                          ? selectedDate.toISOString().split("T")[0]
+                          : undefined;
+
+                        console.log(
+                          "🎯 onMarkComplete called for regular drill:",
+                          {
+                            drillId: drill.id,
+                            completed,
+                            dateKey,
+                            isRoutineExercise: drill.id.includes("-routine-"),
+                          }
+                        );
+
                         if (drill.id.includes("-routine-")) {
-                          // For routine exercises within programs, complete the entire routine
+                          // For routine exercises within programs, use the new completion system
                           const originalDrillId =
                             drill.id.split("-routine-")[0];
-                          console.log(
-                            "🎯 Completing entire routine for drill:",
-                            {
-                              routineExerciseId: drill.id,
-                              originalDrillId: originalDrillId,
-                              completed,
-                            }
-                          );
-                          onMarkDrillComplete(
+                          const exerciseId = drill.id.split("-routine-")[1];
+                          console.log("🎯 Marking routine exercise complete:", {
+                            exerciseId,
                             originalDrillId,
                             completed,
-                            program.programAssignmentId
+                            dateKey,
+                          });
+                          await markExerciseComplete(
+                            exerciseId,
+                            originalDrillId,
+                            completed,
+                            dateKey
                           );
                         } else {
-                          onMarkDrillComplete(
-                            drill.id,
+                          // For regular drills, use the new completion system
+                          console.log("🎯 Marking regular drill complete:", {
+                            drillId: drill.id,
                             completed,
-                            program.programAssignmentId
+                            dateKey,
+                          });
+                          await markExerciseComplete(
+                            drill.id,
+                            undefined,
+                            completed,
+                            dateKey
                           );
                         }
                       }}
@@ -1185,32 +1012,28 @@ function ProgramContent({
                       {/* Superset exercises */}
                       <div className="space-y-3">
                         {supersetDrills.map((drill, index) => {
-                          // For routine exercises within programs, check individual exercise completion state
-                          let isCompleted;
+                          // Use the new completion system - check completion state dynamically
+                          let isCompleted = false;
+                          const dateKey = selectedDate
+                            ? selectedDate.toISOString().split("T")[0]
+                            : undefined;
+
                           if (drill.id.includes("-routine-")) {
                             // This is a routine exercise within a program
-                            isCompleted = drill.completed || false;
-                            console.log(
-                              `🎯 Modal: Checking superset routine exercise completion for ${drill.id}:`,
-                              {
-                                isCompleted,
-                                completedIndividualExercises:
-                                  completedIndividualExercises
-                                    ? Array.from(completedIndividualExercises)
-                                    : [],
-                              }
+                            const originalDrillId =
+                              drill.id.split("-routine-")[0];
+                            const exerciseId = drill.id.split("-routine-")[1];
+                            isCompleted = isExerciseCompleted(
+                              exerciseId,
+                              originalDrillId,
+                              dateKey
                             );
                           } else {
                             // This is a regular drill
-                            isCompleted = completedProgramDrills.has(drill.id);
-                            console.log(
-                              `🎯 Modal: Checking superset regular drill completion for ${drill.id}:`,
-                              {
-                                isCompleted,
-                                completedProgramDrills: Array.from(
-                                  completedProgramDrills
-                                ),
-                              }
+                            isCompleted = isExerciseCompleted(
+                              drill.id,
+                              undefined,
+                              dateKey
                             );
                           }
 
@@ -1236,46 +1059,58 @@ function ProgramContent({
                               <DrillCard
                                 drill={drillWithCompletion}
                                 index={globalIndex++}
-                                onMarkComplete={completed => {
+                                onMarkComplete={async completed => {
+                                  const dateKey = selectedDate
+                                    ? selectedDate.toISOString().split("T")[0]
+                                    : undefined;
+
                                   console.log(
-                                    "🎯 ProgramContent DrillCard onMarkComplete called with:",
+                                    "🎯 onMarkComplete called for superset drill:",
                                     {
                                       drillId: drill.id,
                                       completed,
-                                      drillTitle: drill.title,
+                                      dateKey,
+                                      isRoutineExercise:
+                                        drill.id.includes("-routine-"),
                                     }
                                   );
 
                                   if (drill.id.includes("-routine-")) {
-                                    // For routine exercises within programs, complete the entire routine
+                                    // For routine exercises within programs, use the new completion system
                                     const originalDrillId =
                                       drill.id.split("-routine-")[0];
+                                    const exerciseId =
+                                      drill.id.split("-routine-")[1];
                                     console.log(
-                                      "🎯 Completing entire routine for drill:",
+                                      "🎯 Marking superset routine exercise complete:",
                                       {
-                                        routineExerciseId: drill.id,
-                                        originalDrillId: originalDrillId,
+                                        exerciseId,
+                                        originalDrillId,
                                         completed,
+                                        dateKey,
                                       }
                                     );
-                                    onMarkDrillComplete(
+                                    await markExerciseComplete(
+                                      exerciseId,
                                       originalDrillId,
                                       completed,
-                                      program.programAssignmentId
+                                      dateKey
                                     );
                                   } else {
+                                    // For regular drills, use the new completion system
                                     console.log(
-                                      "🎯 Calling onMarkDrillComplete with:",
+                                      "🎯 Marking superset regular drill complete:",
                                       {
                                         drillId: drill.id,
                                         completed,
+                                        dateKey,
                                       }
                                     );
-
-                                    onMarkDrillComplete(
+                                    await markExerciseComplete(
                                       drill.id,
+                                      undefined,
                                       completed,
-                                      program.programAssignmentId
+                                      dateKey
                                     );
                                   }
                                 }}
@@ -1316,8 +1151,9 @@ function RoutineContent({
   onOpenVideo,
   onOpenCommentModal,
   onOpenVideoSubmissionModal,
-  completedProgramDrills,
-  completedIndividualExercises,
+  isExerciseCompleted,
+  markExerciseComplete,
+  selectedDate,
 }: {
   routineAssignment?: RoutineAssignment;
   onMarkDrillComplete: (
@@ -1333,8 +1169,18 @@ function RoutineContent({
   onOpenVideo: (videoUrl: string, drill: Drill) => void;
   onOpenCommentModal: (drill: Drill) => void;
   onOpenVideoSubmissionModal: (drillId: string, drillTitle: string) => void;
-  completedProgramDrills: Set<string>;
-  completedIndividualExercises?: Set<string>;
+  isExerciseCompleted: (
+    exerciseId: string,
+    programDrillId?: string,
+    date?: string
+  ) => boolean;
+  markExerciseComplete: (
+    exerciseId: string,
+    programDrillId: string | undefined,
+    completed: boolean,
+    date?: string
+  ) => Promise<void>;
+  selectedDate?: Date | null;
 }) {
   console.log("🎯 RoutineContent called with:", {
     routineAssignment: routineAssignment
@@ -1405,9 +1251,13 @@ function RoutineContent({
                   reps: exercise.reps || undefined,
                   tempo: exercise.tempo || undefined,
                   tags: exercise.type ? [exercise.type] : undefined,
-                  completed:
-                    completedIndividualExercises?.has(routineExerciseKey) ||
-                    false,
+                  completed: isExerciseCompleted(
+                    exercise.id,
+                    routineAssignment.id,
+                    selectedDate
+                      ? selectedDate.toISOString().split("T")[0]
+                      : undefined
+                  ),
                   videoUrl: exercise.videoUrl || undefined,
                   supersetId: exercise.supersetId || undefined,
                   supersetOrder: exercise.supersetOrder || undefined,
@@ -1455,24 +1305,19 @@ function RoutineContent({
                     <DrillCard
                       drill={drill}
                       index={globalIndex++}
-                      onMarkComplete={completed => {
-                        console.log(
-                          "🎯 DrillCard onMarkComplete called with:",
-                          {
-                            drillId: drill.id,
-                            completed,
-                            drillTitle: drill.title,
-                          }
-                        );
-
+                      onMarkComplete={async completed => {
                         // For standalone routine exercises: routineAssignmentId-exerciseId
                         const parts = drill.id.split("-");
                         const routineAssignmentId = parts[0];
                         const exerciseId = parts[1];
-                        onMarkRoutineExerciseComplete(
+                        const dateKey = selectedDate
+                          ? selectedDate.toISOString().split("T")[0]
+                          : undefined;
+                        await markExerciseComplete(
                           exerciseId,
                           routineAssignmentId,
-                          completed
+                          completed,
+                          dateKey
                         );
                       }}
                       onOpenVideo={() =>
@@ -1522,24 +1367,19 @@ function RoutineContent({
                               <DrillCard
                                 drill={drill}
                                 index={globalIndex++}
-                                onMarkComplete={completed => {
-                                  console.log(
-                                    "🎯 Superset DrillCard onMarkComplete called with:",
-                                    {
-                                      drillId: drill.id,
-                                      completed,
-                                      drillTitle: drill.title,
-                                    }
-                                  );
-
+                                onMarkComplete={async completed => {
                                   // For standalone routine exercises: routineAssignmentId-exerciseId
                                   const parts = drill.id.split("-");
                                   const routineAssignmentId = parts[0];
                                   const exerciseId = parts[1];
-                                  onMarkRoutineExerciseComplete(
+                                  const dateKey = selectedDate
+                                    ? selectedDate.toISOString().split("T")[0]
+                                    : undefined;
+                                  await markExerciseComplete(
                                     exerciseId,
                                     routineAssignmentId,
-                                    completed
+                                    completed,
+                                    dateKey
                                   );
                                 }}
                                 onOpenVideo={() =>
@@ -1638,6 +1478,12 @@ function DrillCard({
           onClick={e => {
             e.preventDefault();
             e.stopPropagation();
+            console.log("🎯 DrillCard button clicked:", {
+              drillId: drill.id,
+              drillTitle: drill.title,
+              currentCompleted: drill.completed,
+              newCompleted: !drill.completed,
+            });
             onMarkComplete(!drill.completed);
           }}
           className={cn(

@@ -74,6 +74,7 @@ import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientProgramPage from "./MobileClientProgramPage";
 import { processVideoUrl } from "@/lib/youtube-utils";
+import { useExerciseCompletion } from "@/hooks/useExerciseCompletion";
 
 interface Drill {
   id: string;
@@ -148,57 +149,15 @@ function ClientProgramPage() {
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
-  const [completedProgramDrills, setCompletedProgramDrills] = useState<
-    Set<string>
-  >(new Set());
-  const [completedIndividualExercises, setCompletedIndividualExercises] =
-    useState<Set<string>>(new Set());
+  // Use the new completion system
+  const { isExerciseCompleted, markExerciseComplete } = useExerciseCompletion();
+
   const [completedVideoAssignments, setCompletedVideoAssignments] = useState<
     Set<string>
   >(new Set());
 
-  // Initialize completion state from server data when selectedDay changes
+  // Initialize video assignment completion state
   React.useEffect(() => {
-    if (selectedDay?.programs) {
-      const serverCompletedDrills = new Set<string>();
-      const serverCompletedIndividualExercises = new Set<string>();
-
-      selectedDay.programs.forEach(program => {
-        program.drills.forEach(drill => {
-          if (drill.completed) {
-            // For routine exercises, add the original drill ID to completion state
-            if (drill.id.includes("-routine-")) {
-              const originalDrillId = drill.id.split("-routine-")[0];
-              serverCompletedDrills.add(originalDrillId);
-              console.log(
-                `🔄 Adding routine drill completion: ${originalDrillId} for exercise: ${drill.id}`
-              );
-            } else {
-              serverCompletedDrills.add(drill.id);
-              console.log(`🔄 Adding regular drill completion: ${drill.id}`);
-            }
-          }
-        });
-      });
-
-      console.log(
-        "🔄 Initializing completedProgramDrills from server:",
-        Array.from(serverCompletedDrills)
-      );
-      console.log(
-        "🔄 Initializing completedIndividualExercises from server:",
-        Array.from(serverCompletedIndividualExercises)
-      );
-
-      setCompletedProgramDrills(serverCompletedDrills);
-      setCompletedIndividualExercises(serverCompletedIndividualExercises);
-    } else {
-      // Clear completion state if no programs
-      setCompletedProgramDrills(new Set());
-      setCompletedIndividualExercises(new Set());
-    }
-
-    // Initialize video assignment completion state
     if (selectedDay?.videoAssignments) {
       const serverCompletedVideoAssignments = new Set<string>();
 
@@ -218,51 +177,42 @@ function ClientProgramPage() {
     }
   }, [selectedDay]);
 
-  // Update drill completion status based on our tracked state
+  // Update drill completion status based on the new completion system
   const updateDrillCompletionStatus = (dayData: DayData | null) => {
     if (!dayData?.programs) return dayData;
-
-    console.log(
-      "🔄 updateDrillCompletionStatus called with completedProgramDrills:",
-      Array.from(completedProgramDrills)
-    );
 
     const updatedDayData = {
       ...dayData,
       programs: dayData.programs.map(program => ({
         ...program,
         drills: program.drills.map(drill => {
-          // For routine exercises, check if the original drill is completed
+          // Use the new completion system to check if drill is completed
           let isCompleted;
+          const dateKey = dayData.date
+            ? new Date(dayData.date).toISOString().split("T")[0]
+            : undefined;
           if (drill.id.includes("-routine-")) {
-            const originalDrillId = drill.id.split("-routine-")[0];
-            isCompleted = completedProgramDrills.has(originalDrillId);
-            console.log(
-              `🔄 Routine exercise ${drill.id}: checking original drill ${originalDrillId}, completed=${isCompleted}`
-            );
-            console.log(
-              `🔄 Available completions:`,
-              Array.from(completedProgramDrills)
+            // This is a routine exercise within a program
+            const exerciseId = drill.id.split("-routine-")[1];
+            const programDrillId = drill.id.split("-routine-")[0];
+            isCompleted = isExerciseCompleted(
+              exerciseId,
+              programDrillId,
+              dateKey
             );
           } else {
-            isCompleted = completedProgramDrills.has(drill.id);
-            console.log(
-              `🔄 Regular drill ${drill.id}: completed=${isCompleted}`
-            );
+            // This is a regular drill
+            isCompleted = isExerciseCompleted(drill.id, undefined, dateKey);
           }
 
-          console.log(
-            `🔄 Drill ${drill.id} (${drill.title}): server completed=${drill.completed}, state completed=${isCompleted}`
-          );
           return {
             ...drill,
-            completed: isCompleted, // Use our tracked state, not server data
+            completed: isCompleted,
           };
         }),
       })),
     };
 
-    console.log("🔄 Updated dayData:", updatedDayData);
     return updatedDayData;
   };
 
@@ -294,9 +244,6 @@ function ClientProgramPage() {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [activeTab, setActiveTab] = useState<"calendar" | "progress">(
     "calendar"
-  );
-  const [justCompletedDrills, setJustCompletedDrills] = useState<Set<string>>(
-    new Set()
   );
 
   // Get client's assigned program
@@ -402,39 +349,6 @@ function ClientProgramPage() {
 
   // Debug logging for routine assignments
 
-  // Initialize routine exercise completion state from server data when selectedDate changes
-  React.useEffect(() => {
-    if (selectedDate && routineAssignments) {
-      const serverCompletedRoutineExercises = new Set<string>();
-
-      const routinesForDate = getRoutinesForDate(selectedDate);
-
-      // Load routine exercise completions from the routine assignments
-      routinesForDate.forEach(routineAssignment => {
-        if ((routineAssignment as any).completions) {
-          (routineAssignment as any).completions.forEach((completion: any) => {
-            const routineExerciseKey = `${routineAssignment.id}-${completion.exerciseId}`;
-            serverCompletedRoutineExercises.add(routineExerciseKey);
-          });
-        }
-      });
-
-      // Only update if there are actually completions to add
-      if (serverCompletedRoutineExercises.size > 0) {
-        setCompletedProgramDrills(prev => {
-          const newSet = new Set(prev);
-          serverCompletedRoutineExercises.forEach(id => newSet.add(id));
-          // Only return new set if it's actually different
-          if (newSet.size !== prev.size) {
-            return newSet;
-          }
-          return prev; // Return same reference to prevent re-render
-        });
-      }
-    } else {
-    }
-  }, [selectedDate, routineAssignments]);
-
   // Get client's lessons
   const { data: clientLessons = [] } =
     trpc.clientRouter.getClientLessons.useQuery({
@@ -452,27 +366,11 @@ function ClientProgramPage() {
     trpc.clientRouter.addCommentToDrill.useMutation();
 
   // Mutations
-  const markProgramDrillCompleteMutation =
-    trpc.clientRouter.markProgramDrillComplete.useMutation({
-      // Remove aggressive invalidation - let optimistic updates handle UI
-    });
-
-  const markDrillCompleteMutation =
-    trpc.clientRouter.markDrillComplete.useMutation({
-      // For routine exercises within programs
-    });
 
   const markVideoAssignmentCompleteMutation =
     trpc.clientRouter.markVideoAssignmentComplete.useMutation({
       onError: error => {
         alert(`Error updating video assignment: ${error.message}`);
-      },
-    });
-
-  const markRoutineExerciseCompleteMutation =
-    trpc.clientRouter.markRoutineExerciseComplete.useMutation({
-      onError: error => {
-        alert(`Error updating program: ${error.message}`);
       },
     });
 
@@ -660,10 +558,27 @@ function ClientProgramPage() {
     if (dayData?.programs) {
       dayData.programs.forEach(program => {
         if (!program.isRestDay) {
-          totalDrills += program.drills.length;
-          // Count completed program drills from our tracked state
           program.drills.forEach(drill => {
-            if (completedProgramDrills.has(drill.id)) {
+            totalDrills++;
+            // Use the new completion system to check if drill is completed
+            let isCompleted;
+            const dateKey = selectedDate
+              ? selectedDate.toISOString().split("T")[0]
+              : undefined;
+            if (drill.id.includes("-routine-")) {
+              // This is a routine exercise within a program
+              const exerciseId = drill.id.split("-routine-")[1];
+              const programDrillId = drill.id.split("-routine-")[0];
+              isCompleted = isExerciseCompleted(
+                exerciseId,
+                programDrillId,
+                dateKey
+              );
+            } else {
+              // This is a regular drill
+              isCompleted = isExerciseCompleted(drill.id, undefined, dateKey);
+            }
+            if (isCompleted) {
               completedDrills++;
             }
           });
@@ -678,11 +593,17 @@ function ClientProgramPage() {
         if ((routineAssignment as any).routine?.exercises) {
           (routineAssignment as any).routine.exercises.forEach(
             (exercise: any) => {
-              // Use the key format for routine exercises
-              const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
               totalDrills++;
-              // Count completed routine exercises using the individual exercise system
-              if (completedIndividualExercises.has(routineExerciseKey)) {
+              // Use the new completion system for standalone routine exercises
+              const dateKey = selectedDate
+                ? selectedDate.toISOString().split("T")[0]
+                : undefined;
+              const isCompleted = isExerciseCompleted(
+                exercise.id,
+                (routineAssignment as any).id,
+                dateKey
+              );
+              if (isCompleted) {
                 completedDrills++;
               }
             }
@@ -710,10 +631,21 @@ function ClientProgramPage() {
       dayData.programs.forEach(program => {
         if (!program.isRestDay) {
           totalAssignments++;
-          // Check if all drills in this program are completed
-          const allDrillsCompleted = program.drills.every(drill =>
-            completedProgramDrills.has(drill.id)
-          );
+          // Check if all drills in this program are completed using new system
+          const dateKey = selectedDate
+            ? selectedDate.toISOString().split("T")[0]
+            : undefined;
+          const allDrillsCompleted = program.drills.every(drill => {
+            if (drill.id.includes("-routine-")) {
+              // This is a routine exercise within a program
+              const exerciseId = drill.id.split("-routine-")[1];
+              const programDrillId = drill.id.split("-routine-")[0];
+              return isExerciseCompleted(exerciseId, programDrillId, dateKey);
+            } else {
+              // This is a regular drill
+              return isExerciseCompleted(drill.id, undefined, dateKey);
+            }
+          });
           if (allDrillsCompleted) {
             completedAssignments++;
           }
@@ -727,12 +659,18 @@ function ClientProgramPage() {
       routinesForDate.forEach(routineAssignment => {
         if ((routineAssignment as any).routine?.exercises) {
           totalAssignments++;
-          // Check if all exercises in this routine are completed using unified system
+          // Check if all exercises in this routine are completed using new system
+          const dateKey = selectedDate
+            ? selectedDate.toISOString().split("T")[0]
+            : undefined;
           const allExercisesCompleted = (
             routineAssignment as any
           ).routine.exercises.every((exercise: any) => {
-            const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
-            return completedIndividualExercises.has(routineExerciseKey);
+            return isExerciseCompleted(
+              exercise.id,
+              (routineAssignment as any).id,
+              dateKey
+            );
           });
           if (allExercisesCompleted) {
             completedAssignments++;
@@ -744,67 +682,30 @@ function ClientProgramPage() {
     return { totalAssignments, completedAssignments };
   };
 
-  // Handle routine exercise completion - simplified approach
+  // Handle routine exercise completion - using new system
   const handleMarkRoutineExerciseComplete = async (
     exerciseId: string,
     programDrillId: string, // This is actually the program drill ID, not routine assignment ID
     completed: boolean
   ) => {
-    const fullExerciseId = `${programDrillId}-routine-${exerciseId}`;
-
     console.log("🎯 handleMarkRoutineExerciseComplete called:", {
       exerciseId,
       programDrillId,
       completed,
-      fullExerciseId,
     });
 
-    // Update individual exercise completion state immediately for real-time UI updates
-    setCompletedIndividualExercises(prev => {
-      const newSet = new Set(prev);
-      if (completed) {
-        newSet.add(fullExerciseId);
-      } else {
-        newSet.delete(fullExerciseId);
-      }
-      console.log(`🔄 Updated completedIndividualExercises:`, {
-        fullExerciseId,
-        completed,
-        newSet: Array.from(newSet),
-      });
-      return newSet;
-    });
-
-    // For routine exercises within programs, use the markDrillComplete mutation
-    // because they are still drills within a program, just with routine content
     try {
-      console.log(
-        "🎯 Calling markDrillCompleteMutation for routine exercise with:",
-        {
-          drillId: fullExerciseId,
-          completed,
-        }
-      );
-
-      // Add timeout to detect hanging mutations
-      const mutationPromise = markDrillCompleteMutation.mutateAsync({
-        drillId: fullExerciseId,
+      // Use the new completion system
+      const dateKey = selectedDate
+        ? selectedDate.toISOString().split("T")[0]
+        : undefined;
+      await markExerciseComplete(
+        exerciseId,
+        programDrillId,
         completed,
-      });
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Mutation timeout after 10 seconds")),
-          10000
-        )
+        dateKey
       );
-
-      await Promise.race([mutationPromise, timeoutPromise]);
-
-      console.log("✅ Mutation successful");
-
-      // Refresh calendar data to sync with server
-      await refetchCalendar();
+      console.log("✅ Routine exercise completion updated successfully");
     } catch (error) {
       console.error(
         `❌ Failed to ${
@@ -812,19 +713,6 @@ function ClientProgramPage() {
         } routine exercise:`,
         error
       );
-      console.error("❌ Error details:", error);
-
-      // Revert optimistic update on error
-      setCompletedIndividualExercises(prev => {
-        const newSet = new Set(prev);
-        if (completed) {
-          newSet.delete(fullExerciseId); // Remove if we were trying to mark complete
-        } else {
-          newSet.add(fullExerciseId); // Add if we were trying to mark incomplete
-        }
-        console.log("🔄 Reverted optimistic update due to error");
-        return newSet;
-      });
     }
   };
 
@@ -886,7 +774,7 @@ function ClientProgramPage() {
     }
   };
 
-  // Handle drill completion
+  // Handle drill completion - using new system
   const handleMarkDrillComplete = async (
     drillId: string,
     completed: boolean,
@@ -897,82 +785,16 @@ function ClientProgramPage() {
       completed,
       programAssignmentId,
     });
-    console.log(
-      "🎯 Current completedProgramDrills before update:",
-      Array.from(completedProgramDrills)
-    );
 
-    // Update the completion state immediately for real-time UI updates
-    setCompletedProgramDrills(prev => {
-      const newSet = new Set(prev);
-      if (completed) {
-        newSet.add(drillId);
-        console.log("🎯 Added drill to completedProgramDrills:", drillId);
-      } else {
-        newSet.delete(drillId);
-        console.log("🎯 Removed drill from completedProgramDrills:", drillId);
-      }
-      console.log("🎯 New completedProgramDrills:", Array.from(newSet));
-      return newSet;
-    });
-
-    // Add brief celebration effect for completed drills (reduced)
-    if (completed) {
-      setJustCompletedDrills(prev => new Set(prev).add(drillId));
-      setTimeout(() => {
-        setJustCompletedDrills(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(drillId);
-          return newSet;
-        });
-      }, 500); // Much shorter celebration (0.5 seconds)
-    }
-
-    // Then perform the actual mutation
     try {
-      console.log("🎯 Calling markProgramDrillCompleteMutation with:", {
-        drillId,
-        completed,
-        programAssignmentId,
-      });
-
-      if (!programAssignmentId) {
-        throw new Error(
-          "Program assignment ID is required for drill completion"
-        );
-      }
-
-      await markProgramDrillCompleteMutation.mutateAsync({
-        drillId: drillId,
-        programAssignmentId: programAssignmentId,
-        completed,
-      });
-
-      console.log("🎯 markProgramDrillCompleteMutation completed successfully");
-
-      // Invalidate and refetch calendar data to ensure UI stays in sync
-      await utils.clientRouter.getProgramCalendar.invalidate();
-      await utils.clientRouter.getProgramWeekCalendar.invalidate();
-
-      console.log("🎯 Calendar data invalidated and refetched");
+      // Use the new completion system
+      const dateKey = selectedDate
+        ? selectedDate.toISOString().split("T")[0]
+        : undefined;
+      await markExerciseComplete(drillId, undefined, completed, dateKey);
+      console.log("✅ Drill completion updated successfully");
     } catch (error) {
-      console.error(
-        "🎯 ERROR: markProgramDrillCompleteMutation failed:",
-        error
-      );
-
-      // Revert optimistic update on error
-      setCompletedProgramDrills(prev => {
-        const newSet = new Set(prev);
-        if (completed) {
-          newSet.delete(drillId); // Remove if we were trying to mark complete
-        } else {
-          newSet.add(drillId); // Add if we were trying to mark incomplete
-        }
-        return newSet;
-      });
-
-      // Show user-friendly error message
+      console.error("❌ ERROR: Failed to update drill completion:", error);
       alert(
         `Failed to update drill completion: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -1084,8 +906,16 @@ function ClientProgramPage() {
   };
 
   // Get status for a day
-  const getDayStatus = (dayData: DayData | null, date?: Date) => {
+  const getDayStatus = (
+    dayData: DayData | null,
+    date?: Date,
+    completionCounts?: { completedDrills: number; totalDrills: number }
+  ) => {
     if (!dayData) return null;
+
+    // Calculate completion counts if not provided
+    const counts =
+      completionCounts || calculateDayCompletionCounts(dayData, date || null);
 
     // Check if there are active workouts or routines that should override rest days
     if (dayData.isRestDay) {
@@ -1100,9 +930,9 @@ function ClientProgramPage() {
       // If there's active content, don't show rest day status
       if (hasActiveContent) {
         // Return workout status instead
-        if (dayData.completedDrills === dayData.totalDrills)
+        if (counts.completedDrills === counts.totalDrills)
           return { type: "complete", label: "Complete", icon: "✅" };
-        if (dayData.completedDrills > 0)
+        if (counts.completedDrills > 0)
           return { type: "partial", label: "Partial", icon: "🔄" };
         return { type: "pending", label: "Pending", icon: "⏳" };
       }
@@ -1111,9 +941,9 @@ function ClientProgramPage() {
       return { type: "rest", label: "Rest", icon: "🛌" };
     }
 
-    if (dayData.completedDrills === dayData.totalDrills)
+    if (counts.completedDrills === counts.totalDrills)
       return { type: "complete", label: "Complete", icon: "✅" };
-    if (dayData.completedDrills > 0)
+    if (counts.completedDrills > 0)
       return { type: "partial", label: "Partial", icon: "🔄" };
     return { type: "pending", label: "Pending", icon: "⏳" };
   };
@@ -1504,6 +1334,12 @@ function ClientProgramPage() {
                     const isCurrentMonth = isSameMonth(date, currentDate);
                     const lessonsForDay = getLessonsForDate(date);
 
+                    // Calculate completion counts dynamically
+                    const completionCounts = calculateDayCompletionCounts(
+                      dayData,
+                      date
+                    );
+
                     return (
                       <div
                         key={index}
@@ -1533,22 +1369,23 @@ function ClientProgramPage() {
                             {format(date, "d")}
                           </span>
                           {dayData &&
-                            (dayData.totalDrills > 0 ||
+                            (completionCounts.totalDrills > 0 ||
                               (dayData.programs &&
                                 dayData.programs.length > 0) ||
                               getRoutinesForDate(date).length > 0) && (
                               <span
                                 className={cn(
                                   "text-xs px-2 py-1 rounded-full font-medium",
-                                  dayData.completedDrills ===
-                                    dayData.totalDrills
+                                  completionCounts.completedDrills ===
+                                    completionCounts.totalDrills
                                     ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
-                                    : dayData.completedDrills > 0
+                                    : completionCounts.completedDrills > 0
                                     ? "bg-yellow-500 text-white shadow-lg shadow-yellow-500/25"
                                     : "bg-gray-500 text-white"
                                 )}
                               >
-                                {dayData.completedDrills}/{dayData.totalDrills}
+                                {completionCounts.completedDrills}/
+                                {completionCounts.totalDrills}
                               </span>
                             )}
                         </div>
@@ -2141,12 +1978,10 @@ function ClientProgramPage() {
               noteToCoach={noteToCoach}
               setNoteToCoach={setNoteToCoach}
               isSubmittingNote={isSubmittingNote}
-              completedProgramDrills={completedProgramDrills}
               completedVideoAssignments={completedVideoAssignments}
               calculateDayCompletionCounts={calculateDayCompletionCounts}
               calculateDayAssignmentCounts={calculateDayAssignmentCounts}
               onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
-              completedIndividualExercises={completedIndividualExercises}
             />
           )}
 
