@@ -141,16 +141,40 @@ export default function MobileClientProgramPage() {
   const markVideoAssignmentCompleteMutation =
     trpc.clientRouter.markVideoAssignmentComplete.useMutation();
 
+  // Use lightweight calendar query for initial load
   const {
     data: calendarData,
     error: calendarError,
     isLoading: calendarLoading,
     refetch: refetchCalendar,
-  } = trpc.clientRouter.getProgramCalendar.useQuery({
+  } = trpc.clientRouter.getProgramCalendarLight.useQuery({
     year: currentDate.getFullYear(),
     month: currentDate.getMonth() + 1,
     viewMode: "month",
   });
+
+  // Detailed day data - only loaded when a day is selected
+  const [selectedDateForDetails, setSelectedDateForDetails] = useState<
+    string | null
+  >(null);
+  const {
+    data: selectedDayDetails,
+    isLoading: dayDetailsLoading,
+    error: dayDetailsError,
+  } = trpc.clientRouter.getProgramDayDetails.useQuery(
+    { date: selectedDateForDetails! },
+    {
+      enabled: !!selectedDateForDetails,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    }
+  );
+
+  // Open modal when detailed data is loaded
+  React.useEffect(() => {
+    if (selectedDateForDetails && selectedDayDetails && !dayDetailsLoading) {
+      setIsDayModalOpen(true);
+    }
+  }, [selectedDateForDetails, selectedDayDetails, dayDetailsLoading]);
 
   // Fetch routine assignments for mobile program page
   const { data: routineAssignments = [], refetch: refetchRoutineAssignments } =
@@ -374,6 +398,85 @@ export default function MobileClientProgramPage() {
     return (calendarData as any)[dateString] || null;
   };
 
+  // Calculate completion counts for a specific day (same logic as desktop)
+  const calculateDayCompletionCounts = (
+    dayData: DayData | null,
+    selectedDate: Date | null
+  ) => {
+    if (!dayData && !selectedDate)
+      return { totalDrills: 0, completedDrills: 0 };
+
+    let totalDrills = 0;
+    let completedDrills = 0;
+
+    // Count program drills (excluding rest days)
+    if (dayData?.programs) {
+      dayData.programs.forEach(program => {
+        if (!program.isRestDay) {
+          // If we have detailed drill data, count individual drills
+          if (program.drills) {
+            program.drills.forEach(drill => {
+              totalDrills++;
+              // Use the new completion system to check if drill is completed
+              let isCompleted;
+              const dateKey = selectedDate
+                ? selectedDate.toISOString().split("T")[0]
+                : undefined;
+              if (drill.id.includes("-routine-")) {
+                // This is a routine exercise within a program
+                const exerciseId = drill.id.split("-routine-")[1];
+                const programDrillId = drill.id.split("-routine-")[0];
+                isCompleted = isExerciseCompleted(
+                  exerciseId,
+                  programDrillId,
+                  dateKey
+                );
+              } else {
+                // This is a regular drill
+                isCompleted = isExerciseCompleted(drill.id, undefined, dateKey);
+              }
+              if (isCompleted) {
+                completedDrills++;
+              }
+            });
+          } else {
+            // If we only have lightweight data, use the pre-calculated counts
+            totalDrills += program.totalDrills || 0;
+            completedDrills += program.completedDrills || 0;
+          }
+        }
+      });
+    }
+
+    // Count routine exercises for the selected date
+    if (selectedDate) {
+      const routinesForDate = getRoutinesForDate(selectedDate);
+      routinesForDate.forEach(routineAssignment => {
+        if ((routineAssignment as any).routine?.exercises) {
+          (routineAssignment as any).routine.exercises.forEach(
+            (exercise: any) => {
+              totalDrills++;
+              // Use the new completion system for standalone routine exercises
+              const dateKey = selectedDate
+                ? selectedDate.toISOString().split("T")[0]
+                : undefined;
+              const isCompleted = isExerciseCompleted(
+                exercise.id,
+                (routineAssignment as any).id,
+                dateKey
+              );
+              if (isCompleted) {
+                completedDrills++;
+              }
+            }
+          );
+        }
+      });
+    }
+
+    return { totalDrills, completedDrills };
+  };
+
   const handleDateClick = (day: Date) => {
     const dayString = format(day, "yyyy-MM-dd");
     let dayData: DayData | undefined;
@@ -446,8 +549,9 @@ export default function MobileClientProgramPage() {
         );
         setSelectedDay(dayData);
         setSelectedDate(day);
+        setSelectedDateForDetails(dayString);
         setSelectedDayRoutineAssignments(dayRoutineAssignments);
-        setIsDayModalOpen(true);
+        // Don't open modal immediately - wait for data to load
       }
     }
   };
@@ -832,23 +936,33 @@ export default function MobileClientProgramPage() {
                   : Array.isArray(calendarData)
                   ? calendarData.find((d: DayData) => d.date === dayString)
                   : undefined;
+              // Calculate completion counts using the same logic as desktop
+              const completionCounts = calculateDayCompletionCounts(
+                dayData,
+                day
+              );
               const hasWorkout =
-                dayData && !dayData.isRestDay && dayData.totalDrills > 0;
+                dayData &&
+                !dayData.isRestDay &&
+                completionCounts.totalDrills > 0;
               const isCompleted =
                 dayData &&
-                dayData.completedDrills === dayData.totalDrills &&
-                dayData.totalDrills > 0;
+                completionCounts.completedDrills ===
+                  completionCounts.totalDrills &&
+                completionCounts.totalDrills > 0;
               const isPartial =
                 dayData &&
-                dayData.completedDrills > 0 &&
-                dayData.completedDrills < dayData.totalDrills;
+                completionCounts.completedDrills > 0 &&
+                completionCounts.completedDrills < completionCounts.totalDrills;
 
               // Get program indicators for this day
               const programIndicators =
                 dayData?.programs?.map(
                   (program: ProgramData, index: number) => {
+                    // Use the completion counts from the hook for accurate counts
                     const remaining =
-                      program.totalDrills - program.completedDrills;
+                      completionCounts.totalDrills -
+                      completionCounts.completedDrills;
                     const isRestDay = program.isRestDay;
 
                     return {
@@ -972,10 +1086,21 @@ export default function MobileClientProgramPage() {
       {isDayModalOpen && selectedDay && (
         <ClientProgramDayModal
           isOpen={isDayModalOpen}
-          onClose={() => setIsDayModalOpen(false)}
-          selectedDay={updateDrillCompletionStatus(selectedDay)}
+          onClose={() => {
+            setIsDayModalOpen(false);
+            setSelectedDateForDetails(null);
+          }}
+          selectedDay={
+            selectedDayDetails
+              ? updateDrillCompletionStatus(selectedDayDetails)
+              : updateDrillCompletionStatus(selectedDay)
+          }
           selectedDate={selectedDate}
-          programs={updateDrillCompletionStatus(selectedDay)?.programs || []}
+          programs={
+            selectedDayDetails?.programs ||
+            updateDrillCompletionStatus(selectedDay)?.programs ||
+            []
+          }
           routineAssignments={selectedDayRoutineAssignments}
           onMarkDrillComplete={handleMarkDrillComplete}
           onMarkAllComplete={handleMarkAllComplete}
@@ -997,34 +1122,41 @@ export default function MobileClientProgramPage() {
             if (dayData && "programs" in dayData && dayData.programs) {
               (dayData as any).programs.forEach((program: ProgramData) => {
                 if (!program.isRestDay) {
-                  program.drills.forEach((drill: Drill) => {
-                    totalDrills++;
-                    // Use the new completion system to check if drill is completed
-                    let isCompleted;
-                    const dateKey = selectedDate
-                      ? selectedDate.toISOString().split("T")[0]
-                      : undefined;
-                    if (drill.id.includes("-routine-")) {
-                      // This is a routine exercise within a program
-                      const exerciseId = drill.id.split("-routine-")[1];
-                      const programDrillId = drill.id.split("-routine-")[0];
-                      isCompleted = isExerciseCompleted(
-                        exerciseId,
-                        programDrillId,
-                        dateKey
-                      );
-                    } else {
-                      // This is a regular drill
-                      isCompleted = isExerciseCompleted(
-                        drill.id,
-                        undefined,
-                        dateKey
-                      );
-                    }
-                    if (isCompleted) {
-                      completedDrills++;
-                    }
-                  });
+                  // If we have detailed drill data, count individual drills
+                  if (program.drills) {
+                    program.drills.forEach((drill: Drill) => {
+                      totalDrills++;
+                      // Use the new completion system to check if drill is completed
+                      let isCompleted;
+                      const dateKey = selectedDate
+                        ? selectedDate.toISOString().split("T")[0]
+                        : undefined;
+                      if (drill.id.includes("-routine-")) {
+                        // This is a routine exercise within a program
+                        const exerciseId = drill.id.split("-routine-")[1];
+                        const programDrillId = drill.id.split("-routine-")[0];
+                        isCompleted = isExerciseCompleted(
+                          exerciseId,
+                          programDrillId,
+                          dateKey
+                        );
+                      } else {
+                        // This is a regular drill
+                        isCompleted = isExerciseCompleted(
+                          drill.id,
+                          undefined,
+                          dateKey
+                        );
+                      }
+                      if (isCompleted) {
+                        completedDrills++;
+                      }
+                    });
+                  } else {
+                    // If we only have lightweight data, use the pre-calculated counts
+                    totalDrills += (program as any).totalDrills || 0;
+                    completedDrills += (program as any).completedDrills || 0;
+                  }
                 }
               });
             }
@@ -1068,6 +1200,8 @@ export default function MobileClientProgramPage() {
           onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
           onMarkVideoAssignmentComplete={handleMarkVideoAssignmentComplete}
           completedVideoAssignments={completedVideoAssignments}
+          isLoadingDetails={dayDetailsLoading}
+          detailsError={dayDetailsError}
         />
       )}
 

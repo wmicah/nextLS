@@ -194,6 +194,8 @@ interface ClientProgramDayModalProps {
     programDrillId: string,
     completed: boolean
   ) => void;
+  isLoadingDetails?: boolean;
+  detailsError?: any;
 }
 
 interface Tab {
@@ -228,6 +230,8 @@ export default function ClientProgramDayModal({
   calculateDayCompletionCounts,
   calculateDayAssignmentCounts,
   onMarkRoutineExerciseComplete,
+  isLoadingDetails = false,
+  detailsError,
 }: ClientProgramDayModalProps) {
   const [activeTab, setActiveTab] = useState<string>("");
   const [viewedTabs, setViewedTabs] = useState<Set<string>>(new Set());
@@ -249,6 +253,10 @@ export default function ClientProgramDayModal({
   const generateTabs = (): Tab[] => {
     const tabs: Tab[] = [];
 
+    // Debug logging
+    console.log("ClientProgramDayModal - programs:", programs);
+    console.log("ClientProgramDayModal - programs.length:", programs?.length);
+
     // Add program tabs for each program
     if (programs && programs.length > 0) {
       // Check if there are any non-rest-day programs (workouts) OR routines
@@ -262,6 +270,12 @@ export default function ClientProgramDayModal({
         if (program.isRestDay && hasActiveContent) {
           return; // Skip rest days when active content exists
         }
+
+        console.log("ClientProgramDayModal - processing program:", {
+          programId: program.programId,
+          programTitle: program.programTitle,
+          isRestDay: program.isRestDay,
+        });
 
         tabs.push({
           id: `program-${program.programId}`,
@@ -290,6 +304,7 @@ export default function ClientProgramDayModal({
       });
     }
 
+    console.log("ClientProgramDayModal - generated tabs:", tabs);
     return tabs;
   };
 
@@ -297,9 +312,16 @@ export default function ClientProgramDayModal({
 
   // Set active tab to first unviewed tab, or first tab if all viewed
   React.useEffect(() => {
+    console.log("ClientProgramDayModal - useEffect for activeTab:", {
+      tabsLength: tabs.length,
+      activeTab,
+      firstTab: tabs[0]?.id,
+    });
     if (tabs.length > 0 && !activeTab) {
       const unviewedTab = tabs.find(tab => !viewedTabs.has(tab.id));
-      setActiveTab(unviewedTab ? unviewedTab.id : tabs[0].id);
+      const selectedTab = unviewedTab ? unviewedTab.id : tabs[0].id;
+      console.log("ClientProgramDayModal - setting activeTab to:", selectedTab);
+      setActiveTab(selectedTab);
     }
   }, [tabs, activeTab, viewedTabs]);
 
@@ -422,7 +444,31 @@ export default function ClientProgramDayModal({
 
         {/* Content */}
         <div className="p-4 pb-6 overflow-y-auto flex-1">
-          {tabs.length === 0 && lessonsForDate.length > 0 ? (
+          {isLoadingDetails ? (
+            // Loading state for detailed data
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+              <p className="text-gray-300 text-sm">
+                Loading workout details...
+              </p>
+            </div>
+          ) : detailsError ? (
+            // Error state
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <AlertCircle className="h-8 w-8 text-red-400" />
+              <p className="text-red-300 text-sm">
+                Failed to load workout details
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.reload()}
+                className="text-xs"
+              >
+                Retry
+              </Button>
+            </div>
+          ) : tabs.length === 0 && lessonsForDate.length > 0 ? (
             // Show lessons when there are no programs/routines but there are lessons
             <div className="space-y-4">
               <h3 className="text-xl font-bold text-white mb-4">
@@ -518,9 +564,23 @@ export default function ClientProgramDayModal({
             (() => {
               // Find the specific program for this tab
               const programId = currentTab.id.replace("program-", "");
+              console.log("ClientProgramDayModal - looking for program:", {
+                currentTabId: currentTab.id,
+                extractedProgramId: programId,
+                programs: programs.map(p => ({
+                  programId: p.programId,
+                  programTitle: p.programTitle,
+                })),
+              });
               const program = programs.find(p => p.programId === programId);
 
-              if (!program) return <div>Program not found</div>;
+              if (!program) {
+                console.log(
+                  "ClientProgramDayModal - program not found for programId:",
+                  programId
+                );
+                return <div>Program not found</div>;
+              }
 
               return program.isRestDay ? (
                 <RestDayContent programTitle={program.programTitle} />
