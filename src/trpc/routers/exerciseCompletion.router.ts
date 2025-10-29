@@ -50,8 +50,8 @@ export const exerciseCompletionRouter = router({
           clientId_exerciseId_programDrillId_date: {
             clientId: client.id,
             exerciseId: input.exerciseId,
-            programDrillId: input.programDrillId || null,
-            date: input.date || null,
+            programDrillId: input.programDrillId || "",
+            date: input.date || "",
           },
         },
         update: {
@@ -61,10 +61,10 @@ export const exerciseCompletionRouter = router({
         create: {
           clientId: client.id,
           exerciseId: input.exerciseId,
-          programDrillId: input.programDrillId || null,
+          programDrillId: input.programDrillId || "",
           completed: input.completed,
           completedAt: input.completed ? new Date() : null,
-          date: input.date || null,
+          date: input.date || "",
         },
       });
 

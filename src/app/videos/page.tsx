@@ -2,12 +2,12 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@kinde-oss/kinde-auth-nextjs";
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { trpc } from "@/app/_trpc/client";
 import VideosPage from "@/components/VideosPage";
 
 export default function Videos() {
-  const { user, isLoaded } = useUser();
+  const { user, isAuthenticated, isLoading: isLoaded } = useKindeBrowserClient();
   const router = useRouter();
 
   // Get user profile from database
@@ -19,7 +19,7 @@ export default function Videos() {
   useEffect(() => {
     if (!isLoaded || userLoading) return;
 
-    if (!user?.id) {
+    if (!isAuthenticated || !user?.id) {
       router.push("/auth-callback?origin=videos");
       return;
     }
