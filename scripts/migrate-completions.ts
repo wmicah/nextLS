@@ -59,10 +59,11 @@ async function migrateCompletions() {
         for (const exercise of drill.routine.exercises) {
           await prisma.exerciseCompletion.upsert({
             where: {
-              clientId_exerciseId_programDrillId: {
+              clientId_exerciseId_programDrillId_date: {
                 clientId,
                 exerciseId: exercise.id,
                 programDrillId: drillId,
+                date: "",
               },
             },
             update: {
@@ -75,6 +76,7 @@ async function migrateCompletions() {
               programDrillId: drillId,
               completed: true,
               completedAt,
+              date: "",
             },
           });
         }
@@ -87,10 +89,11 @@ async function migrateCompletions() {
 
         await prisma.exerciseCompletion.upsert({
           where: {
-            clientId_exerciseId_programDrillId: {
+            clientId_exerciseId_programDrillId_date: {
               clientId,
               exerciseId: drillId,
               programDrillId: standaloneDrillId,
+              date: "",
             },
           },
           update: {
@@ -103,6 +106,7 @@ async function migrateCompletions() {
             programDrillId: standaloneDrillId,
             completed: true,
             completedAt,
+            date: "",
           },
         });
       }
@@ -119,10 +123,11 @@ async function migrateCompletions() {
 
       await prisma.exerciseCompletion.upsert({
         where: {
-          clientId_exerciseId_programDrillId: {
+          clientId_exerciseId_programDrillId_date: {
             clientId,
             exerciseId,
             programDrillId: standaloneRoutineId,
+            date: "",
           },
         },
         update: {
@@ -135,6 +140,7 @@ async function migrateCompletions() {
           programDrillId: standaloneRoutineId,
           completed: true,
           completedAt,
+          date: "",
         },
       });
     }
