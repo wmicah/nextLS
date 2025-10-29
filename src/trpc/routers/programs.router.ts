@@ -635,38 +635,150 @@ export const programsRouter = router({
                 console.log("Drill data:", drill);
                 console.log("Drill routineId:", drill.routineId);
                 console.log("Drill type:", drill.type);
-                await tx.programDrill.create({
-                  data: {
-                    dayId: newDay.id,
-                    order: drillIndex + 1, // Use proper order
-                    title: drill.title,
-                    description: drill.description || "",
-                    duration: drill.duration || "",
-                    videoUrl: drill.videoUrl || "",
-                    notes: drill.notes || "",
-                    sets: drill.sets,
-                    reps: drill.reps,
-                    tempo: drill.tempo || "",
-                    type: drill.type || "exercise",
-                    videoId: drill.videoId,
-                    videoTitle: drill.videoTitle,
-                    videoThumbnail: drill.videoThumbnail,
-                    routineId: drill.routineId,
-                    supersetId: drill.supersetId,
-                    supersetOrder: drill.supersetOrder,
-                    // Coach Instructions
-                    coachInstructionsWhatToDo: (drill as any).coachInstructions
-                      ?.whatToDo,
-                    coachInstructionsHowToDoIt: (drill as any).coachInstructions
-                      ?.howToDoIt,
-                    coachInstructionsKeyPoints:
-                      (drill as any).coachInstructions?.keyPoints || [],
-                    coachInstructionsCommonMistakes:
-                      (drill as any).coachInstructions?.commonMistakes || [],
-                    coachInstructionsEquipment: (drill as any).coachInstructions
-                      ?.equipment,
-                  },
-                });
+
+                // Check if this drill has a routine - if so, expand it into individual exercises
+                if (drill.routineId) {
+                  console.log("=== EXPANDING ROUTINE DRILL ===");
+
+                  // Fetch the routine and its exercises
+                  const routine = await tx.routine.findUnique({
+                    where: { id: drill.routineId },
+                    include: { exercises: true },
+                  });
+
+                  if (routine && routine.exercises.length > 0) {
+                    console.log(
+                      `=== Creating ${routine.exercises.length} individual exercises for routine: ${routine.name} ===`
+                    );
+
+                    // Create individual drill records for each exercise in the routine
+                    for (
+                      let exerciseIndex = 0;
+                      exerciseIndex < routine.exercises.length;
+                      exerciseIndex++
+                    ) {
+                      const exercise = routine.exercises[exerciseIndex];
+                      // Generate a unique ID for each exercise drill
+                      const exerciseDrillId = `drill-${Date.now()}-${Math.random()
+                        .toString(36)
+                        .substr(2, 9)}`;
+
+                      console.log(
+                        `Creating individual exercise drill: ${exerciseDrillId} for exercise: ${exercise.title}`
+                      );
+
+                      await tx.programDrill.create({
+                        data: {
+                          id: exerciseDrillId, // Use a unique ID for each exercise
+                          dayId: newDay.id,
+                          order: drillIndex + 1, // Keep the original drill order
+                          title: exercise.title,
+                          description:
+                            exercise.description || drill.description || "",
+                          duration: exercise.duration || drill.duration || "",
+                          videoUrl: exercise.videoUrl || drill.videoUrl || "",
+                          notes: exercise.notes || drill.notes || "",
+                          sets: exercise.sets || drill.sets,
+                          reps: exercise.reps || drill.reps,
+                          tempo: exercise.tempo || drill.tempo || "",
+                          type: "exercise", // Regular exercise type
+                          videoId: exercise.videoId || drill.videoId,
+                          videoTitle: exercise.videoTitle || drill.videoTitle,
+                          videoThumbnail:
+                            exercise.videoThumbnail || drill.videoThumbnail,
+                          routineId: drill.routineId, // Keep reference to original routine
+                          supersetId: drill.supersetId,
+                          supersetOrder: drill.supersetOrder,
+                          // Coach Instructions from the original drill
+                          coachInstructionsWhatToDo: (drill as any)
+                            .coachInstructions?.whatToDo,
+                          coachInstructionsHowToDoIt: (drill as any)
+                            .coachInstructions?.howToDoIt,
+                          coachInstructionsKeyPoints:
+                            (drill as any).coachInstructions?.keyPoints || [],
+                          coachInstructionsCommonMistakes:
+                            (drill as any).coachInstructions?.commonMistakes ||
+                            [],
+                          coachInstructionsEquipment: (drill as any)
+                            .coachInstructions?.equipment,
+                        },
+                      });
+                    }
+                  } else {
+                    console.log(
+                      "=== ROUTINE NOT FOUND OR EMPTY, CREATING SINGLE DRILL ==="
+                    );
+                    // Fallback: create a single drill if routine not found
+                    await tx.programDrill.create({
+                      data: {
+                        dayId: newDay.id,
+                        order: drillIndex + 1,
+                        title: drill.title,
+                        description: drill.description || "",
+                        duration: drill.duration || "",
+                        videoUrl: drill.videoUrl || "",
+                        notes: drill.notes || "",
+                        sets: drill.sets,
+                        reps: drill.reps,
+                        tempo: drill.tempo || "",
+                        type: drill.type || "exercise",
+                        videoId: drill.videoId,
+                        videoTitle: drill.videoTitle,
+                        videoThumbnail: drill.videoThumbnail,
+                        routineId: drill.routineId,
+                        supersetId: drill.supersetId,
+                        supersetOrder: drill.supersetOrder,
+                        // Coach Instructions
+                        coachInstructionsWhatToDo: (drill as any)
+                          .coachInstructions?.whatToDo,
+                        coachInstructionsHowToDoIt: (drill as any)
+                          .coachInstructions?.howToDoIt,
+                        coachInstructionsKeyPoints:
+                          (drill as any).coachInstructions?.keyPoints || [],
+                        coachInstructionsCommonMistakes:
+                          (drill as any).coachInstructions?.commonMistakes ||
+                          [],
+                        coachInstructionsEquipment: (drill as any)
+                          .coachInstructions?.equipment,
+                      },
+                    });
+                  }
+                } else {
+                  // Regular drill - create as before
+                  console.log("=== CREATING REGULAR DRILL ===");
+                  await tx.programDrill.create({
+                    data: {
+                      dayId: newDay.id,
+                      order: drillIndex + 1,
+                      title: drill.title,
+                      description: drill.description || "",
+                      duration: drill.duration || "",
+                      videoUrl: drill.videoUrl || "",
+                      notes: drill.notes || "",
+                      sets: drill.sets,
+                      reps: drill.reps,
+                      tempo: drill.tempo || "",
+                      type: drill.type || "exercise",
+                      videoId: drill.videoId,
+                      videoTitle: drill.videoTitle,
+                      videoThumbnail: drill.videoThumbnail,
+                      routineId: drill.routineId,
+                      supersetId: drill.supersetId,
+                      supersetOrder: drill.supersetOrder,
+                      // Coach Instructions
+                      coachInstructionsWhatToDo: (drill as any)
+                        .coachInstructions?.whatToDo,
+                      coachInstructionsHowToDoIt: (drill as any)
+                        .coachInstructions?.howToDoIt,
+                      coachInstructionsKeyPoints:
+                        (drill as any).coachInstructions?.keyPoints || [],
+                      coachInstructionsCommonMistakes:
+                        (drill as any).coachInstructions?.commonMistakes || [],
+                      coachInstructionsEquipment: (drill as any)
+                        .coachInstructions?.equipment,
+                    },
+                  });
+                }
               }
             }
           }

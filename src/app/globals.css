@@ -256,3 +256,16 @@
     transform: scale(1) rotate(0deg);
   }
 }
+
+/* Disable modal animations for performance but allow loading spinners */
+.no-animations {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+.no-animations *:not(.animate-spin) {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}

@@ -89,12 +89,29 @@ export default function DayDetailsModal({
 
   const handleRemoveProgram = (program: any, action: "entire" | "day") => {
     if (onRemoveProgram && !isProgramFinished(program)) {
-      const programData = {
-        assignmentId: program.assignment.id,
-        programId: program.assignment.programId,
-        programTitle: program.title,
-        dayDate: selectedDate.toISOString().split("T")[0],
-      };
+      // Handle different program types
+      let programData;
+
+      if (program.isTemporary) {
+        // For temporary programs, use replacementId as assignmentId
+        programData = {
+          assignmentId: program.replacementId,
+          programId: program.id, // Use the temporary program ID
+          programTitle: program.title,
+          dayDate: selectedDate.toISOString().split("T")[0],
+          isTemporary: true,
+          replacementId: program.replacementId,
+        };
+      } else {
+        // For regular programs, use the assignment data
+        programData = {
+          assignmentId: program.assignment.id,
+          programId: program.assignment.programId,
+          programTitle: program.title,
+          dayDate: selectedDate.toISOString().split("T")[0],
+        };
+      }
+
       onRemoveProgram(programData, action);
     }
   };

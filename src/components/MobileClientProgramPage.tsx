@@ -69,6 +69,7 @@ interface Drill {
 
 interface ProgramData {
   programId: string;
+  programAssignmentId: string;
   programTitle: string;
   programDescription?: string;
   drills: Drill[];
@@ -130,8 +131,8 @@ export default function MobileClientProgramPage() {
   } = trpc.clientRouter.getAssignedProgram.useQuery();
 
   // Mutations for day modal functionality
-  const markDrillCompleteMutation =
-    trpc.clientRouter.markDrillComplete.useMutation({
+  const markProgramDrillCompleteMutation =
+    trpc.clientRouter.markProgramDrillComplete.useMutation({
       onSuccess: data => {
         console.log("✅ markDrillComplete SUCCESS:", data);
       },
@@ -142,6 +143,12 @@ export default function MobileClientProgramPage() {
         console.error("❌ Full error:", error);
       },
     });
+
+  const markDrillCompleteMutation =
+    trpc.clientRouter.markDrillComplete.useMutation({
+      // For routine exercises within programs
+    });
+
   const markRoutineExerciseCompleteMutation =
     trpc.clientRouter.markRoutineExerciseComplete.useMutation({
       onSuccess: data => {
@@ -530,7 +537,8 @@ export default function MobileClientProgramPage() {
   // Handler functions for day modal - exact replica of desktop version
   const handleMarkDrillComplete = async (
     drillId: string,
-    completed: boolean
+    completed: boolean,
+    programAssignmentId?: string
   ) => {
     console.log("🎯 MOBILE handleMarkDrillComplete called with:", {
       drillId,
@@ -559,14 +567,21 @@ export default function MobileClientProgramPage() {
 
     // Then perform the actual mutation
     try {
-      console.log("🎯 MOBILE Calling markDrillCompleteMutation with:", {
+      console.log("🎯 MOBILE Calling markProgramDrillCompleteMutation with:", {
         drillId,
         completed,
       });
 
       // Add timeout to catch hanging mutations
-      const mutationPromise = markDrillCompleteMutation.mutateAsync({
+      if (!programAssignmentId) {
+        throw new Error(
+          "Program assignment ID is required for drill completion"
+        );
+      }
+
+      const mutationPromise = markProgramDrillCompleteMutation.mutateAsync({
         drillId: drillId,
+        programAssignmentId: programAssignmentId,
         completed,
       });
 
@@ -578,7 +593,9 @@ export default function MobileClientProgramPage() {
       );
 
       await Promise.race([mutationPromise, timeoutPromise]);
-      console.log("🎯 MOBILE markDrillCompleteMutation completed successfully");
+      console.log(
+        "🎯 MOBILE markProgramDrillCompleteMutation completed successfully"
+      );
 
       // Subtle refetch to ensure UI stays in sync - with delay to let server process
       console.log("🎯 MOBILE Refetching calendar data...");
@@ -588,7 +605,7 @@ export default function MobileClientProgramPage() {
       }, 1000);
     } catch (error) {
       console.error(
-        "🎯 MOBILE ERROR: markDrillCompleteMutation failed:",
+        "🎯 MOBILE ERROR: markProgramDrillCompleteMutation failed:",
         error
       );
       // Revert optimistic update on error

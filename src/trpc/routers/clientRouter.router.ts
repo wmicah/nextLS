@@ -623,6 +623,46 @@ export const clientRouterRouter = router({
           where: { clientId: client.id },
         });
 
+        // Get all program drill completions for routine exercises within programs
+        const programDrillCompletions =
+          await db.programDrillCompletion.findMany({
+            where: { clientId: client.id },
+          });
+
+        // Get all routine exercise completions
+        const routineExerciseCompletions =
+          await db.routineExerciseCompletion.findMany({
+            where: { clientId: client.id },
+          });
+
+        console.log("🎯 Retrieved completions:", {
+          drillCompletions: allCompletions.length,
+          programDrillCompletions: programDrillCompletions.length,
+          routineExerciseCompletions: routineExerciseCompletions.length,
+          routineExerciseCompletionsData: routineExerciseCompletions.map(c => ({
+            exerciseId: c.exerciseId,
+            routineAssignmentId: c.routineAssignmentId,
+            completedAt: c.completedAt,
+          })),
+        });
+
+        // Combine all completion types
+        const allCompletionsCombined = [
+          ...allCompletions,
+          ...programDrillCompletions.map(completion => ({
+            drillId: completion.drillId,
+            clientId: completion.clientId,
+            completedAt: completion.completedAt,
+          })),
+          // Add routine exercise completions with a special format for lookup
+          ...routineExerciseCompletions.map(completion => ({
+            drillId: `routine-${completion.exerciseId}`, // Special format for routine exercises
+            clientId: completion.clientId,
+            completedAt: completion.completedAt,
+            exerciseId: completion.exerciseId, // Keep original exercise ID for reference
+          })),
+        ];
+
         // Process all assigned programs
         for (const assignment of client.programAssignments) {
           const program = assignment.program;
@@ -716,7 +756,7 @@ export const clientRouterRouter = router({
                 const expandedDrills = [];
                 for (const drill of day.drills) {
                   // Find completion status for this drill
-                  const completion = allCompletions.find(
+                  const completion = allCompletionsCombined.find(
                     (c: any) => c.drillId === drill.id
                   );
 
@@ -739,9 +779,23 @@ export const clientRouterRouter = router({
                     if (routine) {
                       // Add each exercise from the routine as a separate drill
                       for (const exercise of routine.exercises) {
-                        // For routine exercises within programs, use the program drill completion status
-                        // The completion is stored with the program drill ID, not the individual exercise ID
-                        const isCompleted = !!completion;
+                        // For routine exercises within programs, use the original drill completion status
+                        const exerciseId = `${drill.id}-routine-${exercise.id}`;
+                        // Check if the original drill is completed by looking in the completions
+                        const drillCompletion = allCompletionsCombined.find(
+                          (c: any) => c.drillId === drill.id
+                        );
+                        const isCompleted = !!drillCompletion;
+
+                        console.log(
+                          "🎯 Using original drill completion for routine exercise:",
+                          {
+                            exerciseId,
+                            originalDrillId: drill.id,
+                            isCompleted: isCompleted,
+                            drillCompletion: drillCompletion,
+                          }
+                        );
                         expandedDrills.push({
                           id: `${drill.id}-routine-${exercise.id}`, // Unique ID for tracking
                           title: exercise.title,
@@ -750,7 +804,7 @@ export const clientRouterRouter = router({
                           tempo: exercise.tempo,
                           tags: [], // Routine exercises don't have tags
                           videoUrl: exercise.videoUrl,
-                          completed: isCompleted, // Use routine completion status
+                          completed: isCompleted, // Use original drill completion status
                           description: exercise.description,
                           notes: exercise.notes,
                           duration: exercise.duration,
@@ -841,6 +895,7 @@ export const clientRouterRouter = router({
                 // Create program data for this day
                 const programData = {
                   programId: program.id,
+                  programAssignmentId: assignment.id,
                   programTitle: program.title,
                   programDescription: program.description,
                   drills,
@@ -1079,8 +1134,8 @@ export const clientRouterRouter = router({
       // Include the entire end date
       endDateTime.setHours(23, 59, 59, 999);
 
-      // Get all drill completions for this client
-      const completions = await db.drillCompletion.findMany({
+      // Get all program drill completions for this client
+      const programDrillCompletions = await db.programDrillCompletion.findMany({
         where: { clientId: client.id },
       });
 
@@ -1150,8 +1205,10 @@ export const clientRouterRouter = router({
               // Process drills and expand routines
               const expandedDrills = [];
               for (const drill of day.drills) {
-                const completion = completions.find(
-                  (c: any) => c.drillId === drill.id
+                const completion = programDrillCompletions.find(
+                  (c: any) =>
+                    c.drillId === drill.id &&
+                    c.programAssignmentId === assignment.id
                 );
 
                 if (drill.routineId) {
@@ -1176,7 +1233,7 @@ export const clientRouterRouter = router({
                         tempo: exercise.tempo,
                         tags: [], // Routine exercises don't have tags
                         videoUrl: exercise.videoUrl,
-                        completed: !!completion, // Use routine completion status
+                        completed: !!completion, // Use program drill completion status
                         description: exercise.description,
                         notes: exercise.notes,
                         duration: exercise.duration,
@@ -1438,19 +1495,28 @@ export const clientRouterRouter = router({
       });
 
       if (isRoutineExercise) {
-        // For routine exercises, we need to find the original drill ID
-        const originalDrillId = input.drillId.split("-routine-")[0];
+        // For routine exercises within programs, these are now individual drill records
+        // The drill ID format is "drillId-routine-exerciseId" and this ID exists in the database
+        console.log(
+          "🎯 Handling routine exercise as individual drill:",
+          input.drillId
+        );
 
-        // Verify the original drill exists and belongs to the client's program
-        const drill = await db.programDrill.findFirst({
+        // Find the program assignment that contains this drill
+        const allProgramAssignments = await db.programAssignment.findMany({
           where: {
-            id: originalDrillId,
-            day: {
-              week: {
-                program: {
-                  assignments: {
-                    some: {
-                      clientId: client.id,
+            clientId: client.id,
+            completedAt: null,
+          },
+          include: {
+            program: {
+              include: {
+                weeks: {
+                  include: {
+                    days: {
+                      include: {
+                        drills: true,
+                      },
                     },
                   },
                 },
@@ -1459,11 +1525,66 @@ export const clientRouterRouter = router({
           },
         });
 
-        if (!drill) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Drill not found or not assigned to client",
-          });
+        // Find the program assignment that contains this drill
+        let programAssignment = null;
+        console.log("🎯 Looking for drill ID:", input.drillId);
+        console.log(
+          "🎯 Available program assignments:",
+          allProgramAssignments.length
+        );
+
+        for (const assignment of allProgramAssignments) {
+          console.log("🎯 Checking assignment:", assignment.id);
+          const hasDrill = assignment.program.weeks.some(week =>
+            week.days.some(day =>
+              day.drills.some(drill => {
+                console.log(
+                  "🎯 Checking drill:",
+                  drill.id,
+                  "against:",
+                  input.drillId
+                );
+                return drill.id === input.drillId;
+              })
+            )
+          );
+          if (hasDrill) {
+            programAssignment = assignment;
+            console.log("🎯 Found matching program assignment:", assignment.id);
+            break;
+          }
+        }
+
+        if (!programAssignment) {
+          // Fallback: try to find the original drill ID for existing programs
+          console.log(
+            "🎯 Drill not found, trying fallback for existing programs"
+          );
+          const originalDrillId = input.drillId.split("-routine-")[0];
+          console.log("🎯 Looking for original drill ID:", originalDrillId);
+
+          for (const assignment of allProgramAssignments) {
+            const hasDrill = assignment.program.weeks.some(week =>
+              week.days.some(day =>
+                day.drills.some(drill => drill.id === originalDrillId)
+              )
+            );
+            if (hasDrill) {
+              programAssignment = assignment;
+              console.log(
+                "🎯 Found matching program assignment for original drill:",
+                assignment.id
+              );
+              break;
+            }
+          }
+
+          if (!programAssignment) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Program assignment not found for this drill",
+            });
+          }
         }
 
         // Check if the completion date is valid (not in the future)
@@ -1477,32 +1598,53 @@ export const clientRouterRouter = router({
           });
         }
 
+        // Determine which drill ID to use for completion records
+        const drillIdForCompletion =
+          input.drillId.includes("-routine-") &&
+          !programAssignment.program.weeks.some(week =>
+            week.days.some(day =>
+              day.drills.some(drill => drill.id === input.drillId)
+            )
+          )
+            ? input.drillId.split("-routine-")[0] // Use original drill ID for existing programs
+            : input.drillId; // Use full drill ID for new programs
+
+        console.log("🎯 Using drill ID for completion:", drillIdForCompletion);
+
         if (input.completed) {
-          // Mark drill as complete (using the original drill ID)
-          console.log(
-            "✅ Creating drill completion for routine exercise:",
-            originalDrillId
-          );
-          await db.drillCompletion.create({
-            data: {
-              drillId: originalDrillId,
-              clientId: client.id,
-            },
-          });
-          console.log("✅ Drill completion created successfully");
-        } else {
-          // Mark drill as incomplete (remove completion record)
-          console.log(
-            "❌ Removing drill completion for routine exercise:",
-            originalDrillId
-          );
-          await db.drillCompletion.deleteMany({
+          // Use upsert to handle both create and update cases
+          await db.programDrillCompletion.upsert({
             where: {
-              drillId: originalDrillId,
+              drillId_programAssignmentId: {
+                drillId: drillIdForCompletion,
+                programAssignmentId: programAssignment.id,
+              },
+            },
+            update: {
+              completedAt: new Date(),
+            },
+            create: {
+              drillId: drillIdForCompletion,
+              programAssignmentId: programAssignment.id,
+              clientId: client.id,
+              completedAt: new Date(),
+            },
+          });
+          console.log(
+            "✅ Program drill completion upserted successfully for routine exercise"
+          );
+        } else {
+          // Remove program drill completion
+          await db.programDrillCompletion.deleteMany({
+            where: {
+              drillId: drillIdForCompletion,
+              programAssignmentId: programAssignment.id,
               clientId: client.id,
             },
           });
-          console.log("✅ Drill completion removed successfully");
+          console.log(
+            "✅ Program drill completion removed successfully for routine exercise"
+          );
         }
       } else if (isRoutineExerciseInProgram) {
         // This is a standalone routine exercise (format: "assignmentId-exerciseId")
