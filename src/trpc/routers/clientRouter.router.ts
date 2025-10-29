@@ -493,6 +493,310 @@ export const clientRouterRouter = router({
     return assignments;
   }),
 
+  // Lightweight calendar query - only loads basic day info
+  getProgramCalendarLight: publicProcedure
+    .input(
+      z.object({
+        year: z.number(),
+        month: z.number(),
+        viewMode: z.enum(["month", "week"]),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        // Get client's assigned programs with minimal data
+        const client = await db.client.findFirst({
+          where: { userId: user.id },
+          include: {
+            programAssignments: {
+              include: {
+                program: {
+                  include: {
+                    weeks: {
+                      include: {
+                        days: {
+                          select: {
+                            id: true,
+                            title: true,
+                            description: true,
+                            isRestDay: true,
+                            // Only get basic drill info for counting
+                            drills: {
+                              select: {
+                                id: true,
+                                title: true,
+                                type: true,
+                                routineId: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                replacements: {
+                  include: {
+                    program: {
+                      include: {
+                        weeks: {
+                          include: {
+                            days: {
+                              select: {
+                                id: true,
+                                title: true,
+                                description: true,
+                                isRestDay: true,
+                                drills: {
+                                  select: {
+                                    id: true,
+                                    title: true,
+                                    type: true,
+                                    routineId: true,
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            routineAssignments: {
+              include: {
+                routine: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    exercises: {
+                      select: {
+                        id: true,
+                        title: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found",
+          });
+        }
+
+        // Get exercise completions for counting
+        const completions = await db.exerciseCompletion.findMany({
+          where: { clientId: client.id },
+          select: {
+            exerciseId: true,
+            programDrillId: true,
+            completed: true,
+            date: true,
+          },
+        });
+
+        // Create completion map for quick lookup
+        const completionMap = new Map();
+        completions.forEach(completion => {
+          let key: string;
+          const dateSuffix = completion.date ? `-${completion.date}` : "";
+          if (completion.programDrillId === "standalone-routine") {
+            key = `standalone-${completion.exerciseId}${dateSuffix}`;
+          } else if (completion.programDrillId === "standalone-drill") {
+            key = `standalone-${completion.exerciseId}${dateSuffix}`;
+          } else {
+            key = `${completion.programDrillId || "standalone"}-${
+              completion.exerciseId
+            }${dateSuffix}`;
+          }
+          completionMap.set(key, completion.completed);
+        });
+
+        console.log("🔍 getProgramCalendarLight - Completion map:", {
+          totalCompletions: completions.length,
+          completionKeys: Array.from(completionMap.keys()),
+          dateString,
+        });
+
+        // Generate calendar data with minimal information
+        const calendarData: Record<string, any> = {};
+        const startDate = new Date(input.year, input.month - 1, 1);
+        const endDate = new Date(input.year, input.month, 0);
+
+        for (
+          let d = new Date(startDate);
+          d <= endDate;
+          d.setDate(d.getDate() + 1)
+        ) {
+          const dateString = d.toISOString().split("T")[0];
+          const dayData: any = {
+            date: dateString,
+            programs: [],
+            isRestDay: true,
+            totalDrills: 0,
+            completedDrills: 0,
+            expectedTime: 0,
+          };
+
+          // Check for program assignments on this date
+          for (const assignment of (client as any).programAssignments) {
+            const program =
+              assignment.replacements.find(
+                (r: any) =>
+                  new Date(r.startDate) <= d && new Date(r.endDate) >= d
+              )?.program || assignment.program;
+
+            if (program) {
+              const weekNumber =
+                Math.floor(
+                  (d.getTime() - new Date(assignment.startDate).getTime()) /
+                    (7 * 24 * 60 * 60 * 1000)
+                ) + 1;
+              const week = program.weeks.find(
+                (w: any) => w.weekNumber === weekNumber
+              );
+
+              if (week) {
+                const day = week.days.find((day: any) => {
+                  const dayOfWeek = d.getDay();
+                  const dayNames = [
+                    "Sunday",
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                  ];
+                  return dayNames[dayOfWeek] === day.title;
+                });
+
+                if (day) {
+                  dayData.isRestDay = day.isRestDay;
+                  dayData.expectedTime = 0; // Default value since expectedTime is not in the select
+
+                  // Count drills and completions
+                  let totalDrills = 0;
+                  let completedDrills = 0;
+
+                  for (const drill of day.drills) {
+                    if (drill.type === "routine" && drill.routineId) {
+                      // Count routine exercises
+                      const routine = (client as any).routineAssignments.find(
+                        (ra: any) => ra.routineId === drill.routineId
+                      )?.routine;
+                      if (routine) {
+                        totalDrills += routine.exercises.length;
+                        // Count completed routine exercises
+                        routine.exercises.forEach((exercise: any) => {
+                          const key = `${drill.id}-${exercise.id}-${dateString}`;
+                          const isCompleted = completionMap.get(key);
+                          if (isCompleted) completedDrills++;
+                        });
+                      }
+                    } else {
+                      // Regular drill
+                      totalDrills++;
+                      const key = `standalone-${drill.id}-${dateString}`;
+                      if (completionMap.get(key)) completedDrills++;
+                    }
+                  }
+
+                  dayData.totalDrills = totalDrills;
+                  dayData.completedDrills = completedDrills;
+
+                  console.log(
+                    "🔍 getProgramCalendarLight - Day completion counts:",
+                    {
+                      date: dateString,
+                      dayName: day.title,
+                      totalDrills,
+                      completedDrills,
+                      isRestDay: day.isRestDay,
+                    }
+                  );
+
+                  dayData.programs.push({
+                    id: program.id,
+                    title: program.title,
+                    programTitle: program.title, // Add programTitle for calendar display
+                    isRestDay: day.isRestDay,
+                    totalDrills,
+                    completedDrills,
+                  });
+                }
+              }
+            }
+          }
+
+          // Check for routine assignments on this date
+          for (const routineAssignment of (client as any).routineAssignments) {
+            if (
+              new Date(routineAssignment.startDate) <= d &&
+              new Date(routineAssignment.endDate) >= d
+            ) {
+              const routine = routineAssignment.routine;
+              const totalExercises = routine.exercises.length;
+              let completedExercises = 0;
+
+              routine.exercises.forEach((exercise: any) => {
+                const key = `standalone-${exercise.id}-${dateString}`;
+                if (completionMap.get(key)) completedExercises++;
+              });
+
+              if (totalExercises > 0) {
+                dayData.programs.push({
+                  id: `routine-${routine.id}`,
+                  title: routine.name,
+                  programTitle: routine.name, // Add programTitle for calendar display
+                  isRestDay: false,
+                  totalDrills: totalExercises,
+                  completedDrills: completedExercises,
+                });
+                dayData.totalDrills += totalExercises;
+                dayData.completedDrills += completedExercises;
+                dayData.isRestDay = false;
+              }
+            }
+          }
+
+          calendarData[dateString] = dayData;
+        }
+
+        return calendarData;
+      } catch (error) {
+        console.error("Error in getProgramCalendarLight:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to load program calendar",
+        });
+      }
+    }),
+
   getProgramCalendar: publicProcedure
     .input(
       z.object({
@@ -1018,6 +1322,569 @@ export const clientRouterRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to load program calendar",
+        });
+      }
+    }),
+
+  // Detailed day query - loads full drill/exercise data for a specific date
+  getProgramDayDetails: publicProcedure
+    .input(
+      z.object({
+        date: z.string(), // YYYY-MM-DD format
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
+        if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        // Verify user is a CLIENT
+        const dbUser = await db.user.findFirst({
+          where: { id: user.id, role: "CLIENT" },
+        });
+
+        if (!dbUser) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only clients can access this endpoint",
+          });
+        }
+
+        const targetDate = new Date(input.date);
+        const dayOfWeek = targetDate.getDay();
+        const dayNames = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ];
+        const dayName = dayNames[dayOfWeek];
+
+        // Get client's assigned programs with full drill data
+        const client = await db.client.findFirst({
+          where: { userId: user.id },
+          include: {
+            programAssignments: {
+              include: {
+                program: {
+                  include: {
+                    weeks: {
+                      include: {
+                        days: {
+                          include: {
+                            drills: {
+                              select: {
+                                id: true,
+                                order: true,
+                                title: true,
+                                description: true,
+                                duration: true,
+                                videoUrl: true,
+                                notes: true,
+                                sets: true,
+                                reps: true,
+                                tempo: true,
+                                type: true,
+                                routineId: true,
+                                supersetId: true,
+                                supersetOrder: true,
+                                supersetDescription: true,
+                                supersetInstructions: true,
+                                supersetNotes: true,
+                                videoId: true,
+                                videoThumbnail: true,
+                                videoTitle: true,
+                                // Coach Instructions
+                                coachInstructionsWhatToDo: true,
+                                coachInstructionsHowToDoIt: true,
+                                coachInstructionsKeyPoints: true,
+                                coachInstructionsCommonMistakes: true,
+                                coachInstructionsEasier: true,
+                                coachInstructionsHarder: true,
+                                coachInstructionsEquipment: true,
+                                coachInstructionsSetup: true,
+                                // Include routine with exercises for proper expansion
+                                routine: {
+                                  select: {
+                                    id: true,
+                                    name: true,
+                                    description: true,
+                                    exercises: {
+                                      select: {
+                                        id: true,
+                                        title: true,
+                                        description: true,
+                                        sets: true,
+                                        reps: true,
+                                        tempo: true,
+                                        type: true,
+                                        videoUrl: true,
+                                        videoId: true,
+                                        videoThumbnail: true,
+                                        videoTitle: true,
+                                        order: true,
+                                      },
+                                      orderBy: {
+                                        order: "asc",
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                replacements: {
+                  include: {
+                    program: {
+                      include: {
+                        weeks: {
+                          include: {
+                            days: {
+                              where: {
+                                title: {
+                                  equals: dayName,
+                                  mode: "insensitive",
+                                },
+                              },
+                              include: {
+                                drills: {
+                                  select: {
+                                    id: true,
+                                    order: true,
+                                    title: true,
+                                    description: true,
+                                    duration: true,
+                                    videoUrl: true,
+                                    notes: true,
+                                    sets: true,
+                                    reps: true,
+                                    tempo: true,
+                                    type: true,
+                                    routineId: true,
+                                    supersetId: true,
+                                    supersetOrder: true,
+                                    supersetDescription: true,
+                                    supersetInstructions: true,
+                                    supersetNotes: true,
+                                    videoId: true,
+                                    videoThumbnail: true,
+                                    videoTitle: true,
+                                    // Coach Instructions
+                                    coachInstructionsWhatToDo: true,
+                                    coachInstructionsHowToDoIt: true,
+                                    coachInstructionsKeyPoints: true,
+                                    coachInstructionsCommonMistakes: true,
+                                    coachInstructionsEasier: true,
+                                    coachInstructionsHarder: true,
+                                    coachInstructionsEquipment: true,
+                                    coachInstructionsSetup: true,
+                                    // Include routine with exercises for proper expansion
+                                    routine: {
+                                      select: {
+                                        id: true,
+                                        name: true,
+                                        description: true,
+                                        exercises: {
+                                          select: {
+                                            id: true,
+                                            title: true,
+                                            description: true,
+                                            sets: true,
+                                            reps: true,
+                                            tempo: true,
+                                            type: true,
+                                            videoUrl: true,
+                                            videoId: true,
+                                            videoThumbnail: true,
+                                            videoTitle: true,
+                                            order: true,
+                                          },
+                                          orderBy: {
+                                            order: "asc",
+                                          },
+                                        },
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            routineAssignments: {
+              include: {
+                routine: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    exercises: {
+                      select: {
+                        id: true,
+                        title: true,
+                        description: true,
+                        sets: true,
+                        reps: true,
+                        tempo: true,
+                        type: true,
+                        videoUrl: true,
+                        videoId: true,
+                        videoThumbnail: true,
+                        videoTitle: true,
+                        order: true,
+                      },
+                      orderBy: {
+                        order: "asc",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!client) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Client not found",
+          });
+        }
+
+        // Get exercise completions for this specific date
+        const completions = await db.exerciseCompletion.findMany({
+          where: {
+            clientId: client.id,
+            date: input.date,
+          },
+          select: {
+            exerciseId: true,
+            programDrillId: true,
+            completed: true,
+            completedAt: true,
+            date: true,
+          },
+        });
+
+        // Create completion map for quick lookup
+        const completionMap = new Map();
+        completions.forEach(completion => {
+          let key: string;
+          const dateSuffix = completion.date
+            ? `-${completion.date}`
+            : `-${input.date}`;
+          if (completion.programDrillId === "standalone-routine") {
+            key = `standalone-routine-${completion.exerciseId}${dateSuffix}`;
+          } else if (completion.programDrillId === "standalone-drill") {
+            key = `standalone-${completion.exerciseId}${dateSuffix}`;
+          } else {
+            key = `${completion.programDrillId || "standalone"}-${
+              completion.exerciseId
+            }${dateSuffix}`;
+          }
+          completionMap.set(key, {
+            completed: completion.completed,
+            completedAt: completion.completedAt,
+          });
+        });
+
+        // Build detailed day data
+        const dayData: any = {
+          date: input.date,
+          programs: [],
+          isRestDay: true,
+          totalDrills: 0,
+          completedDrills: 0,
+          expectedTime: 0,
+          drills: [], // For backward compatibility
+        };
+
+        console.log(
+          "🔍 getProgramDayDetails - Processing for date:",
+          input.date
+        );
+        console.log(
+          "🔍 getProgramDayDetails - Client program assignments:",
+          (client as any).programAssignments?.length || 0
+        );
+
+        // Process program assignments for this date
+        for (const assignment of (client as any).programAssignments) {
+          const program =
+            assignment.replacements.find(
+              (r: any) =>
+                new Date(r.startDate) <= targetDate &&
+                new Date(r.endDate) >= targetDate
+            )?.program || assignment.program;
+
+          console.log("🔍 getProgramDayDetails - Assignment:", {
+            assignmentId: assignment.id,
+            startDate: assignment.startDate,
+            endDate: assignment.endDate,
+            hasProgram: !!program,
+            programId: program?.id,
+          });
+
+          if (program) {
+            console.log("🔍 getProgramDayDetails - Processing program:", {
+              programId: program.id,
+              programTitle: program.title,
+              weeksCount: program.weeks?.length || 0,
+            });
+
+            const weekNumber =
+              Math.floor(
+                (targetDate.getTime() -
+                  new Date(assignment.startDate).getTime()) /
+                  (7 * 24 * 60 * 60 * 1000)
+              ) + 1;
+            const week = program.weeks.find(
+              (w: any) => w.weekNumber === weekNumber
+            );
+
+            console.log("🔍 getProgramDayDetails - Week finding:", {
+              weekNumber,
+              foundWeek: !!week,
+              weeksAvailable:
+                program.weeks?.map((w: any) => w.weekNumber) || [],
+            });
+
+            if (week) {
+              const day = week.days.find((day: any) => day.title === dayName);
+
+              console.log("🔍 getProgramDayDetails - Day finding:", {
+                dayName,
+                foundDay: !!day,
+                daysAvailable: week.days?.map((d: any) => d.title) || [],
+              });
+
+              if (day) {
+                dayData.isRestDay = day.isRestDay;
+                dayData.expectedTime = 0; // Default value since expectedTime is not in the select
+
+                const programData: any = {
+                  id: program.id,
+                  programId: program.id, // Add programId for modal compatibility
+                  title: program.title,
+                  programTitle: program.title, // Add programTitle for modal compatibility
+                  isRestDay: day.isRestDay,
+                  drills: [],
+                  totalDrills: 0,
+                  completedDrills: 0,
+                };
+
+                // Process drills with full details
+                for (const drill of day.drills) {
+                  if (drill.type === "routine" && drill.routineId) {
+                    // This is a routine drill - expand the routine
+                    const routine = drill.routine;
+                    if (routine) {
+                      for (const exercise of routine.exercises) {
+                        const exerciseId = `${drill.id}-routine-${exercise.id}`;
+                        const completionKey = `${exercise.id}-${drill.id}`;
+                        const completion = completionMap.get(completionKey);
+
+                        const expandedDrill = {
+                          id: exerciseId,
+                          title: exercise.title,
+                          description: exercise.description,
+                          sets: exercise.sets,
+                          reps: exercise.reps,
+                          tempo: exercise.tempo,
+                          type: exercise.type,
+                          videoUrl: exercise.videoUrl,
+                          videoId: exercise.videoId,
+                          videoThumbnail: exercise.videoThumbnail,
+                          videoTitle: exercise.videoTitle,
+                          completed: completion?.completed || false,
+                          completedAt: completion?.completedAt,
+                          // Include drill-level data
+                          drillId: drill.id,
+                          drillTitle: drill.title,
+                          drillDescription: drill.description,
+                          drillNotes: drill.notes,
+                          drillDuration: drill.duration,
+                          // Coach Instructions from drill
+                          coachInstructions: (() => {
+                            const hasInstructions =
+                              drill.coachInstructionsWhatToDo ||
+                              drill.coachInstructionsHowToDoIt ||
+                              drill.coachInstructionsKeyPoints?.length > 0 ||
+                              drill.coachInstructionsCommonMistakes?.length >
+                                0 ||
+                              drill.coachInstructionsEquipment;
+
+                            return hasInstructions
+                              ? {
+                                  whatToDo: drill.coachInstructionsWhatToDo,
+                                  howToDoIt: drill.coachInstructionsHowToDoIt,
+                                  keyPoints:
+                                    drill.coachInstructionsKeyPoints || [],
+                                  commonMistakes:
+                                    drill.coachInstructionsCommonMistakes || [],
+                                  easier: drill.coachInstructionsEasier,
+                                  harder: drill.coachInstructionsHarder,
+                                  equipment: drill.coachInstructionsEquipment,
+                                  setup: drill.coachInstructionsSetup,
+                                }
+                              : null;
+                          })(),
+                        };
+
+                        programData.drills.push(expandedDrill);
+                        dayData.drills.push(expandedDrill);
+                        programData.totalDrills++;
+                        dayData.totalDrills++;
+                        if (expandedDrill.completed) {
+                          programData.completedDrills++;
+                          dayData.completedDrills++;
+                        }
+                      }
+                    }
+                  } else {
+                    // Regular drill
+                    const completionKey = `${drill.id}-standalone`;
+                    const completion = completionMap.get(completionKey);
+
+                    const drillData = {
+                      ...drill,
+                      completed: completion?.completed || false,
+                      completedAt: completion?.completedAt,
+                      // Coach Instructions
+                      coachInstructions: (() => {
+                        const hasInstructions =
+                          drill.coachInstructionsWhatToDo ||
+                          drill.coachInstructionsHowToDoIt ||
+                          drill.coachInstructionsKeyPoints?.length > 0 ||
+                          drill.coachInstructionsCommonMistakes?.length > 0 ||
+                          drill.coachInstructionsEquipment;
+
+                        return hasInstructions
+                          ? {
+                              whatToDo: drill.coachInstructionsWhatToDo,
+                              howToDoIt: drill.coachInstructionsHowToDoIt,
+                              keyPoints: drill.coachInstructionsKeyPoints || [],
+                              commonMistakes:
+                                drill.coachInstructionsCommonMistakes || [],
+                              easier: drill.coachInstructionsEasier,
+                              harder: drill.coachInstructionsHarder,
+                              equipment: drill.coachInstructionsEquipment,
+                              setup: drill.coachInstructionsSetup,
+                            }
+                          : null;
+                      })(),
+                    };
+
+                    programData.drills.push(drillData);
+                    dayData.drills.push(drillData);
+                    programData.totalDrills++;
+                    dayData.totalDrills++;
+                    if (drillData.completed) {
+                      programData.completedDrills++;
+                      dayData.completedDrills++;
+                    }
+                  }
+                }
+
+                if (programData.drills.length > 0) {
+                  dayData.programs.push(programData);
+                }
+              }
+            }
+          }
+        }
+
+        // Process routine assignments for this date
+        for (const routineAssignment of (client as any).routineAssignments) {
+          if (
+            new Date(routineAssignment.startDate) <= targetDate &&
+            new Date(routineAssignment.endDate) >= targetDate
+          ) {
+            const routine = routineAssignment.routine;
+            const routineData: any = {
+              id: `routine-${routine.id}`,
+              programId: `routine-${routine.id}`, // Add programId for modal compatibility
+              title: routine.name,
+              programTitle: routine.name, // Add programTitle for modal compatibility
+              isRestDay: false,
+              drills: [],
+              totalDrills: routine.exercises.length,
+              completedDrills: 0,
+            };
+
+            for (const exercise of routine.exercises) {
+              const exerciseId = `${routineAssignment.id}-${exercise.id}`;
+              const completionKey = `${exercise.id}-standalone-routine`;
+              const completion = completionMap.get(completionKey);
+
+              const exerciseData = {
+                id: exerciseId,
+                title: exercise.title,
+                description: exercise.description,
+                sets: exercise.sets,
+                reps: exercise.reps,
+                tempo: exercise.tempo,
+                type: exercise.type,
+                videoUrl: exercise.videoUrl,
+                videoId: exercise.videoId,
+                videoThumbnail: exercise.videoThumbnail,
+                videoTitle: exercise.videoTitle,
+                completed: completion?.completed || false,
+                completedAt: completion?.completedAt,
+              };
+
+              routineData.drills.push(exerciseData);
+              dayData.drills.push(exerciseData);
+              if (exerciseData.completed) {
+                routineData.completedDrills++;
+                dayData.completedDrills++;
+              }
+            }
+
+            dayData.totalDrills += routineData.totalDrills;
+            dayData.programs.push(routineData);
+            dayData.isRestDay = false;
+          }
+        }
+
+        console.log("🔍 getProgramDayDetails - Final dayData:", {
+          date: dayData.date,
+          programsCount: dayData.programs?.length || 0,
+          isRestDay: dayData.isRestDay,
+          totalDrills: dayData.totalDrills,
+          completedDrills: dayData.completedDrills,
+          programs:
+            dayData.programs?.map((p: any) => ({
+              id: p.id,
+              programId: p.programId,
+              title: p.title,
+              programTitle: p.programTitle,
+              isRestDay: p.isRestDay,
+              drillsCount: p.drills?.length || 0,
+            })) || [],
+        });
+
+        return dayData;
+      } catch (error) {
+        console.error("Error in getProgramDayDetails:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to load program day details",
         });
       }
     }),
