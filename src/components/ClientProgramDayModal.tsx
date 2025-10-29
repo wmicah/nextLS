@@ -31,6 +31,7 @@ import { trpc } from "@/app/_trpc/client";
 
 interface ProgramData {
   programId: string;
+  programAssignmentId: string;
   programTitle: string;
   programDescription?: string;
   drills: Drill[];
@@ -161,7 +162,11 @@ interface ClientProgramDayModalProps {
   programs?: ProgramData[]; // Changed from single programInfo to array of programs
   routineAssignments?: RoutineAssignment[];
   lessonsForDate?: any[]; // Lessons scheduled for this date
-  onMarkDrillComplete: (drillId: string, completed: boolean) => void;
+  onMarkDrillComplete: (
+    drillId: string,
+    completed: boolean,
+    programAssignmentId?: string
+  ) => void;
   onMarkVideoAssignmentComplete: (
     assignmentId: string,
     completed: boolean
@@ -186,7 +191,7 @@ interface ClientProgramDayModalProps {
   ) => { totalAssignments: number; completedAssignments: number };
   onMarkRoutineExerciseComplete: (
     exerciseId: string,
-    routineAssignmentId: string,
+    programDrillId: string,
     completed: boolean
   ) => void;
   completedIndividualExercises: Set<string>;
@@ -315,11 +320,22 @@ export default function ClientProgramDayModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 no-animations"
+      style={{
+        animation: "none !important",
+        transition: "none !important",
+        transform: "none !important",
+        opacity: "1 !important",
+      }}
+    >
       <div
-        className="bg-gray-800 rounded-3xl border-2 border-gray-600 w-full max-w-7xl max-h-[95vh] overflow-hidden transform transition-all duration-300 ease-out flex flex-col"
+        className="bg-gray-800 rounded-3xl border-2 border-gray-600 w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col no-animations"
         style={{
-          animation: "modalSlideIn 0.3s ease-out",
+          animation: "none !important",
+          transition: "none !important",
+          transform: "none !important",
+          opacity: "1 !important",
         }}
       >
         {/* Header */}
@@ -379,7 +395,7 @@ export default function ClientProgramDayModal({
                     key={tab.id}
                     onClick={() => handleTabClick(tab.id)}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap border",
+                      "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap border",
                       isActive
                         ? `${tab.bgColor} ${tab.color} ${tab.borderColor}`
                         : "bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-600/50"
@@ -388,7 +404,7 @@ export default function ClientProgramDayModal({
                     {tab.icon}
                     <span>{tab.title}</span>
                     {!isViewed && (
-                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-orange-400 rounded-full" />
                     )}
                     {isViewed && (
                       <CheckCircle2 className="h-4 w-4 text-green-400" />
@@ -543,6 +559,7 @@ export default function ClientProgramDayModal({
                   onOpenCommentModal={onOpenCommentModal}
                   onOpenVideoSubmissionModal={onOpenVideoSubmissionModal}
                   completedProgramDrills={completedProgramDrills}
+                  completedIndividualExercises={completedIndividualExercises}
                 />
               );
             })()
@@ -672,7 +689,7 @@ export default function ClientProgramDayModal({
                       onClick={() => {
                         setViewedTabs(new Set(tabs.map(tab => tab.id)));
                       }}
-                      className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                      className="text-sm text-blue-400 hover:text-blue-300"
                     >
                       Mark all as viewed
                     </button>
@@ -718,7 +735,11 @@ function ProgramContent({
   completedIndividualExercises,
 }: {
   program: ProgramData;
-  onMarkDrillComplete: (drillId: string, completed: boolean) => void;
+  onMarkDrillComplete: (
+    drillId: string,
+    completed: boolean,
+    programAssignmentId?: string
+  ) => void;
   onOpenVideo: (videoUrl: string, drill: Drill) => void;
   onOpenCommentModal: (drill: Drill) => void;
   onOpenVideoSubmissionModal: (drillId: string, drillTitle: string) => void;
@@ -776,7 +797,8 @@ function ProgramContent({
           reps: exercise.reps || undefined,
           tempo: exercise.tempo || undefined,
           tags: exercise.type ? [exercise.type] : undefined,
-          completed: completedProgramDrills.has(routineExerciseKey),
+          completed:
+            completedIndividualExercises?.has(routineExerciseKey) || false,
           videoUrl: exercise.videoUrl || undefined,
           isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
           youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
@@ -841,7 +863,8 @@ function ProgramContent({
           reps: exercise.reps || undefined,
           tempo: exercise.tempo || undefined,
           tags: exercise.type ? [exercise.type] : undefined,
-          completed: completedProgramDrills.has(routineExerciseKey),
+          completed:
+            completedIndividualExercises?.has(routineExerciseKey) || false,
           videoUrl: exercise.videoUrl || undefined,
           isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
           youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
@@ -922,7 +945,8 @@ function ProgramContent({
               reps: exercise.reps || undefined,
               tempo: exercise.tempo || undefined,
               tags: exercise.type ? [exercise.type] : undefined,
-              completed: completedProgramDrills.has(routineExerciseKey),
+              completed:
+                completedIndividualExercises?.has(routineExerciseKey) || false,
               videoUrl: exercise.videoUrl || undefined,
               isYoutube: isYouTubeUrl(exercise.videoUrl || ""),
               youtubeId: extractYouTubeId(exercise.videoUrl || "") || undefined,
@@ -1063,8 +1087,7 @@ function ProgramContent({
                   let isCompleted;
                   if (drill.id.includes("-routine-")) {
                     // This is a routine exercise within a program
-                    isCompleted =
-                      completedIndividualExercises?.has(drill.id) || false;
+                    isCompleted = drill.completed || false;
                     console.log(
                       `🎯 Modal: Checking routine exercise completion for ${drill.id}:`,
                       {
@@ -1100,19 +1123,29 @@ function ProgramContent({
                       drill={drillWithCompletion}
                       index={globalIndex++}
                       onMarkComplete={completed => {
-                        if (
-                          drill.id.includes("-") &&
-                          onMarkRoutineExerciseComplete
-                        ) {
-                          const [assignmentId, exerciseId] =
-                            drill.id.split("-");
-                          onMarkRoutineExerciseComplete(
-                            exerciseId,
-                            assignmentId,
-                            completed
+                        if (drill.id.includes("-routine-")) {
+                          // For routine exercises within programs, complete the entire routine
+                          const originalDrillId =
+                            drill.id.split("-routine-")[0];
+                          console.log(
+                            "🎯 Completing entire routine for drill:",
+                            {
+                              routineExerciseId: drill.id,
+                              originalDrillId: originalDrillId,
+                              completed,
+                            }
+                          );
+                          onMarkDrillComplete(
+                            originalDrillId,
+                            completed,
+                            program.programAssignmentId
                           );
                         } else {
-                          onMarkDrillComplete(drill.id, completed);
+                          onMarkDrillComplete(
+                            drill.id,
+                            completed,
+                            program.programAssignmentId
+                          );
                         }
                       }}
                       onOpenVideo={() =>
@@ -1156,9 +1189,7 @@ function ProgramContent({
                           let isCompleted;
                           if (drill.id.includes("-routine-")) {
                             // This is a routine exercise within a program
-                            isCompleted =
-                              completedIndividualExercises?.has(drill.id) ||
-                              false;
+                            isCompleted = drill.completed || false;
                             console.log(
                               `🎯 Modal: Checking superset routine exercise completion for ${drill.id}:`,
                               {
@@ -1215,39 +1246,22 @@ function ProgramContent({
                                     }
                                   );
 
-                                  if (
-                                    drill.id.includes("-routine-") &&
-                                    onMarkRoutineExerciseComplete
-                                  ) {
-                                    // For routine exercises within programs: drillId-routine-exerciseId
-                                    console.log("🎯 Parsing drill ID:", {
-                                      drillId: drill.id,
-                                      parts: drill.id.split("-routine-"),
-                                    });
-
-                                    const parts = drill.id.split("-routine-");
-                                    const assignmentId = parts[0];
-                                    const exerciseId = parts[1];
-
-                                    console.log("🎯 Parsed values:", {
-                                      assignmentId,
-                                      exerciseId,
-                                      partsLength: parts.length,
-                                    });
-
+                                  if (drill.id.includes("-routine-")) {
+                                    // For routine exercises within programs, complete the entire routine
+                                    const originalDrillId =
+                                      drill.id.split("-routine-")[0];
                                     console.log(
-                                      "🎯 Calling onMarkRoutineExerciseComplete with:",
+                                      "🎯 Completing entire routine for drill:",
                                       {
-                                        exerciseId,
-                                        assignmentId,
+                                        routineExerciseId: drill.id,
+                                        originalDrillId: originalDrillId,
                                         completed,
                                       }
                                     );
-
-                                    onMarkRoutineExerciseComplete(
-                                      exerciseId,
-                                      assignmentId,
-                                      completed
+                                    onMarkDrillComplete(
+                                      originalDrillId,
+                                      completed,
+                                      program.programAssignmentId
                                     );
                                   } else {
                                     console.log(
@@ -1258,7 +1272,11 @@ function ProgramContent({
                                       }
                                     );
 
-                                    onMarkDrillComplete(drill.id, completed);
+                                    onMarkDrillComplete(
+                                      drill.id,
+                                      completed,
+                                      program.programAssignmentId
+                                    );
                                   }
                                 }}
                                 onOpenVideo={() =>
@@ -1299,18 +1317,24 @@ function RoutineContent({
   onOpenCommentModal,
   onOpenVideoSubmissionModal,
   completedProgramDrills,
+  completedIndividualExercises,
 }: {
   routineAssignment?: RoutineAssignment;
-  onMarkDrillComplete: (drillId: string, completed: boolean) => void;
+  onMarkDrillComplete: (
+    drillId: string,
+    completed: boolean,
+    programAssignmentId?: string
+  ) => void;
   onMarkRoutineExerciseComplete: (
     exerciseId: string,
-    routineAssignmentId: string,
+    programDrillId: string,
     completed: boolean
   ) => void;
   onOpenVideo: (videoUrl: string, drill: Drill) => void;
   onOpenCommentModal: (drill: Drill) => void;
   onOpenVideoSubmissionModal: (drillId: string, drillTitle: string) => void;
   completedProgramDrills: Set<string>;
+  completedIndividualExercises?: Set<string>;
 }) {
   console.log("🎯 RoutineContent called with:", {
     routineAssignment: routineAssignment
@@ -1381,7 +1405,9 @@ function RoutineContent({
                   reps: exercise.reps || undefined,
                   tempo: exercise.tempo || undefined,
                   tags: exercise.type ? [exercise.type] : undefined,
-                  completed: completedProgramDrills.has(routineExerciseKey),
+                  completed:
+                    completedIndividualExercises?.has(routineExerciseKey) ||
+                    false,
                   videoUrl: exercise.videoUrl || undefined,
                   supersetId: exercise.supersetId || undefined,
                   supersetOrder: exercise.supersetOrder || undefined,
@@ -1438,7 +1464,16 @@ function RoutineContent({
                             drillTitle: drill.title,
                           }
                         );
-                        onMarkDrillComplete(drill.id, completed);
+
+                        // For standalone routine exercises: routineAssignmentId-exerciseId
+                        const parts = drill.id.split("-");
+                        const routineAssignmentId = parts[0];
+                        const exerciseId = parts[1];
+                        onMarkRoutineExerciseComplete(
+                          exerciseId,
+                          routineAssignmentId,
+                          completed
+                        );
                       }}
                       onOpenVideo={() =>
                         drill.videoUrl && onOpenVideo(drill.videoUrl, drill)
@@ -1496,7 +1531,16 @@ function RoutineContent({
                                       drillTitle: drill.title,
                                     }
                                   );
-                                  onMarkDrillComplete(drill.id, completed);
+
+                                  // For standalone routine exercises: routineAssignmentId-exerciseId
+                                  const parts = drill.id.split("-");
+                                  const routineAssignmentId = parts[0];
+                                  const exerciseId = parts[1];
+                                  onMarkRoutineExerciseComplete(
+                                    exerciseId,
+                                    routineAssignmentId,
+                                    completed
+                                  );
                                 }}
                                 onOpenVideo={() =>
                                   drill.videoUrl &&
@@ -1564,7 +1608,7 @@ function DrillCard({
   return (
     <div
       className={cn(
-        "rounded-lg border transition-all duration-200",
+        "rounded-lg border",
         drill.supersetId
           ? "bg-purple-600/10 border-purple-500/30 hover:bg-purple-600/20"
           : "bg-gray-700/30 border-gray-600/50 hover:bg-gray-700/50"
@@ -1597,7 +1641,7 @@ function DrillCard({
             onMarkComplete(!drill.completed);
           }}
           className={cn(
-            "h-8 w-8 p-0 rounded-full transition-all duration-200 hover:scale-105",
+            "h-8 w-8 p-0 rounded-full",
             drill.completed
               ? "bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/25"
               : "bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white"
@@ -1716,7 +1760,7 @@ function VideoAssignmentCard({
   onOpenVideoSubmission: () => void;
 }) {
   return (
-    <div className="rounded-lg border transition-all duration-200 bg-purple-600/10 border-purple-500/30 hover:bg-purple-600/20">
+    <div className="rounded-lg border bg-purple-600/10 border-purple-500/30 hover:bg-purple-600/20">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-purple-500/30">
         <div className="flex items-center gap-3">
@@ -1744,7 +1788,7 @@ function VideoAssignmentCard({
             onMarkComplete(!assignment.completed);
           }}
           className={cn(
-            "h-8 w-8 p-0 rounded-full transition-all duration-200",
+            "h-8 w-8 p-0 rounded-full",
             assignment.completed
               ? "bg-green-500 text-white hover:bg-green-600"
               : "bg-gray-600 text-gray-300 hover:bg-gray-500"

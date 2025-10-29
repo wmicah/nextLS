@@ -94,10 +94,13 @@ interface Drill {
     commonMistakes: string[];
     equipment?: string;
   };
+  // Backend properties
+  routineId?: string;
 }
 
 interface ProgramData {
   programId: string;
+  programAssignmentId: string;
   programTitle: string;
   programDescription?: string;
   drills: Drill[];
@@ -163,10 +166,13 @@ function ClientProgramPage() {
       selectedDay.programs.forEach(program => {
         program.drills.forEach(drill => {
           if (drill.completed) {
-            // For routine exercises within programs, use the full exercise ID for completion state
+            // For routine exercises, add the original drill ID to completion state
             if (drill.id.includes("-routine-")) {
-              serverCompletedIndividualExercises.add(drill.id);
-              console.log(`🔄 Adding routine exercise completion: ${drill.id}`);
+              const originalDrillId = drill.id.split("-routine-")[0];
+              serverCompletedDrills.add(originalDrillId);
+              console.log(
+                `🔄 Adding routine drill completion: ${originalDrillId} for exercise: ${drill.id}`
+              );
             } else {
               serverCompletedDrills.add(drill.id);
               console.log(`🔄 Adding regular drill completion: ${drill.id}`);
@@ -226,14 +232,23 @@ function ClientProgramPage() {
       programs: dayData.programs.map(program => ({
         ...program,
         drills: program.drills.map(drill => {
-          // For routine exercises within programs, check individual exercise completion state
+          // For routine exercises, check if the original drill is completed
           let isCompleted;
           if (drill.id.includes("-routine-")) {
-            // This is a routine exercise within a program - use individual exercise completion state
-            isCompleted = completedIndividualExercises.has(drill.id);
+            const originalDrillId = drill.id.split("-routine-")[0];
+            isCompleted = completedProgramDrills.has(originalDrillId);
+            console.log(
+              `🔄 Routine exercise ${drill.id}: checking original drill ${originalDrillId}, completed=${isCompleted}`
+            );
+            console.log(
+              `🔄 Available completions:`,
+              Array.from(completedProgramDrills)
+            );
           } else {
-            // This is a regular drill - use program drill completion state
             isCompleted = completedProgramDrills.has(drill.id);
+            console.log(
+              `🔄 Regular drill ${drill.id}: completed=${isCompleted}`
+            );
           }
 
           console.log(
@@ -437,9 +452,14 @@ function ClientProgramPage() {
     trpc.clientRouter.addCommentToDrill.useMutation();
 
   // Mutations
+  const markProgramDrillCompleteMutation =
+    trpc.clientRouter.markProgramDrillComplete.useMutation({
+      // Remove aggressive invalidation - let optimistic updates handle UI
+    });
+
   const markDrillCompleteMutation =
     trpc.clientRouter.markDrillComplete.useMutation({
-      // Remove aggressive invalidation - let optimistic updates handle UI
+      // For routine exercises within programs
     });
 
   const markVideoAssignmentCompleteMutation =
@@ -661,8 +681,8 @@ function ClientProgramPage() {
               // Use the key format for routine exercises
               const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
               totalDrills++;
-              // Count completed routine exercises using the unified system
-              if (completedProgramDrills.has(routineExerciseKey)) {
+              // Count completed routine exercises using the individual exercise system
+              if (completedIndividualExercises.has(routineExerciseKey)) {
                 completedDrills++;
               }
             }
@@ -712,7 +732,7 @@ function ClientProgramPage() {
             routineAssignment as any
           ).routine.exercises.every((exercise: any) => {
             const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
-            return completedProgramDrills.has(routineExerciseKey);
+            return completedIndividualExercises.has(routineExerciseKey);
           });
           if (allExercisesCompleted) {
             completedAssignments++;
@@ -727,10 +747,17 @@ function ClientProgramPage() {
   // Handle routine exercise completion - simplified approach
   const handleMarkRoutineExerciseComplete = async (
     exerciseId: string,
-    routineAssignmentId: string,
+    programDrillId: string, // This is actually the program drill ID, not routine assignment ID
     completed: boolean
   ) => {
-    const fullExerciseId = `${routineAssignmentId}-routine-${exerciseId}`;
+    const fullExerciseId = `${programDrillId}-routine-${exerciseId}`;
+
+    console.log("🎯 handleMarkRoutineExerciseComplete called:", {
+      exerciseId,
+      programDrillId,
+      completed,
+      fullExerciseId,
+    });
 
     // Update individual exercise completion state immediately for real-time UI updates
     setCompletedIndividualExercises(prev => {
@@ -748,16 +775,45 @@ function ClientProgramPage() {
       return newSet;
     });
 
-    // Call the backend mutation for drill completion (works for both regular drills and routine exercises)
+    // For routine exercises within programs, use the markDrillComplete mutation
+    // because they are still drills within a program, just with routine content
     try {
-      await markDrillCompleteMutation.mutateAsync({
+      console.log(
+        "🎯 Calling markDrillCompleteMutation for routine exercise with:",
+        {
+          drillId: fullExerciseId,
+          completed,
+        }
+      );
+
+      // Add timeout to detect hanging mutations
+      const mutationPromise = markDrillCompleteMutation.mutateAsync({
         drillId: fullExerciseId,
         completed,
       });
 
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Mutation timeout after 10 seconds")),
+          10000
+        )
+      );
+
+      await Promise.race([mutationPromise, timeoutPromise]);
+
+      console.log("✅ Mutation successful");
+
       // Refresh calendar data to sync with server
       await refetchCalendar();
     } catch (error) {
+      console.error(
+        `❌ Failed to ${
+          completed ? "complete" : "uncomplete"
+        } routine exercise:`,
+        error
+      );
+      console.error("❌ Error details:", error);
+
       // Revert optimistic update on error
       setCompletedIndividualExercises(prev => {
         const newSet = new Set(prev);
@@ -766,6 +822,7 @@ function ClientProgramPage() {
         } else {
           newSet.add(fullExerciseId); // Add if we were trying to mark incomplete
         }
+        console.log("🔄 Reverted optimistic update due to error");
         return newSet;
       });
     }
@@ -832,12 +889,18 @@ function ClientProgramPage() {
   // Handle drill completion
   const handleMarkDrillComplete = async (
     drillId: string,
-    completed: boolean
+    completed: boolean,
+    programAssignmentId?: string
   ) => {
     console.log("🎯 handleMarkDrillComplete called with:", {
       drillId,
       completed,
+      programAssignmentId,
     });
+    console.log(
+      "🎯 Current completedProgramDrills before update:",
+      Array.from(completedProgramDrills)
+    );
 
     // Update the completion state immediately for real-time UI updates
     setCompletedProgramDrills(prev => {
@@ -867,17 +930,25 @@ function ClientProgramPage() {
 
     // Then perform the actual mutation
     try {
-      console.log("🎯 Calling markDrillCompleteMutation with:", {
+      console.log("🎯 Calling markProgramDrillCompleteMutation with:", {
         drillId,
         completed,
+        programAssignmentId,
       });
 
-      await markDrillCompleteMutation.mutateAsync({
+      if (!programAssignmentId) {
+        throw new Error(
+          "Program assignment ID is required for drill completion"
+        );
+      }
+
+      await markProgramDrillCompleteMutation.mutateAsync({
         drillId: drillId,
+        programAssignmentId: programAssignmentId,
         completed,
       });
 
-      console.log("🎯 markDrillCompleteMutation completed successfully");
+      console.log("🎯 markProgramDrillCompleteMutation completed successfully");
 
       // Invalidate and refetch calendar data to ensure UI stays in sync
       await utils.clientRouter.getProgramCalendar.invalidate();
@@ -885,7 +956,10 @@ function ClientProgramPage() {
 
       console.log("🎯 Calendar data invalidated and refetched");
     } catch (error) {
-      console.error("🎯 ERROR: markDrillCompleteMutation failed:", error);
+      console.error(
+        "🎯 ERROR: markProgramDrillCompleteMutation failed:",
+        error
+      );
 
       // Revert optimistic update on error
       setCompletedProgramDrills(prev => {
@@ -924,15 +998,11 @@ function ClientProgramPage() {
         completedDrills: updatedDrills.length,
       });
 
-      // Mark all drills as complete in the database
-      for (const drill of selectedDay.drills) {
-        if (!drill.completed) {
-          await markDrillCompleteMutation.mutateAsync({
-            drillId: drill.id,
-            completed: true,
-          });
-        }
-      }
+      // TODO: Update this function to work with the new multi-program structure
+      // For now, just update the UI state
+      console.log(
+        "handleMarkAllComplete: UI state updated, database update needs program assignment context"
+      );
     }
   };
 
@@ -1081,10 +1151,10 @@ function ClientProgramPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
                 {/* Upcoming Lesson */}
                 <div
-                  className={`group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl ${
+                  className={`group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border ${
                     nextLesson?.status === "CONFIRMED"
-                      ? "bg-gradient-to-br from-green-600/20 via-green-700/10 to-green-800/20 border-green-500/40 hover:border-green-400/60"
-                      : "bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20 hover:border-emerald-400/40"
+                      ? "bg-gradient-to-br from-green-600/20 via-green-700/10 to-green-800/20 border-green-500/40"
+                      : "bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20"
                   }`}
                 >
                   {/* Background Pattern */}
@@ -1125,7 +1195,7 @@ function ClientProgramPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-2 h-2 rounded-full animate-pulse ${
+                            className={`w-2 h-2 rounded-full ${
                               nextLesson.status === "CONFIRMED"
                                 ? "bg-green-400"
                                 : "bg-emerald-400"
@@ -1185,7 +1255,7 @@ function ClientProgramPage() {
                 </div>
 
                 {/* Coach Feedback */}
-                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl bg-gradient-to-br from-purple-500/10 via-purple-600/5 to-purple-700/10 border-purple-500/20 hover:border-purple-400/40">
+                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border bg-gradient-to-br from-purple-500/10 via-purple-600/5 to-purple-700/10 border-purple-500/20">
                   {/* Background Pattern */}
                   <div className="absolute inset-0 opacity-5">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-purple-400 rounded-full blur-3xl"></div>
@@ -1216,7 +1286,7 @@ function ClientProgramPage() {
                           {extractNoteContent(coachNotes).length > 20 && (
                             <button
                               onClick={() => setIsCoachNotesModalOpen(true)}
-                              className="mt-2 text-xs font-semibold text-purple-300 hover:text-purple-200 transition-colors duration-200"
+                              className="mt-2 text-xs font-semibold text-purple-300 hover:text-purple-200"
                             >
                               Read Full Note
                             </button>
@@ -1244,7 +1314,7 @@ function ClientProgramPage() {
                 </div>
 
                 {/* View Full Schedule Button */}
-                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border transition-all duration-300 hover:scale-105 hover:shadow-3xl bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-blue-700/10 border-blue-500/20 hover:border-blue-400/40">
+                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-blue-700/10 border-blue-500/20">
                   {/* Background Pattern */}
                   <div className="absolute inset-0 opacity-5">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400 rounded-full blur-3xl"></div>
@@ -1269,7 +1339,7 @@ function ClientProgramPage() {
                       onClick={() =>
                         (window.location.href = "/client-schedule")
                       }
-                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 shadow-lg"
                     >
                       View Full Schedule
                     </button>
@@ -1306,10 +1376,8 @@ function ClientProgramPage() {
                   onClick={() =>
                     setActiveTab(tab.id as "calendar" | "progress")
                   }
-                  className={`flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-6 py-2 md:py-3 rounded-xl transition-all duration-300 touch-manipulation ${
-                    activeTab === tab.id
-                      ? "shadow-lg border"
-                      : "hover:scale-105"
+                  className={`flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-6 py-2 md:py-3 rounded-xl touch-manipulation ${
+                    activeTab === tab.id ? "shadow-lg border" : ""
                   }`}
                   style={{
                     backgroundColor:
@@ -1341,7 +1409,7 @@ function ClientProgramPage() {
                     onClick={() => navigateMonth("prev")}
                     variant="ghost"
                     size="lg"
-                    className="p-2 md:p-4 rounded-xl md:rounded-2xl hover:bg-gray-700/30 transition-all duration-300 hover:scale-105"
+                    className="p-2 md:p-4 rounded-xl md:rounded-2xl hover:bg-gray-700/30"
                   >
                     <ChevronLeft className="h-6 w-6 md:h-8 md:w-8 text-white" />
                   </Button>
@@ -1352,7 +1420,7 @@ function ClientProgramPage() {
                     onClick={() => navigateMonth("next")}
                     variant="ghost"
                     size="lg"
-                    className="p-2 md:p-4 rounded-xl md:rounded-2xl hover:bg-gray-700/30 transition-all duration-300 hover:scale-105"
+                    className="p-2 md:p-4 rounded-xl md:rounded-2xl hover:bg-gray-700/30"
                   >
                     <ChevronRight className="h-6 w-6 md:h-8 md:w-8 text-white" />
                   </Button>
@@ -1362,7 +1430,7 @@ function ClientProgramPage() {
                     onClick={() => setViewMode("week")}
                     variant={viewMode === "week" ? "default" : "ghost"}
                     size="lg"
-                    className="px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl text-white font-medium transition-all duration-300 hover:scale-105 text-sm md:text-base"
+                    className="px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl text-white font-medium text-sm md:text-base"
                     style={{
                       backgroundColor:
                         viewMode === "week" ? "#4A5A70" : "transparent",
@@ -1379,7 +1447,7 @@ function ClientProgramPage() {
                     onClick={() => setViewMode("month")}
                     variant={viewMode === "month" ? "default" : "ghost"}
                     size="lg"
-                    className="px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl text-white font-medium transition-all duration-300 hover:scale-105 text-sm md:text-base"
+                    className="px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl text-white font-medium text-sm md:text-base"
                     style={{
                       backgroundColor:
                         viewMode === "month" ? "#4A5A70" : "transparent",
@@ -1424,7 +1492,7 @@ function ClientProgramPage() {
                 )}
                 {calendarLoading && (
                   <div className="col-span-7 p-4 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                    <div className="rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto animate-spin"></div>
                     <p className="mt-2 text-gray-400">Loading calendar...</p>
                   </div>
                 )}
@@ -1440,7 +1508,7 @@ function ClientProgramPage() {
                       <div
                         key={index}
                         className={cn(
-                          "min-h-[80px] md:min-h-[100px] p-2 rounded-lg transition-all duration-200 cursor-pointer hover:bg-white/10 border touch-manipulation",
+                          "min-h-[80px] md:min-h-[100px] p-2 rounded-lg cursor-pointer hover:bg-white/10 border touch-manipulation",
                           isCurrentMonth
                             ? "bg-white/5 border-white/10 hover:border-white/20"
                             : "bg-white/2 border-white/5",
@@ -1471,7 +1539,7 @@ function ClientProgramPage() {
                               getRoutinesForDate(date).length > 0) && (
                               <span
                                 className={cn(
-                                  "text-xs px-2 py-1 rounded-full font-medium transition-all duration-200",
+                                  "text-xs px-2 py-1 rounded-full font-medium",
                                   dayData.completedDrills ===
                                     dayData.totalDrills
                                     ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
@@ -1573,7 +1641,7 @@ function ClientProgramPage() {
                                     .map((drill, drillIndex) => (
                                       <div
                                         key={drillIndex}
-                                        className={`p-1 rounded text-xs transition-all duration-200 ${
+                                        className={`p-1 rounded text-xs ${
                                           drill.completed
                                             ? "bg-green-500/20 text-green-400"
                                             : "bg-gray-600/20 text-gray-300"
@@ -1915,7 +1983,7 @@ function ClientProgramPage() {
                         style={{ backgroundColor: "#606364" }}
                       >
                         <div
-                          className="h-4 rounded-full transition-all duration-300"
+                          className="h-4 rounded-full"
                           style={{
                             width: `${Math.min(
                               (pitchingData.averageSpeed / 80) * 100,
@@ -1946,7 +2014,7 @@ function ClientProgramPage() {
                         style={{ backgroundColor: "#606364" }}
                       >
                         <div
-                          className="h-4 rounded-full transition-all duration-300"
+                          className="h-4 rounded-full"
                           style={{
                             width: `${Math.min(
                               (pitchingData.topSpeed / 85) * 100,
@@ -2095,12 +2163,7 @@ function ClientProgramPage() {
           {/* Video Player Modal */}
           {isVideoPlayerOpen && selectedVideo && (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div
-                className="bg-gray-900 rounded-3xl border-2 border-gray-600 w-full max-w-4xl max-h-[90vh] overflow-hidden transform transition-all duration-300 ease-out"
-                style={{
-                  animation: "modalSlideIn 0.3s ease-out",
-                }}
-              >
+              <div className="bg-gray-900 rounded-3xl border-2 border-gray-600 w-full max-w-4xl max-h-[90vh] overflow-hidden">
                 {/* Video Player Header */}
                 <div className="p-4 border-b border-gray-700 flex items-center justify-between">
                   <h3 className="text-xl font-bold text-white">Video Demo</h3>
@@ -2188,12 +2251,7 @@ function ClientProgramPage() {
           {/* Comment Modal */}
           {isCommentModalOpen && selectedDrillForComment && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div
-                className="bg-gray-800 rounded-3xl border-2 border-gray-600 w-full max-w-md transform transition-all duration-300 ease-out"
-                style={{
-                  animation: "modalSlideIn 0.3s ease-out",
-                }}
-              >
+              <div className="bg-gray-800 rounded-3xl border-2 border-gray-600 w-full max-w-md">
                 {/* Comment Modal Header */}
                 <div className="p-6 border-b border-gray-700">
                   <div className="flex items-center justify-between">
@@ -2245,7 +2303,7 @@ function ClientProgramPage() {
                       >
                         {isSubmittingComment ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-4 w-4 mr-2" />
                             Submitting...
                           </>
                         ) : (
@@ -2291,7 +2349,7 @@ function ClientProgramPage() {
                   </div>
                   <button
                     onClick={() => setIsCoachNotesModalOpen(false)}
-                    className="p-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 hover:text-purple-200 transition-colors duration-200"
+                    className="p-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 hover:text-purple-200"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -2346,7 +2404,7 @@ function ClientProgramPage() {
                 <div className="flex justify-end mt-6">
                   <button
                     onClick={() => setIsCoachNotesModalOpen(false)}
-                    className="px-6 py-2 rounded-lg font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 hover:text-purple-200 transition-all duration-200"
+                    className="px-6 py-2 rounded-lg font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 hover:text-purple-200"
                   >
                     Close
                   </button>
