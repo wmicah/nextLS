@@ -1069,7 +1069,7 @@ model Organization {
   ownerId           String   @unique @map("owner_id")
   
   // Relationships
-  owner             User     @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  owner             User     @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   coaches           User[]   @relation("OrganizationCoaches")
   clients           Client[] @relation("OrganizationClients")
   sharedPrograms    Program[] @relation("SharedPrograms")
@@ -1089,8 +1089,8 @@ model CoachOrganization {
   isActive       Boolean  @default(true)
   
   // Relationships
-  coach          User         @relation("CoachOrganizations", fields: [coachId], references: [id])
-  organization   Organization @relation("CoachOrganizationMembers", fields: [organizationId], references: [id])
+  coach          User         @relation("CoachOrganizations", fields: [coachId], references: [id], onDelete: Cascade)
+  organization   Organization @relation("CoachOrganizationMembers", fields: [organizationId], references: [id], onDelete: Cascade)
   
   @@unique([coachId, organizationId])
   @@map("coach_organizations")
@@ -1106,9 +1106,9 @@ model ClientCoachAssignment {
   role           AssignmentRole @default(ASSISTANT)
   
   // Relationships
-  client         Client   @relation("ClientCoachAssignments", fields: [clientId], references: [id])
-  coach          User     @relation("CoachClientAssignments", fields: [coachId], references: [id])
-  assigner       User     @relation("AssignedBy", fields: [assignedBy], references: [id])
+  client         Client   @relation("ClientCoachAssignments", fields: [clientId], references: [id], onDelete: Cascade)
+  coach          User     @relation("CoachClientAssignments", fields: [coachId], references: [id], onDelete: Cascade)
+  assigner       User     @relation("AssignedBy", fields: [assignedBy], references: [id], onDelete: Cascade)
   
   @@unique([clientId, coachId])
   @@map("client_coach_assignments")

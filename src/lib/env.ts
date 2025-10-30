@@ -10,8 +10,8 @@ const envSchema = z.object({
   KINDE_CLIENT_SECRET: z.string().min(1),
   KINDE_ISSUER_URL: z.string().url(),
   KINDE_SITE_URL: z.string().url(),
-  KINDE_LOGOUT_REDIRECT_URL: z.string().url(),
-  KINDE_LOGIN_REDIRECT_URL: z.string().url(),
+  KINDE_LOGOUT_REDIRECT_URL: z.string().url().optional(),
+  KINDE_LOGIN_REDIRECT_URL: z.string().url().optional(),
   KINDE_MANAGEMENT_API_TOKEN: z.string().min(1).optional(), // Optional for now to avoid breaking existing setups
 
   // JWT
@@ -24,10 +24,10 @@ const envSchema = z.object({
   // Email
   RESEND_API_KEY: z.string().min(1),
 
-  // Stripe
-  STRIPE_SECRET_KEY: z.string().min(1),
-  STRIPE_WEBHOOK_SECRET: z.string().min(1),
-  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1),
+  // Stripe (optional - only needed if using Stripe)
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1).optional(),
 
   // App
   NODE_ENV: z
@@ -36,9 +36,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
   NEXT_PUBLIC_APP_NAME: z.string().default("Next Level Softball"),
 
-  // Security
-  NEXTAUTH_SECRET: z.string().min(32),
-  NEXTAUTH_URL: z.string().url(),
+  // Security (NextAuth is optional if using Kinde)
+  NEXTAUTH_SECRET: z.string().min(32).optional(),
+  NEXTAUTH_URL: z.string().url().optional(),
 
   // Optional
   NEXT_PUBLIC_ANALYTICS_ID: z.string().optional(),
@@ -83,8 +83,10 @@ export const config = {
       clientSecret: env.KINDE_CLIENT_SECRET,
       issuerUrl: env.KINDE_ISSUER_URL,
       siteUrl: env.KINDE_SITE_URL,
-      logoutRedirectUrl: env.KINDE_LOGOUT_REDIRECT_URL,
-      loginRedirectUrl: env.KINDE_LOGIN_REDIRECT_URL,
+      logoutRedirectUrl:
+        env.KINDE_LOGOUT_REDIRECT_URL || `${env.NEXT_PUBLIC_APP_URL}/`,
+      loginRedirectUrl:
+        env.KINDE_LOGIN_REDIRECT_URL || `${env.NEXT_PUBLIC_APP_URL}/dashboard`,
       managementApiToken: env.KINDE_MANAGEMENT_API_TOKEN,
     },
     jwt: {

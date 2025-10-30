@@ -75,7 +75,35 @@ export const authCallbackRouter = router({
         }
       }
 
-      // NEW USER LOGIC (rest stays the same)
+      // NEW USER LOGIC
+      // Check if user previously had an account (check deletion logs)
+      const wasDeleted = await db.accountDeletionLog.findFirst({
+        where: {
+          userId: user.id,
+        },
+        orderBy: {
+          deletedAt: "desc",
+        },
+      });
+
+      // If user previously deleted their account, they should go through role selection again
+      // Don't auto-recreate their account or auto-assign them as CLIENT
+      if (wasDeleted) {
+        console.log(
+          "User previously deleted account, sending to role selection"
+        );
+        return {
+          success: true,
+          needsRoleSelection: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.given_name || user.family_name || "User",
+          },
+        };
+      }
+
+      // Check for orphaned client record (only for truly new users who never had an account)
       const existingClientRecord = await db.client.findFirst({
         where: {
           email: user.email,
@@ -116,7 +144,7 @@ export const authCallbackRouter = router({
         };
       }
 
-      // Completely new user
+      // Completely new user - send to role selection
       return {
         success: true,
         needsRoleSelection: true,
@@ -127,8 +155,9 @@ export const authCallbackRouter = router({
         },
       };
     }
-  )
+  ),
 });
 
 // Export the procedure directly for easy access
-export const authCallbackProcedure = authCallbackRouter._def.record.authCallback;
+export const authCallbackProcedure =
+  authCallbackRouter._def.record.authCallback;

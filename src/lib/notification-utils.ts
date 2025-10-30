@@ -91,22 +91,117 @@ export async function sendEmailNotification(
   data: EmailNotificationData
 ): Promise<boolean> {
   try {
-    // Send email using our API route
-    const response = await fetch("/api/send-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    // Check if we're in a server-side context (has process.env)
+    const isServerSide = typeof window === "undefined";
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Email API error:", errorData);
-      return false;
+    if (isServerSide) {
+      // Server-side: Use Resend directly
+      if (!process.env.RESEND_API_KEY) {
+        console.error("RESEND_API_KEY not configured");
+        return false;
+      }
+
+      const { Resend } = await import("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+      const { data: emailData, error } = await resend.emails.send({
+        from: "Coach Platform <onboarding@resend.dev>",
+        to: [data.to],
+        subject: data.subject,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${data.subject}</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+              }
+              .header {
+                background: linear-gradient(135deg, #4A5A70 0%, #606364 100%);
+                color: white;
+                padding: 30px;
+                text-align: center;
+                border-radius: 10px 10px 0 0;
+              }
+              .content {
+                background: #f9f9f9;
+                padding: 30px;
+                border-radius: 0 0 10px 10px;
+              }
+              .button {
+                display: inline-block;
+                background: #4A5A70;
+                color: white;
+                padding: 12px 24px;
+                text-decoration: none;
+                border-radius: 6px;
+                margin: 20px 0;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid #eee;
+                color: #666;
+                font-size: 14px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>🏆 Coach Platform</h1>
+            </div>
+            <div class="content">
+              ${data.body.replace(/\n/g, "<br>")}
+              <br><br>
+              <a href="${appUrl}/dashboard" class="button">
+                View Dashboard
+              </a>
+            </div>
+            <div class="footer">
+              <p>This email was sent from your Coach Platform.</p>
+              <p>If you have any questions, please contact support.</p>
+            </div>
+          </body>
+          </html>
+        `,
+      });
+
+      if (error) {
+        console.error("❌ Resend error:", error);
+        return false;
+      }
+
+      console.log("✅ Email sent successfully:", emailData);
+      return true;
+    } else {
+      // Client-side: Use API route with absolute URL
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const response = await fetch(`${appUrl}/api/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Email API error:", errorData);
+        return false;
+      }
+
+      const result = await response.json();
+      console.log("📧 Email sent successfully:", result);
+      return true;
     }
-
-    const result = await response.json();
-    console.log("📧 Email sent successfully:", result);
-    return true;
   } catch (error) {
     console.error("Failed to send email notification:", error);
     return false;

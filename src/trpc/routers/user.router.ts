@@ -591,6 +591,23 @@ export const userRouter = router({
 
       const clientUserId = (notification.data as any).clientUserId as string;
 
+      // Check if client record exists before trying to update
+      const clientRecord = await db.client.findFirst({
+        where: { userId: clientUserId },
+      });
+
+      if (!clientRecord) {
+        // Client/user has been deleted, just mark notification as read
+        console.log(
+          `Client record for user ${clientUserId} not found - may have been deleted already`
+        );
+        await db.notification.update({
+          where: { id: input.notificationId },
+          data: { isRead: true },
+        });
+        return { success: true, message: "Client no longer exists" };
+      }
+
       // Update the client record to assign the coach
       await db.client.update({
         where: { userId: clientUserId },
@@ -635,10 +652,30 @@ export const userRouter = router({
 
       const clientUserId = (notification.data as any).clientUserId as string;
 
-      // Delete the client record since they're rejected
-      await db.client.delete({
+      // Check if client record exists before trying to delete
+      const clientRecord = await db.client.findFirst({
         where: { userId: clientUserId },
       });
+
+      // Only delete if the client record exists
+      // It might already be deleted if the user deleted their account
+      if (clientRecord) {
+        try {
+          await db.client.delete({
+            where: { userId: clientUserId },
+          });
+        } catch (error) {
+          // If deletion fails (e.g., record already deleted), log but continue
+          console.warn(
+            `Could not delete client record for user ${clientUserId}:`,
+            error
+          );
+        }
+      } else {
+        console.log(
+          `Client record for user ${clientUserId} not found - may have been deleted already`
+        );
+      }
 
       // Mark notification as read
       await db.notification.update({
@@ -766,10 +803,30 @@ export const userRouter = router({
         };
       } catch (error) {
         console.error("❌ Error deleting user account:", error);
+
+        // Provide more specific error messages
+        let errorMessage =
+          "Failed to delete account. Please try again or contact support.";
+
+        if (error instanceof Error) {
+          // Check for foreign key constraint errors
+          if (
+            error.message.includes("foreign key") ||
+            error.message.includes("Foreign key")
+          ) {
+            errorMessage =
+              "Cannot delete account because it's still referenced by other data. Please contact support for assistance.";
+          } else if (error.message.includes("constraint")) {
+            errorMessage =
+              "Account deletion failed due to database constraints. Please contact support.";
+          } else {
+            errorMessage = error.message || errorMessage;
+          }
+        }
+
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message:
-            "Failed to delete account. Please try again or contact support.",
+          message: errorMessage,
         });
       }
     }),

@@ -611,18 +611,63 @@ function ClientRequestsModal({
 }) {
   const utils = trpc.useUtils();
 
-  // Get pending client requests
-  const { data: pendingRequests = [], refetch } =
+  // Get ALL notifications (not just unread) for CLIENT_JOIN_REQUEST
+  // This way, even if acknowledged, they can still accept/deny
+  const { data: allNotifications = [], refetch } =
     trpc.notifications.getNotifications.useQuery({
-      unreadOnly: true,
-      limit: 50,
+      unreadOnly: false, // Get all notifications, not just unread
+      limit: 100,
     });
 
-  const clientRequests = pendingRequests.filter(
-    (req: any) =>
-      req.type === "CLIENT_JOIN_REQUEST" &&
-      req.title === "New Athlete Join Request" // Only show email-based requests that need approval
-  );
+  // Filter for CLIENT_JOIN_REQUEST and verify they're still pending
+  // (i.e., the client hasn't been assigned a coach yet)
+  const clientRequests = allNotifications.filter((req: any) => {
+    if (req.type !== "CLIENT_JOIN_REQUEST") return false;
+    if (req.title !== "New Athlete Join Request") return false;
+
+    // Check if the request is still pending (client doesn't have a coach)
+    // We'll verify this by checking the client record
+    return true; // We'll filter this in a useEffect after fetching client data
+  });
+
+  // Fetch client data to verify which requests are still pending
+  const { data: allClients = [] } = trpc.clients.list.useQuery();
+
+  // Filter out requests where:
+  // 1. Client already has a coach assigned
+  // 2. Client/user no longer exists in database (deleted)
+  const pendingClientRequests = clientRequests.filter((req: any) => {
+    // Get clientUserId from notification data (could be stored as JSON)
+    const notificationData =
+      typeof req.data === "string" ? JSON.parse(req.data) : req.data;
+    const clientUserId =
+      notificationData?.clientUserId || notificationData?.clientId;
+
+    if (!clientUserId) return false;
+
+    // Check if this client still exists in the database
+    const client = allClients.find((c: any) => c.userId === clientUserId);
+
+    // Filter out if:
+    // - Client doesn't exist (user was deleted)
+    // - Client already has a coach assigned
+    if (!client) {
+      console.log(
+        `Filtering out request - client/user ${clientUserId} no longer exists`
+      );
+      return false;
+    }
+
+    if (client.coachId) {
+      console.log(
+        `Filtering out request - client ${clientUserId} already has coach ${client.coachId}`
+      );
+      return false;
+    }
+
+    // Request is still pending
+    return true;
+  });
 
   const acceptRequest = trpc.user.acceptClientRequest.useMutation({
     onSuccess: () => {
@@ -654,14 +699,14 @@ function ClientRequestsModal({
           </button>
         </div>
 
-        {clientRequests.length === 0 ? (
+        {pendingClientRequests.length === 0 ? (
           <div className="text-center py-8">
             <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-400">No pending requests</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {clientRequests.map((request: any) => (
+            {pendingClientRequests.map((request: any) => (
               <div
                 key={request.id}
                 className="bg-[#353A3A] rounded-lg p-4 border border-[#4A5A70]"

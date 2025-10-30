@@ -269,12 +269,6 @@ export default function RoleSelectionPage() {
             {currentStep === 1 && (
               <div className="p-8">
                 <div className="text-center mb-8">
-                  <div
-                    className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
-                    style={{ backgroundColor: "#4A5A70" }}
-                  >
-                    <Sparkles className="h-8 w-8 text-white" />
-                  </div>
                   <h2 className="text-3xl font-bold text-white mb-2">
                     Welcome to Next Level Softball!
                   </h2>
