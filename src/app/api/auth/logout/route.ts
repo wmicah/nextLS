@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    // Create a response that redirects to home and clears all authentication data
-    const response = NextResponse.redirect(new URL("/", request.url));
+    // Get the redirect URL from query params or default to home
+    const searchParams = request.nextUrl.searchParams;
+    const postLogoutRedirect =
+      searchParams.get("post_logout_redirect_url") || "/";
+
+    // Create a response that redirects to the specified URL (or home) and clears all authentication data
+    const redirectUrl = new URL(postLogoutRedirect, request.url);
+    const response = NextResponse.redirect(redirectUrl);
 
     // Add headers to clear any cached data
     response.headers.set(
@@ -40,7 +46,12 @@ export async function GET(request: NextRequest) {
     console.error("Logout error:", error);
 
     // Fallback response that clears everything
-    const response = NextResponse.redirect(new URL("/", request.url));
+    // Try to preserve the redirect URL even on error
+    const searchParams = request.nextUrl.searchParams;
+    const postLogoutRedirect =
+      searchParams.get("post_logout_redirect_url") || "/";
+    const redirectUrl = new URL(postLogoutRedirect, request.url);
+    const response = NextResponse.redirect(redirectUrl);
 
     // Clear all authentication cookies as fallback
     const cookiesToDelete = [

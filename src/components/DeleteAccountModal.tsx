@@ -18,10 +18,16 @@ export default function DeleteAccountModal({
   const [confirmationText, setConfirmationText] = useState("");
   const [reason, setReason] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const deleteAccountMutation = trpc.user.deleteAccount.useMutation({
-    onSuccess: () => {
+    onSuccess: async data => {
+      console.log("✅ Account deletion successful:", data);
+
+      // Give a brief moment for the deletion to fully complete on the server
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Build an absolute URL that Kinde accepts, then redirect to Kinde logout
       const postLogout = `${window.location.origin}/?accountDeleted=true`;
       window.location.href = `/api/auth/logout?post_logout_redirect_url=${encodeURIComponent(
@@ -29,8 +35,21 @@ export default function DeleteAccountModal({
       )}`;
     },
     onError: (error: any) => {
-      console.error("Error deleting account:", error);
+      console.error("❌ Error deleting account:", error);
       setIsDeleting(false);
+      // Display error message to user
+      const message =
+        error?.data?.message ||
+        error?.message ||
+        "Failed to delete account. Please try again or contact support.";
+      setErrorMessage(message);
+
+      // Log detailed error for debugging
+      console.error("Deletion error details:", {
+        code: error?.data?.code,
+        message: error?.data?.message || error?.message,
+        stack: error?.stack,
+      });
     },
   });
 
@@ -39,11 +58,20 @@ export default function DeleteAccountModal({
       return;
     }
 
+    // Clear any previous error messages
+    setErrorMessage(null);
     setIsDeleting(true);
     deleteAccountMutation.mutate({
       confirmationText,
       reason: reason || undefined,
     });
+  };
+
+  const handleClose = () => {
+    setErrorMessage(null);
+    setConfirmationText("");
+    setReason("");
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -75,12 +103,35 @@ export default function DeleteAccountModal({
               </h2>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="text-gray-400 hover:text-gray-300 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
+
+          {/* Error Message */}
+          {errorMessage && (
+            <div
+              className="mb-6 p-4 rounded-xl border"
+              style={{
+                backgroundColor: "#2A1F1F",
+                borderColor: "#DC2626",
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium mb-1" style={{ color: "#FCA5A5" }}>
+                    Deletion Failed
+                  </h3>
+                  <p className="text-sm" style={{ color: "#FCA5A5" }}>
+                    {errorMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Warning */}
           <div
@@ -185,7 +236,7 @@ export default function DeleteAccountModal({
           {/* Actions */}
           <div className="flex gap-3">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isDeleting}
               className="flex-1 px-4 py-2 border rounded-md transition-colors disabled:opacity-50"
               style={{
