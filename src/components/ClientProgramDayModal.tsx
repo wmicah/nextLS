@@ -208,6 +208,14 @@ interface Tab {
   borderColor: string;
 }
 
+// Helper function to format date in local timezone
+const formatDateKey = (date: Date | null | undefined): string | undefined => {
+  if (!date) return undefined;
+  return `${date.getFullYear()}-${(date.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+};
+
 export default function ClientProgramDayModal({
   isOpen,
   onClose,
@@ -367,11 +375,18 @@ export default function ClientProgramDayModal({
               <h2 className="text-xl font-bold text-white mb-1">
                 {(() => {
                   // Use selectedDate if available, otherwise fall back to selectedDay.date
-                  const dateToUse =
-                    selectedDate ||
-                    (selectedDay?.date
-                      ? new Date(selectedDay.date)
-                      : new Date());
+                  let dateToUse: Date;
+                  if (selectedDate) {
+                    dateToUse = selectedDate;
+                  } else if (selectedDay?.date) {
+                    // Parse date string as local time to avoid timezone shifts
+                    const [year, month, day] = selectedDay.date
+                      .split("-")
+                      .map(Number);
+                    dateToUse = new Date(year, month - 1, day);
+                  } else {
+                    dateToUse = new Date();
+                  }
                   const formattedDate = format(dateToUse, "EEEE, MMMM d, yyyy");
 
                   return formattedDate;
@@ -844,10 +859,38 @@ function ProgramContent({
     (drill: any) => drill.routine && drill.routine.exercises
   );
 
+  console.log("🎬 CHECKING ROUTINE VIDEO DATA:", {
+    totalDrills: program.drills.length,
+    drillsWithRoutines: drillsWithRoutines.length,
+    firstRoutineDrill: drillsWithRoutines[0]
+      ? {
+          drillId: drillsWithRoutines[0].id,
+          routineId: drillsWithRoutines[0].routineId,
+          exerciseCount: drillsWithRoutines[0].routine?.exercises?.length || 0,
+          firstExercise: drillsWithRoutines[0].routine?.exercises?.[0]
+            ? {
+                id: drillsWithRoutines[0].routine.exercises[0].id,
+                title: drillsWithRoutines[0].routine.exercises[0].title,
+                videoUrl: drillsWithRoutines[0].routine.exercises[0].videoUrl,
+                videoId: drillsWithRoutines[0].routine.exercises[0].videoId,
+              }
+            : null,
+        }
+      : null,
+  });
+
   if (drillsWithRoutines.length > 0) {
     drillsWithRoutines.forEach((drill: any) => {
       drill.routine.exercises.forEach((exercise: any) => {
         const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
+
+        console.log("🎬 Creating routine exercise drill:", {
+          exerciseId: exercise.id,
+          title: exercise.title,
+          videoUrl: exercise.videoUrl,
+          videoId: exercise.videoId,
+          hasVideo: !!exercise.videoUrl,
+        });
 
         const drillLikeExercise: Drill = {
           id: routineExerciseKey,
@@ -956,9 +999,7 @@ function ProgramContent({
 
                   // Use the new completion system - check completion state dynamically
                   let isCompleted = false;
-                  const dateKey = selectedDate
-                    ? selectedDate.toISOString().split("T")[0]
-                    : undefined;
+                  const dateKey = formatDateKey(selectedDate);
 
                   if (drill.id.includes("-routine-")) {
                     // This is a routine exercise within a program
@@ -989,9 +1030,7 @@ function ProgramContent({
                       drill={drillWithCompletion}
                       index={globalIndex++}
                       onMarkComplete={async completed => {
-                        const dateKey = selectedDate
-                          ? selectedDate.toISOString().split("T")[0]
-                          : undefined;
+                        const dateKey = formatDateKey(selectedDate);
 
                         console.log(
                           "🎯 onMarkComplete called for regular drill:",
@@ -1074,9 +1113,7 @@ function ProgramContent({
                         {supersetDrills.map((drill, index) => {
                           // Use the new completion system - check completion state dynamically
                           let isCompleted = false;
-                          const dateKey = selectedDate
-                            ? selectedDate.toISOString().split("T")[0]
-                            : undefined;
+                          const dateKey = formatDateKey(selectedDate);
 
                           if (drill.id.includes("-routine-")) {
                             // This is a routine exercise within a program
@@ -1120,9 +1157,7 @@ function ProgramContent({
                                 drill={drillWithCompletion}
                                 index={globalIndex++}
                                 onMarkComplete={async completed => {
-                                  const dateKey = selectedDate
-                                    ? selectedDate.toISOString().split("T")[0]
-                                    : undefined;
+                                  const dateKey = formatDateKey(selectedDate);
 
                                   console.log(
                                     "🎯 onMarkComplete called for superset drill:",
@@ -1314,9 +1349,7 @@ function RoutineContent({
                   completed: isExerciseCompleted(
                     exercise.id,
                     routineAssignment.id,
-                    selectedDate
-                      ? selectedDate.toISOString().split("T")[0]
-                      : undefined
+                    formatDateKey(selectedDate)
                   ),
                   videoUrl: exercise.videoUrl || undefined,
                   supersetId: exercise.supersetId || undefined,
@@ -1370,9 +1403,7 @@ function RoutineContent({
                         const parts = drill.id.split("-");
                         const routineAssignmentId = parts[0];
                         const exerciseId = parts[1];
-                        const dateKey = selectedDate
-                          ? selectedDate.toISOString().split("T")[0]
-                          : undefined;
+                        const dateKey = formatDateKey(selectedDate);
                         await markExerciseComplete(
                           exerciseId,
                           routineAssignmentId,
@@ -1432,9 +1463,7 @@ function RoutineContent({
                                   const parts = drill.id.split("-");
                                   const routineAssignmentId = parts[0];
                                   const exerciseId = parts[1];
-                                  const dateKey = selectedDate
-                                    ? selectedDate.toISOString().split("T")[0]
-                                    : undefined;
+                                  const dateKey = formatDateKey(selectedDate);
                                   await markExerciseComplete(
                                     exerciseId,
                                     routineAssignmentId,

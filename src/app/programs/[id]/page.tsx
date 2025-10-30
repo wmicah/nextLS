@@ -98,12 +98,9 @@ function ProgramEditorPageContent() {
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type: drill.routineId
-                    ? "routine"
-                    : drill.supersetId
-                    ? "superset"
-                    : (drill.type as "exercise" | "drill" | "video") ||
-                      undefined,
+                  // Preserve existing type - don't infer from routineId/supersetId
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -147,12 +144,9 @@ function ProgramEditorPageContent() {
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type: drill.routineId
-                    ? "routine"
-                    : drill.supersetId
-                    ? "superset"
-                    : (drill.type as "exercise" | "drill" | "video") ||
-                      undefined,
+                  // Preserve existing type - don't infer from routineId/supersetId
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -196,12 +190,9 @@ function ProgramEditorPageContent() {
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type: drill.routineId
-                    ? "routine"
-                    : drill.supersetId
-                    ? "superset"
-                    : (drill.type as "exercise" | "drill" | "video") ||
-                      undefined,
+                  // Preserve existing type - don't infer from routineId/supersetId
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -245,12 +236,9 @@ function ProgramEditorPageContent() {
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type: drill.routineId
-                    ? "routine"
-                    : drill.supersetId
-                    ? "superset"
-                    : (drill.type as "exercise" | "drill" | "video") ||
-                      undefined,
+                  // Preserve existing type - don't infer from routineId/supersetId
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -294,12 +282,9 @@ function ProgramEditorPageContent() {
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type: drill.routineId
-                    ? "routine"
-                    : drill.supersetId
-                    ? "superset"
-                    : (drill.type as "exercise" | "drill" | "video") ||
-                      undefined,
+                  // Preserve existing type - don't infer from routineId/supersetId
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -343,12 +328,9 @@ function ProgramEditorPageContent() {
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type: drill.routineId
-                    ? "routine"
-                    : drill.supersetId
-                    ? "superset"
-                    : (drill.type as "exercise" | "drill" | "video") ||
-                      undefined,
+                  // Preserve existing type - don't infer from routineId/supersetId
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
@@ -392,12 +374,9 @@ function ProgramEditorPageContent() {
                 ?.drills?.map(drill => ({
                   id: drill.id,
                   title: drill.title,
-                  type: drill.routineId
-                    ? "routine"
-                    : drill.supersetId
-                    ? "superset"
-                    : (drill.type as "exercise" | "drill" | "video") ||
-                      undefined,
+                  // Preserve existing type - don't infer from routineId/supersetId
+                  type:
+                    (drill.type as "exercise" | "drill" | "video") || undefined,
                   notes: drill.description || drill.notes || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
