@@ -190,7 +190,7 @@ function ClientProgramPage() {
               // Use the new completion system to check if drill is completed
               let isCompleted;
               const dateKey = dayData.date
-                ? new Date(dayData.date).toISOString().split("T")[0]
+                ? dayData.date // Already in YYYY-MM-DD format
                 : undefined;
               if (drill.id.includes("-routine-")) {
                 // This is a routine exercise within a program
@@ -600,7 +600,12 @@ function ClientProgramPage() {
               // Use the new completion system to check if drill is completed
               let isCompleted;
               const dateKey = selectedDate
-                ? selectedDate.toISOString().split("T")[0]
+                ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1)
+                    .toString()
+                    .padStart(2, "0")}-${selectedDate
+                    .getDate()
+                    .toString()
+                    .padStart(2, "0")}`
                 : undefined;
               if (drill.id.includes("-routine-")) {
                 // This is a routine exercise within a program
@@ -638,7 +643,12 @@ function ClientProgramPage() {
               totalDrills++;
               // Use the new completion system for standalone routine exercises
               const dateKey = selectedDate
-                ? selectedDate.toISOString().split("T")[0]
+                ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1)
+                    .toString()
+                    .padStart(2, "0")}-${selectedDate
+                    .getDate()
+                    .toString()
+                    .padStart(2, "0")}`
                 : undefined;
               const isCompleted = isExerciseCompleted(
                 exercise.id,
@@ -676,7 +686,12 @@ function ClientProgramPage() {
           // Check if all drills in this program are completed using new system
           if (program.drills) {
             const dateKey = selectedDate
-              ? selectedDate.toISOString().split("T")[0]
+              ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1)
+                  .toString()
+                  .padStart(2, "0")}-${selectedDate
+                  .getDate()
+                  .toString()
+                  .padStart(2, "0")}`
               : undefined;
             const allDrillsCompleted = program.drills.every(drill => {
               if (drill.id.includes("-routine-")) {
@@ -712,7 +727,12 @@ function ClientProgramPage() {
           totalAssignments++;
           // Check if all exercises in this routine are completed using new system
           const dateKey = selectedDate
-            ? selectedDate.toISOString().split("T")[0]
+            ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1)
+                .toString()
+                .padStart(2, "0")}-${selectedDate
+                .getDate()
+                .toString()
+                .padStart(2, "0")}`
             : undefined;
           const allExercisesCompleted = (
             routineAssignment as any
@@ -748,7 +768,12 @@ function ClientProgramPage() {
     try {
       // Use the new completion system
       const dateKey = selectedDate
-        ? selectedDate.toISOString().split("T")[0]
+        ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")}-${selectedDate
+            .getDate()
+            .toString()
+            .padStart(2, "0")}`
         : undefined;
       await markExerciseComplete(
         exerciseId,
@@ -840,7 +865,12 @@ function ClientProgramPage() {
     try {
       // Use the new completion system
       const dateKey = selectedDate
-        ? selectedDate.toISOString().split("T")[0]
+        ? `${selectedDate.getFullYear()}-${(selectedDate.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")}-${selectedDate
+            .getDate()
+            .toString()
+            .padStart(2, "0")}`
         : undefined;
       await markExerciseComplete(drillId, undefined, completed, dateKey);
       console.log("✅ Drill completion updated successfully");
@@ -1404,7 +1434,15 @@ function ClientProgramPage() {
                         )}
                         onClick={() => {
                           // Allow clicking on any day to view what's scheduled
-                          const dayString = date.toISOString().split("T")[0];
+                          // Use local date format to avoid timezone issues
+                          const dayString = `${date.getFullYear()}-${(
+                            date.getMonth() + 1
+                          )
+                            .toString()
+                            .padStart(2, "0")}-${date
+                            .getDate()
+                            .toString()
+                            .padStart(2, "0")}`;
                           setSelectedDay(dayData);
                           setSelectedDate(date);
                           setSelectedDateForDetails(dayString);

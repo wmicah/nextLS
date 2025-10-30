@@ -466,77 +466,57 @@ function CreateProgramModalContent({
             ?.find((d: any) => d.dayNumber === 1)
             ?.drills?.map((drill: any) => ({
               ...drill,
-              type: drill.routineId
-                ? "routine"
-                : drill.supersetId
-                ? "superset"
-                : drill.type || "exercise",
+              // Preserve existing type - don't infer from routineId/supersetId
+              // because expanded exercises keep routineId as a reference
+              type: drill.type || "exercise",
             })) || [],
         tue:
           week.days
             ?.find((d: any) => d.dayNumber === 2)
             ?.drills?.map((drill: any) => ({
               ...drill,
-              type: drill.routineId
-                ? "routine"
-                : drill.supersetId
-                ? "superset"
-                : drill.type || "exercise",
+              // Preserve existing type - don't infer from routineId/supersetId
+              type: drill.type || "exercise",
             })) || [],
         wed:
           week.days
             ?.find((d: any) => d.dayNumber === 3)
             ?.drills?.map((drill: any) => ({
               ...drill,
-              type: drill.routineId
-                ? "routine"
-                : drill.supersetId
-                ? "superset"
-                : drill.type || "exercise",
+              // Preserve existing type - don't infer from routineId/supersetId
+              type: drill.type || "exercise",
             })) || [],
         thu:
           week.days
             ?.find((d: any) => d.dayNumber === 4)
             ?.drills?.map((drill: any) => ({
               ...drill,
-              type: drill.routineId
-                ? "routine"
-                : drill.supersetId
-                ? "superset"
-                : drill.type || "exercise",
+              // Preserve existing type - don't infer from routineId/supersetId
+              type: drill.type || "exercise",
             })) || [],
         fri:
           week.days
             ?.find((d: any) => d.dayNumber === 5)
             ?.drills?.map((drill: any) => ({
               ...drill,
-              type: drill.routineId
-                ? "routine"
-                : drill.supersetId
-                ? "superset"
-                : drill.type || "exercise",
+              // Preserve existing type - don't infer from routineId/supersetId
+              type: drill.type || "exercise",
             })) || [],
         sat:
           week.days
             ?.find((d: any) => d.dayNumber === 6)
             ?.drills?.map((drill: any) => ({
               ...drill,
-              type: drill.routineId
-                ? "routine"
-                : drill.supersetId
-                ? "superset"
-                : drill.type || "exercise",
+              // Preserve existing type - don't infer from routineId/supersetId
+              type: drill.type || "exercise",
             })) || [],
         sun:
           week.days
             ?.find((d: any) => d.dayNumber === 7)
             ?.drills?.map((drill: any) => ({
               ...drill,
-              type: drill.routineId
-                ? "routine"
-                : drill.supersetId
-                ? "superset"
-                : drill.type || "exercise",
+              // Preserve existing type - don't infer from routineId/supersetId
+              type: drill.type || "exercise",
             })) || [],
       },
     }));

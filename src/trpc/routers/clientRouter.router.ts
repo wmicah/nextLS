@@ -533,6 +533,7 @@ export const clientRouterRouter = router({
                         days: {
                           select: {
                             id: true,
+                            dayNumber: true, // CRITICAL: needed for day matching!
                             title: true,
                             description: true,
                             isRestDay: true,
@@ -543,6 +544,16 @@ export const clientRouterRouter = router({
                                 title: true,
                                 type: true,
                                 routineId: true,
+                                routine: {
+                                  select: {
+                                    id: true,
+                                    exercises: {
+                                      select: {
+                                        id: true,
+                                      },
+                                    },
+                                  },
+                                },
                               },
                             },
                           },
@@ -560,6 +571,7 @@ export const clientRouterRouter = router({
                             days: {
                               select: {
                                 id: true,
+                                dayNumber: true, // CRITICAL: needed for day matching!
                                 title: true,
                                 description: true,
                                 isRestDay: true,
@@ -569,6 +581,31 @@ export const clientRouterRouter = router({
                                     title: true,
                                     type: true,
                                     routineId: true,
+                                    routine: {
+                                      select: {
+                                        id: true,
+                                        name: true,
+                                        exercises: {
+                                          select: {
+                                            id: true,
+                                            title: true,
+                                            description: true,
+                                            sets: true,
+                                            reps: true,
+                                            tempo: true,
+                                            type: true,
+                                            videoUrl: true,
+                                            videoId: true,
+                                            videoThumbnail: true,
+                                            videoTitle: true,
+                                            order: true,
+                                          },
+                                          orderBy: {
+                                            order: "asc",
+                                          },
+                                        },
+                                      },
+                                    },
                                   },
                                 },
                               },
@@ -608,7 +645,28 @@ export const clientRouterRouter = router({
           });
         }
 
-        // Get exercise completions for counting
+        // Debug: Log program assignments
+        console.log("🔍 CLIENT DEBUG - Program Assignments:", {
+          clientId: client.id,
+          clientName: client.name,
+          totalAssignments: client.programAssignments.length,
+          assignments: client.programAssignments.map(a => ({
+            id: a.id,
+            programId: a.programId,
+            programTitle: a.program?.title,
+            assignedAt: a.assignedAt,
+            startDate: a.startDate,
+            completedAt: a.completedAt,
+            hasWeeks: a.program?.weeks?.length || 0,
+            weekDetails: a.program?.weeks?.map(w => ({
+              weekNumber: w.weekNumber,
+              daysCount: w.days?.length || 0,
+            })),
+          })),
+        });
+
+        // Get exercise completions for the client
+        // This is used for both program drills and standalone items
         const completions = await db.exerciseCompletion.findMany({
           where: { clientId: client.id },
           select: {
@@ -619,27 +677,65 @@ export const clientRouterRouter = router({
           },
         });
 
-        // Create completion map for quick lookup
-        const completionMap = new Map();
-        completions.forEach(completion => {
-          let key: string;
-          const dateSuffix = completion.date ? `-${completion.date}` : "";
-          if (completion.programDrillId === "standalone-routine") {
-            key = `standalone-${completion.exerciseId}${dateSuffix}`;
-          } else if (completion.programDrillId === "standalone-drill") {
-            key = `standalone-${completion.exerciseId}${dateSuffix}`;
-          } else {
-            key = `${completion.programDrillId || "standalone"}-${
-              completion.exerciseId
-            }${dateSuffix}`;
-          }
-          completionMap.set(key, completion.completed);
+        console.log("🔍 LOADED COMPLETIONS:", {
+          totalCompletions: completions.length,
+          sampleCompletions: completions.slice(0, 5).map(c => ({
+            exerciseId: c.exerciseId,
+            programDrillId: c.programDrillId,
+            completed: c.completed,
+            date: c.date,
+          })),
         });
 
-        console.log("🔍 getProgramCalendarLight - Completion map:", {
-          totalCompletions: completions.length,
-          completionKeys: Array.from(completionMap.keys()),
-          dateString,
+        // Build completion map
+        // Keys must match what's being saved by the modal/hook
+        const completionMap = new Map<string, boolean>();
+        completions.forEach(c => {
+          // Skip completions without dates - they're invalid
+          if (!c.date) {
+            console.log("🔍 Skipping completion without date:", {
+              exerciseId: c.exerciseId,
+              programDrillId: c.programDrillId,
+              completed: c.completed,
+            });
+            return;
+          }
+
+          if (
+            c.programDrillId === "standalone-routine" ||
+            c.programDrillId === "standalone-drill"
+          ) {
+            // Standalone item
+            const key = `standalone-${c.exerciseId}-${c.date}`;
+            completionMap.set(key, !!c.completed);
+            console.log("🔍 Mapped standalone:", {
+              key,
+              completed: c.completed,
+            });
+          } else if (c.programDrillId && c.programDrillId !== "") {
+            // Routine exercise within a program: programDrillId is the parent drill ID
+            const key = `${c.programDrillId}-${c.exerciseId}-${c.date}`;
+            completionMap.set(key, !!c.completed);
+            console.log("🔍 Mapped routine exercise:", {
+              key,
+              programDrillId: c.programDrillId,
+              exerciseId: c.exerciseId,
+              completed: c.completed,
+            });
+          } else {
+            // Regular program drill: exerciseId is the drill ID
+            const key = `${c.exerciseId}-${c.date}`;
+            completionMap.set(key, !!c.completed);
+            console.log("🔍 Mapped regular drill:", {
+              key,
+              completed: c.completed,
+            });
+          }
+        });
+
+        console.log("🔍 COMPLETION MAP KEYS:", {
+          totalKeys: completionMap.size,
+          sampleKeys: Array.from(completionMap.keys()).slice(0, 10),
         });
 
         // Generate calendar data with minimal information
@@ -671,29 +767,77 @@ export const clientRouterRouter = router({
               )?.program || assignment.program;
 
             if (program) {
-              const weekNumber =
-                Math.floor(
-                  (d.getTime() - new Date(assignment.startDate).getTime()) /
-                    (7 * 24 * 60 * 60 * 1000)
-                ) + 1;
+              // Use startDate if available, otherwise fall back to assignedAt
+              const programStartDate =
+                assignment.startDate || assignment.assignedAt;
+
+              // Skip dates before program starts - compare date components directly
+              const startDateObj = new Date(programStartDate);
+              const startYear = startDateObj.getFullYear();
+              const startMonth = startDateObj.getMonth();
+              const startDay = startDateObj.getDate();
+
+              const currentYear = d.getFullYear();
+              const currentMonth = d.getMonth();
+              const currentDay = d.getDate();
+
+              // Compare dates by components to avoid timezone issues
+              if (
+                currentYear < startYear ||
+                (currentYear === startYear && currentMonth < startMonth) ||
+                (currentYear === startYear &&
+                  currentMonth === startMonth &&
+                  currentDay < startDay)
+              ) {
+                continue; // Skip this date - program hasn't started yet
+              }
+
+              // Calculate which week and day this date corresponds to
+              // Normalize both dates to local midnight to avoid timezone drift
+              const startDt = new Date(programStartDate);
+              const startLocal = new Date(
+                startDt.getFullYear(),
+                startDt.getMonth(),
+                startDt.getDate()
+              );
+              const currentLocal = new Date(
+                d.getFullYear(),
+                d.getMonth(),
+                d.getDate()
+              );
+              const daysSinceStart = Math.round(
+                (currentLocal.getTime() - startLocal.getTime()) /
+                  (24 * 60 * 60 * 1000)
+              );
+              const weekNumber = Math.floor(daysSinceStart / 7) + 1;
+              const dayNumberInWeek = (daysSinceStart % 7) + 1;
+
+              console.log("🔍 DATE CALCULATION:", {
+                dateString,
+                programStartDate,
+                daysSinceStart,
+                weekNumber,
+                dayNumberInWeek,
+              });
+
               const week = program.weeks.find(
                 (w: any) => w.weekNumber === weekNumber
               );
 
               if (week) {
-                const day = week.days.find((day: any) => {
-                  const dayOfWeek = d.getDay();
-                  const dayNames = [
-                    "Sunday",
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                  ];
-                  return dayNames[dayOfWeek] === day.title;
+                console.log("🔍 MATCHING DAY:", {
+                  dateString,
+                  dayNumberInWeek,
+                  availableDays: week.days.map((d: any) => ({
+                    dayNumber: d.dayNumber,
+                    title: d.title,
+                    drillCount: d.drills?.length || 0,
+                  })),
                 });
+
+                const day = week.days.find(
+                  (day: any) => day.dayNumber === dayNumberInWeek
+                );
 
                 if (day) {
                   dayData.isRestDay = day.isRestDay;
@@ -704,25 +848,52 @@ export const clientRouterRouter = router({
                   let completedDrills = 0;
 
                   for (const drill of day.drills) {
-                    if (drill.type === "routine" && drill.routineId) {
-                      // Count routine exercises
-                      const routine = (client as any).routineAssignments.find(
-                        (ra: any) => ra.routineId === drill.routineId
-                      )?.routine;
-                      if (routine) {
+                    console.log("🔍 COUNTING DRILL:", {
+                      drillId: drill.id,
+                      drillTitle: drill.title,
+                      drillType: drill.type,
+                      hasRoutineId: !!drill.routineId,
+                      hasRoutineData: !!(drill as any).routine,
+                      routineExerciseCount:
+                        (drill as any).routine?.exercises?.length || 0,
+                    });
+
+                    if (
+                      drill.type === "routine" &&
+                      drill.routineId &&
+                      (drill as any).routine
+                    ) {
+                      // Count routine exercises - check each exercise individually
+                      const routine = (drill as any).routine;
+                      if (routine?.exercises) {
                         totalDrills += routine.exercises.length;
-                        // Count completed routine exercises
+                        // Count completed exercises for this routine
                         routine.exercises.forEach((exercise: any) => {
                           const key = `${drill.id}-${exercise.id}-${dateString}`;
                           const isCompleted = completionMap.get(key);
-                          if (isCompleted) completedDrills++;
+                          console.log("🔍 Checking routine exercise:", {
+                            key,
+                            isCompleted,
+                            exerciseTitle: exercise.title,
+                          });
+                          if (isCompleted) {
+                            completedDrills++;
+                          }
                         });
                       }
                     } else {
                       // Regular drill
                       totalDrills++;
-                      const key = `standalone-${drill.id}-${dateString}`;
-                      if (completionMap.get(key)) completedDrills++;
+                      const key = `${drill.id}-${dateString}`;
+                      const isCompleted = completionMap.get(key);
+                      console.log("🔍 Checking regular drill:", {
+                        key,
+                        isCompleted,
+                        drillTitle: drill.title,
+                      });
+                      if (isCompleted) {
+                        completedDrills++;
+                      }
                     }
                   }
 
@@ -786,6 +957,18 @@ export const clientRouterRouter = router({
 
           calendarData[dateString] = dayData;
         }
+
+        // Debug: Log final calendar data summary
+        const datesWithPrograms = Object.keys(calendarData).filter(
+          date =>
+            calendarData[date].programs &&
+            calendarData[date].programs.length > 0
+        );
+        console.log("🔍 CLIENT DEBUG - Calendar Data Summary:", {
+          totalDates: Object.keys(calendarData).length,
+          datesWithPrograms: datesWithPrograms.length,
+          programDates: datesWithPrograms.slice(0, 10), // Show first 10 dates
+        });
 
         return calendarData;
       } catch (error) {
@@ -1069,7 +1252,7 @@ export const clientRouterRouter = router({
                     !!completion
                   );
 
-                  if (drill.routineId) {
+                  if (drill.routineId && drill.type === "routine") {
                     // This is a routine drill - fetch and expand the routine
                     const routine = await db.routine.findUnique({
                       where: { id: drill.routineId },
@@ -1351,7 +1534,9 @@ export const clientRouterRouter = router({
           });
         }
 
-        const targetDate = new Date(input.date);
+        // Parse the clicked date as LOCAL date to avoid UTC shift
+        const [ty, tm, td] = input.date.split("-").map(Number);
+        const targetDate = new Date(ty, tm - 1, td);
         const dayOfWeek = targetDate.getDay();
         const dayNames = [
           "Sunday",
@@ -1362,7 +1547,7 @@ export const clientRouterRouter = router({
           "Friday",
           "Saturday",
         ];
-        const dayName = dayNames[dayOfWeek];
+        const dayName = dayNames[dayOfWeek]; // Keep for logging
 
         // Get client's assigned programs with full drill data
         const client = await db.client.findFirst({
@@ -1647,30 +1832,89 @@ export const clientRouterRouter = router({
               weeksCount: program.weeks?.length || 0,
             });
 
-            const weekNumber =
-              Math.floor(
-                (targetDate.getTime() -
-                  new Date(assignment.startDate).getTime()) /
-                  (7 * 24 * 60 * 60 * 1000)
-              ) + 1;
-            const week = program.weeks.find(
-              (w: any) => w.weekNumber === weekNumber
+            // Use startDate if available, otherwise fall back to assignedAt
+            const programStartDate =
+              assignment.startDate || assignment.assignedAt;
+
+            // Skip if target date is before program starts - compare date components directly
+            const startDateObj = new Date(programStartDate);
+            const startYear = startDateObj.getFullYear();
+            const startMonth = startDateObj.getMonth();
+            const startDay = startDateObj.getDate();
+
+            const targetYear = targetDate.getFullYear();
+            const targetMonth = targetDate.getMonth();
+            const targetDay = targetDate.getDate();
+
+            // Compare dates by components to avoid timezone issues
+            if (
+              targetYear < startYear ||
+              (targetYear === startYear && targetMonth < startMonth) ||
+              (targetYear === startYear &&
+                targetMonth === startMonth &&
+                targetDay < startDay)
+            ) {
+              console.log(
+                "🔍 getProgramDayDetails - Skipping program (not started yet):",
+                {
+                  programTitle: program.title,
+                  startDate: `${startYear}-${startMonth + 1}-${startDay}`,
+                  targetDate: `${targetYear}-${targetMonth + 1}-${targetDay}`,
+                }
+              );
+              continue; // Skip this program - it hasn't started yet
+            }
+
+            // Calculate which week and day this date corresponds to
+            // Normalize both dates to local midnight to avoid timezone drift
+            const startDt2 = new Date(programStartDate);
+            const startLocal2 = new Date(
+              startDt2.getFullYear(),
+              startDt2.getMonth(),
+              startDt2.getDate()
             );
+            const targetLocal = new Date(
+              targetDate.getFullYear(),
+              targetDate.getMonth(),
+              targetDate.getDate()
+            );
+            const daysSinceStart = Math.round(
+              (targetLocal.getTime() - startLocal2.getTime()) /
+                (24 * 60 * 60 * 1000)
+            );
+            const weekNumber = Math.floor(daysSinceStart / 7) + 1;
+            const dayNumberInWeek = (daysSinceStart % 7) + 1;
 
             console.log("🔍 getProgramDayDetails - Week finding:", {
+              daysSinceStart,
               weekNumber,
-              foundWeek: !!week,
+              dayNumberInWeek,
+              foundWeek: !!program.weeks.find(
+                (w: any) => w.weekNumber === weekNumber
+              ),
               weeksAvailable:
                 program.weeks?.map((w: any) => w.weekNumber) || [],
             });
 
+            const week = program.weeks.find(
+              (w: any) => w.weekNumber === weekNumber
+            );
+
             if (week) {
-              const day = week.days.find((day: any) => day.title === dayName);
+              // Match by dayNumber (sequential days from start)
+              const day = week.days.find(
+                (day: any) => day.dayNumber === dayNumberInWeek
+              );
 
               console.log("🔍 getProgramDayDetails - Day finding:", {
                 dayName,
+                dayNumberInWeek,
                 foundDay: !!day,
-                daysAvailable: week.days?.map((d: any) => d.title) || [],
+                daysAvailable:
+                  week.days?.map((d: any) => ({
+                    dayNumber: d.dayNumber,
+                    title: d.title,
+                  })) || [],
               });
 
               if (day) {
@@ -1680,128 +1924,80 @@ export const clientRouterRouter = router({
                 const programData: any = {
                   id: program.id,
                   programId: program.id, // Add programId for modal compatibility
-                  title: program.title,
-                  programTitle: program.title, // Add programTitle for modal compatibility
+                  programTitle: program.title,
                   isRestDay: day.isRestDay,
-                  drills: [],
-                  totalDrills: 0,
-                  completedDrills: 0,
+                  drills: [] as any[],
                 };
 
-                // Process drills with full details
+                // Process drills and expand routines with correct completion checks
                 for (const drill of day.drills) {
-                  if (drill.type === "routine" && drill.routineId) {
-                    // This is a routine drill - expand the routine
+                  if (drill.routineId && drill.type === "routine") {
+                    // Routine drill - expand exercises
                     const routine = drill.routine;
-                    if (routine) {
+                    if (routine?.exercises?.length) {
                       for (const exercise of routine.exercises) {
-                        const exerciseId = `${drill.id}-routine-${exercise.id}`;
-                        const completionKey = `${exercise.id}-${drill.id}`;
-                        const completion = completionMap.get(completionKey);
+                        // For program routines: inherit parent drill completion (by drillId+assignment)
+                        const pdKey = `${drill.id}-${assignment.id}`;
+                        const isCompleted = completionMap.get(pdKey);
 
-                        const expandedDrill = {
-                          id: exerciseId,
+                        programData.drills.push({
+                          id: `${drill.id}-routine-${exercise.id}`,
                           title: exercise.title,
                           description: exercise.description,
                           sets: exercise.sets,
                           reps: exercise.reps,
                           tempo: exercise.tempo,
+                          notes: exercise.notes,
+                          duration: exercise.duration,
                           type: exercise.type,
                           videoUrl: exercise.videoUrl,
                           videoId: exercise.videoId,
-                          videoThumbnail: exercise.videoThumbnail,
                           videoTitle: exercise.videoTitle,
-                          completed: completion?.completed || false,
-                          completedAt: completion?.completedAt,
-                          // Include drill-level data
-                          drillId: drill.id,
-                          drillTitle: drill.title,
-                          drillDescription: drill.description,
-                          drillNotes: drill.notes,
-                          drillDuration: drill.duration,
-                          // Coach Instructions from drill
-                          coachInstructions: (() => {
-                            const hasInstructions =
-                              drill.coachInstructionsWhatToDo ||
-                              drill.coachInstructionsHowToDoIt ||
-                              drill.coachInstructionsKeyPoints?.length > 0 ||
-                              drill.coachInstructionsCommonMistakes?.length >
-                                0 ||
-                              drill.coachInstructionsEquipment;
-
-                            return hasInstructions
-                              ? {
-                                  whatToDo: drill.coachInstructionsWhatToDo,
-                                  howToDoIt: drill.coachInstructionsHowToDoIt,
-                                  keyPoints:
-                                    drill.coachInstructionsKeyPoints || [],
-                                  commonMistakes:
-                                    drill.coachInstructionsCommonMistakes || [],
-                                  easier: drill.coachInstructionsEasier,
-                                  harder: drill.coachInstructionsHarder,
-                                  equipment: drill.coachInstructionsEquipment,
-                                  setup: drill.coachInstructionsSetup,
-                                }
-                              : null;
-                          })(),
-                        };
-
-                        programData.drills.push(expandedDrill);
-                        dayData.drills.push(expandedDrill);
-                        programData.totalDrills++;
-                        dayData.totalDrills++;
-                        if (expandedDrill.completed) {
-                          programData.completedDrills++;
-                          dayData.completedDrills++;
-                        }
+                          videoThumbnail: exercise.videoThumbnail,
+                          completed: !!isCompleted,
+                          // Superset fields
+                          supersetId: exercise.supersetId,
+                          supersetOrder: exercise.supersetOrder,
+                          supersetDescription: exercise.supersetDescription,
+                          supersetInstructions: exercise.supersetInstructions,
+                          supersetNotes: exercise.supersetNotes,
+                          routineId: drill.routineId,
+                          originalDrillId: drill.id,
+                        });
                       }
                     }
                   } else {
-                    // Regular drill
-                    const completionKey = `${drill.id}-standalone`;
-                    const completion = completionMap.get(completionKey);
-
-                    const drillData = {
-                      ...drill,
-                      completed: completion?.completed || false,
-                      completedAt: completion?.completedAt,
-                      // Coach Instructions
-                      coachInstructions: (() => {
-                        const hasInstructions =
-                          drill.coachInstructionsWhatToDo ||
-                          drill.coachInstructionsHowToDoIt ||
-                          drill.coachInstructionsKeyPoints?.length > 0 ||
-                          drill.coachInstructionsCommonMistakes?.length > 0 ||
-                          drill.coachInstructionsEquipment;
-
-                        return hasInstructions
-                          ? {
-                              whatToDo: drill.coachInstructionsWhatToDo,
-                              howToDoIt: drill.coachInstructionsHowToDoIt,
-                              keyPoints: drill.coachInstructionsKeyPoints || [],
-                              commonMistakes:
-                                drill.coachInstructionsCommonMistakes || [],
-                              easier: drill.coachInstructionsEasier,
-                              harder: drill.coachInstructionsHarder,
-                              equipment: drill.coachInstructionsEquipment,
-                              setup: drill.coachInstructionsSetup,
-                            }
-                          : null;
-                      })(),
-                    };
-
-                    programData.drills.push(drillData);
-                    dayData.drills.push(drillData);
-                    programData.totalDrills++;
-                    dayData.totalDrills++;
-                    if (drillData.completed) {
-                      programData.completedDrills++;
-                      dayData.completedDrills++;
+                    // Regular drill - completion key format: `standalone-<exerciseId>-<date>`
+                    const pdKey = `${drill.id}-${assignment.id}`;
+                    let isCompleted = completionMap.get(pdKey);
+                    // Fallback to standalone if any (e.g., non-program use)
+                    if (!isCompleted) {
+                      const standaloneKey = `standalone-${drill.id}-${input.date}`;
+                      isCompleted = completionMap.get(standaloneKey);
                     }
+
+                    programData.drills.push({
+                      id: drill.id,
+                      title: drill.title,
+                      sets: drill.sets,
+                      reps: drill.reps,
+                      tempo: drill.tempo,
+                      notes: drill.notes,
+                      duration: drill.duration,
+                      type: drill.type,
+                      videoId: drill.videoId,
+                      videoTitle: drill.videoTitle,
+                      videoThumbnail: drill.videoThumbnail,
+                      completed: !!isCompleted,
+                    });
                   }
                 }
 
-                if (programData.drills.length > 0) {
+                if (!programData.isRestDay) {
+                  dayData.programs.push(programData);
+                } else if (programData.drills.length > 0) {
+                  // If drills exist, it's not a rest day
+                  programData.isRestDay = false;
                   dayData.programs.push(programData);
                 }
               }
@@ -2078,7 +2274,7 @@ export const clientRouterRouter = router({
                     c.programAssignmentId === assignment.id
                 );
 
-                if (drill.routineId) {
+                if (drill.routineId && drill.type === "routine") {
                   // This is a routine drill - fetch and expand the routine
                   const routine = await db.routine.findUnique({
                     where: { id: drill.routineId },
