@@ -1045,7 +1045,7 @@ export default function MobileClientProgramPage() {
                         .slice(0, 2)
                         .map((indicator: any, idx: number) => (
                           <div
-                            key={indicator.id}
+                            key={indicator.id || `${indicator.title}-${idx}`}
                             className={`w-2 h-2 rounded-full flex items-center justify-center text-[6px] font-bold shadow-sm border transition-all duration-200 ${
                               indicator.isRestDay
                                 ? "bg-orange-500 text-white border-orange-400"
