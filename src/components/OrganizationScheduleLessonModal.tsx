@@ -51,6 +51,8 @@ export default function OrganizationScheduleLessonModal({
       : null
   );
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [useCustomTime, setUseCustomTime] = useState(false);
+  const [customTime, setCustomTime] = useState<string>("");
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [isScheduling, setIsScheduling] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
@@ -604,35 +606,82 @@ export default function OrganizationScheduleLessonModal({
             {/* Time Selection */}
             {selectedDate && (
               <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Select Time <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-                  {timeSlots.map(time => {
-                    const isAvailable = isTimeSlotAvailable(selectedDate, time);
-                    const isSelected = selectedTime === time;
-
-                    return (
-                      <button
-                        key={time}
-                        onClick={() => isAvailable && setSelectedTime(time)}
-                        disabled={!isAvailable}
-                        className={`
-                          px-4 py-2 rounded-lg text-sm font-medium transition-all
-                          ${
-                            isSelected
-                              ? "bg-[#4A5A70] text-white"
-                              : isAvailable
-                              ? "bg-[#353A3A] text-white hover:bg-[#4A5A70]"
-                              : "bg-[#2A3133] text-[#606364] cursor-not-allowed"
-                          }
-                        `}
-                      >
-                        {time}
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-white">
+                    Select Time <span className="text-red-500">*</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useCustomTime}
+                      onChange={e => {
+                        setUseCustomTime(e.target.checked);
+                        if (e.target.checked) {
+                          setSelectedTime("");
+                        } else {
+                          setCustomTime("");
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-[#606364] bg-[#353A3A] text-[#4A5A70] focus:ring-[#4A5A70]"
+                    />
+                    <span className="text-xs text-[#ABA4AA]">Custom time</span>
+                  </label>
                 </div>
+
+                {useCustomTime ? (
+                  <input
+                    type="time"
+                    value={customTime}
+                    onChange={e => {
+                      setCustomTime(e.target.value);
+                      // Convert to 12-hour format for selectedTime
+                      if (e.target.value) {
+                        const [hours, minutes] = e.target.value.split(":");
+                        const hour = parseInt(hours);
+                        const min = parseInt(minutes);
+                        const period = hour >= 12 ? "PM" : "AM";
+                        const displayHour =
+                          hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+                        const timeStr = `${displayHour}:${minutes.padStart(
+                          2,
+                          "0"
+                        )} ${period}`;
+                        setSelectedTime(timeStr);
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-[#353A3A] border border-[#606364] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
+                  />
+                ) : (
+                  <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                    {timeSlots.map(time => {
+                      const isAvailable = isTimeSlotAvailable(
+                        selectedDate,
+                        time
+                      );
+                      const isSelected = selectedTime === time;
+
+                      return (
+                        <button
+                          key={time}
+                          onClick={() => isAvailable && setSelectedTime(time)}
+                          disabled={!isAvailable}
+                          className={`
+                            px-4 py-2 rounded-lg text-sm font-medium transition-all
+                            ${
+                              isSelected
+                                ? "bg-[#4A5A70] text-white"
+                                : isAvailable
+                                ? "bg-[#353A3A] text-white hover:bg-[#4A5A70]"
+                                : "bg-[#2A3133] text-[#606364] cursor-not-allowed"
+                            }
+                          `}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
