@@ -1873,30 +1873,11 @@ function ClientsPage() {
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
-                                  if (activeTab === "active") {
-                                    handleArchiveClient(client.id, client.name);
-                                  } else {
-                                    handleUnarchiveClient(
-                                      client.id,
-                                      client.name
-                                    );
-                                  }
+                                  setSelectedClientForProfile(client);
+                                  setIsProfileModalOpen(true);
                                 }}
-                                disabled={archivingClientId === client.id}
-                                className="relative transition-all duration-200 hover:scale-105 disabled:opacity-50 group"
-                                onMouseEnter={e => {
-                                  e.currentTarget.classList.add("hover-close");
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.classList.remove(
-                                    "hover-close"
-                                  );
-                                }}
-                                title={
-                                  activeTab === "active"
-                                    ? "Click to archive client"
-                                    : "Click to unarchive client"
-                                }
+                                className="relative transition-all duration-200 hover:scale-105"
+                                title="View client profile"
                               >
                                 <ProfilePictureUploader
                                   currentAvatarUrl={
@@ -1908,19 +1889,6 @@ function ClientsPage() {
                                   readOnly={true}
                                   size="sm"
                                 />
-                                {/* Hover overlay with trash icon */}
-                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover-close:opacity-100 transition-opacity duration-200">
-                                  {archivingClientId === client.id ? (
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                                  ) : (
-                                    <Trash2
-                                      className="h-4 w-4 text-white"
-                                      style={{
-                                        color: "#EF4444", // Red color for both archive and unarchive
-                                      }}
-                                    />
-                                  )}
-                                </div>
                               </button>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
@@ -1930,6 +1898,48 @@ function ClientsPage() {
                                   >
                                     {client.name}
                                   </h3>
+                                  {/* Archive button next to name */}
+                                  {activeTab === "active" && (
+                                    <button
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        handleArchiveClient(
+                                          client.id,
+                                          client.name
+                                        );
+                                      }}
+                                      disabled={archivingClientId === client.id}
+                                      className="p-1 rounded transition-all duration-200 hover:scale-110 disabled:opacity-50 flex-shrink-0"
+                                      style={{
+                                        color: "#EF4444",
+                                        backgroundColor: "transparent",
+                                      }}
+                                      onMouseEnter={e => {
+                                        if (!e.currentTarget.disabled) {
+                                          e.currentTarget.style.color =
+                                            "#DC2626";
+                                        }
+                                      }}
+                                      onMouseLeave={e => {
+                                        if (!e.currentTarget.disabled) {
+                                          e.currentTarget.style.color =
+                                            "#EF4444";
+                                        }
+                                      }}
+                                      title="Archive client"
+                                    >
+                                      {archivingClientId === client.id ? (
+                                        <div
+                                          className="animate-spin rounded-full h-3 w-3 border-b-2"
+                                          style={{
+                                            borderColor: "#EF4444",
+                                          }}
+                                        />
+                                      ) : (
+                                        <Archive className="h-3 w-3" />
+                                      )}
+                                    </button>
+                                  )}
                                   {/* Next Lesson Indicator */}
                                   {isValidLessonDate(client.nextLessonDate) && (
                                     <span
@@ -2183,30 +2193,11 @@ function ClientsPage() {
                               <button
                                 onClick={e => {
                                   e.stopPropagation();
-                                  if (activeTab === "active") {
-                                    handleArchiveClient(client.id, client.name);
-                                  } else {
-                                    handleUnarchiveClient(
-                                      client.id,
-                                      client.name
-                                    );
-                                  }
+                                  setSelectedClientForProfile(client);
+                                  setIsProfileModalOpen(true);
                                 }}
-                                disabled={archivingClientId === client.id}
-                                className="relative transition-all duration-200 hover:scale-105 disabled:opacity-50 flex-shrink-0 group"
-                                onMouseEnter={e => {
-                                  e.currentTarget.classList.add("hover-close");
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.classList.remove(
-                                    "hover-close"
-                                  );
-                                }}
-                                title={
-                                  activeTab === "active"
-                                    ? "Click to archive client"
-                                    : "Click to unarchive client"
-                                }
+                                className="relative transition-all duration-200 hover:scale-105 flex-shrink-0"
+                                title="View client profile"
                               >
                                 <ProfilePictureUploader
                                   currentAvatarUrl={
@@ -2219,27 +2210,77 @@ function ClientsPage() {
                                   readOnly={true}
                                   className="flex-shrink-0"
                                 />
-                                {/* Hover overlay with trash icon */}
-                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 hover-close:opacity-100 transition-opacity duration-200">
-                                  {archivingClientId === client.id ? (
-                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                                  ) : (
-                                    <Trash2
-                                      className="h-5 w-5 text-white"
-                                      style={{
-                                        color: "#EF4444", // Red color for both archive and unarchive
-                                      }}
-                                    />
-                                  )}
-                                </div>
                               </button>
                               <div>
-                                <h3
-                                  className="text-xl font-bold mb-2"
-                                  style={{ color: "#C3BCC2" }}
-                                >
-                                  {client.name}
-                                </h3>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3
+                                    className="text-xl font-bold"
+                                    style={{ color: "#C3BCC2" }}
+                                  >
+                                    {client.name}
+                                  </h3>
+                                  {/* Archive/Unarchive button next to name */}
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      if (activeTab === "active") {
+                                        handleArchiveClient(
+                                          client.id,
+                                          client.name
+                                        );
+                                      } else {
+                                        handleUnarchiveClient(
+                                          client.id,
+                                          client.name
+                                        );
+                                      }
+                                    }}
+                                    disabled={archivingClientId === client.id}
+                                    className="p-1 rounded transition-all duration-200 hover:scale-110 disabled:opacity-50 flex-shrink-0"
+                                    style={{
+                                      color:
+                                        activeTab === "active"
+                                          ? "#EF4444"
+                                          : "#10B981",
+                                      backgroundColor: "transparent",
+                                    }}
+                                    onMouseEnter={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color =
+                                          activeTab === "active"
+                                            ? "#DC2626"
+                                            : "#059669";
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color =
+                                          activeTab === "active"
+                                            ? "#EF4444"
+                                            : "#10B981";
+                                      }
+                                    }}
+                                    title={
+                                      activeTab === "active"
+                                        ? "Archive client"
+                                        : "Unarchive client"
+                                    }
+                                  >
+                                    {archivingClientId === client.id ? (
+                                      <div
+                                        className="animate-spin rounded-full h-3 w-3 border-b-2"
+                                        style={{
+                                          borderColor:
+                                            activeTab === "active"
+                                              ? "#EF4444"
+                                              : "#10B981",
+                                        }}
+                                      />
+                                    ) : (
+                                      <Archive className="h-3 w-3" />
+                                    )}
+                                  </button>
+                                </div>
                                 <p
                                   className="text-sm mb-1"
                                   style={{ color: "#ABA4AA" }}
@@ -2291,46 +2332,6 @@ function ClientsPage() {
                                 </div>
                               )}
                               <div className="flex flex-col gap-1">
-                                {activeTab === "archived" && (
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      handleUnarchiveClient(
-                                        client.id,
-                                        client.name
-                                      );
-                                    }}
-                                    disabled={archivingClientId === client.id}
-                                    className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
-                                    style={{ color: "#10B981" }}
-                                    onMouseEnter={e => {
-                                      if (!e.currentTarget.disabled) {
-                                        e.currentTarget.style.color = "#059669";
-                                        e.currentTarget.style.backgroundColor =
-                                          "#3A4040";
-                                      }
-                                    }}
-                                    onMouseLeave={e => {
-                                      if (!e.currentTarget.disabled) {
-                                        e.currentTarget.style.color = "#10B981";
-                                        e.currentTarget.style.backgroundColor =
-                                          "transparent";
-                                      }
-                                    }}
-                                    title="Unarchive client"
-                                  >
-                                    {archivingClientId === client.id ? (
-                                      <div
-                                        className="animate-spin rounded-full h-4 w-4 border-b-2"
-                                        style={{
-                                          borderColor: "#10B981",
-                                        }}
-                                      />
-                                    ) : (
-                                      <Archive className="h-4 w-4" />
-                                    )}
-                                  </button>
-                                )}
                                 <button
                                   onClick={e => {
                                     e.stopPropagation();
@@ -2352,6 +2353,69 @@ function ClientsPage() {
                                   title="Edit client"
                                 >
                                   <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    if (activeTab === "active") {
+                                      handleArchiveClient(
+                                        client.id,
+                                        client.name
+                                      );
+                                    } else {
+                                      handleUnarchiveClient(
+                                        client.id,
+                                        client.name
+                                      );
+                                    }
+                                  }}
+                                  disabled={archivingClientId === client.id}
+                                  className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
+                                  style={{
+                                    color:
+                                      activeTab === "active"
+                                        ? "#EF4444"
+                                        : "#10B981",
+                                  }}
+                                  onMouseEnter={e => {
+                                    if (!e.currentTarget.disabled) {
+                                      e.currentTarget.style.color =
+                                        activeTab === "active"
+                                          ? "#DC2626"
+                                          : "#059669";
+                                      e.currentTarget.style.backgroundColor =
+                                        "#3A4040";
+                                    }
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!e.currentTarget.disabled) {
+                                      e.currentTarget.style.color =
+                                        activeTab === "active"
+                                          ? "#EF4444"
+                                          : "#10B981";
+                                      e.currentTarget.style.backgroundColor =
+                                        "transparent";
+                                    }
+                                  }}
+                                  title={
+                                    activeTab === "active"
+                                      ? "Archive client"
+                                      : "Unarchive client"
+                                  }
+                                >
+                                  {archivingClientId === client.id ? (
+                                    <div
+                                      className="animate-spin rounded-full h-4 w-4 border-b-2"
+                                      style={{
+                                        borderColor:
+                                          activeTab === "active"
+                                            ? "#EF4444"
+                                            : "#10B981",
+                                      }}
+                                    />
+                                  ) : (
+                                    <Archive className="h-4 w-4" />
+                                  )}
                                 </button>
                               </div>
                             </div>
