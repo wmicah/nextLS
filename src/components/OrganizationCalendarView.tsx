@@ -11,8 +11,6 @@ import {
   X,
   Trash2,
   Plus,
-  Copy,
-  Clipboard,
   CheckCircle,
   Calendar,
   Loader2,
@@ -66,9 +64,6 @@ export default function OrganizationCalendarView() {
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set());
   const [isDeletingMultipleDays, setIsDeletingMultipleDays] = useState(false);
-
-  // Copy/paste functionality
-  const [clipboardData, setClipboardData] = useState<any>(null);
 
   const { data: currentUser } = trpc.user.getProfile.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
@@ -225,91 +220,6 @@ export default function OrganizationCalendarView() {
         setSelectedTimeSlot("");
       }
     }
-  };
-
-  // Copy/paste functionality
-  const handleCopyDay = (date: Date) => {
-    const lessons = getLessonsForDate(date);
-    const totalItems = lessons.length;
-
-    if (totalItems === 0) {
-      toast.warning("No lessons to copy from this day");
-      return;
-    }
-
-    const clipboardData = {
-      type: "organization_lessons",
-      sourceDate: date.toISOString().split("T")[0],
-      lessons: lessons.map((lesson: any) => ({
-        id: lesson.id,
-        clientId: lesson.clientId,
-        clientName: lesson.client?.name,
-        coachId: lesson.coachId,
-        date: lesson.date,
-        status: lesson.status,
-      })),
-      copiedAt: new Date(),
-    };
-
-    setClipboardData(clipboardData);
-    toast.success(`Copied ${totalItems} lesson${totalItems !== 1 ? "s" : ""}`);
-  };
-
-  const handlePasteDay = async (targetDate: Date) => {
-    if (!clipboardData || clipboardData.type !== "organization_lessons") {
-      toast.error("No lessons copied to paste");
-      return;
-    }
-
-    const targetDateStr = targetDate.toISOString().split("T")[0];
-    const sourceDateStr = new Date(clipboardData.sourceDate)
-      .toISOString()
-      .split("T")[0];
-
-    if (targetDateStr === sourceDateStr) {
-      toast.error("Cannot paste to the same day");
-      return;
-    }
-
-    if (
-      !confirm(
-        `Paste ${clipboardData.lessons.length} lesson(s) to ${format(
-          targetDate,
-          "MMM d, yyyy"
-        )}?`
-      )
-    ) {
-      return;
-    }
-
-    // Schedule lessons for each copied lesson
-    const scheduleMutation =
-      trpc.organization.scheduleOrganizationLesson.useMutation();
-
-    for (const lesson of clipboardData.lessons) {
-      try {
-        const originalDate = new Date(lesson.date);
-        const newDate = new Date(targetDate);
-        newDate.setHours(
-          originalDate.getHours(),
-          originalDate.getMinutes(),
-          0,
-          0
-        );
-
-        await scheduleMutation.mutateAsync({
-          clientId: lesson.clientId,
-          lessonDate: newDate.toISOString(),
-          sendEmail: false,
-        });
-      } catch (error: any) {
-        console.error(`Error pasting lesson:`, error);
-      }
-    }
-
-    toast.success(`Pasted ${clipboardData.lessons.length} lesson(s)`);
-    setClipboardData(null);
-    refetch();
   };
 
   // Multi-select deletion
@@ -537,24 +447,6 @@ export default function OrganizationCalendarView() {
                   )}
                 </button>
               )}
-
-              {/* Clipboard Indicator */}
-              {clipboardData && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-                  <Clipboard className="h-4 w-4 text-cyan-400" />
-                  <span className="text-sm text-cyan-300">
-                    {clipboardData.lessons?.length || 0} lesson
-                    {(clipboardData.lessons?.length || 0) !== 1 ? "s" : ""}{" "}
-                    copied
-                  </span>
-                  <button
-                    onClick={() => setClipboardData(null)}
-                    className="text-cyan-400 hover:text-cyan-300 transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
             </div>
 
             <div className="flex items-center gap-4">
@@ -669,35 +561,6 @@ export default function OrganizationCalendarView() {
                             <CheckCircle className="h-3 w-3 text-white" />
                           )}
                         </div>
-                      </div>
-                    )}
-
-                    {/* Hover Overlay with Copy/Paste Buttons */}
-                    {!multiSelectMode && (
-                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 z-10">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleCopyDay(day);
-                          }}
-                          className="p-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 hover:border-cyan-500/50 transition-all duration-200"
-                          title="Copy day lessons"
-                        >
-                          <Copy className="h-3 w-3 text-cyan-400" />
-                        </button>
-
-                        {clipboardData && (
-                          <button
-                            onClick={e => {
-                              e.stopPropagation();
-                              handlePasteDay(day);
-                            }}
-                            className="p-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-500/50 transition-all duration-200"
-                            title="Paste lessons to this day"
-                          >
-                            <Clipboard className="h-3 w-3 text-emerald-400" />
-                          </button>
-                        )}
                       </div>
                     )}
 
@@ -832,9 +695,6 @@ export default function OrganizationCalendarView() {
             setShowDayOverviewModal(false);
             setShowScheduleModal(true);
           }}
-          onCopy={() => handleCopyDay(selectedDate)}
-          onPaste={() => handlePasteDay(selectedDate)}
-          canPaste={!!clipboardData}
           onClose={() => {
             setShowDayOverviewModal(false);
             setSelectedDate(null);
@@ -862,9 +722,6 @@ export default function OrganizationCalendarView() {
             setShowDayDetailsModal(false);
             setShowScheduleModal(true);
           }}
-          onCopy={() => handleCopyDay(selectedDate)}
-          onPaste={() => handlePasteDay(selectedDate)}
-          canPaste={!!clipboardData}
           onClose={() => setShowDayDetailsModal(false)}
         />
       )}
@@ -922,9 +779,6 @@ function OrganizationDayOverviewModal({
   onScheduleLesson,
   onDeleteLesson,
   onScheduleWithCustomTime,
-  onCopy,
-  onPaste,
-  canPaste,
   onClose,
 }: {
   date: Date;
@@ -956,9 +810,6 @@ function OrganizationDayOverviewModal({
   ) => Promise<void>;
   onDeleteLesson: (lessonId: string) => void;
   onScheduleWithCustomTime: () => void;
-  onCopy: () => void;
-  onPaste: () => void;
-  canPaste: boolean;
   onClose: () => void;
 }) {
   const getCoachName = (coachId: string) => {
@@ -1179,26 +1030,6 @@ function OrganizationDayOverviewModal({
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCopy}
-              className="flex items-center gap-2"
-            >
-              <Copy className="h-4 w-4" />
-              Copy
-            </Button>
-            {canPaste && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onPaste}
-                className="flex items-center gap-2"
-              >
-                <Clipboard className="h-4 w-4" />
-                Paste
-              </Button>
-            )}
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-6 w-6" />
             </Button>
@@ -1457,9 +1288,6 @@ function OrganizationDayDetailsModal({
   userRole,
   onDeleteLesson,
   onScheduleLesson,
-  onCopy,
-  onPaste,
-  canPaste,
   onClose,
 }: {
   date: Date;
@@ -1470,9 +1298,6 @@ function OrganizationDayDetailsModal({
   userRole: string;
   onDeleteLesson: (lessonId: string) => void;
   onScheduleLesson: () => void;
-  onCopy: () => void;
-  onPaste: () => void;
-  canPaste: boolean;
   onClose: () => void;
 }) {
   const getCoachName = (coachId: string) => {
@@ -1503,28 +1328,6 @@ function OrganizationDayDetailsModal({
             {format(date, "EEEE, MMMM d, yyyy")}
           </h3>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCopy}
-              className="flex items-center gap-2"
-              title="Copy all lessons from this day"
-            >
-              <Copy className="h-4 w-4" />
-              Copy
-            </Button>
-            {canPaste && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onPaste}
-                className="flex items-center gap-2"
-                title="Paste lessons to this day"
-              >
-                <Clipboard className="h-4 w-4" />
-                Paste
-              </Button>
-            )}
             <Button
               variant="outline"
               size="sm"
