@@ -439,6 +439,10 @@ function ProgramBuilder({
   const updateRoutineMutation = trpc.routines.update.useMutation({
     onSuccess: () => {
       refetchRoutines();
+      // Also invalidate the tRPC cache to ensure all components get fresh data
+      const utils = trpc.useUtils();
+      utils.routines.list.invalidate();
+      utils.routines.get.invalidate();
     },
   });
   const deleteRoutineMutation = trpc.routines.delete.useMutation({
