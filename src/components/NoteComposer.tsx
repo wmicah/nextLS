@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   X,
@@ -23,6 +23,15 @@ interface NoteComposerProps {
   clientId: string;
   clientName: string;
   onSuccess?: () => void;
+  editingNote?: {
+    id: string;
+    title: string | null;
+    content: string;
+    type: string;
+    priority: string;
+    isPrivate: boolean;
+    tags: Array<{ id: string; name: string }>;
+  } | null;
 }
 
 interface Attachment {
@@ -39,6 +48,7 @@ export default function NoteComposer({
   clientId,
   clientName,
   onSuccess,
+  editingNote = null,
 }: NoteComposerProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -64,7 +74,44 @@ export default function NoteComposer({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Initialize form when editingNote changes
+  React.useEffect(() => {
+    if (editingNote && isOpen) {
+      setTitle(editingNote.title || "");
+      setContent(editingNote.content);
+      setType(editingNote.type as any);
+      setPriority(editingNote.priority as any);
+      setIsPrivate(editingNote.isPrivate);
+      setTags(editingNote.tags.map(t => t.name));
+      setAttachments([]); // Attachments are read-only for now
+    } else if (!editingNote && isOpen) {
+      // Reset form for new note
+      setTitle("");
+      setContent("");
+      setType("GENERAL");
+      setPriority("NORMAL");
+      setIsPrivate(false);
+      setTags([]);
+      setAttachments([]);
+    }
+  }, [editingNote, isOpen]);
+
   const createNoteMutation = trpc.notes.createNote.useMutation({
+    onSuccess: () => {
+      onSuccess?.();
+      onClose();
+      // Reset form
+      setTitle("");
+      setContent("");
+      setType("GENERAL");
+      setPriority("NORMAL");
+      setIsPrivate(false);
+      setTags([]);
+      setAttachments([]);
+    },
+  });
+
+  const updateNoteMutation = trpc.notes.updateNote.useMutation({
     onSuccess: () => {
       onSuccess?.();
       onClose();
@@ -158,24 +205,41 @@ export default function NoteComposer({
     }
 
     try {
-      await createNoteMutation.mutateAsync({
-        clientId,
-        title: title.trim() || undefined,
-        content: content.trim(),
-        type,
-        priority,
-        isPrivate,
-        tags: tags.length > 0 ? tags : undefined,
-      });
+      if (editingNote) {
+        // Update existing note
+        await updateNoteMutation.mutateAsync({
+          noteId: editingNote.id,
+          title: title.trim() || undefined,
+          content: content.trim(),
+          type,
+          priority,
+          isPrivate,
+          tags: tags.length > 0 ? tags : undefined,
+        });
+      } else {
+        // Create new note
+        await createNoteMutation.mutateAsync({
+          clientId,
+          title: title.trim() || undefined,
+          content: content.trim(),
+          type,
+          priority,
+          isPrivate,
+          tags: tags.length > 0 ? tags : undefined,
+        });
 
-      // Handle attachments after note creation
-      if (attachments.length > 0) {
-        // In a real app, you'd upload files to your storage service
-        // and then add them to the note
-        console.log("Attachments to upload:", attachments);
+        // Handle attachments after note creation
+        if (attachments.length > 0) {
+          // In a real app, you'd upload files to your storage service
+          // and then add them to the note
+          console.log("Attachments to upload:", attachments);
+        }
       }
     } catch (error) {
-      console.error("Error creating note:", error);
+      console.error(
+        `Error ${editingNote ? "updating" : "creating"} note:`,
+        error
+      );
     }
   };
 
@@ -232,10 +296,15 @@ export default function NoteComposer({
             <FileText className="w-6 h-6" style={{ color: "#4A5A70" }} />
             <div>
               <h2 className="text-2xl font-bold" style={{ color: "#ffffff" }}>
-                Send Note to {clientName}
+                {editingNote ? "Edit Note" : `Send Note to ${clientName}`}
               </h2>
               <p className="text-sm" style={{ color: "#9ca3af" }}>
-                {format(new Date(), "MMM d, yyyy 'at' h:mm a")}
+                {editingNote
+                  ? `Last updated: ${format(
+                      new Date(),
+                      "MMM d, yyyy 'at' h:mm a"
+                    )}`
+                  : format(new Date(), "MMM d, yyyy 'at' h:mm a")}
               </p>
             </div>
           </div>
@@ -533,19 +602,33 @@ export default function NoteComposer({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={createNoteMutation.isPending || !content.trim()}
+            disabled={
+              (editingNote
+                ? updateNoteMutation.isPending
+                : createNoteMutation.isPending) || !content.trim()
+            }
             className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: "#4A5A70",
               color: "#FFFFFF",
             }}
           >
-            {createNoteMutation.isPending ? (
+            {(
+              editingNote
+                ? updateNoteMutation.isPending
+                : createNoteMutation.isPending
+            ) ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Send className="w-4 h-4" />
             )}
-            {createNoteMutation.isPending ? "Sending..." : "Send Note"}
+            {editingNote
+              ? updateNoteMutation.isPending
+                ? "Saving..."
+                : "Save Changes"
+              : createNoteMutation.isPending
+              ? "Sending..."
+              : "Send Note"}
           </button>
         </div>
       </div>

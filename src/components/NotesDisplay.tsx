@@ -70,6 +70,7 @@ export default function NotesDisplay({
 
   const [showComposerModal, setShowComposerModal] = useState(false);
   const [showAllNotesModal, setShowAllNotesModal] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("ALL");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
@@ -357,7 +358,7 @@ export default function NotesDisplay({
           {filteredNotes.slice(0, 4).map((note: Note) => (
             <div
               key={note.id}
-              className={`p-6 rounded-lg border transition-all duration-200 hover:scale-[1.02] ${
+              className={`p-6 rounded-lg border ${
                 note.isPinned ? "ring-2 ring-yellow-500/50" : ""
               }`}
               style={{
@@ -418,6 +419,13 @@ export default function NotesDisplay({
 
                 {!isClientView && (
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setEditingNote(note)}
+                      className="p-2 rounded-lg hover:bg-blue-500/20 transition-colors"
+                      title="Edit note"
+                    >
+                      <Edit className="w-4 h-4" style={{ color: "#3B82F6" }} />
+                    </button>
                     <button
                       onClick={() =>
                         togglePinNoteMutation.mutate({ noteId: note.id })
@@ -582,7 +590,7 @@ export default function NotesDisplay({
               {filteredNotes.map((note: Note) => (
                 <div
                   key={note.id}
-                  className={`p-6 rounded-lg border transition-all duration-200 hover:scale-[1.01] ${
+                  className={`p-6 rounded-lg border ${
                     note.isPinned ? "ring-2 ring-yellow-500/50" : ""
                   }`}
                   style={{
@@ -648,6 +656,19 @@ export default function NotesDisplay({
 
                     {!isClientView && (
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingNote(note);
+                            setShowAllNotesModal(false);
+                          }}
+                          className="p-2 rounded-lg hover:bg-blue-500/20 transition-colors"
+                          title="Edit note"
+                        >
+                          <Edit
+                            className="w-4 h-4"
+                            style={{ color: "#3B82F6" }}
+                          />
+                        </button>
                         <button
                           onClick={() =>
                             togglePinNoteMutation.mutate({ noteId: note.id })
@@ -777,16 +798,35 @@ export default function NotesDisplay({
         </div>
       )}
 
-      {/* Note Composer Modal */}
+      {/* Note Composer Modal - Create */}
       {showComposerModal && clientId && (
         <NoteComposer
           isOpen={showComposerModal}
-          onClose={() => setShowComposerModal(false)}
+          onClose={() => {
+            setShowComposerModal(false);
+            setEditingNote(null);
+          }}
           clientId={clientId}
           clientName="Client" // You might want to pass the actual client name
           onSuccess={() => {
             refetch();
             setShowComposerModal(false);
+            setEditingNote(null);
+          }}
+        />
+      )}
+
+      {/* Note Composer Modal - Edit */}
+      {editingNote && clientId && (
+        <NoteComposer
+          isOpen={!!editingNote}
+          onClose={() => setEditingNote(null)}
+          clientId={clientId}
+          clientName="Client" // You might want to pass the actual client name
+          editingNote={editingNote}
+          onSuccess={() => {
+            refetch();
+            setEditingNote(null);
           }}
         />
       )}
