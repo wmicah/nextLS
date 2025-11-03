@@ -257,13 +257,13 @@ export default function DrillSelectionModal({
                 />
               </div>
 
-              {/* Tempo */}
+              {/* Duration */}
               <div>
                 <Label
                   htmlFor="tempo"
                   className="text-white text-sm font-medium"
                 >
-                  Tempo (e.g., 3-1-1)
+                  Duration (e.g., 60 seconds)
                 </Label>
                 <Input
                   id="tempo"
@@ -276,7 +276,7 @@ export default function DrillSelectionModal({
                     }))
                   }
                   className="mt-1 bg-[#3A4245] border-gray-600 text-white"
-                  placeholder="3-1-1"
+                  placeholder="60 seconds"
                 />
               </div>
 

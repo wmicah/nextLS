@@ -1086,7 +1086,7 @@ export default function MobileProgramBuilder({
                                     exercises: updatedExercises,
                                   }));
                                 }}
-                                placeholder="Tempo"
+                                placeholder="60 seconds"
                                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
                               />
                             </div>
@@ -1746,7 +1746,7 @@ function MobileSortableDrillItem({
                 )}
                 {displayItem?.tempo && (
                   <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
-                    Tempo: {displayItem.tempo}
+                    Duration: {displayItem.tempo}
                   </span>
                 )}
                 {displayItem?.duration && (
@@ -1938,7 +1938,7 @@ function VideoDetailsDialog({
 
             <div>
               <Label htmlFor="tempo" className="text-[#C3BCC2]">
-                Tempo (Optional)
+                Duration (Optional)
               </Label>
               <Input
                 id="tempo"

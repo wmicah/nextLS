@@ -248,7 +248,7 @@ function ExerciseEditDialog({
             />
           </div>
 
-          {/* Sets, Reps, Tempo */}
+          {/* Sets, Reps, Duration */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="sets" className="text-gray-400 text-sm">
@@ -292,7 +292,7 @@ function ExerciseEditDialog({
 
             <div>
               <Label htmlFor="tempo" className="text-gray-400 text-sm">
-                Tempo
+                Duration
               </Label>
               <Input
                 id="tempo"
@@ -301,7 +301,7 @@ function ExerciseEditDialog({
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
                 className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="2-1-2"
+                placeholder="60 seconds"
               />
             </div>
           </div>
@@ -1747,7 +1747,7 @@ function ProgramBuilder({
                                     exercises: updatedExercises,
                                   }));
                                 }}
-                                placeholder="Tempo"
+                                placeholder="60 seconds"
                                 className="bg-gray-700 border-gray-600 text-white text-sm"
                               />
                             </div>

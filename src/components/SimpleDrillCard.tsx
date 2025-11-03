@@ -101,7 +101,7 @@ export default function SimpleDrillCard({
           {drill.tempo && (
             <div className="text-center">
               <div className="text-lg font-bold text-white">{drill.tempo}</div>
-              <div className="text-xs text-gray-400">Tempo</div>
+              <div className="text-xs text-gray-400">Duration</div>
             </div>
           )}
         </div>

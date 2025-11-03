@@ -297,7 +297,7 @@ export default function ExerciseRow({
               </div>
             </div>
 
-            {/* Sets, Reps, Tempo */}
+            {/* Sets, Reps, Duration */}
             <div className="flex gap-2">
               <div className="flex-1">
                 <input
@@ -358,7 +358,7 @@ export default function ExerciseRow({
                     backgroundColor: "#1F2323",
                     borderColor: "#606364",
                   }}
-                  placeholder="Tempo (e.g., 2-0-2)"
+                  placeholder="Duration (e.g., 60 seconds)"
                 />
               </div>
             </div>
@@ -509,12 +509,12 @@ export default function ExerciseRow({
               {exercise.notes && <span>Notes: {exercise.notes}</span>}
             </div>
 
-            {/* Sets, Reps, Tempo Display */}
+            {/* Sets, Reps, Duration Display */}
             {(exercise.sets || exercise.reps || exercise.tempo) && (
               <div className="flex items-center gap-3 text-xs text-gray-400">
                 {exercise.sets && <span>Sets: {exercise.sets}</span>}
                 {exercise.reps && <span>Reps: {exercise.reps}</span>}
-                {exercise.tempo && <span>Tempo: {exercise.tempo}</span>}
+                {exercise.tempo && <span>Duration: {exercise.tempo}</span>}
               </div>
             )}
 
