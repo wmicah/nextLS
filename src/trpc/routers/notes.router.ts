@@ -201,6 +201,7 @@ export const notesRouter = router({
           .optional(),
         priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
         isPrivate: z.boolean().optional(),
+        tags: z.array(z.string()).optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -221,19 +222,67 @@ export const notesRouter = router({
         });
       }
 
+      // Get the existing note to save to history
+      const existingNote = await db.clientNote.findUnique({
+        where: {
+          id: input.noteId,
+          coachId: user.id,
+        },
+        include: {
+          client: true,
+        },
+      });
+
+      if (!existingNote) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Note not found",
+        });
+      }
+
+      // Create history entry before updating
+      await db.clientNoteHistory.create({
+        data: {
+          clientId: existingNote.clientId,
+          coachId: user.id,
+          notes: existingNote.content,
+          action: "UPDATED",
+        },
+      });
+
+      // Prepare update data
+      const updateData: any = {};
+      if (input.title !== undefined) updateData.title = input.title;
+      if (input.content !== undefined) updateData.content = input.content;
+      if (input.type !== undefined) updateData.type = input.type;
+      if (input.priority !== undefined) updateData.priority = input.priority;
+      if (input.isPrivate !== undefined) updateData.isPrivate = input.isPrivate;
+
+      // Update tags if provided
+      if (input.tags !== undefined) {
+        // Delete existing tags
+        await db.noteTag.deleteMany({
+          where: { noteId: input.noteId },
+        });
+
+        // Create new tags if any
+        if (input.tags.length > 0) {
+          updateData.tags = {
+            create: input.tags.map(tag => ({
+              name: tag,
+              color: "#4A5A70",
+            })),
+          };
+        }
+      }
+
       // Update the note
       const note = await db.clientNote.update({
         where: {
           id: input.noteId,
           coachId: user.id,
         },
-        data: {
-          title: input.title,
-          content: input.content,
-          type: input.type,
-          priority: input.priority,
-          isPrivate: input.isPrivate,
-        },
+        data: updateData,
         include: {
           coach: {
             select: {
