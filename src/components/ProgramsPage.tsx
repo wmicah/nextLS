@@ -291,7 +291,12 @@ function ProgramsPage() {
 
   const updateRoutine = trpc.routines.update.useMutation({
     onSuccess: () => {
+      // Invalidate all routine queries
       utils.routines.list.invalidate();
+      utils.routines.get.invalidate();
+      utils.routines.getRoutineAssignments.invalidate();
+      utils.routines.getClientRoutineAssignments.invalidate();
+      utils.routines.getRoutineAssignmentsForCalendar.invalidate();
       toast({
         title: "Routine updated",
         description: "Your routine has been updated successfully.",
@@ -1077,7 +1082,13 @@ function ProgramsPage() {
               setSelectedRoutine(null);
               setSelectedVideoFromLibrary(null);
             }}
-            routine={selectedRoutine}
+            routine={
+              // Find the latest version of the routine from the routines list to ensure fresh data
+              selectedRoutine
+                ? routines.find(r => r.id === selectedRoutine.id) ||
+                  selectedRoutine
+                : null
+            }
             onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
             selectedVideoFromLibrary={selectedVideoFromLibrary}
             onVideoProcessed={() => setSelectedVideoFromLibrary(null)}

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -579,6 +579,15 @@ export default function SeamlessRoutineModal({
   selectedVideoFromLibrary,
   onVideoProcessed,
 }: SeamlessRoutineModalProps) {
+  // Generate unique IDs for temporary exercises
+  // Use a ref-based counter + timestamp + random to ensure absolute uniqueness across renders
+  const tempIdCounterRef = useRef(0);
+  const generateTempId = () => {
+    tempIdCounterRef.current++;
+    return `temp-${Date.now()}-${tempIdCounterRef.current}-${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
+  };
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [exercises, setExercises] = useState<RoutineExercise[]>([]);
@@ -647,15 +656,19 @@ export default function SeamlessRoutineModal({
       coachInstructions: details.coachInstructions,
     };
 
-    if (editingExercise.id.startsWith("temp-")) {
-      // This is a new exercise being added
-      setExercises(prev => [...prev, updatedExercise]);
-    } else {
-      // This is editing an existing exercise
-      setExercises(prev =>
-        prev.map(ex => (ex.id === editingExercise.id ? updatedExercise : ex))
-      );
-    }
+    // Check if the exercise already exists in the array
+    setExercises(prev => {
+      const existingIndex = prev.findIndex(ex => ex.id === editingExercise.id);
+      if (existingIndex >= 0) {
+        // Exercise exists - update it
+        return prev.map(ex =>
+          ex.id === editingExercise.id ? updatedExercise : ex
+        );
+      } else {
+        // New exercise - add it
+        return [...prev, updatedExercise];
+      }
+    });
 
     setIsExerciseEditDialogOpen(false);
     setEditingExercise(null);
@@ -796,8 +809,13 @@ export default function SeamlessRoutineModal({
     url?: string;
     thumbnail?: string;
   }) => {
+    let newExerciseId = generateTempId();
+    // Ensure ID is unique (very unlikely but safety check)
+    while (exercises.some(ex => ex.id === newExerciseId)) {
+      newExerciseId = generateTempId();
+    }
     const newExercise: RoutineExercise = {
-      id: `temp-${Date.now()}`,
+      id: newExerciseId,
       title: video.title,
       type: "video",
       description: video.description || "",
@@ -832,8 +850,17 @@ export default function SeamlessRoutineModal({
   });
 
   const updateRoutine = trpc.routines.update.useMutation({
-    onSuccess: () => {
+    onSuccess: updatedRoutine => {
+      // Invalidate all routine-related queries to ensure fresh data everywhere
       utils.routines.list.invalidate();
+      // Invalidate the specific routine query if we have an ID
+      if (routine?.id) {
+        utils.routines.get.invalidate({ id: routine.id });
+      }
+      // Also invalidate all routine-related queries that might be cached
+      utils.routines.getRoutineAssignments.invalidate();
+      utils.routines.getClientRoutineAssignments.invalidate();
+      utils.routines.getRoutineAssignmentsForCalendar.invalidate();
       toast({
         title: "Routine updated! ✨",
         description: "Your routine has been updated successfully.",
@@ -909,13 +936,20 @@ export default function SeamlessRoutineModal({
   };
 
   const addEmptyExercise = () => {
-    const newExercise: RoutineExercise = {
-      id: `temp-${Date.now()}`,
-      title: "",
-      type: "exercise",
-      notes: "",
-    };
-    setExercises(prev => [...prev, newExercise]);
+    setExercises(prev => {
+      let newExerciseId = generateTempId();
+      // Ensure ID is unique (very unlikely but safety check)
+      while (prev.some(ex => ex.id === newExerciseId)) {
+        newExerciseId = generateTempId();
+      }
+      const newExercise: RoutineExercise = {
+        id: newExerciseId,
+        title: "",
+        type: "exercise",
+        notes: "",
+      };
+      return [...prev, newExercise];
+    });
   };
 
   // Icons removed for cleaner design
@@ -1205,13 +1239,15 @@ export default function SeamlessRoutineModal({
                       onDragEnd={handleDragEnd}
                     >
                       <SortableContext
-                        items={exercises.map(exercise => exercise.id)}
+                        items={Array.from(
+                          new Set(exercises.map(exercise => exercise.id))
+                        )}
                         strategy={verticalListSortingStrategy}
                       >
                         <div className="space-y-2">
                           {(() => {
                             // Filter out duplicate superset items (only show first item in each group)
-                            const filteredExercises = exercises.filter(
+                            let filteredExercises = exercises.filter(
                               exercise => {
                                 if (exercise.supersetId) {
                                   const supersetGroup =
@@ -1226,6 +1262,21 @@ export default function SeamlessRoutineModal({
                                     supersetGroup.items[0]?.id === exercise.id
                                   );
                                 }
+                                return true;
+                              }
+                            );
+
+                            // Remove any duplicate IDs (keep first occurrence)
+                            const seenIds = new Set<string>();
+                            filteredExercises = filteredExercises.filter(
+                              exercise => {
+                                if (seenIds.has(exercise.id)) {
+                                  console.warn(
+                                    `Duplicate exercise ID detected and removed: ${exercise.id}`
+                                  );
+                                  return false;
+                                }
+                                seenIds.add(exercise.id);
                                 return true;
                               }
                             );

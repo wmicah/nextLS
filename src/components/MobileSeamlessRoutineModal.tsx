@@ -98,6 +98,15 @@ export default function MobileSeamlessRoutineModal({
   // Update routine mutation
   const updateRoutine = trpc.routines.update.useMutation({
     onSuccess: () => {
+      // Invalidate all routine queries to ensure fresh data
+      const utils = trpc.useUtils();
+      utils.routines.list.invalidate();
+      if (routine?.id) {
+        utils.routines.get.invalidate({ id: routine.id });
+      }
+      utils.routines.getRoutineAssignments.invalidate();
+      utils.routines.getClientRoutineAssignments.invalidate();
+      utils.routines.getRoutineAssignmentsForCalendar.invalidate();
       toast({
         title: "Routine updated",
         description: "Your routine has been updated successfully.",
