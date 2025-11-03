@@ -228,7 +228,7 @@ function SortableExerciseItem({
             <Input
               value={exercise.tempo || ""}
               onChange={e => onUpdate(index, "tempo", e.target.value)}
-              placeholder="Tempo"
+              placeholder="60 seconds"
               className="bg-gray-600 border-gray-500 text-white text-xs h-7"
             />
           </div>

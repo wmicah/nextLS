@@ -130,7 +130,7 @@ function SortableExerciseItem({ exercise, onDelete }: any) {
             )}
             {exercise.tempo && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Tempo:</span>
+                <span className="text-sm text-gray-400">Duration:</span>
                 <span className="text-lg font-medium text-white">
                   {exercise.tempo}
                 </span>
