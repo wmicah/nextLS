@@ -43,6 +43,7 @@ import {
   EyeOff,
   Copy,
   Clipboard,
+  ChevronDown,
 } from "lucide-react";
 import {
   format,
@@ -67,6 +68,13 @@ import {
 import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import Sidebar from "@/components/Sidebar";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import SimpleAssignProgramModal from "@/components/SimpleAssignProgramModal";
 import QuickAssignProgramModal from "@/components/QuickAssignProgramModal";
 import QuickAssignRoutineModal from "@/components/QuickAssignRoutineModal";
@@ -113,7 +121,9 @@ function ClientDetailPage({
   const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
   const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false);
   const [showDayDetailsModal, setShowDayDetailsModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"lessons">("lessons");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "calendar" | "programs" | "routines" | "videos" | "notes"
+  >("overview");
   const [compliancePeriod, setCompliancePeriod] = useState<
     "4" | "6" | "8" | "all"
   >("4");
@@ -134,6 +144,9 @@ function ClientDetailPage({
   const [conflictData, setConflictData] = useState<ConflictResolution | null>(
     null
   );
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set());
+  const [isDeletingMultipleDays, setIsDeletingMultipleDays] = useState(false);
 
   // Fetch client data
   const {
@@ -741,6 +754,232 @@ function ClientDetailPage({
     }
   };
 
+  // Multi-select handlers
+  const toggleDaySelection = (day: Date) => {
+    const dayKey = day.toISOString().split("T")[0];
+    setSelectedDays(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dayKey)) {
+        newSet.delete(dayKey);
+      } else {
+        newSet.add(dayKey);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeleteMultipleDays = async () => {
+    if (selectedDays.size === 0) return;
+
+    const daysArray = Array.from(selectedDays);
+    const confirmationMessage = `Are you sure you want to delete all assignments from ${
+      selectedDays.size
+    } day${
+      selectedDays.size !== 1 ? "s" : ""
+    }?\n\nThis will remove all lessons, programs, routines, and videos from the selected days.`;
+
+    if (!confirm(confirmationMessage)) {
+      return;
+    }
+
+    setIsDeletingMultipleDays(true);
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
+    try {
+      // Process each selected day sequentially
+      for (let i = 0; i < daysArray.length; i++) {
+        const dayKey = daysArray[i];
+        // Create date properly - parse the YYYY-MM-DD string and set to local midnight
+        const [year, month, dayNum] = dayKey.split("-").map(Number);
+        const day = new Date(year, month - 1, dayNum);
+        day.setHours(0, 0, 0, 0);
+
+        console.log(`🗓️ Processing day ${i + 1}/${daysArray.length}:`, {
+          dayKey,
+          day: day.toISOString(),
+          dayLocal: day.toLocaleDateString(),
+          isToday: isSameDay(day, new Date()),
+        });
+
+        // Refresh data before getting assignments for this day to ensure fresh data
+        if (i > 0) {
+          await utils.scheduling.getCoachSchedule.invalidate({
+            month: day.getMonth(),
+            year: day.getFullYear(),
+          });
+          await utils.clients.getAssignedPrograms.invalidate({ clientId });
+          await utils.routines.getClientRoutineAssignments.invalidate({
+            clientId,
+          });
+          await utils.library.getClientAssignments.invalidate({ clientId });
+          // Small delay to let cache refresh
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        // Get all assignments for this day with fresh data
+        const lessons = getLessonsForDate(day);
+        const programs = getProgramsForDate(day);
+        const routines = getRoutineAssignmentsForDate(day);
+        const videos = getVideosForDate(day);
+
+        console.log(`📋 Found assignments for ${dayKey}:`, {
+          lessons: lessons.length,
+          programs: programs.length,
+          routines: routines.length,
+          videos: videos.length,
+          total:
+            lessons.length + programs.length + routines.length + videos.length,
+        });
+
+        const totalAssignments =
+          lessons.length + programs.length + routines.length + videos.length;
+
+        if (totalAssignments === 0) {
+          console.warn(`⚠️ No assignments found for ${dayKey} - skipping`);
+          continue;
+        }
+
+        let daySuccess = true;
+
+        // Delete all lessons
+        for (const lesson of lessons) {
+          try {
+            const result = await deleteLessonMutation.mutateAsync({
+              lessonId: lesson.id,
+            });
+            console.log(`✅ Deleted lesson ${lesson.id}:`, result);
+          } catch (error: any) {
+            console.error(`❌ Error deleting lesson ${lesson.id}:`, error);
+            errors.push(`Lesson: ${error.message || "Unknown error"}`);
+            daySuccess = false;
+          }
+        }
+
+        // Delete all program days
+        for (const program of programs) {
+          try {
+            let result;
+            if (program.isTemporary && program.replacementId) {
+              result = await removeTemporaryProgramDayMutation.mutateAsync({
+                replacementId: program.replacementId,
+              });
+            } else if (program.assignment) {
+              result = await deleteProgramDayMutation.mutateAsync({
+                assignmentId: program.assignment.id,
+                dayDate: dayKey,
+                reason: "Bulk deleted by coach",
+              });
+            }
+            console.log(`✅ Deleted program day from ${dayKey}:`, result);
+          } catch (error: any) {
+            console.error(
+              `❌ Error deleting program day from ${dayKey}:`,
+              error
+            );
+            errors.push(`Program day: ${error.message || "Unknown error"}`);
+            daySuccess = false;
+          }
+        }
+
+        // Delete all routines
+        for (const routine of routines) {
+          try {
+            const result = await unassignRoutineMutation.mutateAsync({
+              assignmentId: routine.id,
+            });
+            console.log(`✅ Deleted routine ${routine.id}:`, result);
+          } catch (error: any) {
+            console.error(`❌ Error deleting routine ${routine.id}:`, error);
+            errors.push(`Routine: ${error.message || "Unknown error"}`);
+            daySuccess = false;
+          }
+        }
+
+        // Delete all videos
+        for (const video of videos) {
+          try {
+            const result = await removeVideoAssignmentMutation.mutateAsync({
+              assignmentId: video.assignment.id,
+              clientId: clientId,
+            });
+            console.log(`✅ Deleted video ${video.assignment.id}:`, result);
+          } catch (error: any) {
+            console.error(
+              `❌ Error deleting video ${video.assignment.id}:`,
+              error
+            );
+            errors.push(`Video: ${error.message || "Unknown error"}`);
+            daySuccess = false;
+          }
+        }
+
+        if (daySuccess) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+
+        // Wait a bit for backend to process
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      // Show results
+      if (errorCount === 0) {
+        addToast({
+          type: "success",
+          title: "Days Deleted!",
+          message: `Successfully deleted all assignments from ${successCount} day${
+            successCount !== 1 ? "s" : ""
+          }.`,
+        });
+      } else {
+        addToast({
+          type: "warning",
+          title: "Partial Success",
+          message: `Deleted from ${successCount} day${
+            successCount !== 1 ? "s" : ""
+          }, but encountered errors on ${errorCount} day${
+            errorCount !== 1 ? "s" : ""
+          }.`,
+        });
+        console.error("Deletion errors:", errors);
+      }
+
+      // Clear selection and exit multi-select mode
+      setSelectedDays(new Set());
+      setMultiSelectMode(false);
+
+      // Final refresh - actually refetch the data
+      await Promise.all([
+        utils.scheduling.getCoachSchedule.refetch({
+          month: currentMonth.getMonth(),
+          year: currentMonth.getFullYear(),
+        }),
+        utils.clients.getAssignedPrograms.refetch({ clientId }),
+        utils.routines.getClientRoutineAssignments.refetch({ clientId }),
+        utils.library.getClientAssignments.refetch({ clientId }),
+        utils.programs.getTemporaryReplacements.refetch({ clientId }),
+      ]);
+
+      // Also invalidate other queries
+      refreshAllData();
+    } catch (error: any) {
+      console.error("Bulk deletion error:", error);
+      addToast({
+        type: "error",
+        title: "Deletion Error",
+        message:
+          error.message ||
+          "Some assignments could not be deleted. Please try again.",
+      });
+    } finally {
+      setIsDeletingMultipleDays(false);
+    }
+  };
+
   // Clipboard functions
   const handleCopyDay = (date: Date) => {
     const dateStr = date.toISOString().split("T")[0];
@@ -1225,6 +1464,7 @@ function ClientDetailPage({
 
             {/* Action Buttons */}
             <div className="flex items-center gap-3">
+              {/* Primary action - Schedule Lesson (most common) */}
               <button
                 onClick={() => setShowScheduleLessonModal(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/30"
@@ -1233,30 +1473,56 @@ function ClientDetailPage({
                 <Calendar className="h-4 w-4" />
                 Schedule Lesson
               </button>
-              <button
-                onClick={() => setShowAssignProgramModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/30"
-                style={{ color: "#3B82F6" }}
-              >
-                <BookOpen className="h-4 w-4" />
-                Assign Program
-              </button>
-              <button
-                onClick={() => setShowQuickAssignRoutineModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/30"
-                style={{ color: "#10B981" }}
-              >
-                <Target className="h-4 w-4" />
-                Assign Routine
-              </button>
-              <button
-                onClick={() => setShowAssignVideoModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 hover:border-purple-500/30"
-                style={{ color: "#8B5CF6" }}
-              >
-                <Video className="h-4 w-4" />
-                Assign Video
-              </button>
+
+              {/* Dropdown for other assignments */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/30"
+                    style={{ color: "#3B82F6" }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Assign
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="min-w-[200px] rounded-lg border shadow-xl"
+                  style={{
+                    backgroundColor: "#1F2323",
+                    borderColor: "#606364",
+                  }}
+                >
+                  <DropdownMenuItem
+                    onClick={() => setShowAssignProgramModal(true)}
+                    className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    <BookOpen
+                      className="h-4 w-4"
+                      style={{ color: "#3B82F6" }}
+                    />
+                    Assign Program
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setShowQuickAssignRoutineModal(true)}
+                    className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    <Target className="h-4 w-4" style={{ color: "#10B981" }} />
+                    Assign Routine
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setShowAssignVideoModal(true)}
+                    className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    <Video className="h-4 w-4" style={{ color: "#8B5CF6" }} />
+                    Assign Video
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -1415,6 +1681,44 @@ function ClientDetailPage({
                   </button>
                 </div>
 
+                {/* Multi-Select Mode Toggle */}
+                <button
+                  onClick={() => {
+                    setMultiSelectMode(!multiSelectMode);
+                    if (multiSelectMode) {
+                      setSelectedDays(new Set());
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    multiSelectMode
+                      ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                      : "bg-gray-700/50 text-gray-300 hover:bg-gray-700/70"
+                  }`}
+                >
+                  {multiSelectMode ? "Cancel Selection" : "Select Days"}
+                </button>
+
+                {/* Delete Selected Button */}
+                {multiSelectMode && selectedDays.size > 0 && (
+                  <button
+                    onClick={handleDeleteMultipleDays}
+                    disabled={isDeletingMultipleDays}
+                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 hover:border-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ color: "#EF4444" }}
+                  >
+                    {isDeletingMultipleDays ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Deleting...
+                      </span>
+                    ) : (
+                      `Delete ${selectedDays.size} Day${
+                        selectedDays.size !== 1 ? "s" : ""
+                      }`
+                    )}
+                  </button>
+                )}
+
                 {/* Clipboard Indicator */}
                 {clipboardData && (
                   <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
@@ -1441,6 +1745,7 @@ function ClientDetailPage({
                     onClick={() => navigateMonth("prev")}
                     className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
                     style={{ color: "#C3BCC2" }}
+                    title="Previous"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
@@ -1456,6 +1761,7 @@ function ClientDetailPage({
                     onClick={() => navigateMonth("next")}
                     className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
                     style={{ color: "#C3BCC2" }}
+                    title="Next"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </button>
@@ -1511,6 +1817,13 @@ function ClientDetailPage({
                 const videosForDay = getVideosForDate(day);
                 const routineAssignmentsForDay =
                   getRoutineAssignmentsForDate(day);
+                const dayKey = day.toISOString().split("T")[0];
+                const isSelected = selectedDays.has(dayKey);
+                const hasAssignments =
+                  lessonsForDay.length > 0 ||
+                  programsForDay.length > 0 ||
+                  videosForDay.length > 0 ||
+                  routineAssignmentsForDay.length > 0;
 
                 return (
                   <div
@@ -1520,7 +1833,9 @@ function ClientDetailPage({
                         viewMode === "week" ? "min-h-[200px]" : "min-h-[120px]"
                       } p-2 rounded-lg transition-all duration-200 border-2 relative group
                       ${
-                        isToday
+                        isSelected
+                          ? "bg-red-500/30 text-white border-red-400 ring-2 ring-red-400"
+                          : isToday
                           ? "bg-blue-500/20 text-blue-300 border-blue-400"
                           : isPastDay
                           ? "text-gray-500 bg-gray-700/30 border-gray-600"
@@ -1528,8 +1843,30 @@ function ClientDetailPage({
                           ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
                           : "text-gray-600 bg-gray-900/30 border-gray-700"
                       }
+                      ${multiSelectMode ? "cursor-pointer" : ""}
                     `}
+                    onClick={
+                      multiSelectMode && hasAssignments
+                        ? () => toggleDaySelection(day)
+                        : undefined
+                    }
                   >
+                    {/* Selection Checkbox */}
+                    {multiSelectMode && hasAssignments && (
+                      <div className="absolute top-2 left-2 z-20">
+                        <div
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                            isSelected
+                              ? "bg-red-500 border-red-400"
+                              : "bg-gray-800/80 border-gray-500"
+                          }`}
+                        >
+                          {isSelected && (
+                            <CheckCircle className="h-3 w-3 text-white" />
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {/* Hover Overlay with Copy/Paste Buttons */}
                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 z-10">
                       {/* Copy Button */}
@@ -1561,8 +1898,19 @@ function ClientDetailPage({
 
                     {/* Day Content - clickable area */}
                     <div
-                      onClick={() => handleDateClick(day)}
-                      className="cursor-pointer h-full"
+                      onClick={
+                        !multiSelectMode
+                          ? () => handleDateClick(day)
+                          : undefined
+                      }
+                      className={
+                        !multiSelectMode ? "cursor-pointer h-full" : "h-full"
+                      }
+                      style={
+                        multiSelectMode
+                          ? { paddingLeft: hasAssignments ? "1.75rem" : "0" }
+                          : {}
+                      }
                     >
                       <div className="font-bold text-sm mb-2">
                         {format(day, "d")}
