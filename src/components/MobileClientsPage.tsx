@@ -118,11 +118,27 @@ function MobileInviteCodeButton() {
     generateInviteCode.mutate();
   };
 
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const inviteLink = generateInviteCode.data?.inviteCode
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${
+        generateInviteCode.data.inviteCode
+      }`
+    : null;
+
   const handleCopyInviteCode = () => {
     if (generateInviteCode.data?.inviteCode) {
       navigator.clipboard.writeText(generateInviteCode.data.inviteCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyInviteLink = () => {
+    if (inviteLink) {
+      navigator.clipboard.writeText(inviteLink);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -179,42 +195,75 @@ function MobileInviteCodeButton() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-[#C3BCC2]">
-                  Share this code with your athletes
-                </p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type={isVisible ? "text" : "password"}
-                    value={generateInviteCode.data.inviteCode}
-                    readOnly
-                    className="flex-1 px-3 py-2 bg-[#2A3133] border border-[#606364] rounded-lg text-white font-mono text-sm"
-                  />
-                  <button
-                    onClick={() => setIsVisible(!isVisible)}
-                    className="p-2 text-[#ABA4AA] hover:text-white transition-colors"
-                    title={isVisible ? "Hide code" : "Show code"}
-                  >
-                    {isVisible ? "👁️" : "👁️‍🗨️"}
-                  </button>
-                  <button
-                    onClick={handleCopyInviteCode}
-                    className="p-2 bg-[#4A5A70] hover:bg-[#606364] text-white rounded-lg transition-colors"
-                    title="Copy invite code"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {copied && (
-                  <p className="text-xs text-green-400 flex items-center gap-1">
-                    <Check className="h-3 w-3" />
-                    Copied to clipboard!
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-[#C3BCC2] mb-2">
+                    Share this invite link (recommended)
                   </p>
-                )}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={inviteLink || ""}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-[#2A3133] border border-[#606364] rounded-lg text-white text-xs font-mono"
+                    />
+                    <button
+                      onClick={handleCopyInviteLink}
+                      className="p-2 bg-[#4A5A70] hover:bg-[#606364] text-white rounded-lg transition-colors"
+                      title="Copy invite link"
+                    >
+                      {copiedLink ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {copiedLink && (
+                    <p className="text-xs text-green-400 flex items-center gap-1 mt-1">
+                      <Check className="h-3 w-3" />
+                      Link copied!
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t border-[#606364] pt-3">
+                  <p className="text-sm text-[#C3BCC2] mb-2">
+                    Or share this code
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type={isVisible ? "text" : "password"}
+                      value={generateInviteCode.data.inviteCode}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-[#2A3133] border border-[#606364] rounded-lg text-white font-mono text-sm"
+                    />
+                    <button
+                      onClick={() => setIsVisible(!isVisible)}
+                      className="p-2 text-[#ABA4AA] hover:text-white transition-colors"
+                      title={isVisible ? "Hide code" : "Show code"}
+                    >
+                      {isVisible ? "👁️" : "👁️‍🗨️"}
+                    </button>
+                    <button
+                      onClick={handleCopyInviteCode}
+                      className="p-2 bg-[#4A5A70] hover:bg-[#606364] text-white rounded-lg transition-colors"
+                      title="Copy invite code"
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {copied && (
+                    <p className="text-xs text-green-400 flex items-center gap-1 mt-1">
+                      <Check className="h-3 w-3" />
+                      Code copied!
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>

@@ -522,6 +522,141 @@ export const userRouter = router({
       };
     }),
 
+  // Auto-assign client via invite code (called from auth callback)
+  autoAssignViaInviteCode: publicProcedure
+    .input(z.object({ inviteCode: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id || !user.email)
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Check if user already exists
+      const existingUser = await db.user.findFirst({
+        where: { id: user.id },
+      });
+
+      if (existingUser && existingUser.role) {
+        // User already has a role, can't auto-assign
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "User already has a role assigned",
+        });
+      }
+
+      // Find coach by invite code
+      const coach = await db.user.findFirst({
+        where: {
+          role: "COACH",
+          inviteCode: input.inviteCode,
+        },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Invalid invite code",
+        });
+      }
+
+      // Create or update user as CLIENT
+      const updatedUser = existingUser
+        ? await db.user.update({
+            where: { id: user.id },
+            data: {
+              role: "CLIENT",
+              name:
+                user.given_name && user.family_name
+                  ? `${user.given_name} ${user.family_name}`
+                  : user.given_name || user.family_name || existingUser.name,
+            },
+          })
+        : await db.user.create({
+            data: {
+              id: user.id,
+              email: user.email,
+              name:
+                user.given_name && user.family_name
+                  ? `${user.given_name} ${user.family_name}`
+                  : user.given_name || user.family_name || null,
+              role: "CLIENT",
+            },
+          });
+
+      // Create or update client record with coach
+      await db.client.upsert({
+        where: { userId: user.id },
+        update: {
+          coachId: coach.id,
+          name: updatedUser.name || "New Client",
+          email: updatedUser.email,
+          archived: false,
+          archivedAt: null,
+          updatedAt: new Date(),
+        },
+        create: {
+          userId: user.id,
+          coachId: coach.id,
+          name: updatedUser.name || "New Client",
+          email: updatedUser.email,
+        },
+      });
+
+      // Create notification for the coach
+      await db.notification.create({
+        data: {
+          userId: coach.id,
+          type: "CLIENT_JOIN_REQUEST",
+          title: "New Athlete Joined",
+          message: `${
+            updatedUser.name || "A new athlete"
+          } has joined your coaching program using your invite link!`,
+          data: {
+            clientId: ensureUserId(user.id),
+            clientName: updatedUser.name,
+            clientEmail: updatedUser.email,
+          },
+        },
+      });
+
+      // Send email notification to coach
+      try {
+        await sendClientJoinNotification(
+          coach.email,
+          coach.name || "Coach",
+          updatedUser.name || "New Client",
+          updatedUser.email
+        );
+        console.log(
+          `📧 Client join notification sent to coach: ${coach.email}`
+        );
+      } catch (error) {
+        console.error("Failed to send client join notification email:", error);
+      }
+
+      // Send welcome message from coach to client
+      await sendWelcomeMessage(coach.id, user.id);
+
+      // Send welcome email to client
+      try {
+        await sendWelcomeEmailForClient(
+          updatedUser.email,
+          updatedUser.name || "Client",
+          coach.name || "Coach"
+        );
+        console.log(`📧 Welcome email sent to client: ${updatedUser.email}`);
+      } catch (error) {
+        console.error("Failed to send welcome email to client:", error);
+      }
+
+      return {
+        success: true,
+        user: updatedUser,
+        coachId: coach.id,
+      };
+    }),
+
   // Generate or get existing invite code for coach
   generateInviteCode: publicProcedure.mutation(async () => {
     const { getUser } = getKindeServerSession();

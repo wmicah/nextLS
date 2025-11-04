@@ -456,6 +456,14 @@ function InviteCodeButton() {
     generateInviteCode.mutate();
   };
 
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const inviteLink = generateInviteCode.data?.inviteCode
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${
+        generateInviteCode.data.inviteCode
+      }`
+    : null;
+
   const handleCopyInviteCode = () => {
     if (generateInviteCode.data?.inviteCode) {
       navigator.clipboard.writeText(generateInviteCode.data.inviteCode);
@@ -464,11 +472,19 @@ function InviteCodeButton() {
     }
   };
 
+  const handleCopyInviteLink = () => {
+    if (inviteLink) {
+      navigator.clipboard.writeText(inviteLink);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
   return (
     <div className="relative">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105"
+        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 flex-shrink-0"
         style={{
           backgroundColor: "#4A5A70",
           color: "#C3BCC2",
@@ -481,7 +497,7 @@ function InviteCodeButton() {
         }}
       >
         <Key className="h-4 w-4" />
-        Invite Code
+        <span className="whitespace-nowrap">Invite Code</span>
       </button>
 
       {showDropdown && (
@@ -515,42 +531,75 @@ function InviteCodeButton() {
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-[#C3BCC2]">
-                Share this code with your athletes
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type={isVisible ? "text" : "password"}
-                  value={generateInviteCode.data.inviteCode}
-                  readOnly
-                  className="flex-1 px-3 py-2 bg-[#2A3133] border border-[#606364] rounded-lg text-white font-mono text-sm"
-                />
-                <button
-                  onClick={() => setIsVisible(!isVisible)}
-                  className="p-2 text-[#ABA4AA] hover:text-white transition-colors"
-                  title={isVisible ? "Hide code" : "Show code"}
-                >
-                  {isVisible ? "👁️" : "👁️‍🗨️"}
-                </button>
-                <button
-                  onClick={handleCopyInviteCode}
-                  className="p-2 bg-[#4A5A70] hover:bg-[#606364] text-white rounded-lg transition-colors"
-                  title="Copy invite code"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {copied && (
-                <p className="text-xs text-green-400 flex items-center gap-1">
-                  <Check className="h-3 w-3" />
-                  Copied to clipboard!
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-[#C3BCC2] mb-2">
+                  Share this invite link (recommended)
                 </p>
-              )}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={inviteLink || ""}
+                    readOnly
+                    className="flex-1 px-3 py-2 bg-[#2A3133] border border-[#606364] rounded-lg text-white text-xs font-mono"
+                  />
+                  <button
+                    onClick={handleCopyInviteLink}
+                    className="p-2 bg-[#4A5A70] hover:bg-[#606364] text-white rounded-lg transition-colors"
+                    title="Copy invite link"
+                  >
+                    {copiedLink ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {copiedLink && (
+                  <p className="text-xs text-green-400 flex items-center gap-1 mt-1">
+                    <Check className="h-3 w-3" />
+                    Link copied!
+                  </p>
+                )}
+              </div>
+
+              <div className="border-t border-[#606364] pt-3">
+                <p className="text-sm text-[#C3BCC2] mb-2">
+                  Or share this code
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type={isVisible ? "text" : "password"}
+                    value={generateInviteCode.data.inviteCode}
+                    readOnly
+                    className="flex-1 px-3 py-2 bg-[#2A3133] border border-[#606364] rounded-lg text-white font-mono text-sm"
+                  />
+                  <button
+                    onClick={() => setIsVisible(!isVisible)}
+                    className="p-2 text-[#ABA4AA] hover:text-white transition-colors"
+                    title={isVisible ? "Hide code" : "Show code"}
+                  >
+                    {isVisible ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                  <button
+                    onClick={handleCopyInviteCode}
+                    className="p-2 bg-[#4A5A70] hover:bg-[#606364] text-white rounded-lg transition-colors"
+                    title="Copy invite code"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {copied && (
+                  <p className="text-xs text-green-400 flex items-center gap-1 mt-1">
+                    <Check className="h-3 w-3" />
+                    Code copied!
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1485,10 +1534,10 @@ function ClientsPage() {
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
         {/* Simplified Header */}
         <div className="mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ backgroundColor: "#4A5A70" }}
               >
                 <Users className="h-4 w-4" style={{ color: "#C3BCC2" }} />
@@ -1512,10 +1561,10 @@ function ClientsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={toggleBulkMode}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 flex-shrink-0 ${
                   isBulkMode ? "ring-2 ring-blue-400" : ""
                 }`}
                 style={{
@@ -1532,7 +1581,9 @@ function ClientsPage() {
                 }}
               >
                 <Users className="h-4 w-4" />
-                {isBulkMode ? "Exit Bulk Mode" : "Bulk Select"}
+                <span className="whitespace-nowrap">
+                  {isBulkMode ? "Exit Bulk Mode" : "Bulk Select"}
+                </span>
               </button>
 
               {/* Invite Code Button */}

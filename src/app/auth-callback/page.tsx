@@ -1,14 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { clearUserSession, handleSessionConflict } from "@/lib/sessionUtils";
 
-export default function AuthCallback() {
+function AuthCallbackContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [hasCheckedInviteCode, setHasCheckedInviteCode] = useState(false);
 
   const { data, isLoading, error, refetch } = trpc.authCallback.useQuery(
     undefined,
@@ -18,6 +20,9 @@ export default function AuthCallback() {
       refetchOnMount: false,
     }
   );
+
+  const autoAssignViaInviteCode =
+    trpc.user.autoAssignViaInviteCode.useMutation();
 
   const handleRetry = async () => {
     if (retryCount >= 2) {
@@ -46,10 +51,83 @@ export default function AuthCallback() {
   };
 
   useEffect(() => {
-    if (data?.success) {
-      console.log("🔍 Auth callback data:", data); // Add debug
+    // Check for invite code in localStorage (stored when user clicks invite link)
+    if (data?.success && !hasCheckedInviteCode) {
+      const pendingInviteCode =
+        typeof window !== "undefined"
+          ? localStorage.getItem("pendingInviteCode")
+          : null;
+
+      if (pendingInviteCode && data.needsRoleSelection) {
+        // User needs role selection and has an invite code - auto-assign them
+        setHasCheckedInviteCode(true);
+        console.log(
+          "🔗 Invite code found in localStorage, auto-assigning client...",
+          pendingInviteCode
+        );
+
+        autoAssignViaInviteCode.mutate(
+          { inviteCode: pendingInviteCode },
+          {
+            onSuccess: () => {
+              // Clear the invite code from localStorage
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("pendingInviteCode");
+              }
+              // Refetch auth callback to get updated user data
+              refetch();
+            },
+            onError: error => {
+              console.error("Failed to auto-assign via invite code:", error);
+              // Clear invalid invite code
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("pendingInviteCode");
+              }
+              // Proceed to role selection if auto-assignment fails
+              router.push("/role-selection");
+            },
+          }
+        );
+        return;
+      } else if (pendingInviteCode) {
+        // User already has a role, clear the invite code
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("pendingInviteCode");
+        }
+      }
+    }
+
+    if (
+      data?.success &&
+      hasCheckedInviteCode &&
+      !autoAssignViaInviteCode.isPending
+    ) {
+      // After auto-assignment, check if user now has a role
+      const userRole = data.user?.role;
+      console.log("🔍 After auto-assignment, user role is:", userRole);
+
+      if (userRole === "CLIENT") {
+        console.log(
+          "✅ Client auto-assigned via invite code, redirecting to client dashboard"
+        );
+        router.push("/client-dashboard");
+        return;
+      } else if (userRole === "COACH") {
+        console.log("➡️ Going to COACH dashboard");
+        router.push("/dashboard");
+        return;
+      }
+      // If still no role, fall through to role selection
+    }
+
+    if (
+      data?.success &&
+      !autoAssignViaInviteCode.isPending &&
+      !hasCheckedInviteCode
+    ) {
+      console.log("🔍 Auth callback data:", data);
       if ("role" in (data.user || {})) {
-        console.log("🔍 User role:", data.user.role); // Add debug
+        console.log("🔍 User role:", data.user.role);
       } else {
         console.log("🔍 User role is not defined");
       }
@@ -66,9 +144,9 @@ export default function AuthCallback() {
           console.log("➡️ Going to COACH dashboard");
           router.push("/dashboard");
         } else if (userRole === "CLIENT") {
-          console.log("➡️ CLIENT role detected, checking coach assignment");
-          // For clients, we need to check if they have a coach assigned
-          // This will be handled by the client dashboard page itself
+          console.log(
+            "➡️ CLIENT role detected, redirecting to client dashboard"
+          );
           router.push("/client-dashboard");
         } else {
           console.log("➡️ Unknown role, going to role selection");
@@ -77,7 +155,7 @@ export default function AuthCallback() {
       }
     }
 
-    if (error) {
+    if (error && !autoAssignViaInviteCode.isPending) {
       console.error("Auth callback error:", error);
 
       // Check if this might be a session conflict
@@ -91,9 +169,18 @@ export default function AuthCallback() {
         router.push("/auth-error");
       }
     }
-  }, [data, error, router, retryCount]);
+  }, [
+    data,
+    error,
+    router,
+    retryCount,
+    hasCheckedInviteCode,
+    autoAssignViaInviteCode,
+    refetch,
+    searchParams,
+  ]);
 
-  if (isLoading || isRetrying) {
+  if (isLoading || isRetrying || autoAssignViaInviteCode.isPending) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -164,5 +251,22 @@ export default function AuthCallback() {
         </h2>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900">Loading...</h2>
+          </div>
+        </div>
+      }
+    >
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
