@@ -943,10 +943,11 @@ function OrganizationDayOverviewModal({
     );
   });
 
-  // Check if time slot is available (not booked)
+  // Check if time slot is available (not booked) for a specific coach
   // Need to compare times properly accounting for timezone
-  const isTimeSlotAvailable = (timeSlot: string) => {
+  const isTimeSlotAvailable = (timeSlot: string, coachId?: string) => {
     const timeZone = getUserTimezone();
+    const targetCoachId = coachId || scheduleForm.coachId || currentUserId;
 
     // Parse the time slot to get hour and minute
     const timeMatch = timeSlot.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -957,8 +958,11 @@ function OrganizationDayOverviewModal({
     if (period.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
     if (period.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
 
-    // Check if any lesson conflicts with this time slot
+    // Check if any lesson for THIS SPECIFIC COACH conflicts with this time slot
     return !lessons.some((lesson: any) => {
+      // Only check conflicts for lessons belonging to the target coach
+      if (lesson.coachId !== targetCoachId) return false;
+
       // Convert UTC lesson time to user's timezone for comparison
       const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
       const lessonHour = lessonDateInUserTz.getHours();
@@ -970,11 +974,32 @@ function OrganizationDayOverviewModal({
     });
   };
 
-  // Get blocked times for this date
-  const dayBlockedTimes = getBlockedTimesForDate(date);
+  // Get blocked times for this date and specific coach
+  const getDayBlockedTimesForCoach = (coachId?: string) => {
+    const targetCoachId = coachId || scheduleForm.coachId || currentUserId;
+    return allBlockedTimes.filter((blockedTime: any) => {
+      // Filter by coach if specified
+      if (targetCoachId && blockedTime.coachId !== targetCoachId) return false;
 
-  // Check if time slot is blocked
-  const isTimeSlotBlocked = (timeSlot: string) => {
+      const startDate = new Date(blockedTime.startTime);
+      const endDate = new Date(blockedTime.endTime);
+
+      const targetDate = new Date(date);
+      targetDate.setHours(0, 0, 0, 0);
+
+      if (blockedTime.isAllDay) {
+        return startDate <= targetDate && targetDate <= endDate;
+      }
+
+      return startDate <= targetDate && targetDate <= endDate;
+    });
+  };
+
+  // Check if time slot is blocked for a specific coach
+  const isTimeSlotBlocked = (timeSlot: string, coachId?: string) => {
+    const targetCoachId = coachId || scheduleForm.coachId || currentUserId;
+    const dayBlockedTimes = getDayBlockedTimesForCoach(targetCoachId);
+
     return dayBlockedTimes.some((blockedTime: any) => {
       if (blockedTime.isAllDay) return true;
       // Check if time slot falls within blocked time range
@@ -1152,8 +1177,10 @@ function OrganizationDayOverviewModal({
 
           <div className="grid grid-cols-3 gap-2 mb-4">
             {timeSlots.map((slot: string) => {
-              const isAvailable = isTimeSlotAvailable(slot);
-              const isBlocked = isTimeSlotBlocked(slot);
+              const targetCoachId = scheduleForm.coachId || currentUserId;
+              const isAvailable = isTimeSlotAvailable(slot, targetCoachId);
+              const isBlocked = isTimeSlotBlocked(slot, targetCoachId);
+              const dayBlockedTimes = getDayBlockedTimesForCoach(targetCoachId);
               const isSelected = selectedTimeSlot === slot;
 
               return (

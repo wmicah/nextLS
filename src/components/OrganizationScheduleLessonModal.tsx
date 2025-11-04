@@ -415,9 +415,15 @@ export default function OrganizationScheduleLessonModal({
     if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
     const minute = parseInt(minutes);
 
-    // Check if this time slot conflicts with existing lessons in the organization
+    // Check if this time slot conflicts with existing lessons for THIS SPECIFIC COACH
+    // Only check conflicts for the current user (coach scheduling the lesson)
     const lessonsOnDate = getLessonsForDate(date);
+    const currentCoachId = coachProfile?.id;
+
     const hasConflict = lessonsOnDate.some((lesson: any) => {
+      // Only check conflicts for lessons belonging to the current coach
+      if (lesson.coachId !== currentCoachId) return false;
+
       const lessonDate = new Date(lesson.date);
       // Compare time in local timezone
       return (
