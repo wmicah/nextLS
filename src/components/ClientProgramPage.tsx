@@ -69,7 +69,11 @@ import {
   // isPast,
   // isFuture,
 } from "date-fns";
-import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
+import {
+  formatTimeInUserTimezone,
+  getUserTimezone,
+} from "@/lib/timezone-utils";
+import { toZonedTime } from "date-fns-tz";
 import ClientTopNav from "@/components/ClientTopNav";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientProgramPage from "./MobileClientProgramPage";
@@ -488,12 +492,16 @@ function ClientProgramPage() {
 
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
+    const timeZone = getUserTimezone();
     const lessons = clientLessons.filter((lesson: { date: string }) => {
-      const lessonDate = new Date(lesson.date);
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
+      // Compare only the date part, not the time
       const lessonDateOnly = new Date(
-        lessonDate.getFullYear(),
-        lessonDate.getMonth(),
-        lessonDate.getDate()
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
       );
       const targetDateOnly = new Date(
         date.getFullYear(),
@@ -501,7 +509,7 @@ function ClientProgramPage() {
         date.getDate()
       );
       const isSame = lessonDateOnly.getTime() === targetDateOnly.getTime();
-      const isFuture = lessonDate > now;
+      const isFuture = lessonDateInUserTz > now;
       return isSame && isFuture;
     });
     return lessons;
