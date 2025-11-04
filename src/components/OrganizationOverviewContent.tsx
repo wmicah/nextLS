@@ -15,15 +15,10 @@ import {
   Crown,
   Shield,
   User,
-  ArrowRight,
-  Target,
-  FolderOpen,
-  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 import OrganizationCreateModal from "./OrganizationCreateModal";
 import OrganizationInviteModal from "./OrganizationInviteModal";
-import Link from "next/link";
 
 const ROLE_ICONS: Record<string, any> = {
   OWNER: Crown,
@@ -461,35 +456,6 @@ export default function OrganizationOverviewContent() {
         />
       </div>
 
-      {/* Quick Links - Note: These won't work with Link since we're using client-side routing */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <QuickLinkCard
-          icon={Calendar}
-          title="Organization Calendar"
-          description="See all scheduled lessons across your organization with color-coded coaches"
-        />
-        <QuickLinkCard
-          icon={Video}
-          title="Organization Library"
-          description="Browse and assign videos from all coaches' libraries"
-        />
-        <QuickLinkCard
-          icon={FolderOpen}
-          title="Shared Resources"
-          description="Browse programs and routines shared by all coaches in your organization"
-        />
-        <QuickLinkCard
-          icon={UserCheck}
-          title="All Clients"
-          description="View and manage all clients from all coaches in your organization"
-        />
-        <QuickLinkCard
-          icon={Users}
-          title="Team Management"
-          description="Invite coaches, manage roles, and view team members"
-        />
-      </div>
-
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TeamMembersCard organization={organization} />
@@ -546,58 +512,6 @@ function StatCard({
         <div className="text-sm" style={{ color: "#ABA4AA" }}>
           {label}
           {max && ` • Max: ${max}`}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Quick Link Card Component
-function QuickLinkCard({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: any;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div
-      className="rounded-2xl shadow-xl border relative overflow-hidden group cursor-pointer transition-all duration-200 hover:shadow-2xl"
-      style={{
-        backgroundColor: "#353A3A",
-        borderColor: "#606364",
-      }}
-    >
-      <div
-        className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-        style={{
-          background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-        }}
-      />
-      <div className="relative p-6">
-        <div className="flex items-start gap-4">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{
-              background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-            }}
-          >
-            <Icon className="h-6 w-6" style={{ color: "#C3BCC2" }} />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold mb-2" style={{ color: "#C3BCC2" }}>
-              {title}
-            </h3>
-            <p className="text-sm" style={{ color: "#ABA4AA" }}>
-              {description}
-            </p>
-          </div>
-          <ArrowRight
-            className="h-5 w-5 group-hover:translate-x-1 transition-transform"
-            style={{ color: "#ABA4AA" }}
-          />
         </div>
       </div>
     </div>
