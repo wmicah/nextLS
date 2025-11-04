@@ -65,7 +65,11 @@ import {
   parseISO,
   differenceInDays,
 } from "date-fns";
-import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
+import {
+  formatTimeInUserTimezone,
+  getUserTimezone,
+} from "@/lib/timezone-utils";
+import { toZonedTime } from "date-fns-tz";
 import Sidebar from "@/components/Sidebar";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import {
@@ -477,9 +481,23 @@ function ClientDetailPage({
   };
 
   const getLessonsForDate = (date: Date) => {
+    const timeZone = getUserTimezone();
     return clientLessons.filter((lesson: any) => {
-      const lessonDate = new Date(lesson.date);
-      return isSameDay(lessonDate, date);
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
+      // Compare only the date part, not the time
+      const lessonDateOnly = new Date(
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
+      );
+      const targetDateOnly = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+      return lessonDateOnly.getTime() === targetDateOnly.getTime();
     });
   };
 

@@ -760,6 +760,33 @@ export const clientRouterRouter = router({
 
           // Check for program assignments on this date
           for (const assignment of (client as any).programAssignments) {
+            // First check if this specific date has been deleted (replacement with empty lessonId)
+            // Compare dates as strings (YYYY-MM-DD) to avoid timezone issues
+            // Use UTC methods to avoid timezone shifts when database returns UTC
+            const deletedReplacement = assignment.replacements?.find(
+              (r: any) => {
+                const replacementDate = new Date(r.replacedDate);
+                const replacementDateStr = `${replacementDate.getUTCFullYear()}-${(
+                  replacementDate.getUTCMonth() + 1
+                )
+                  .toString()
+                  .padStart(2, "0")}-${replacementDate
+                  .getUTCDate()
+                  .toString()
+                  .padStart(2, "0")}`;
+                const currentDateStr = dateString; // Already in YYYY-MM-DD format
+                return (
+                  replacementDateStr === currentDateStr &&
+                  (!r.lessonId || r.lessonId === "") // Empty lessonId means deletion
+                );
+              }
+            );
+
+            // If this day was deleted, skip it
+            if (deletedReplacement) {
+              continue;
+            }
+
             const program =
               assignment.replacements.find(
                 (r: any) =>
@@ -1810,6 +1837,35 @@ export const clientRouterRouter = router({
 
         // Process program assignments for this date
         for (const assignment of (client as any).programAssignments) {
+          // First check if this specific date has been deleted (replacement with empty lessonId)
+          // Compare dates as strings (YYYY-MM-DD) to avoid timezone issues
+          // Use UTC methods to avoid timezone shifts when database returns UTC
+          const deletedReplacement = assignment.replacements?.find((r: any) => {
+            const replacementDate = new Date(r.replacedDate);
+            const replacementDateStr = `${replacementDate.getUTCFullYear()}-${(
+              replacementDate.getUTCMonth() + 1
+            )
+              .toString()
+              .padStart(2, "0")}-${replacementDate
+              .getUTCDate()
+              .toString()
+              .padStart(2, "0")}`;
+            const targetDateStr = input.date; // Already in YYYY-MM-DD format
+            return (
+              replacementDateStr === targetDateStr &&
+              (!r.lessonId || r.lessonId === "") // Empty lessonId means deletion
+            );
+          });
+
+          // If this day was deleted, skip it
+          if (deletedReplacement) {
+            console.log(
+              "🔍 getProgramDayDetails - Skipping deleted day:",
+              input.date
+            );
+            continue;
+          }
+
           const program =
             assignment.replacements.find(
               (r: any) =>
@@ -2179,6 +2235,11 @@ export const clientRouterRouter = router({
                   },
                 },
               },
+              replacements: {
+                orderBy: {
+                  replacedDate: "asc",
+                },
+              },
             },
           },
         },
@@ -2264,6 +2325,33 @@ export const clientRouterRouter = router({
                 .getDate()
                 .toString()
                 .padStart(2, "0")}`;
+
+              // Check if this specific date has been deleted (replacement with empty lessonId)
+              // Compare dates as strings (YYYY-MM-DD) to avoid timezone issues
+              // Use UTC methods to avoid timezone shifts when database returns UTC
+              const deletedReplacement = assignment.replacements?.find(
+                (r: any) => {
+                  const replacementDate = new Date(r.replacedDate);
+                  const replacementDateStr = `${replacementDate.getUTCFullYear()}-${(
+                    replacementDate.getUTCMonth() + 1
+                  )
+                    .toString()
+                    .padStart(2, "0")}-${replacementDate
+                    .getUTCDate()
+                    .toString()
+                    .padStart(2, "0")}`;
+                  const dayDateStr = dateString; // Already in YYYY-MM-DD format
+                  return (
+                    replacementDateStr === dayDateStr &&
+                    (!r.lessonId || r.lessonId === "") // Empty lessonId means deletion
+                  );
+                }
+              );
+
+              // If this day was deleted, skip it
+              if (deletedReplacement) {
+                continue;
+              }
 
               // Process drills and expand routines
               const expandedDrills = [];
