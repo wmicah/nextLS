@@ -170,10 +170,32 @@ export default function OrganizationCalendarView() {
   };
 
   const getLessonsForDate = (date: Date) => {
-    return allLessons.filter((lesson: any) => {
-      const lessonDate = new Date(lesson.date);
-      return isSameDay(lessonDate, date);
+    const now = new Date();
+    const lessons = allLessons.filter((lesson: any) => {
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const timeZone = getUserTimezone();
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
+      // Compare only the date part, not the time
+      const lessonDateOnly = new Date(
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
+      );
+      const targetDateOnly = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+      const isSame = lessonDateOnly.getTime() === targetDateOnly.getTime();
+
+      // Only include lessons that are in the future (or allow past lessons)
+      const isFuture = lessonDateInUserTz > now;
+
+      return isSame;
     });
+
+    return lessons;
   };
 
   const getBlockedTimesForDate = (date: Date, coachId?: string) => {
@@ -1047,8 +1069,10 @@ function OrganizationDayOverviewModal({
           {lessons.length > 0 ? (
             <div className="space-y-3">
               {lessons.map((lesson: any) => {
-                const lessonDate = new Date(lesson.date);
-                const isPast = lessonDate < new Date();
+                // Convert lesson date to user timezone for proper comparison
+                const timeZone = getUserTimezone();
+                const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+                const isPast = lessonDateInUserTz < new Date();
                 return (
                   <div
                     key={lesson.id}
