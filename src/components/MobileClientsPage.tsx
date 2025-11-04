@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
+import { useUIStore } from "@/lib/stores/uiStore";
 import { extractNoteContent } from "@/lib/note-utils";
 import {
-  Plus,
   Calendar,
   Edit,
   Trash2,
@@ -38,7 +38,6 @@ import {
   PinOff,
 } from "lucide-react";
 import { format } from "date-fns";
-import AddClientModal from "./AddClientModal";
 import ClientProfileModal from "./ClientProfileModal";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import MobileNavigation from "./MobileNavigation";
@@ -263,71 +262,218 @@ function MobileClientRequestsModal({
   onClose: () => void;
 }) {
   const utils = trpc.useUtils();
+  const { addToast } = useUIStore();
 
   // Get ALL notifications (not just unread) for CLIENT_JOIN_REQUEST
   // This way, even if acknowledged, they can still accept/deny
-  const { data: allNotifications = [], refetch } =
-    trpc.notifications.getNotifications.useQuery({
-      unreadOnly: false, // Get all notifications, not just unread
-      limit: 100,
-    });
+  const {
+    data: allNotifications = [],
+    refetch,
+    isLoading: notificationsLoading,
+  } = trpc.notifications.getNotifications.useQuery({
+    unreadOnly: false, // Get all notifications, not just unread
+    limit: 100,
+  });
+
+  console.log("🔍 Notifications query result:", {
+    total: allNotifications.length,
+    loading: notificationsLoading,
+    notifications: allNotifications.map((n: any) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      isRead: n.isRead,
+    })),
+  });
 
   // Filter for CLIENT_JOIN_REQUEST
   const clientRequests = allNotifications.filter((req: any) => {
     if (req.type !== "CLIENT_JOIN_REQUEST") return false;
-    if (req.title !== "New Athlete Join Request") return false;
+
+    // Filter out rejected requests (marked as read)
+    // Rejected requests are marked as isRead: true
+    if (req.isRead) {
+      console.log("Filtering out read/rejected notification:", req.id);
+      return false;
+    }
+
+    // Show ALL CLIENT_JOIN_REQUEST notifications, not just "New Athlete Join Request"
+    // This includes: "New Athlete Join Request", "New Athlete Joined", "New Client Request", etc.
+
+    // Debug logging
+    console.log("Found CLIENT_JOIN_REQUEST notification:", {
+      id: req.id,
+      title: req.title,
+      type: req.type,
+      isRead: req.isRead,
+      data: req.data,
+      createdAt: req.createdAt,
+    });
+
     return true;
   });
+
+  console.log(
+    "Total CLIENT_JOIN_REQUEST notifications found:",
+    clientRequests.length
+  );
+  console.log(
+    "Notification titles found:",
+    clientRequests.map((r: any) => r.title)
+  );
 
   // Fetch client data to verify which requests are still pending
   const { data: allClients = [] } = trpc.clients.list.useQuery();
 
+  console.log("All clients fetched:", allClients.length);
+
   // Filter out requests where:
   // 1. Client already has a coach assigned
   // 2. Client/user no longer exists in database (deleted)
-  const pendingClientRequests = clientRequests.filter((req: any) => {
-    // Get clientUserId from notification data (could be stored as JSON)
-    const notificationData =
-      typeof req.data === "string" ? JSON.parse(req.data) : req.data;
-    const clientUserId =
-      notificationData?.clientUserId || notificationData?.clientId;
+  const pendingClientRequests = clientRequests
+    .map((req: any) => {
+      // Parse notification data (could be stored as JSON string or object)
+      let notificationData;
+      try {
+        notificationData =
+          typeof req.data === "string" ? JSON.parse(req.data) : req.data;
+      } catch (error) {
+        console.error("Error parsing notification data:", error, req.data);
+        notificationData = req.data || {};
+      }
 
-    if (!clientUserId) return false;
+      const clientUserId =
+        notificationData?.clientUserId || notificationData?.clientId;
 
-    // Check if this client still exists in the database
-    const client = allClients.find((c: any) => c.userId === clientUserId);
+      if (!clientUserId) {
+        console.log(
+          "No clientUserId found in notification data:",
+          notificationData
+        );
+        return null;
+      }
 
-    // Filter out if:
-    // - Client doesn't exist (user was deleted)
-    // - Client already has a coach assigned
-    if (!client) {
+      // Check if this client still exists in the database
+      const client = allClients.find((c: any) => c.userId === clientUserId);
+
+      console.log("Client lookup result:", {
+        clientUserId,
+        found: !!client,
+        clientName: client?.name,
+        hasCoach: !!client?.coachId,
+        coachId: client?.coachId,
+      });
+
+      // Filter out if:
+      // - Client doesn't exist (user was deleted) - BUT allow if notification has name/email
+      // - Client already has a coach assigned
+      if (!client) {
+        console.log(`⚠️ Client/user ${clientUserId} not found in clients list`);
+        // If we have client name/email in notification, still show it
+        if (notificationData?.clientName || notificationData?.clientEmail) {
+          console.log(
+            "✅ Showing request even though client not found (has name/email in notification)"
+          );
+          return {
+            ...req,
+            parsedData: notificationData,
+            clientNotFound: true, // Flag to handle differently
+          };
+        }
+        return null;
+      }
+
+      if (client.coachId) {
+        console.log(
+          `⚠️ Filtering out request - client ${clientUserId} already has coach ${client.coachId}`
+        );
+        return null;
+      }
+
+      // Request is still pending - return request with parsed data attached
       console.log(
-        `Filtering out request - client/user ${clientUserId} no longer exists`
+        "✅ Keeping pending request for client:",
+        clientUserId,
+        "Client:",
+        client.name
       );
-      return false;
-    }
+      return {
+        ...req,
+        parsedData: notificationData,
+      };
+    })
+    .filter((req: any) => req !== null);
 
-    if (client.coachId) {
-      console.log(
-        `Filtering out request - client ${clientUserId} already has coach ${client.coachId}`
-      );
-      return false;
-    }
-
-    // Request is still pending
-    return true;
-  });
+  console.log(
+    "Final pending client requests count:",
+    pendingClientRequests.length
+  );
 
   const acceptRequest = trpc.user.acceptClientRequest.useMutation({
-    onSuccess: () => {
-      refetch();
+    onSuccess: async data => {
+      console.log("✅ Client request accepted successfully:", data);
+
+      // Show success toast
+      addToast({
+        type: "success",
+        title: "Client Accepted",
+        message: "The client has been added to your clients list.",
+      });
+
+      // Refetch notifications to remove accepted request from list
+      await refetch();
+
+      // Invalidate ALL client list queries (with all possible parameters)
+      // This ensures React Query clears the cache for all variants
       utils.clients.list.invalidate();
+      utils.clients.list.invalidate({ archived: false });
+      utils.clients.list.invalidate({ archived: true });
+      utils.clients.list.invalidate(undefined); // No params
+
+      // Force a refetch of all client queries and wait for them to complete
+      console.log("🔄 Refetching client lists...");
+      await Promise.all([
+        utils.clients.list.refetch({ archived: false }),
+        utils.clients.list.refetch({ archived: true }),
+      ]);
+
+      // Get the updated client list to verify
+      const updatedClients = await utils.clients.list.fetch({
+        archived: false,
+      });
+      console.log("📊 Refetched clients after acceptance:", {
+        activeCount: updatedClients?.length || 0,
+        clients: updatedClients?.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          coachId: c.coachId,
+          userId: c.userId,
+          archived: c.archived,
+        })),
+      });
+
+      // Close the modal immediately - don't wait
+      onClose();
+    },
+    onError: error => {
+      console.error("❌ Error accepting client request:", error);
+      addToast({
+        type: "error",
+        title: "Failed to Accept Client",
+        message:
+          error.message ||
+          "An error occurred while accepting the client request.",
+      });
     },
   });
 
   const rejectRequest = trpc.user.rejectClientRequest.useMutation({
     onSuccess: () => {
+      // Refetch notifications to get updated isRead status
       refetch();
+      // Also invalidate clients list in case client was deleted
+      utils.clients.list.invalidate();
     },
   });
 
@@ -347,60 +493,81 @@ function MobileClientRequestsModal({
           </button>
         </div>
 
-        {pendingClientRequests.length === 0 ? (
+        {notificationsLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4" />
+            <p className="text-gray-400">Loading requests...</p>
+          </div>
+        ) : pendingClientRequests.length === 0 ? (
           <div className="text-center py-8">
             <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-400">No pending requests</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Total CLIENT_JOIN_REQUEST notifications: {clientRequests.length}
+            </p>
+            <p className="text-xs text-gray-500">
+              All notifications: {allNotifications.length}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {pendingClientRequests.map((request: any) => (
-              <div
-                key={request.id}
-                className="bg-[#353A3A] rounded-lg p-4 border border-[#4A5A70]"
-              >
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-white">
-                      {request.data?.clientName || "Unknown Client"}
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      {request.data?.clientEmail || "No email provided"}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Requested{" "}
-                      {new Date(request.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        acceptRequest.mutate({ notificationId: request.id });
-                      }}
-                      disabled={
-                        acceptRequest.isPending || rejectRequest.isPending
-                      }
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      <Check className="h-4 w-4" />
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => {
-                        rejectRequest.mutate({ notificationId: request.id });
-                      }}
-                      disabled={
-                        acceptRequest.isPending || rejectRequest.isPending
-                      }
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Reject
-                    </button>
+            {pendingClientRequests.map((request: any) => {
+              // Use parsedData if available, otherwise parse on the fly
+              const notificationData =
+                request.parsedData ||
+                (typeof request.data === "string"
+                  ? JSON.parse(request.data)
+                  : request.data) ||
+                {};
+
+              return (
+                <div
+                  key={request.id}
+                  className="bg-[#353A3A] rounded-lg p-4 border border-[#4A5A70]"
+                >
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-white">
+                        {notificationData?.clientName || "Unknown Client"}
+                      </h3>
+                      <p className="text-sm text-gray-400">
+                        {notificationData?.clientEmail || "No email provided"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Requested{" "}
+                        {new Date(request.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          acceptRequest.mutate({ notificationId: request.id });
+                        }}
+                        disabled={
+                          acceptRequest.isPending || rejectRequest.isPending
+                        }
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <Check className="h-4 w-4" />
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => {
+                          rejectRequest.mutate({ notificationId: request.id });
+                        }}
+                        disabled={
+                          acceptRequest.isPending || rejectRequest.isPending
+                        }
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -419,7 +586,6 @@ function MobileClientRequestsModal({
 
 export default function MobileClientsPage() {
   const router = useRouter();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [archivingClientId, setArchivingClientId] = useState<string | null>(
     null
   );
@@ -811,12 +977,6 @@ export default function MobileClientsPage() {
             <MobileRequestsButton
               onOpenModal={() => setIsRequestsModalOpen(true)}
             />
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="p-2 rounded-lg bg-[#4A5A70] text-white"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
             <MobileNavigation currentPage="clients" />
           </div>
         </div>
@@ -1044,20 +1204,9 @@ export default function MobileClientsPage() {
               {searchTerm
                 ? `No athletes match "${searchTerm}". Try a different search term.`
                 : activeTab === "active"
-                ? "Add your first athlete to start building your coaching team."
+                ? "Athletes will appear here when they request to join your coaching program."
                 : "No athletes have been archived yet."}
             </p>
-            {!searchTerm && (
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-[#4A5A70] text-[#C3BCC2] font-medium mx-auto"
-              >
-                <Plus className="h-4 w-4" />
-                {activeTab === "active"
-                  ? "Add Your First Athlete"
-                  : "Add Athlete"}
-              </button>
-            )}
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
@@ -1297,14 +1446,6 @@ export default function MobileClientsPage() {
       </div>
 
       {/* Modals */}
-      <AddClientModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddClient={() => {
-          console.log("Client added successfully!");
-        }}
-      />
-
       {selectedClientForProfile && (
         <ClientProfileModal
           isOpen={isProfileModalOpen}
