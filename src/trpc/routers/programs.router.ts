@@ -593,10 +593,149 @@ export const programsRouter = router({
 
         // If weeks data is provided, update the program structure
         if (input.weeks) {
+          // BEFORE deleting weeks, collect all existing drill completions for migration
+          const existingProgram = await tx.program.findUnique({
+            where: { id: input.id },
+            include: {
+              weeks: {
+                include: {
+                  days: {
+                    include: {
+                      drills: {
+                        include: {
+                          programDrillCompletions: {
+                            include: {
+                              programAssignment: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          // Build a mapping of old drill IDs to their completions and position info
+          const drillCompletionMap = new Map<
+            string,
+            {
+              completions: Array<{
+                id: string;
+                programAssignmentId: string;
+                clientId: string;
+                completedAt: Date;
+                notes: string | null;
+              }>;
+              weekNumber: number;
+              dayNumber: number;
+              order: number;
+              title: string;
+              routineId: string | null;
+            }
+          >();
+
+          existingProgram?.weeks.forEach(week => {
+            week.days.forEach(day => {
+              day.drills.forEach(drill => {
+                drillCompletionMap.set(drill.id, {
+                  completions: drill.programDrillCompletions.map(comp => ({
+                    id: comp.id,
+                    programAssignmentId: comp.programAssignmentId,
+                    clientId: comp.clientId,
+                    completedAt: comp.completedAt,
+                    notes: comp.notes,
+                  })),
+                  weekNumber: week.weekNumber,
+                  dayNumber: day.dayNumber,
+                  order: drill.order,
+                  title: drill.title,
+                  routineId: drill.routineId,
+                });
+              });
+            });
+          });
+
+          // Also collect ExerciseCompletion records that reference old drill IDs
+          // These can be either:
+          // 1. Regular drills: exerciseId = oldDrillId, programDrillId = ""
+          // 2. Routine exercises in drills: exerciseId = exerciseId, programDrillId = oldDrillId
+          const drillIds = Array.from(drillCompletionMap.keys()).filter(
+            id => id !== ""
+          );
+
+          // Find ExerciseCompletion records where the old drill ID is used as exerciseId (regular drills)
+          const exerciseCompletionsAsExerciseId =
+            drillIds.length > 0
+              ? await tx.exerciseCompletion.findMany({
+                  where: {
+                    exerciseId: {
+                      in: drillIds,
+                    },
+                    programDrillId: "", // Regular drills use empty string
+                  },
+                })
+              : [];
+
+          // Find ExerciseCompletion records where the old drill ID is used as programDrillId (routine exercises)
+          // Filter out empty strings from drillIds first, then query
+          const nonEmptyDrillIds = drillIds.filter(id => id !== "");
+          const exerciseCompletionsAsProgramDrillId =
+            nonEmptyDrillIds.length > 0
+              ? await tx.exerciseCompletion.findMany({
+                  where: {
+                    programDrillId: {
+                      in: nonEmptyDrillIds,
+                    },
+                  },
+                })
+              : [];
+
+          // Group exercise completions by old drill ID
+          // For regular drills: key is exerciseId (the old drill ID)
+          const exerciseCompletionMapByExerciseId = new Map<
+            string,
+            typeof exerciseCompletionsAsExerciseId
+          >();
+          exerciseCompletionsAsExerciseId.forEach(comp => {
+            if (!exerciseCompletionMapByExerciseId.has(comp.exerciseId)) {
+              exerciseCompletionMapByExerciseId.set(comp.exerciseId, []);
+            }
+            exerciseCompletionMapByExerciseId.get(comp.exerciseId)!.push(comp);
+          });
+
+          // For routine exercises: key is programDrillId (the old drill ID)
+          // Filter out any records with empty programDrillId (those are regular drills)
+          const exerciseCompletionMapByProgramDrillId = new Map<
+            string,
+            typeof exerciseCompletionsAsProgramDrillId
+          >();
+          exerciseCompletionsAsProgramDrillId
+            .filter(comp => comp.programDrillId && comp.programDrillId !== "")
+            .forEach(comp => {
+              if (
+                !exerciseCompletionMapByProgramDrillId.has(comp.programDrillId!)
+              ) {
+                exerciseCompletionMapByProgramDrillId.set(
+                  comp.programDrillId!,
+                  []
+                );
+              }
+              exerciseCompletionMapByProgramDrillId
+                .get(comp.programDrillId!)!
+                .push(comp);
+            });
+
           // Delete existing weeks and recreate them
           await tx.programWeek.deleteMany({
             where: { programId: input.id },
           });
+
+          // Map to track old drill ID -> new drill ID
+          const drillIdMapping = new Map<string, string>();
+          // Track which old drills have been matched to prevent double-matching
+          const matchedOldDrillIds = new Set<string>();
 
           // Create new weeks structure
           for (const week of input.weeks) {
@@ -639,7 +778,7 @@ export const programsRouter = router({
                 // Keep routines as single items on coach side
                 // Expansion will happen only on client side in clientRouter
                 console.log("=== CREATING DRILL (ROUTINE OR EXERCISE) ===");
-                await tx.programDrill.create({
+                const newDrill = await tx.programDrill.create({
                   data: {
                     dayId: newDay.id,
                     order: drillIndex + 1,
@@ -671,7 +810,134 @@ export const programsRouter = router({
                       ?.equipment,
                   },
                 });
+
+                // Try to find matching old drill based on position and content
+                // Match by: week number, day number, order, and optionally title/routineId
+                // Priority: exact position + content match > exact position match > same routineId match
+                const matchingOldDrill = Array.from(
+                  drillCompletionMap.entries()
+                )
+                  .filter(([oldDrillId]) => !matchedOldDrillIds.has(oldDrillId))
+                  .find(([oldDrillId, oldDrillData]) => {
+                    const positionMatch =
+                      oldDrillData.weekNumber === week.weekNumber &&
+                      oldDrillData.dayNumber === day.dayNumber &&
+                      oldDrillData.order === drillIndex + 1;
+
+                    // Additional matching criteria for better accuracy
+                    const contentMatch =
+                      oldDrillData.title === drill.title ||
+                      (oldDrillData.routineId &&
+                        oldDrillData.routineId === drill.routineId);
+
+                    return positionMatch && (contentMatch || drillIndex === 0); // For first drill, be more lenient
+                  });
+
+                if (matchingOldDrill) {
+                  const [oldDrillId] = matchingOldDrill;
+                  drillIdMapping.set(oldDrillId, newDrill.id);
+                  matchedOldDrillIds.add(oldDrillId);
+                  console.log(
+                    `🔗 Matched old drill ${oldDrillId} (${
+                      drillCompletionMap.get(oldDrillId)?.title
+                    }) to new drill ${newDrill.id} (${drill.title})`
+                  );
+                }
               }
+            }
+          }
+
+          // Migrate ProgramDrillCompletion records
+          for (const [oldDrillId, newDrillId] of drillIdMapping.entries()) {
+            const oldDrillData = drillCompletionMap.get(oldDrillId);
+            if (oldDrillData && oldDrillData.completions.length > 0) {
+              for (const completion of oldDrillData.completions) {
+                // Use upsert to handle potential duplicates (unique constraint: drillId + programAssignmentId)
+                await tx.programDrillCompletion.upsert({
+                  where: {
+                    drillId_programAssignmentId: {
+                      drillId: newDrillId,
+                      programAssignmentId: completion.programAssignmentId,
+                    },
+                  },
+                  update: {
+                    completedAt: completion.completedAt,
+                    notes: completion.notes,
+                  },
+                  create: {
+                    drillId: newDrillId,
+                    programAssignmentId: completion.programAssignmentId,
+                    clientId: completion.clientId,
+                    completedAt: completion.completedAt,
+                    notes: completion.notes,
+                  },
+                });
+              }
+              console.log(
+                `✅ Migrated ${oldDrillData.completions.length} ProgramDrillCompletion records from drill ${oldDrillId} to ${newDrillId}`
+              );
+            }
+          }
+
+          // Migrate ExerciseCompletion records
+          for (const [oldDrillId, newDrillId] of drillIdMapping.entries()) {
+            // 1. Migrate regular drills (where exerciseId = old drill ID)
+            const regularDrillCompletions =
+              exerciseCompletionMapByExerciseId.get(oldDrillId);
+            if (regularDrillCompletions && regularDrillCompletions.length > 0) {
+              for (const completion of regularDrillCompletions) {
+                // Use upsert to handle unique constraint (clientId, exerciseId, programDrillId, date)
+                // Delete old record first, then upsert with new exerciseId
+                await tx.exerciseCompletion.delete({
+                  where: { id: completion.id },
+                });
+                await tx.exerciseCompletion.upsert({
+                  where: {
+                    clientId_exerciseId_programDrillId_date: {
+                      clientId: completion.clientId,
+                      exerciseId: newDrillId, // New drill ID
+                      programDrillId: "", // Keep empty for regular drills
+                      date: completion.date || "",
+                    },
+                  },
+                  update: {
+                    completed: completion.completed,
+                    completedAt: completion.completedAt,
+                  },
+                  create: {
+                    clientId: completion.clientId,
+                    exerciseId: newDrillId, // Update to new drill ID
+                    programDrillId: "", // Keep empty for regular drills
+                    date: completion.date || "",
+                    completed: completion.completed,
+                    completedAt: completion.completedAt,
+                  },
+                });
+              }
+              console.log(
+                `✅ Migrated ${regularDrillCompletions.length} ExerciseCompletion records (regular drills) from drill ${oldDrillId} to ${newDrillId}`
+              );
+            }
+
+            // 2. Migrate routine exercises within drills (where programDrillId = old drill ID)
+            const routineExerciseCompletions =
+              exerciseCompletionMapByProgramDrillId.get(oldDrillId);
+            if (
+              routineExerciseCompletions &&
+              routineExerciseCompletions.length > 0
+            ) {
+              for (const completion of routineExerciseCompletions) {
+                // Update the programDrillId to point to the new drill
+                await tx.exerciseCompletion.update({
+                  where: { id: completion.id },
+                  data: {
+                    programDrillId: newDrillId,
+                  },
+                });
+              }
+              console.log(
+                `✅ Migrated ${routineExerciseCompletions.length} ExerciseCompletion records (routine exercises) from drill ${oldDrillId} to ${newDrillId}`
+              );
             }
           }
         }

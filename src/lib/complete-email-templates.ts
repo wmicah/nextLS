@@ -186,7 +186,7 @@ export const completeEmailTemplates = {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://nxlvlcoach.com/client-schedule" 
+            <a href="https://nxlvlcoach.com/messages" 
                style="background: #6B7280; color: #ffffff; padding: 15px 30px; text-decoration: none; 
                       border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
               View Schedule
@@ -321,7 +321,7 @@ export const completeEmailTemplates = {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://nxlvlcoach.com/client-programs" 
+            <a href="https://nxlvlcoach.com/client-dashboard" 
                style="background: #6B7280; color: #ffffff; padding: 15px 30px; text-decoration: none; 
                       border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
               View Program
@@ -390,7 +390,7 @@ export const completeEmailTemplates = {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://nxlvlcoach.com/client-workouts" 
+            <a href="https://nxlvlcoach.com/client-dashboard" 
                style="background: #6B7280; color: #ffffff; padding: 15px 30px; text-decoration: none; 
                       border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
               View Workout
@@ -523,7 +523,7 @@ export const completeEmailTemplates = {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://nxlvlcoach.com/client-videos" 
+            <a href="https://nxlvlcoach.com/client-dashboard" 
                style="background: #6B7280; color: #ffffff; padding: 15px 30px; text-decoration: none; 
                       border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
               View Feedback
