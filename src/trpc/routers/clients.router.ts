@@ -1357,6 +1357,16 @@ export const clientsRouter = router({
 
       // Calculate date range based on period
       const now = new Date();
+      // Normalize to end of today (23:59:59.999) to ensure today is included
+      const endOfToday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
       let startDate: Date;
 
       switch (input.period) {
@@ -1374,15 +1384,41 @@ export const clientsRouter = router({
           break;
       }
 
-      // Get all drill completions for this client in the time range
-      const completions = await db.drillCompletion.findMany({
+      // Get all drill completions for this client in the time range (up to end of today)
+      const drillCompletions = await db.drillCompletion.findMany({
         where: {
           clientId: client.id,
           completedAt: {
             gte: startDate,
+            lte: endOfToday,
           },
         },
       });
+
+      // Get routine exercise completions from BOTH tables:
+      // 1. RoutineExerciseCompletion (legacy/alternative system)
+      const allRoutineExerciseCompletions =
+        await db.routineExerciseCompletion.findMany({
+          where: {
+            clientId: client.id,
+          },
+        });
+
+      // 2. ExerciseCompletion (new system used by exerciseCompletion.markExerciseComplete)
+      const allExerciseCompletions = await db.exerciseCompletion.findMany({
+        where: {
+          clientId: client.id,
+          completed: true, // Only completed ones
+        },
+      });
+
+      // Filter both by date range
+      const routineExerciseCompletions = allRoutineExerciseCompletions.filter(
+        completion => {
+          const completedAt = new Date(completion.completedAt);
+          return completedAt >= startDate && completedAt <= endOfToday;
+        }
+      );
 
       // Get all assigned programs for this client (regardless of when assigned)
       const programAssignments = await db.programAssignment.findMany({
@@ -1427,11 +1463,27 @@ export const clientsRouter = router({
         },
       });
 
+      // Get video assignments for this client
+      const videoAssignments = await db.videoAssignment.findMany({
+        where: {
+          clientId: client.id,
+        },
+      });
+
       // Calculate total drills assigned and completed
       let totalDrills = 0;
       let completedDrills = 0;
 
-      // Count program drills
+      // Track assigned drill IDs for program drills
+      const assignedProgramDrillIds = new Set<string>();
+
+      // Track assigned routine exercises (assignmentId + exerciseId)
+      const assignedRoutineExercises = new Set<string>();
+
+      // Track assigned video IDs
+      const assignedVideoIds = new Set<string>();
+
+      // Count program drills and track their IDs
       programAssignments.forEach(assignment => {
         if (!assignment.startDate) return;
 
@@ -1440,8 +1492,9 @@ export const clientsRouter = router({
         assignment.program.weeks.forEach((week, weekIndex) => {
           week.days.forEach((day, dayIndex) => {
             // Calculate the actual date this day should be completed
+            // Day 0 = startDate, Day 1 = startDate + 1, etc.
             const dayDate = new Date(assignmentStartDate);
-            dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex - 1);
+            dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex);
 
             // Check if this day has been replaced with a lesson
             const hasReplacement = assignment.replacements?.some(
@@ -1461,103 +1514,269 @@ export const clientsRouter = router({
               }
             );
 
-            // Only count drills from days that were due within the time period and haven't been replaced
-            if (dayDate >= startDate && dayDate <= now && !hasReplacement) {
-              totalDrills += day.drills.length;
-            }
-          });
-        });
-      });
-
-      // Count routine exercises
-      routineAssignments.forEach(assignment => {
-        if (!assignment.startDate) return;
-
-        const assignmentStartDate = new Date(assignment.startDate);
-
-        // For routines, we count each exercise as a drill
-        // Check if the routine was assigned within the time period
-        if (assignmentStartDate >= startDate && assignmentStartDate <= now) {
-          totalDrills += assignment.routine.exercises.length;
-        }
-      });
-
-      // Count completed drills that match the drills we counted above
-      // We need to filter completions to only include those for drills that were actually assigned
-      const assignedDrillIds = new Set<string>();
-
-      // Collect all drill IDs that were assigned during the time period
-      programAssignments.forEach(assignment => {
-        if (!assignment.startDate) return;
-        const assignmentStartDate = new Date(assignment.startDate);
-
-        assignment.program.weeks.forEach((week, weekIndex) => {
-          week.days.forEach((day, dayIndex) => {
-            const dayDate = new Date(assignmentStartDate);
-            dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex - 1);
-
-            const hasReplacement = assignment.replacements?.some(
-              (replacement: any) => {
-                const replacementDate = new Date(replacement.replacedDate);
-                const replacementDateOnly = new Date(
-                  replacementDate.getFullYear(),
-                  replacementDate.getMonth(),
-                  replacementDate.getDate()
-                );
-                const dayDateOnly = new Date(
-                  dayDate.getFullYear(),
-                  dayDate.getMonth(),
-                  dayDate.getDate()
-                );
-                return replacementDateOnly.getTime() === dayDateOnly.getTime();
-              }
+            // Only count drills from days that were due within the time period (past or today, not future) and haven't been replaced
+            // Normalize dayDate to midnight for comparison
+            const dayDateOnly = new Date(
+              dayDate.getFullYear(),
+              dayDate.getMonth(),
+              dayDate.getDate()
+            );
+            const todayOnly = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate()
             );
 
-            if (dayDate >= startDate && dayDate <= now && !hasReplacement) {
+            if (
+              dayDateOnly <= todayOnly &&
+              dayDate >= startDate &&
+              !hasReplacement
+            ) {
               day.drills.forEach(drill => {
-                assignedDrillIds.add(drill.id);
+                assignedProgramDrillIds.add(drill.id);
+                totalDrills += 1;
               });
             }
           });
         });
       });
 
-      // Add routine exercise IDs
+      // Count routine exercises that were active during the time period
+      // Routines are ongoing assignments, so we count them if they were active during any part of the period
       routineAssignments.forEach(assignment => {
-        if (!assignment.startDate) return;
-        const assignmentStartDate = new Date(assignment.startDate);
-        if (assignmentStartDate >= startDate && assignmentStartDate <= now) {
+        // If no startDate, use assignedAt as the start date
+        const assignmentStartDate = assignment.startDate
+          ? new Date(assignment.startDate)
+          : new Date(assignment.assignedAt);
+
+        // For routines, count exercises if the routine was active during the period
+        // Routines are ongoing, so we count them if:
+        // 1. They were assigned before or during the period AND
+        // 2. They are still active (or were completed during/after the period)
+        const routineEndDate = assignment.completedAt
+          ? new Date(assignment.completedAt)
+          : endOfToday;
+
+        // Normalize dates for comparison
+        const assignmentStartDateOnly = new Date(
+          assignmentStartDate.getFullYear(),
+          assignmentStartDate.getMonth(),
+          assignmentStartDate.getDate()
+        );
+        const todayOnly = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+
+        // Count if the routine was assigned before or during the period and is active up to today
+        // This ensures routines assigned today are included
+        const wasActiveDuringPeriod =
+          assignmentStartDateOnly <= todayOnly && routineEndDate >= startDate;
+
+        if (wasActiveDuringPeriod) {
           assignment.routine.exercises.forEach(exercise => {
-            // Use the same key format as in the completion tracking
-            const routineExerciseKey = `${assignment.id}-${exercise.id}`;
-            assignedDrillIds.add(routineExerciseKey);
+            const routineKey = `${assignment.id}-${exercise.id}`;
+            assignedRoutineExercises.add(routineKey);
+            totalDrills += 1;
           });
         }
       });
 
-      // Count only completions for drills that were actually assigned
-      completedDrills = completions.filter(completion =>
-        assignedDrillIds.has(completion.drillId)
+      // Count video assignments that were due during the time period (past or today, not future)
+      videoAssignments.forEach(assignment => {
+        // If there's a dueDate, use it; otherwise use assignedAt
+        const dueDate = assignment.dueDate
+          ? new Date(assignment.dueDate)
+          : new Date(assignment.assignedAt);
+
+        // Normalize to date only for comparison
+        const dueDateOnly = new Date(
+          dueDate.getFullYear(),
+          dueDate.getMonth(),
+          dueDate.getDate()
+        );
+        const todayOnly = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+
+        // Only count videos that were due within the time period and are due today or earlier (not future)
+        if (
+          dueDateOnly <= todayOnly &&
+          dueDate >= startDate &&
+          dueDate <= endOfToday
+        ) {
+          assignedVideoIds.add(assignment.videoId);
+          totalDrills += 1;
+        }
+      });
+
+      // Count completed program drills
+      completedDrills += drillCompletions.filter(completion =>
+        assignedProgramDrillIds.has(completion.drillId)
       ).length;
+
+      // Count completed routine exercises from RoutineExerciseCompletion table
+      const completedRoutineExercisesSet = new Set<string>();
+      routineExerciseCompletions.forEach(completion => {
+        const routineKey = `${completion.routineAssignmentId}-${completion.exerciseId}`;
+        if (assignedRoutineExercises.has(routineKey)) {
+          completedRoutineExercisesSet.add(routineKey);
+        }
+      });
+
+      // Count completed routine exercises from ExerciseCompletion table
+      // For ExerciseCompletion, we need to match by exerciseId and check if it belongs to an assigned routine
+      const routineExerciseIds = new Set(
+        routineAssignments.flatMap(assignment =>
+          assignment.routine.exercises.map(ex => ex.id)
+        )
+      );
+
+      const exerciseCompletionsForRoutines = allExerciseCompletions.filter(
+        completion => {
+          // Check if this completion is for a routine exercise
+          const isRoutineExercise = routineExerciseIds.has(
+            completion.exerciseId
+          );
+          if (!isRoutineExercise) return false;
+
+          // Check date range
+          if (!completion.completedAt) return false;
+          const completedAt = new Date(completion.completedAt);
+          return completedAt >= startDate && completedAt <= endOfToday;
+        }
+      );
+
+      // Match ExerciseCompletion entries to routine assignments
+      exerciseCompletionsForRoutines.forEach(completion => {
+        // Find which routine assignment this exercise belongs to
+        for (const assignment of routineAssignments) {
+          const exercise = assignment.routine.exercises.find(
+            ex => ex.id === completion.exerciseId
+          );
+          if (exercise) {
+            const routineKey = `${assignment.id}-${completion.exerciseId}`;
+            if (assignedRoutineExercises.has(routineKey)) {
+              completedRoutineExercisesSet.add(routineKey);
+            }
+          }
+        }
+      });
+
+      completedDrills += completedRoutineExercisesSet.size;
+
+      // Debug logging
+      console.log("🔍 Routine exercise completions debug:", {
+        clientId: client.id,
+        routineExerciseCompletionCount: allRoutineExerciseCompletions.length,
+        exerciseCompletionCount: allExerciseCompletions.length,
+        exerciseCompletionsForRoutinesCount:
+          exerciseCompletionsForRoutines.length,
+        completedRoutineExercisesCount: completedRoutineExercisesSet.size,
+        assignedRoutineExercisesCount: assignedRoutineExercises.size,
+        routineExerciseIds: Array.from(routineExerciseIds).slice(0, 5),
+        exerciseCompletionsForRoutines: exerciseCompletionsForRoutines.map(
+          c => ({
+            exerciseId: c.exerciseId,
+            programDrillId: c.programDrillId,
+            completedAt: c.completedAt?.toISOString(),
+            date: c.date,
+          })
+        ),
+      });
+
+      // Count completed videos (videos that were assigned and completed)
+      completedDrills += videoAssignments.filter(assignment => {
+        const dueDate = assignment.dueDate
+          ? new Date(assignment.dueDate)
+          : new Date(assignment.assignedAt);
+
+        const dueDateOnly = new Date(
+          dueDate.getFullYear(),
+          dueDate.getMonth(),
+          dueDate.getDate()
+        );
+        const todayOnly = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+
+        return (
+          assignedVideoIds.has(assignment.videoId) &&
+          assignment.completed &&
+          assignment.completedAt &&
+          new Date(assignment.completedAt) >= startDate &&
+          new Date(assignment.completedAt) <= endOfToday &&
+          dueDateOnly <= todayOnly
+        );
+      }).length;
 
       // Calculate completion rate
       const completionRate =
         totalDrills > 0 ? Math.round((completedDrills / totalDrills) * 100) : 0;
 
       // Debug logging
+      const completedVideoCount = videoAssignments.filter(assignment => {
+        const dueDate = assignment.dueDate
+          ? new Date(assignment.dueDate)
+          : new Date(assignment.assignedAt);
+
+        const dueDateOnly = new Date(
+          dueDate.getFullYear(),
+          dueDate.getMonth(),
+          dueDate.getDate()
+        );
+        const todayOnly = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+
+        return (
+          assignedVideoIds.has(assignment.videoId) &&
+          assignment.completed &&
+          assignment.completedAt &&
+          new Date(assignment.completedAt) >= startDate &&
+          new Date(assignment.completedAt) <= endOfToday &&
+          dueDateOnly <= todayOnly
+        );
+      }).length;
+
       console.log("Compliance calculation debug:", {
         clientId: input.clientId,
         period: input.period,
         startDate: startDate.toISOString(),
+        endOfToday: endOfToday.toISOString(),
         now: now.toISOString(),
         totalDrills,
         completedDrills,
         completionRate,
+        breakdown: {
+          programDrills: {
+            total: assignedProgramDrillIds.size,
+            completed: drillCompletions.filter(completion =>
+              assignedProgramDrillIds.has(completion.drillId)
+            ).length,
+          },
+          routineExercises: {
+            total: assignedRoutineExercises.size,
+            completed: completedRoutineExercisesSet.size,
+          },
+          videos: {
+            total: assignedVideoIds.size,
+            completed: completedVideoCount,
+          },
+        },
         programAssignmentsCount: programAssignments.length,
         routineAssignmentsCount: routineAssignments.length,
-        totalCompletionsCount: completions.length,
-        assignedDrillIdsCount: assignedDrillIds.size,
-        assignedDrillIds: Array.from(assignedDrillIds).slice(0, 10), // Show first 10 for debugging
+        videoAssignmentsCount: videoAssignments.length,
+        drillCompletionsCount: drillCompletions.length,
+        routineExerciseCompletionsCount: routineExerciseCompletions.length,
+        note: "Includes: Program drills, Standalone routines, Videos. Only counting past and current day (today), excluding future days",
       });
 
       return {
