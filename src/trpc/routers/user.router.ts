@@ -609,9 +609,15 @@ export const userRouter = router({
       }
 
       // Update the client record to assign the coach
+      // Explicitly set archived: false and update updatedAt to prevent auto-archiving
       await db.client.update({
         where: { userId: clientUserId },
-        data: { coachId: user.id },
+        data: {
+          coachId: user.id,
+          archived: false, // Ensure client is not archived
+          archivedAt: null, // Clear any archived timestamp
+          updatedAt: new Date(), // Update timestamp to prevent auto-archiving
+        },
       });
 
       // Mark notification as read
