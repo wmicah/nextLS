@@ -311,7 +311,6 @@ export default function ExerciseRow({
                         : undefined,
                     })
                   }
-                  placeholder="Sets"
                   min={1}
                   max={99}
                   className="w-full p-2 rounded border text-white text-xs"
@@ -333,7 +332,6 @@ export default function ExerciseRow({
                         : undefined,
                     })
                   }
-                  placeholder="Reps"
                   min={1}
                   max={999}
                   className="w-full p-2 rounded border text-white text-xs"
@@ -358,7 +356,7 @@ export default function ExerciseRow({
                     backgroundColor: "#1F2323",
                     borderColor: "#606364",
                   }}
-                  placeholder="Duration (e.g., 60 seconds)"
+                  placeholder="e.g., 30 seconds"
                 />
               </div>
             </div>

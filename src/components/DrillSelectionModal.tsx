@@ -229,7 +229,6 @@ export default function DrillSelectionModal({
                     }))
                   }
                   className="mt-1 bg-[#3A4245] border-gray-600 text-white"
-                  placeholder="3"
                 />
               </div>
 
@@ -253,7 +252,6 @@ export default function DrillSelectionModal({
                     }))
                   }
                   className="mt-1 bg-[#3A4245] border-gray-600 text-white"
-                  placeholder="10"
                 />
               </div>
 
@@ -276,7 +274,7 @@ export default function DrillSelectionModal({
                     }))
                   }
                   className="mt-1 bg-[#3A4245] border-gray-600 text-white"
-                  placeholder="60 seconds"
+                  placeholder="e.g., 30 seconds"
                 />
               </div>
 
