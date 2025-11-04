@@ -1382,7 +1382,7 @@ function ClientProgramPage() {
                 onTouchEnd={onTouchEnd}
               >
                 {/* Day headers */}
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                   <div
                     key={day}
                     className="p-2 text-center text-sm font-semibold mb-2"
