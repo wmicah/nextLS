@@ -2041,6 +2041,7 @@ export const clientRouterRouter = router({
                       notes: drill.notes,
                       duration: drill.duration,
                       type: drill.type,
+                      videoUrl: drill.videoUrl,
                       videoId: drill.videoId,
                       videoTitle: drill.videoTitle,
                       videoThumbnail: drill.videoThumbnail,
