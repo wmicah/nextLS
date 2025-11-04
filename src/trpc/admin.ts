@@ -236,9 +236,63 @@ export const adminRouter = {
       // Check if user is admin with audit logging
       await requireAdmin(user.id, "add_to_master_library");
 
+      // If it's a YouTube video, fetch metadata if not provided
+      let finalTitle = input.title;
+      let finalDescription = input.description;
+      let finalThumbnail = input.thumbnail;
+      let finalYoutubeId = input.youtubeId;
+
+      if (input.isYoutube && input.url) {
+        const {
+          extractYouTubeVideoId,
+          fetchYouTubeVideoInfo,
+          getYouTubeThumbnail,
+        } = await import("@/lib/youtube");
+
+        // Extract video ID if not provided
+        if (!finalYoutubeId) {
+          finalYoutubeId = extractYouTubeVideoId(input.url) || undefined;
+        }
+
+        // Fetch YouTube video info if we have a video ID
+        if (finalYoutubeId) {
+          try {
+            const youtubeInfo = await fetchYouTubeVideoInfo(
+              finalYoutubeId,
+              process.env.YOUTUBE_API_KEY
+            );
+
+            // Use fetched info if title/description not provided or if title is just a placeholder
+            if (!input.title || input.title.includes("YouTube Video")) {
+              finalTitle = youtubeInfo.title || input.title;
+            }
+            if (
+              !input.description ||
+              input.description === "Imported from YouTube"
+            ) {
+              finalDescription = youtubeInfo.description || input.description;
+            }
+            if (!input.thumbnail) {
+              finalThumbnail =
+                youtubeInfo.thumbnail || getYouTubeThumbnail(finalYoutubeId);
+            }
+          } catch (error) {
+            console.error("Error fetching YouTube info:", error);
+            // Continue with provided values or fallbacks
+            if (!finalThumbnail && finalYoutubeId) {
+              finalThumbnail = getYouTubeThumbnail(finalYoutubeId);
+            }
+          }
+        }
+      }
+
       const resource = await db.libraryResource.create({
         data: {
           ...input,
+          title: finalTitle,
+          description: finalDescription,
+          thumbnail: finalThumbnail,
+          youtubeId: finalYoutubeId,
           isMasterLibrary: true,
           isActive: true,
           isFeatured: false,
