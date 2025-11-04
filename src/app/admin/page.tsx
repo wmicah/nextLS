@@ -23,6 +23,9 @@ import PerformanceDashboard from "@/components/PerformanceDashboard";
 import AdminSecurityDashboard from "@/components/AdminSecurityDashboard";
 import { UploadButton } from "@uploadthing/react";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
+import { Youtube } from "lucide-react";
+import { isYouTubeUrl } from "@/lib/youtube-utils";
+import { extractYouTubeVideoId, getYouTubeThumbnail } from "@/lib/youtube";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -40,6 +43,7 @@ export default function AdminDashboard() {
     size: 0,
     thumbnail: "",
     onformUrl: "",
+    youtubeUrl: "",
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -78,6 +82,7 @@ export default function AdminDashboard() {
           size: 0,
           thumbnail: "",
           onformUrl: "",
+          youtubeUrl: "",
         });
         setSelectedFile(null);
       }, 1000);
@@ -708,11 +713,21 @@ export default function AdminDashboard() {
                 onSubmit={async e => {
                   e.preventDefault();
 
-                  // Check if either a file is selected OR an OnForm URL is provided
-                  if (!selectedFile && !newResource.onformUrl) {
+                  // Check if either a file, OnForm URL, or YouTube URL is provided
+                  if (
+                    !selectedFile &&
+                    !newResource.onformUrl &&
+                    !newResource.youtubeUrl
+                  ) {
                     alert(
-                      "Please either select a file to upload or provide an OnForm URL"
+                      "Please either select a file to upload, provide an OnForm URL, or provide a YouTube URL"
                     );
+                    return;
+                  }
+
+                  // Validate category is selected
+                  if (!newResource.category) {
+                    alert("Please select a category");
                     return;
                   }
 
@@ -727,9 +742,47 @@ export default function AdminDashboard() {
                     let resourceType = "video";
                     let isOnForm = false;
                     let onformId = "";
+                    let isYoutube = false;
+                    let youtubeId: string | null = null;
+                    let youtubeThumbnail = "";
+                    let youtubeTitle = "";
+                    let youtubeDescription = "";
 
+                    // Check if YouTube URL is provided
+                    if (newResource.youtubeUrl) {
+                      console.log(
+                        "Processing YouTube URL:",
+                        newResource.youtubeUrl
+                      );
+
+                      if (!isYouTubeUrl(newResource.youtubeUrl)) {
+                        alert("Please enter a valid YouTube URL");
+                        setIsUploading(false);
+                        setUploadProgress(0);
+                        return;
+                      }
+
+                      youtubeId = extractYouTubeVideoId(newResource.youtubeUrl);
+                      if (!youtubeId) {
+                        alert("Could not extract video ID from YouTube URL");
+                        setIsUploading(false);
+                        setUploadProgress(0);
+                        return;
+                      }
+
+                      // For YouTube videos, we'll let the server fetch the info
+                      // Just set basic values here
+                      fileUrl = newResource.youtubeUrl;
+                      isYoutube = true;
+                      resourceType = "video";
+                      youtubeTitle =
+                        newResource.title || `YouTube Video ${youtubeId}`;
+                      youtubeDescription =
+                        newResource.description || "Imported from YouTube";
+                      youtubeThumbnail = getYouTubeThumbnail(youtubeId);
+                    }
                     // Check if OnForm URL is provided
-                    if (newResource.onformUrl) {
+                    else if (newResource.onformUrl) {
                       console.log(
                         "Processing OnForm URL:",
                         newResource.onformUrl
@@ -797,16 +850,21 @@ export default function AdminDashboard() {
 
                     // Now save the metadata to the database using the admin mutation
                     addResourceMutation.mutate({
-                      title: newResource.title,
-                      description: newResource.description,
+                      title: isYoutube ? youtubeTitle : newResource.title,
+                      description: isYoutube
+                        ? youtubeDescription
+                        : newResource.description,
                       category: newResource.category,
                       type: resourceType,
                       url: fileUrl,
                       filename: newResource.filename,
                       contentType: newResource.contentType,
                       size: newResource.size,
-                      thumbnail: "",
-                      isYoutube: false,
+                      thumbnail: isYoutube
+                        ? youtubeThumbnail
+                        : newResource.thumbnail || "",
+                      isYoutube: isYoutube,
+                      youtubeId: youtubeId || undefined,
                       isOnForm,
                       onformId,
                     });
@@ -902,41 +960,70 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    OnForm URL (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={newResource.onformUrl || ""}
-                    onChange={e =>
-                      setNewResource({
-                        ...newResource,
-                        onformUrl: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-[#2A3133] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
-                    placeholder="https://onform.net/video/12345 or https://onform.net/embed/12345"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Paste an OnForm video URL to embed it instead of uploading a
-                    file
-                  </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      YouTube URL (Optional)
+                    </label>
+                    <div className="relative">
+                      <Youtube className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-500" />
+                      <input
+                        type="url"
+                        value={newResource.youtubeUrl || ""}
+                        onChange={e => {
+                          const url = e.target.value;
+                          setNewResource({
+                            ...newResource,
+                            youtubeUrl: url,
+                          });
+                        }}
+                        className="w-full pl-10 pr-3 py-2 bg-[#2A3133] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Paste a YouTube video URL to import it to the master
+                      library
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      OnForm URL (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={newResource.onformUrl || ""}
+                      onChange={e =>
+                        setNewResource({
+                          ...newResource,
+                          onformUrl: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-[#2A3133] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                      placeholder="https://onform.net/video/12345 or https://onform.net/embed/12345"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Paste an OnForm video URL to embed it instead of uploading
+                      a file
+                    </p>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Training Video File{" "}
-                    {!newResource.onformUrl
+                    {!newResource.onformUrl && !newResource.youtubeUrl
                       ? "*"
-                      : "(Optional if OnForm URL provided)"}
+                      : "(Optional if YouTube or OnForm URL provided)"}
                   </label>
                   {!selectedFile ? (
                     <div className="border-2 border-dashed border-[#4A5A70] rounded-lg p-6 text-center hover:border-[#606364] transition-colors">
-                      {newResource.onformUrl && (
+                      {(newResource.onformUrl || newResource.youtubeUrl) && (
                         <div className="mb-4 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
                           <p className="text-green-400 text-sm">
-                            ✓ OnForm URL provided - file upload is optional
+                            ✓ {newResource.youtubeUrl ? "YouTube" : "OnForm"}{" "}
+                            URL provided - file upload is optional
                           </p>
                         </div>
                       )}
