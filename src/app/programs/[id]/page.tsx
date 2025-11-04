@@ -101,7 +101,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.description || drill.notes || "",
+                  notes: drill.notes || "",
+                  description: drill.description || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -113,7 +114,6 @@ function ProgramEditorPageContent() {
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
                   supersetOrder: drill.supersetOrder || undefined,
-                  description: drill.description || "",
                   supersetDescription: drill.supersetDescription || undefined,
                   supersetInstructions: drill.supersetInstructions || undefined,
                   supersetNotes: drill.supersetNotes || undefined,
@@ -147,7 +147,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.description || drill.notes || "",
+                  notes: drill.notes || "",
+                  description: drill.description || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -159,7 +160,6 @@ function ProgramEditorPageContent() {
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
                   supersetOrder: drill.supersetOrder || undefined,
-                  description: drill.description || "",
                   supersetDescription: drill.supersetDescription || undefined,
                   supersetInstructions: drill.supersetInstructions || undefined,
                   supersetNotes: drill.supersetNotes || undefined,
@@ -193,7 +193,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.description || drill.notes || "",
+                  notes: drill.notes || "",
+                  description: drill.description || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -205,7 +206,6 @@ function ProgramEditorPageContent() {
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
                   supersetOrder: drill.supersetOrder || undefined,
-                  description: drill.description || "",
                   supersetDescription: drill.supersetDescription || undefined,
                   supersetInstructions: drill.supersetInstructions || undefined,
                   supersetNotes: drill.supersetNotes || undefined,
@@ -239,7 +239,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.description || drill.notes || "",
+                  notes: drill.notes || "",
+                  description: drill.description || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -251,7 +252,6 @@ function ProgramEditorPageContent() {
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
                   supersetOrder: drill.supersetOrder || undefined,
-                  description: drill.description || "",
                   supersetDescription: drill.supersetDescription || undefined,
                   supersetInstructions: drill.supersetInstructions || undefined,
                   supersetNotes: drill.supersetNotes || undefined,
@@ -285,7 +285,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.description || drill.notes || "",
+                  notes: drill.notes || "",
+                  description: drill.description || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -297,7 +298,6 @@ function ProgramEditorPageContent() {
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
                   supersetOrder: drill.supersetOrder || undefined,
-                  description: drill.description || "",
                   supersetDescription: drill.supersetDescription || undefined,
                   supersetInstructions: drill.supersetInstructions || undefined,
                   supersetNotes: drill.supersetNotes || undefined,
@@ -331,7 +331,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.description || drill.notes || "",
+                  notes: drill.notes || "",
+                  description: drill.description || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -343,7 +344,6 @@ function ProgramEditorPageContent() {
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
                   supersetOrder: drill.supersetOrder || undefined,
-                  description: drill.description || "",
                   supersetDescription: drill.supersetDescription || undefined,
                   supersetInstructions: drill.supersetInstructions || undefined,
                   supersetNotes: drill.supersetNotes || undefined,
@@ -377,7 +377,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.description || drill.notes || "",
+                  notes: drill.notes || "",
+                  description: drill.description || "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -389,7 +390,6 @@ function ProgramEditorPageContent() {
                   routineId: drill.routineId || undefined,
                   supersetId: drill.supersetId || undefined,
                   supersetOrder: drill.supersetOrder || undefined,
-                  description: drill.description || "",
                   supersetDescription: drill.supersetDescription || undefined,
                   supersetInstructions: drill.supersetInstructions || undefined,
                   supersetNotes: drill.supersetNotes || undefined,
@@ -493,10 +493,10 @@ function ProgramEditorPageContent() {
             drills: items.map((item, itemIndex) => ({
               id: item.id,
               title: item.title,
-              description: item.description || item.notes || "",
+              description: item.description ?? "", // Use nullish coalescing to preserve empty strings
+              notes: item.notes ?? "",
               duration: item.duration || "",
               videoUrl: item.videoUrl || "",
-              notes: item.notes || "",
               type: item.type || "exercise",
               sets: item.sets,
               reps: item.reps,

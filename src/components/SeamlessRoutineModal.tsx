@@ -131,10 +131,11 @@ function ExerciseEditDialog({
       setup: "",
     },
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update form data when exercise changes
+  // Update form data when exercise changes or dialog opens
   useEffect(() => {
-    if (exercise) {
+    if (isOpen && exercise) {
       setFormData({
         title: exercise.title || "",
         description: exercise.description || "",
@@ -152,15 +153,33 @@ function ExerciseEditDialog({
         },
       });
     }
-  }, [exercise]);
+    // Reset submitting state when dialog closes
+    if (!isOpen) {
+      setIsSubmitting(false);
+    }
+  }, [exercise, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     onSubmit(formData);
   };
 
+  const handleOpenChange = (open: boolean) => {
+    // Only call onClose if not submitting (prevents double close)
+    if (!open && !isSubmitting) {
+      onClose();
+    }
+  };
+
+  // Don't render anything if not open to prevent double rendering
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-white">Edit Exercise</DialogTitle>
@@ -247,7 +266,6 @@ function ExerciseEditDialog({
                   }))
                 }
                 className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="3"
                 min="0"
               />
             </div>
@@ -267,7 +285,6 @@ function ExerciseEditDialog({
                   }))
                 }
                 className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="10"
                 min="0"
               />
             </div>
@@ -283,12 +300,12 @@ function ExerciseEditDialog({
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
                 className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="60 seconds"
+                placeholder="e.g., 30 seconds"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -300,10 +317,11 @@ function ExerciseEditDialog({
             <Button
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isSubmitting}
             >
-              Save Changes
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -521,7 +539,6 @@ function SortableExerciseItem({
                     onUpdate(index, "sets", value || undefined);
                   }
                 }}
-                placeholder="Sets"
                 type="number"
                 min="0"
                 className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
@@ -537,7 +554,6 @@ function SortableExerciseItem({
                     onUpdate(index, "reps", value || undefined);
                   }
                 }}
-                placeholder="Reps"
                 type="number"
                 min="0"
                 className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
@@ -550,7 +566,7 @@ function SortableExerciseItem({
               <Input
                 value={exercise.tempo || ""}
                 onChange={e => onUpdate(index, "tempo", e.target.value)}
-                placeholder="e.g., 2-0-2"
+                placeholder="e.g., 30 seconds or 2-0-2"
                 className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
               />
             </div>
@@ -825,8 +841,10 @@ export default function SeamlessRoutineModal({
       videoTitle: video.title,
       videoThumbnail: video.thumbnail || "",
     };
-    setEditingExercise(newExercise);
-    setIsExerciseEditDialogOpen(true);
+    // Edit dialog disabled - add video directly to exercises
+    setExercises(prev => [...prev, newExercise]);
+    // setEditingExercise(newExercise);
+    // setIsExerciseEditDialogOpen(true);
   };
 
   // Routine mutations
@@ -1527,15 +1545,18 @@ export default function SeamlessRoutineModal({
         </Dialog>
 
         {/* Exercise Edit Dialog */}
-        <ExerciseEditDialog
-          isOpen={isExerciseEditDialogOpen}
-          onClose={() => {
-            setIsExerciseEditDialogOpen(false);
-            setEditingExercise(null);
-          }}
-          onSubmit={handleExerciseEditSubmit}
-          exercise={editingExercise}
-        />
+        {editingExercise && editingExercise.id && (
+          <ExerciseEditDialog
+            key={editingExercise.id} // Force remount when exercise changes
+            isOpen={isExerciseEditDialogOpen}
+            onClose={() => {
+              setIsExerciseEditDialogOpen(false);
+              setEditingExercise(null);
+            }}
+            onSubmit={handleExerciseEditSubmit}
+            exercise={editingExercise}
+          />
+        )}
       </Dialog>
 
       {/* Superset Description Modal - Rendered outside main Dialog */}

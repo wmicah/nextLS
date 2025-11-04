@@ -1050,7 +1050,6 @@ export default function MobileProgramBuilder({
                                     exercises: updatedExercises,
                                   }));
                                 }}
-                                placeholder="Sets"
                                 type="number"
                                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
                               />
@@ -1071,7 +1070,6 @@ export default function MobileProgramBuilder({
                                     exercises: updatedExercises,
                                   }));
                                 }}
-                                placeholder="Reps"
                                 type="number"
                                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
                               />
@@ -1090,7 +1088,7 @@ export default function MobileProgramBuilder({
                                     exercises: updatedExercises,
                                   }));
                                 }}
-                                placeholder="60 seconds"
+                                placeholder="e.g., 30 seconds"
                                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
                               />
                             </div>
@@ -1912,7 +1910,6 @@ function VideoDetailsDialog({
                   }
                 }}
                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
-                placeholder="3"
                 min="0"
               />
             </div>
@@ -1935,7 +1932,6 @@ function VideoDetailsDialog({
                   }
                 }}
                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
-                placeholder="10"
                 min="0"
               />
             </div>
@@ -1951,7 +1947,7 @@ function VideoDetailsDialog({
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
                 className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
-                placeholder="2-0-2"
+                placeholder="e.g., 30 seconds or 2-0-2"
               />
             </div>
           </div>

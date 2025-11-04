@@ -207,7 +207,6 @@ function SortableExerciseItem({
                   onUpdate(index, "sets", value || undefined);
                 }
               }}
-              placeholder="Sets"
               type="number"
               min="0"
               className="bg-gray-600 border-gray-500 text-white text-xs h-7"
@@ -220,7 +219,6 @@ function SortableExerciseItem({
                   onUpdate(index, "reps", value || undefined);
                 }
               }}
-              placeholder="Reps"
               type="number"
               min="0"
               className="bg-gray-600 border-gray-500 text-white text-xs h-7"
@@ -228,7 +226,7 @@ function SortableExerciseItem({
             <Input
               value={exercise.tempo || ""}
               onChange={e => onUpdate(index, "tempo", e.target.value)}
-              placeholder="60 seconds"
+              placeholder="e.g., 30 seconds"
               className="bg-gray-600 border-gray-500 text-white text-xs h-7"
             />
           </div>

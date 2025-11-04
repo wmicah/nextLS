@@ -149,13 +149,18 @@ function ExerciseEditDialog({
       setup: "",
     },
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update form data when exercise changes
+  // Update form data when exercise changes or dialog opens
   useEffect(() => {
-    if (exercise) {
+    if (isOpen && exercise) {
+      console.log("=== ExerciseEditDialog: Loading exercise data ===");
+      console.log("exercise:", exercise);
+      console.log("exercise.description:", exercise.description);
+      console.log("exercise.description type:", typeof exercise.description);
       setFormData({
         title: exercise.title || "",
-        description: exercise.description || "",
+        description: exercise.description ?? "", // Use nullish coalescing to preserve empty strings but handle null/undefined
         sets: exercise.sets || undefined,
         reps: exercise.reps || undefined,
         tempo: exercise.tempo || "",
@@ -169,16 +174,35 @@ function ExerciseEditDialog({
           setup: "",
         },
       });
+      console.log("Form data set - description:", exercise.description ?? "");
     }
-  }, [exercise]);
+    // Reset submitting state when dialog closes
+    if (!isOpen) {
+      setIsSubmitting(false);
+    }
+  }, [exercise, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     onSubmit(formData);
   };
 
+  const handleOpenChange = (open: boolean) => {
+    // Only call onClose if not submitting (prevents double close)
+    if (!open && !isSubmitting) {
+      onClose();
+    }
+  };
+
+  // Don't render anything if not open to prevent double rendering
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-white">Edit Exercise</DialogTitle>
@@ -265,7 +289,6 @@ function ExerciseEditDialog({
                   }))
                 }
                 className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="3"
                 min="0"
               />
             </div>
@@ -285,7 +308,6 @@ function ExerciseEditDialog({
                   }))
                 }
                 className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="10"
                 min="0"
               />
             </div>
@@ -301,7 +323,7 @@ function ExerciseEditDialog({
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
                 className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="60 seconds"
+                placeholder="e.g., 30 seconds"
               />
             </div>
           </div>
@@ -318,8 +340,9 @@ function ExerciseEditDialog({
             <Button
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isSubmitting}
             >
-              Save Changes
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>
@@ -373,7 +396,6 @@ function ProgramBuilder({
       // For now, we'll rely on the parent to handle this
     }
   }, [weeks.length, programDetails]);
-  const [editingItem, setEditingItem] = useState<ProgramItem | null>(null);
   const [isExerciseEditDialogOpen, setIsExerciseEditDialogOpen] =
     useState(false);
   const [editingExercise, setEditingExercise] = useState<ProgramItem | null>(
@@ -713,21 +735,44 @@ function ProgramBuilder({
 
   const openEditItemDialog = useCallback(
     (weekId: string, dayKey: DayKey, item: ProgramItem) => {
+      console.log("=== openEditItemDialog ===");
+      console.log("item:", item);
+      console.log("item.description:", item.description);
       setSelectedWeekId(weekId);
       setSelectedDayKey(dayKey);
-      setEditingItem(item);
 
       // Use the new exercise edit dialog for ALL exercises (including videos)
+      setEditingExercise(item);
+      setIsExerciseEditDialogOpen(true);
     },
     []
   );
 
   const openAddFromLibrary = useCallback(
     (weekId: string, dayKey: DayKey) => {
-      setSelectedWeekId(weekId);
-      setSelectedDayKey(dayKey);
-      setEditingItem(null);
-      onOpenVideoLibrary?.();
+      // IMMEDIATELY clear any existing edit state
+      setEditingExercise(null);
+      // Ensure dialog is never open (redundant but safe)
+      setIsExerciseEditDialogOpen(false);
+
+      // Ensure we're NOT in routine-creation mode when adding from library for normal days
+      if (weekId !== "routine-creation") {
+        // Clear any stale routine-creation state
+        // Only set week/day if we have valid values
+        if (weekId && dayKey) {
+          setSelectedWeekId(weekId);
+          setSelectedDayKey(dayKey);
+        }
+      } else {
+        // If we ARE in routine-creation, set the flag
+        setSelectedWeekId("routine-creation");
+        setSelectedDayKey(dayKey || "sun");
+      }
+
+      // Use setTimeout to ensure state updates are processed before opening library
+      setTimeout(() => {
+        onOpenVideoLibrary?.();
+      }, 0);
     },
     [onOpenVideoLibrary]
   );
@@ -741,6 +786,14 @@ function ProgramBuilder({
       url?: string;
       thumbnail?: string;
     }) => {
+      // Only process if we have valid state - prevent opening dialog accidentally
+      if (!selectedWeekId || !selectedDayKey) {
+        console.warn(
+          "handleVideoSelect: Missing selectedWeekId or selectedDayKey"
+        );
+        return;
+      }
+
       // Check if we're creating a routine
       if (selectedWeekId === "routine-creation") {
         // Use exercise edit dialog for routine creation too
@@ -755,13 +808,14 @@ function ProgramBuilder({
           videoTitle: video.title,
           videoThumbnail: video.thumbnail || "",
         };
+        // Only set editing exercise and open dialog if we're in routine creation mode
         setEditingExercise(videoItem);
         setIsExerciseEditDialogOpen(true);
         setSelectedWeekId("routine-creation"); // Keep this flag for the submit handler
       } else {
-        // Normal video selection for program days - open edit dialog first
-        const videoItem: ProgramItem = {
-          id: `temp-${Date.now()}`,
+        // Normal video selection for program days - add directly without edit dialog
+        // Only add if we have valid weekId and dayKey (not routine-creation)
+        const videoItem: Omit<ProgramItem, "id"> = {
           title: video.title,
           type: "video",
           description: video.description || "",
@@ -772,9 +826,8 @@ function ProgramBuilder({
           videoThumbnail: video.thumbnail || "",
         };
 
-        // Open edit dialog for the video (video not added to program yet)
-        setEditingExercise(videoItem);
-        setIsExerciseEditDialogOpen(true);
+        // Add video directly to program without opening edit dialog
+        addItem(selectedWeekId, selectedDayKey, videoItem);
       }
     },
     [selectedWeekId, selectedDayKey, addItem]
@@ -783,10 +836,20 @@ function ProgramBuilder({
   // Handle video selection from library
   useEffect(() => {
     if (selectedVideoFromLibrary) {
-      handleVideoSelect(selectedVideoFromLibrary);
+      // Only process if we have valid state (not in a transitional state)
+      // This prevents the edit dialog from opening when it shouldn't
+      if (selectedWeekId && selectedWeekId !== "" && selectedDayKey) {
+        handleVideoSelect(selectedVideoFromLibrary);
+      }
       onVideoProcessed?.(); // Clear the selected video after processing
     }
-  }, [selectedVideoFromLibrary, onVideoProcessed, handleVideoSelect]);
+  }, [
+    selectedVideoFromLibrary,
+    onVideoProcessed,
+    handleVideoSelect,
+    selectedWeekId,
+    selectedDayKey,
+  ]);
 
   const handleExerciseEditSubmit = useCallback(
     (details: {
@@ -806,7 +869,13 @@ function ProgramBuilder({
         setup?: string;
       };
     }) => {
-      if (!editingExercise) return;
+      // Strict validation - must have editingExercise with valid ID
+      if (!editingExercise || !editingExercise.id) {
+        console.warn("Cannot submit: editingExercise is null or missing ID");
+        setIsExerciseEditDialogOpen(false);
+        setEditingExercise(null);
+        return;
+      }
 
       // Prevent double submission
       if (isSubmittingRef.current) return;
@@ -816,7 +885,7 @@ function ProgramBuilder({
       const exerciseItem: Omit<ProgramItem, "id"> = {
         title: details.title,
         type: editingExercise.type || "exercise",
-        description: details.description || "",
+        description: details.description ?? "", // Use nullish coalescing to preserve empty strings
         notes: editingExercise.notes || "", // Keep existing notes from the exercise
         sets: details.sets,
         reps: details.reps,
@@ -909,12 +978,11 @@ function ProgramBuilder({
 
       setIsExerciseEditDialogOpen(false);
       setEditingExercise(null);
-      setEditingItem(null);
 
       // Reset submission flag after a short delay
       setTimeout(() => {
         isSubmittingRef.current = false;
-      }, 100);
+      }, 500);
     },
     [
       editingExercise,
@@ -1519,17 +1587,19 @@ function ProgramBuilder({
         ))}
       </div>
 
-      {/* Exercise Edit Dialog */}
-      <ExerciseEditDialog
-        isOpen={isExerciseEditDialogOpen}
-        onClose={() => {
-          setIsExerciseEditDialogOpen(false);
-          setEditingExercise(null);
-          setEditingItem(null);
-        }}
-        onSubmit={handleExerciseEditSubmit}
-        exercise={editingExercise}
-      />
+      {/* Exercise Edit Dialog - Only render when open to prevent double modals */}
+      {isExerciseEditDialogOpen && editingExercise && editingExercise.id && (
+        <ExerciseEditDialog
+          key={editingExercise.id} // Force remount when exercise changes
+          isOpen={isExerciseEditDialogOpen}
+          onClose={() => {
+            setIsExerciseEditDialogOpen(false);
+            setEditingExercise(null);
+          }}
+          onSubmit={handleExerciseEditSubmit}
+          exercise={editingExercise}
+        />
+      )}
 
       {/* Superset Modal */}
       <Dialog open={isSupersetModalOpen} onOpenChange={setIsSupersetModalOpen}>
@@ -1644,7 +1714,6 @@ function ProgramBuilder({
                   onClick={() => {
                     // Open video library to select videos for the routine
                     onOpenVideoLibrary?.();
-                    setEditingItem(null);
                     setSelectedWeekId("routine-creation");
                     setSelectedDayKey("sun");
                   }}
@@ -1711,7 +1780,6 @@ function ProgramBuilder({
                                     exercises: updatedExercises,
                                   }));
                                 }}
-                                placeholder="Sets"
                                 type="number"
                                 className="bg-gray-700 border-gray-600 text-white text-sm"
                               />
@@ -1732,7 +1800,6 @@ function ProgramBuilder({
                                     exercises: updatedExercises,
                                   }));
                                 }}
-                                placeholder="Reps"
                                 type="number"
                                 className="bg-gray-700 border-gray-600 text-white text-sm"
                               />
@@ -1751,7 +1818,7 @@ function ProgramBuilder({
                                     exercises: updatedExercises,
                                   }));
                                 }}
-                                placeholder="60 seconds"
+                                placeholder="e.g., 30 seconds"
                                 className="bg-gray-700 border-gray-600 text-white text-sm"
                               />
                             </div>
@@ -2671,7 +2738,11 @@ function SortableDrillItem({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onEdit}
+              onClick={e => {
+                e.stopPropagation();
+                e.preventDefault();
+                onEdit();
+              }}
               className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
             >
               <Edit className="h-3 w-3" />
@@ -2887,7 +2958,11 @@ function ProgramItemCard({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-gray-700 border-gray-600">
                   <DropdownMenuItem
-                    onClick={onEdit}
+                    onClick={e => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onEdit();
+                    }}
                     className="text-white hover:bg-gray-600"
                   >
                     <Edit className="h-3 w-3 mr-2" />
@@ -2910,6 +2985,5 @@ function ProgramItemCard({
     </Card>
   );
 }
-
 // Export with mobile detection
 export default withMobileDetection(MobileProgramBuilderNew, ProgramBuilder);

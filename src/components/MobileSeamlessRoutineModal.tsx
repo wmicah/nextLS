@@ -427,7 +427,6 @@ export default function MobileSeamlessRoutineModal({
                                           parseInt(e.target.value) || undefined,
                                       })
                                     }
-                                    placeholder="Sets"
                                     className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] text-sm"
                                   />
                                 </div>
@@ -444,7 +443,6 @@ export default function MobileSeamlessRoutineModal({
                                           parseInt(e.target.value) || undefined,
                                       })
                                     }
-                                    placeholder="Reps"
                                     className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] text-sm"
                                   />
                                 </div>
