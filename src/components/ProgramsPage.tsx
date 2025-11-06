@@ -1082,13 +1082,7 @@ function ProgramsPage() {
               setSelectedRoutine(null);
               setSelectedVideoFromLibrary(null);
             }}
-            routine={
-              // Find the latest version of the routine from the routines list to ensure fresh data
-              selectedRoutine
-                ? routines.find(r => r.id === selectedRoutine.id) ||
-                  selectedRoutine
-                : null
-            }
+            routine={selectedRoutine}
             onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
             selectedVideoFromLibrary={selectedVideoFromLibrary}
             onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
