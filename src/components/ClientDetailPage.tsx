@@ -1059,6 +1059,34 @@ function ClientDetailPage({
               tempo: drill.tempo,
               order: drill.order,
               routineId: drill.routineId,
+              // Superset fields
+              supersetId: drill.supersetId || undefined,
+              supersetOrder: drill.supersetOrder || undefined,
+              supersetDescription: drill.supersetDescription || undefined,
+              supersetInstructions: drill.supersetInstructions || undefined,
+              supersetNotes: drill.supersetNotes || undefined,
+              // Coach Instructions fields
+              coachInstructionsWhatToDo:
+                drill.coachInstructionsWhatToDo || undefined,
+              coachInstructionsHowToDoIt:
+                drill.coachInstructionsHowToDoIt || undefined,
+              coachInstructionsKeyPoints:
+                drill.coachInstructionsKeyPoints || undefined,
+              coachInstructionsCommonMistakes:
+                drill.coachInstructionsCommonMistakes || undefined,
+              coachInstructionsEasier:
+                drill.coachInstructionsEasier || undefined,
+              coachInstructionsHarder:
+                drill.coachInstructionsHarder || undefined,
+              coachInstructionsEquipment:
+                drill.coachInstructionsEquipment || undefined,
+              coachInstructionsSetup: drill.coachInstructionsSetup || undefined,
+              // Video fields
+              videoId: drill.videoId || undefined,
+              videoThumbnail: drill.videoThumbnail || undefined,
+              videoTitle: drill.videoTitle || undefined,
+              // Type field
+              type: drill.type || undefined,
             })) || [],
         })),
         videos: videosForDate.map((video: any) => ({
@@ -1257,8 +1285,8 @@ function ClientDetailPage({
             programTitle: program.programTitle,
             dayTitle: program.dayTitle,
             dayDescription: program.dayDescription,
-            drills: program.drills.map((drill, index) => ({
-              order: index + 1,
+            drills: program.drills.map((drill: any, index) => ({
+              order: drill.order !== undefined ? drill.order : index + 1,
               title: drill.title,
               description: drill.description,
               duration:
@@ -1271,6 +1299,34 @@ function ClientDetailPage({
               reps: drill.reps || undefined,
               tempo: drill.tempo || "",
               routineId: drill.routineId || "",
+              // Superset fields
+              supersetId: drill.supersetId || undefined,
+              supersetOrder: drill.supersetOrder || undefined,
+              supersetDescription: drill.supersetDescription || undefined,
+              supersetInstructions: drill.supersetInstructions || undefined,
+              supersetNotes: drill.supersetNotes || undefined,
+              // Coach Instructions fields
+              coachInstructionsWhatToDo:
+                drill.coachInstructionsWhatToDo || undefined,
+              coachInstructionsHowToDoIt:
+                drill.coachInstructionsHowToDoIt || undefined,
+              coachInstructionsKeyPoints:
+                drill.coachInstructionsKeyPoints || undefined,
+              coachInstructionsCommonMistakes:
+                drill.coachInstructionsCommonMistakes || undefined,
+              coachInstructionsEasier:
+                drill.coachInstructionsEasier || undefined,
+              coachInstructionsHarder:
+                drill.coachInstructionsHarder || undefined,
+              coachInstructionsEquipment:
+                drill.coachInstructionsEquipment || undefined,
+              coachInstructionsSetup: drill.coachInstructionsSetup || undefined,
+              // Video fields
+              videoId: drill.videoId || undefined,
+              videoThumbnail: drill.videoThumbnail || undefined,
+              videoTitle: drill.videoTitle || undefined,
+              // Type field
+              type: drill.type || undefined,
             })),
             reason: `Copied from ${program.programTitle} Week ${program.weekNumber} Day ${program.dayNumber}`,
           });
