@@ -332,7 +332,7 @@ export default function EditClientModal({
                   value={formData.height}
                   onChange={handleInputChange}
                   className="mt-2 bg-gray-800/50 border-gray-600/50 text-white focus:border-blue-500/50"
-                  placeholder="e.g., 5'10\""
+                  placeholder="e.g., 5'10&quot; or 178cm"
                 />
               </div>
             </div>

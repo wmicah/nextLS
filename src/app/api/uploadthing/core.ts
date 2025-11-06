@@ -336,9 +336,9 @@ export const ourFileRouter = {
 
   // Note attachment uploader (images, videos, PDFs)
   noteAttachmentUploader: f({
-    image: { maxFileSize: "50MB", maxFileCount: 10 },
+    image: { maxFileSize: "64MB", maxFileCount: 10 },
     video: { maxFileSize: "512MB", maxFileCount: 10 },
-    "application/pdf": { maxFileSize: "50MB", maxFileCount: 10 },
+    "application/pdf": { maxFileSize: "64MB", maxFileCount: 10 },
   })
     .middleware(async ({ req }) => {
       // Authenticate user
