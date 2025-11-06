@@ -577,8 +577,12 @@ function ClientDetailPage({
           (date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
         );
 
+        // Use actual number of weeks from the data, not the duration field (which may be incorrect)
+        const actualWeeks = program.weeks?.length || program.duration;
+        const programDurationInDays = actualWeeks * 7;
+
         // Only show if the date is within the program duration
-        if (daysSinceStart >= 0 && daysSinceStart < program.duration * 7) {
+        if (daysSinceStart >= 0 && daysSinceStart < programDurationInDays) {
           const weekNumber = Math.floor(daysSinceStart / 7) + 1;
           const dayNumber = (daysSinceStart % 7) + 1;
 

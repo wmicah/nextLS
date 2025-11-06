@@ -958,7 +958,14 @@ export const clientsRouter = router({
                 include: {
                   days: {
                     include: {
-                      drills: true,
+                      drills: {
+                        orderBy: {
+                          order: "asc",
+                        },
+                      },
+                    },
+                    orderBy: {
+                      dayNumber: "asc",
                     },
                   },
                 },
@@ -977,6 +984,25 @@ export const clientsRouter = router({
         orderBy: {
           assignedAt: "desc",
         },
+      });
+
+      // Validate that all weeks are included (debug check)
+      assignments.forEach(assignment => {
+        const program = assignment.program;
+        console.log(
+          `🔍 COACH ROUTER - Program ${program.id} (${program.title}): ${program.weeks.length} weeks, duration: ${program.duration}`
+        );
+        if (program.weeks.length !== program.duration) {
+          console.warn(
+            `⚠️ Program ${program.id} (${program.title}) has ${program.weeks.length} weeks but duration is ${program.duration}. Weeks:`,
+            program.weeks.map(w => w.weekNumber)
+          );
+        } else {
+          console.log(
+            `✅ Program ${program.id} has all weeks:`,
+            program.weeks.map(w => w.weekNumber)
+          );
+        }
       });
 
       return assignments;
