@@ -2247,6 +2247,27 @@ export const programsRouter = router({
             reps: z.number().optional(),
             tempo: z.string().optional(),
             routineId: z.string().optional(),
+            // Superset fields
+            supersetId: z.string().optional(),
+            supersetOrder: z.number().optional(),
+            supersetDescription: z.string().optional(),
+            supersetInstructions: z.string().optional(),
+            supersetNotes: z.string().optional(),
+            // Coach Instructions fields
+            coachInstructionsWhatToDo: z.string().optional(),
+            coachInstructionsHowToDoIt: z.string().optional(),
+            coachInstructionsKeyPoints: z.array(z.string()).optional(),
+            coachInstructionsCommonMistakes: z.array(z.string()).optional(),
+            coachInstructionsEasier: z.string().optional(),
+            coachInstructionsHarder: z.string().optional(),
+            coachInstructionsEquipment: z.string().optional(),
+            coachInstructionsSetup: z.string().optional(),
+            // Video fields
+            videoId: z.string().optional(),
+            videoThumbnail: z.string().optional(),
+            videoTitle: z.string().optional(),
+            // Type field
+            type: z.string().optional(),
           })
         ),
         reason: z.string().optional(),
@@ -2361,16 +2382,48 @@ export const programsRouter = router({
                       isRestDay: false,
                       drills: {
                         create: input.drills.map((drill, index) => ({
-                          order: index + 1,
+                          order:
+                            drill.order !== undefined ? drill.order : index + 1,
                           title: drill.title,
                           description: drill.description || "",
                           duration: drill.duration?.toString() || "0",
                           videoUrl: drill.videoUrl || "",
                           notes: drill.notes || "",
-                          sets: drill.sets || 0,
-                          reps: drill.reps || 0,
-                          tempo: drill.tempo || "",
-                          routineId: drill.routineId || "",
+                          sets: drill.sets || null,
+                          reps: drill.reps || null,
+                          tempo: drill.tempo || null,
+                          routineId: drill.routineId || null,
+                          // Superset fields
+                          supersetId: drill.supersetId || null,
+                          supersetOrder: drill.supersetOrder || null,
+                          supersetDescription:
+                            drill.supersetDescription || null,
+                          supersetInstructions:
+                            drill.supersetInstructions || null,
+                          supersetNotes: drill.supersetNotes || null,
+                          // Coach Instructions fields
+                          coachInstructionsWhatToDo:
+                            drill.coachInstructionsWhatToDo || null,
+                          coachInstructionsHowToDoIt:
+                            drill.coachInstructionsHowToDoIt || null,
+                          coachInstructionsKeyPoints:
+                            drill.coachInstructionsKeyPoints || [],
+                          coachInstructionsCommonMistakes:
+                            drill.coachInstructionsCommonMistakes || [],
+                          coachInstructionsEasier:
+                            drill.coachInstructionsEasier || null,
+                          coachInstructionsHarder:
+                            drill.coachInstructionsHarder || null,
+                          coachInstructionsEquipment:
+                            drill.coachInstructionsEquipment || null,
+                          coachInstructionsSetup:
+                            drill.coachInstructionsSetup || null,
+                          // Video fields
+                          videoId: drill.videoId || null,
+                          videoThumbnail: drill.videoThumbnail || null,
+                          videoTitle: drill.videoTitle || null,
+                          // Type field
+                          type: drill.type || null,
                         })),
                       },
                     },

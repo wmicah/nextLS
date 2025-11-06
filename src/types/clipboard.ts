@@ -45,6 +45,27 @@ export interface ClipboardProgramAssignment {
     tempo?: string;
     order: number;
     routineId?: string;
+    // Superset fields
+    supersetId?: string;
+    supersetOrder?: number;
+    supersetDescription?: string;
+    supersetInstructions?: string;
+    supersetNotes?: string;
+    // Coach Instructions fields
+    coachInstructionsWhatToDo?: string;
+    coachInstructionsHowToDoIt?: string;
+    coachInstructionsKeyPoints?: string[];
+    coachInstructionsCommonMistakes?: string[];
+    coachInstructionsEasier?: string;
+    coachInstructionsHarder?: string;
+    coachInstructionsEquipment?: string;
+    coachInstructionsSetup?: string;
+    // Video fields
+    videoId?: string;
+    videoThumbnail?: string;
+    videoTitle?: string;
+    // Type field
+    type?: string;
   }>;
 }
 
