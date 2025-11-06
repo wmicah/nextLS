@@ -653,6 +653,7 @@ export default function SeamlessRoutineModal({
   }) => {
     if (!editingExercise) return;
 
+    hasUserMadeChanges.current = true;
     const updatedExercise: RoutineExercise = {
       id: editingExercise.id,
       title: details.title,
@@ -703,6 +704,7 @@ export default function SeamlessRoutineModal({
   }) => {
     if (!editingSuperset) return;
 
+    hasUserMadeChanges.current = true;
     // Update all exercises in the superset
     setExercises(prev =>
       prev.map(exercise => {
@@ -745,6 +747,7 @@ export default function SeamlessRoutineModal({
     const { active, over } = event;
 
     if (active.id !== over?.id) {
+      hasUserMadeChanges.current = true;
       setExercises(items => {
         const oldIndex = items.findIndex(item => item.id === active.id);
         const newIndex = items.findIndex(item => item.id === over?.id);
@@ -792,9 +795,18 @@ export default function SeamlessRoutineModal({
     return undefined;
   }, [exercises.length]);
 
-  // Reset form when modal opens/closes or routine changes
+  // Track if modal was just opened to preserve step when navigating
+  const isInitialOpen = useRef(false);
+  const hasUserMadeChanges = useRef(false);
+  const lastRoutineIdRef = useRef<string | null>(null);
+
+  // Reset form ONLY when modal first opens (not when routine changes)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isInitialOpen.current) {
+      // Modal just opened - reset everything
+      isInitialOpen.current = true;
+      hasUserMadeChanges.current = false;
+      lastRoutineIdRef.current = routine?.id || null;
       if (routine) {
         setName(routine.name);
         setDescription(routine.description);
@@ -806,16 +818,45 @@ export default function SeamlessRoutineModal({
         setExercises([]);
         setCurrentStep("details");
       }
+    } else if (!isOpen) {
+      // Modal closed - reset flags for next open
+      isInitialOpen.current = false;
+      hasUserMadeChanges.current = false;
+      lastRoutineIdRef.current = null;
+    } else if (isOpen && routine) {
+      // Modal is open - check if this is a different routine
+      const isDifferentRoutine = lastRoutineIdRef.current !== routine.id;
+      if (isDifferentRoutine) {
+        // Different routine - reset everything
+        lastRoutineIdRef.current = routine.id;
+        hasUserMadeChanges.current = false;
+        setName(routine.name);
+        setDescription(routine.description);
+        setExercises(routine.exercises);
+        setCurrentStep("details");
+      } else if (!hasUserMadeChanges.current) {
+        // Same routine, no user changes - only update name/description if they changed
+        setName(routine.name);
+        setDescription(routine.description);
+        // DON'T update exercises or reset step - preserve user's work
+      }
+      // If user has made changes, don't overwrite anything
     }
   }, [isOpen, routine]);
 
-  // Handle video selection from library
+  // Handle video selection from library - ensure we stay on exercises step
   useEffect(() => {
     if (selectedVideoFromLibrary) {
+      // Ensure we're on the exercises step when adding a video
+      setCurrentStep(prevStep => {
+        // Only change to exercises if we're not already there
+        return prevStep === "exercises" ? prevStep : "exercises";
+      });
       handleVideoSelect(selectedVideoFromLibrary);
       onVideoProcessed?.();
     }
-  }, [selectedVideoFromLibrary, onVideoProcessed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVideoFromLibrary]);
 
   const handleVideoSelect = (video: {
     id: string;
@@ -825,26 +866,45 @@ export default function SeamlessRoutineModal({
     url?: string;
     thumbnail?: string;
   }) => {
-    let newExerciseId = generateTempId();
-    // Ensure ID is unique (very unlikely but safety check)
-    while (exercises.some(ex => ex.id === newExerciseId)) {
-      newExerciseId = generateTempId();
-    }
-    const newExercise: RoutineExercise = {
-      id: newExerciseId,
-      title: video.title,
-      type: "video",
-      description: video.description || "",
-      duration: video.duration || "",
-      videoUrl: video.url || "",
-      videoId: video.id,
-      videoTitle: video.title,
-      videoThumbnail: video.thumbnail || "",
-    };
-    // Edit dialog disabled - add video directly to exercises
-    setExercises(prev => [...prev, newExercise]);
-    // setEditingExercise(newExercise);
-    // setIsExerciseEditDialogOpen(true);
+    // Add video directly to exercises - use functional update to ensure we get latest state
+    setExercises(prev => {
+      // Check if this video is already added (by videoId to prevent duplicates)
+      const alreadyExists = prev.some(ex => ex.videoId === video.id);
+      if (alreadyExists) {
+        console.log("Video already in exercises, skipping duplicate");
+        return prev;
+      }
+
+      // Generate unique ID
+      let newExerciseId = generateTempId();
+      // Ensure ID is unique (very unlikely but safety check)
+      while (prev.some(ex => ex.id === newExerciseId)) {
+        newExerciseId = generateTempId();
+      }
+
+      const newExercise: RoutineExercise = {
+        id: newExerciseId,
+        title: video.title,
+        type: "video",
+        description: video.description || "",
+        duration: video.duration || "",
+        videoUrl: video.url || "",
+        videoId: video.id,
+        videoTitle: video.title,
+        videoThumbnail: video.thumbnail || "",
+      };
+
+      // Mark that user has made changes
+      hasUserMadeChanges.current = true;
+      const updated = [...prev, newExercise];
+      console.log(
+        "✅ Video added to exercises:",
+        newExercise.title,
+        "Total exercises:",
+        updated.length
+      );
+      return updated;
+    });
   };
 
   // Routine mutations
@@ -942,6 +1002,7 @@ export default function SeamlessRoutineModal({
     field: keyof RoutineExercise,
     value: any
   ) => {
+    hasUserMadeChanges.current = true;
     setExercises(prev =>
       prev.map((exercise, i) =>
         i === index ? { ...exercise, [field]: value } : exercise
@@ -950,10 +1011,12 @@ export default function SeamlessRoutineModal({
   };
 
   const removeExercise = (index: number) => {
+    hasUserMadeChanges.current = true;
     setExercises(prev => prev.filter((_, i) => i !== index));
   };
 
   const addEmptyExercise = () => {
+    hasUserMadeChanges.current = true;
     setExercises(prev => {
       let newExerciseId = generateTempId();
       // Ensure ID is unique (very unlikely but safety check)
