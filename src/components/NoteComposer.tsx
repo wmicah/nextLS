@@ -33,6 +33,13 @@ interface NoteComposerProps {
     priority: string;
     isPrivate: boolean;
     tags: Array<{ id: string; name: string }>;
+    attachments?: Array<{
+      id: string;
+      fileName: string;
+      fileUrl: string;
+      fileType: string;
+      fileSize: number;
+    }>;
   } | null;
 }
 
@@ -90,7 +97,29 @@ export default function NoteComposer({
   }, [editingNote, isOpen]);
 
   const createNoteMutation = trpc.notes.createNote.useMutation({
-    onSuccess: () => {
+    onSuccess: async newNote => {
+      // Handle attachments after note creation, before closing
+      if (attachments.length > 0) {
+        try {
+          // Add attachments to the newly created note
+          for (const attachment of attachments) {
+            try {
+              await addAttachmentMutation.mutateAsync({
+                noteId: newNote.id,
+                fileName: attachment.fileName,
+                fileUrl: attachment.fileUrl,
+                fileType: attachment.fileType,
+                fileSize: attachment.fileSize,
+              });
+            } catch (error) {
+              console.error("Failed to add attachment:", error);
+            }
+          }
+        } catch (error) {
+          console.error("Error adding attachments:", error);
+        }
+      }
+
       onSuccess?.();
       onClose();
       // Reset form
@@ -180,20 +209,9 @@ export default function NoteComposer({
           isPrivate,
         });
         noteId = updatedNote.id;
-      } else {
-        // Create new note
-        const newNote = await createNoteMutation.mutateAsync({
-          clientId,
-          content: content.trim(),
-          type,
-          priority,
-          isPrivate,
-        });
-        noteId = newNote.id;
 
-        // Handle attachments after note creation
+        // Handle attachments when editing (add new ones)
         if (attachments.length > 0) {
-          // Add attachments to the newly created note
           for (const attachment of attachments) {
             try {
               await addAttachmentMutation.mutateAsync({
@@ -208,6 +226,17 @@ export default function NoteComposer({
             }
           }
         }
+      } else {
+        // Create new note - attachments will be handled in onSuccess
+        await createNoteMutation.mutateAsync({
+          clientId,
+          content: content.trim(),
+          type,
+          priority,
+          isPrivate,
+        });
+        // Don't close here - let onSuccess handle it after attachments are added
+        return;
       }
     } catch (error) {
       console.error(

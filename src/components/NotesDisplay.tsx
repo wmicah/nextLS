@@ -491,7 +491,7 @@ export default function NotesDisplay({
               )}
 
               {/* Attachments */}
-              {note.attachments.length > 0 && (
+              {note.attachments && note.attachments.length > 0 && (
                 <div className="space-y-2">
                   <h4
                     className="text-sm font-medium"
@@ -742,7 +742,7 @@ export default function NotesDisplay({
                   )}
 
                   {/* Attachments */}
-                  {note.attachments.length > 0 && (
+                  {note.attachments && note.attachments.length > 0 && (
                     <div className="space-y-2">
                       <h4
                         className="text-sm font-medium"
