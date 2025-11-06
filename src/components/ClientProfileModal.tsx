@@ -29,6 +29,8 @@ import {
   BarChart3,
   History,
   Save,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -108,16 +110,11 @@ ClientProfileModalProps) {
   const [editedPitchingData, setEditedPitchingData] = useState({
     age: "",
     height: "",
-    dominantHand: "",
-    movementStyle: "",
-    reachingAbility: "",
-    averageSpeed: "",
-    topSpeed: "",
-    dropSpinRate: "",
-    changeupSpinRate: "",
-    riseSpinRate: "",
-    curveSpinRate: "",
   });
+  const [customFields, setCustomFields] = useState<
+    Array<{ key: string; value: string; type: "text" | "number" | "boolean" }>
+  >([]);
+  const [isEditingClientInfo, setIsEditingClientInfo] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview">("overview");
 
@@ -157,30 +154,40 @@ ClientProfileModalProps) {
     { enabled: isOpen && !!clientId }
   );
 
-  // Update editedPitchingData when client data is loaded
+  // Update editedPitchingData when client data is loaded or when entering edit mode
   useEffect(() => {
-    if (client) {
+    if (client && isEditingClientInfo) {
       setEditedPitchingData({
         age: client.age?.toString() || "",
         height: client.height || "",
-        dominantHand: client.dominantHand || "",
-        movementStyle: client.movementStyle || "",
-        reachingAbility: client.reachingAbility || "",
-        averageSpeed: client.averageSpeed?.toString() || "",
-        topSpeed: client.topSpeed?.toString() || "",
-        dropSpinRate: client.dropSpinRate?.toString() || "",
-        changeupSpinRate: client.changeupSpinRate?.toString() || "",
-        riseSpinRate: client.riseSpinRate?.toString() || "",
-        curveSpinRate: client.curveSpinRate?.toString() || "",
       });
+      setCustomFields(
+        (client as any)?.customFields &&
+          typeof (client as any).customFields === "object" &&
+          !Array.isArray((client as any).customFields)
+          ? Object.entries((client as any).customFields).map(
+              ([key, value]) => ({
+                key,
+                value: String(value),
+                type:
+                  typeof value === "number"
+                    ? "number"
+                    : typeof value === "boolean"
+                    ? "boolean"
+                    : "text",
+              })
+            )
+          : []
+      );
     }
-  }, [client]);
+  }, [client, isEditingClientInfo]);
 
   // Update client mutation
   const updateClientMutation = trpc.clients.update.useMutation({
     onSuccess: () => {
       setIsUpdating(false);
       setIsEditingName(false);
+      setIsEditingClientInfo(false);
       setEditedName("");
       addToast({
         type: "success",
@@ -210,33 +217,24 @@ ClientProfileModalProps) {
         ? parseInt(editedPitchingData.age)
         : undefined,
       height: editedPitchingData.height.trim() || undefined,
-      dominantHand:
-        (editedPitchingData.dominantHand as "RIGHT" | "LEFT") || undefined,
-      movementStyle:
-        (editedPitchingData.movementStyle as "AIRPLANE" | "HELICOPTER") ||
-        undefined,
-      reachingAbility:
-        (editedPitchingData.reachingAbility as "REACHER" | "NON_REACHER") ||
-        undefined,
-      averageSpeed: editedPitchingData.averageSpeed
-        ? parseFloat(editedPitchingData.averageSpeed)
-        : undefined,
-      topSpeed: editedPitchingData.topSpeed
-        ? parseFloat(editedPitchingData.topSpeed)
-        : undefined,
-      dropSpinRate: editedPitchingData.dropSpinRate
-        ? parseInt(editedPitchingData.dropSpinRate)
-        : undefined,
-      changeupSpinRate: editedPitchingData.changeupSpinRate
-        ? parseInt(editedPitchingData.changeupSpinRate)
-        : undefined,
-      riseSpinRate: editedPitchingData.riseSpinRate
-        ? parseInt(editedPitchingData.riseSpinRate)
-        : undefined,
-      curveSpinRate: editedPitchingData.curveSpinRate
-        ? parseInt(editedPitchingData.curveSpinRate)
-        : undefined,
+      customFields:
+        customFields.length > 0
+          ? customFields.reduce((acc, field) => {
+              if (field.key.trim()) {
+                let value: string | number | boolean = field.value;
+                if (field.type === "number") {
+                  value = parseFloat(field.value) || 0;
+                } else if (field.type === "boolean") {
+                  value =
+                    field.value.toLowerCase() === "true" || field.value === "1";
+                }
+                acc[field.key.trim()] = value;
+              }
+              return acc;
+            }, {} as Record<string, string | number | boolean>)
+          : undefined,
     });
+    // Note: isEditingClientInfo will be set to false in the onClick handler
   };
 
   const handlePitchingInputChange = (
@@ -462,7 +460,7 @@ ClientProfileModalProps) {
                   </div>
                 </div>
 
-                {/* Pitching Information Section */}
+                {/* Client Information Section */}
                 <div
                   className="rounded-2xl shadow-xl border p-6"
                   style={{
@@ -470,13 +468,31 @@ ClientProfileModalProps) {
                     borderColor: "#606364",
                   }}
                 >
-                  <div className="flex items-center gap-2 mb-4">
-                    <Target className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-                    <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
-                      Pitching Information
-                    </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Target
+                        className="h-5 w-5"
+                        style={{ color: "#C3BCC2" }}
+                      />
+                      <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
+                        Client Information
+                      </h3>
+                    </div>
+                    {!isEditingClientInfo && (
+                      <button
+                        onClick={() => setIsEditingClientInfo(true)}
+                        className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
+                        style={{
+                          backgroundColor: "#4A5A70",
+                          color: "#FFFFFF",
+                        }}
+                      >
+                        <Edit className="h-4 w-4 inline mr-1" />
+                        Edit
+                      </button>
+                    )}
                   </div>
-                  {false ? (
+                  {isEditingClientInfo ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -527,237 +543,214 @@ ClientProfileModalProps) {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label
-                            htmlFor="dominantHand"
-                            className="block text-sm font-medium mb-2"
+                      {/* Custom Fields Editing */}
+                      <div
+                        className="mt-6 pt-6 border-t"
+                        style={{ borderColor: "#606364" }}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <h4
+                            className="text-md font-semibold"
                             style={{ color: "#C3BCC2" }}
                           >
-                            Dominant Hand
-                          </label>
-                          <select
-                            id="dominantHand"
-                            name="dominantHand"
-                            value={editedPitchingData.dominantHand}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                            Custom Metrics
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCustomFields([
+                                ...customFields,
+                                { key: "", value: "", type: "text" },
+                              ])
+                            }
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
                             style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
+                              backgroundColor: "#10B981",
+                              color: "#FFFFFF",
                             }}
                           >
-                            <option value="">Select hand</option>
-                            <option value="RIGHT">Right</option>
-                            <option value="LEFT">Left</option>
-                          </select>
+                            <Plus className="h-4 w-4 inline mr-1" />
+                            Add Field
+                          </button>
                         </div>
-                        <div>
-                          <label
-                            htmlFor="movementStyle"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Movement Style
-                          </label>
-                          <select
-                            id="movementStyle"
-                            name="movementStyle"
-                            value={editedPitchingData.movementStyle}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
-                            }}
-                          >
-                            <option value="">Select style</option>
-                            <option value="AIRPLANE">Airplane</option>
-                            <option value="HELICOPTER">Helicopter</option>
-                          </select>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label
-                            htmlFor="reachingAbility"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
+                        {customFields.length === 0 ? (
+                          <p
+                            className="text-gray-400 text-sm mb-4"
+                            style={{ color: "#ABA4AA" }}
                           >
-                            Reaching Ability
-                          </label>
-                          <select
-                            id="reachingAbility"
-                            name="reachingAbility"
-                            value={editedPitchingData.reachingAbility}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
-                            }}
-                          >
-                            <option value="">Select ability</option>
-                            <option value="REACHER">Reacher</option>
-                            <option value="NON_REACHER">Non Reacher</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label
-                            htmlFor="averageSpeed"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Average Speed (mph)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            id="averageSpeed"
-                            name="averageSpeed"
-                            value={editedPitchingData.averageSpeed}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
-                            }}
-                            placeholder="0.0"
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="topSpeed"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Top Speed (mph)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            id="topSpeed"
-                            name="topSpeed"
-                            value={editedPitchingData.topSpeed}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
-                            }}
-                            placeholder="0.0"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label
-                            htmlFor="dropSpinRate"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Drop Spin Rate (rpm)
-                          </label>
-                          <input
-                            type="number"
-                            id="dropSpinRate"
-                            name="dropSpinRate"
-                            value={editedPitchingData.dropSpinRate}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
-                            }}
-                            placeholder="0"
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="changeupSpinRate"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Changeup Spin Rate (rpm)
-                          </label>
-                          <input
-                            type="number"
-                            id="changeupSpinRate"
-                            name="changeupSpinRate"
-                            value={editedPitchingData.changeupSpinRate}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
-                            }}
-                            placeholder="0"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label
-                            htmlFor="riseSpinRate"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Rise Spin Rate (rpm)
-                          </label>
-                          <input
-                            type="number"
-                            id="riseSpinRate"
-                            name="riseSpinRate"
-                            value={editedPitchingData.riseSpinRate}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
-                            }}
-                            placeholder="0"
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="curveSpinRate"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Curve Spin Rate (rpm)
-                          </label>
-                          <input
-                            type="number"
-                            id="curveSpinRate"
-                            name="curveSpinRate"
-                            value={editedPitchingData.curveSpinRate}
-                            onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
-                            }}
-                            placeholder="0"
-                          />
-                        </div>
+                            Add custom metrics specific to your coaching needs.
+                            For example: "Wing Span", "Weight", "Grip Strength",
+                            etc.
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {customFields.map((field, index) => (
+                              <div
+                                key={index}
+                                className="flex items-start gap-2 p-3 rounded-lg"
+                                style={{
+                                  backgroundColor: "#353A3A",
+                                  borderColor: "#606364",
+                                }}
+                              >
+                                <div className="flex-1 grid grid-cols-12 gap-2">
+                                  <div className="col-span-4">
+                                    <input
+                                      placeholder="Field name"
+                                      value={field.key}
+                                      onChange={e => {
+                                        const updated = [...customFields];
+                                        updated[index].key = e.target.value;
+                                        setCustomFields(updated);
+                                      }}
+                                      className="w-full px-3 py-2 rounded-lg border text-sm"
+                                      style={{
+                                        backgroundColor: "#2A2F2F",
+                                        borderColor: "#606364",
+                                        color: "#C3BCC2",
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="col-span-3">
+                                    <select
+                                      value={field.type}
+                                      onChange={e => {
+                                        const updated = [...customFields];
+                                        updated[index].type = e.target.value as
+                                          | "text"
+                                          | "number"
+                                          | "boolean";
+                                        updated[index].value = "";
+                                        setCustomFields(updated);
+                                      }}
+                                      className="w-full px-3 py-2 rounded-lg border text-sm"
+                                      style={{
+                                        backgroundColor: "#2A2F2F",
+                                        borderColor: "#606364",
+                                        color: "#C3BCC2",
+                                      }}
+                                    >
+                                      <option value="text">Text</option>
+                                      <option value="number">Number</option>
+                                      <option value="boolean">Yes/No</option>
+                                    </select>
+                                  </div>
+                                  <div className="col-span-4">
+                                    {field.type === "boolean" ? (
+                                      <select
+                                        value={field.value}
+                                        onChange={e => {
+                                          const updated = [...customFields];
+                                          updated[index].value = e.target.value;
+                                          setCustomFields(updated);
+                                        }}
+                                        className="w-full px-3 py-2 rounded-lg border text-sm"
+                                        style={{
+                                          backgroundColor: "#2A2F2F",
+                                          borderColor: "#606364",
+                                          color: "#C3BCC2",
+                                        }}
+                                      >
+                                        <option value="">Select...</option>
+                                        <option value="true">Yes</option>
+                                        <option value="false">No</option>
+                                      </select>
+                                    ) : (
+                                      <input
+                                        placeholder={
+                                          field.type === "number"
+                                            ? "Value"
+                                            : "Enter value"
+                                        }
+                                        type={
+                                          field.type === "number"
+                                            ? "number"
+                                            : "text"
+                                        }
+                                        step={
+                                          field.type === "number"
+                                            ? "0.1"
+                                            : undefined
+                                        }
+                                        value={field.value}
+                                        onChange={e => {
+                                          const updated = [...customFields];
+                                          updated[index].value = e.target.value;
+                                          setCustomFields(updated);
+                                        }}
+                                        className="w-full px-3 py-2 rounded-lg border text-sm"
+                                        style={{
+                                          backgroundColor: "#2A2F2F",
+                                          borderColor: "#606364",
+                                          color: "#C3BCC2",
+                                        }}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setCustomFields(
+                                      customFields.filter((_, i) => i !== index)
+                                    )
+                                  }
+                                  className="p-2 rounded-lg transition-all"
+                                  style={{
+                                    backgroundColor: "#DC2626",
+                                    color: "#FFFFFF",
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex gap-3 pt-4">
+                        <button
+                          onClick={() => {
+                            setIsEditingClientInfo(false);
+                            // Reset form data to original values
+                            if (client) {
+                              setEditedPitchingData({
+                                age: client.age?.toString() || "",
+                                height: client.height || "",
+                              });
+                              setCustomFields(
+                                (client as any)?.customFields &&
+                                  typeof (client as any).customFields ===
+                                    "object" &&
+                                  !Array.isArray((client as any).customFields)
+                                  ? Object.entries(
+                                      (client as any).customFields
+                                    ).map(([key, value]) => ({
+                                      key,
+                                      value: String(value),
+                                      type:
+                                        typeof value === "number"
+                                          ? "number"
+                                          : typeof value === "boolean"
+                                          ? "boolean"
+                                          : "text",
+                                    }))
+                                  : []
+                              );
+                            }
+                          }}
+                          disabled={isUpdating}
+                          className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                          style={{
+                            backgroundColor: "#353A3A",
+                            color: "#C3BCC2",
+                            borderColor: "#606364",
+                          }}
+                        >
+                          Cancel
+                        </button>
                         <button
                           onClick={handleSavePitchingData}
                           disabled={isUpdating}
@@ -767,7 +760,7 @@ ClientProfileModalProps) {
                             color: "#FFFFFF",
                           }}
                         >
-                          {isUpdating ? "Saving..." : "Save Pitching Data"}
+                          {isUpdating ? "Saving..." : "Save Changes"}
                         </button>
                       </div>
                     </div>
@@ -797,136 +790,50 @@ ClientProfileModalProps) {
                           </div>
                         </div>
                       )}
-                      {client?.dominantHand && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Dominant Hand
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.dominantHand === "RIGHT" ? "Right" : "Left"}
-                          </div>
-                        </div>
-                      )}
-                      {client?.movementStyle && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Movement Style
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.movementStyle === "AIRPLANE"
-                              ? "Airplane"
-                              : "Helicopter"}
-                          </div>
-                        </div>
-                      )}
-                      {client?.reachingAbility && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Reaching Ability
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.reachingAbility === "REACHER"
-                              ? "Reacher"
-                              : "Non Reacher"}
-                          </div>
-                        </div>
-                      )}
-                      {client?.averageSpeed && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Average Speed
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.averageSpeed} mph
-                          </div>
-                        </div>
-                      )}
-                      {client?.topSpeed && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Top Speed
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.topSpeed} mph
-                          </div>
-                        </div>
-                      )}
-                      {client?.dropSpinRate && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Drop Spin Rate
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.dropSpinRate} rpm
-                          </div>
-                        </div>
-                      )}
-                      {client?.changeupSpinRate && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Changeup Spin Rate
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.changeupSpinRate} rpm
-                          </div>
-                        </div>
-                      )}
-                      {client?.riseSpinRate && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Rise Spin Rate
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.riseSpinRate} rpm
-                          </div>
-                        </div>
-                      )}
-                      {client?.curveSpinRate && (
-                        <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
-                        >
-                          <div className="text-xs text-gray-400 mb-1">
-                            Curve Spin Rate
-                          </div>
-                          <div className="text-sm font-medium text-white">
-                            {client.curveSpinRate} rpm
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  )}{" "}
-                  (
-                  <div className="text-center py-8">
-                    <p className="text-gray-400">
-                      Pitching information editing is disabled
-                    </p>
-                  </div>
-                  )
+                  )}
+
+                  {/* Custom Fields Display */}
+                  {(client as any)?.customFields &&
+                    typeof (client as any).customFields === "object" &&
+                    !Array.isArray((client as any).customFields) &&
+                    Object.keys((client as any).customFields).length > 0 && (
+                      <>
+                        <div
+                          className="mt-6 pt-6 border-t"
+                          style={{ borderColor: "#606364" }}
+                        >
+                          <h4
+                            className="text-md font-semibold mb-4"
+                            style={{ color: "#C3BCC2" }}
+                          >
+                            Custom Metrics
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {Object.entries((client as any).customFields).map(
+                              ([key, value]) => (
+                                <div
+                                  key={key}
+                                  className="p-3 rounded-lg"
+                                  style={{ backgroundColor: "#353A3A" }}
+                                >
+                                  <div className="text-xs text-gray-400 mb-1">
+                                    {key}
+                                  </div>
+                                  <div className="text-sm font-medium text-white">
+                                    {typeof value === "boolean"
+                                      ? value
+                                        ? "Yes"
+                                        : "No"
+                                      : String(value)}
+                                  </div>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                 </div>
               </div>
             )}

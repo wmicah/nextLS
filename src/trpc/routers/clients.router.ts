@@ -832,6 +832,7 @@ export const clientsRouter = router({
           changeupSpinRate: true,
           riseSpinRate: true,
           curveSpinRate: true,
+          customFields: true,
           user: {
             select: {
               id: true,
@@ -1030,6 +1031,10 @@ export const clientsRouter = router({
         changeupSpinRate: z.number().int().positive().optional(),
         riseSpinRate: z.number().int().positive().optional(),
         curveSpinRate: z.number().int().positive().optional(),
+        // Custom fields - flexible JSON object for coach-defined metrics
+        customFields: z
+          .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+          .optional(),
       })
     )
     .mutation(async ({ input }) => {

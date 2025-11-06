@@ -115,6 +115,7 @@ model Client {
   topSpeed             Float?
   dominantHand         DominantHand?
   movementStyle        MovementStyle?
+  customFields         Json?              @map("custom_fields")
   analytics            ClientAnalytics?
   videoSubmissions     ClientVideoSubmission[]
   coach                User?                   @relation("CoachClients", fields: [coachId], references: [id])
