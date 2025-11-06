@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -142,6 +142,7 @@ function LibraryPage() {
     isLoading: masterLoading,
     error: masterError,
     refetch: refetchMaster,
+    isFetching: masterFetching,
   } = trpc.admin.getMasterLibrary.useQuery(
     {
       search: debouncedSearchTerm || undefined,
@@ -150,9 +151,11 @@ function LibraryPage() {
       limit: 24, // Load 24 items per page
     },
     {
-      placeholderData: previousData => previousData, // Prevent flash when switching tabs
-      staleTime: 0, // Always refetch when search changes
+      enabled: activeTab === "master", // Only fetch when master tab is active
+      staleTime: 0, // Always consider data stale to force refetch on mount
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      refetchOnMount: true, // Always refetch when component mounts
     }
   );
 
@@ -161,6 +164,7 @@ function LibraryPage() {
     isLoading: localLoading,
     error: localError,
     refetch: refetchLocal,
+    isFetching: localFetching,
   } = trpc.library.list.useQuery(
     {
       search: debouncedSearchTerm || undefined,
@@ -169,51 +173,47 @@ function LibraryPage() {
       limit: 24, // Load 24 items per page
     },
     {
-      placeholderData: previousData => previousData, // Prevent flash when search changes
-      staleTime: 0, // Always refetch when search changes
+      enabled: activeTab === "local", // Only fetch when local tab is active
+      staleTime: 0, // Always consider data stale to force refetch on mount
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      refetchOnMount: true, // Always refetch when component mounts
     }
   );
 
-  // Handle master library data
+  // Handle master library data - ensure it always updates when data arrives
   useEffect(() => {
-    if (masterLibraryItems?.items) {
-      if (masterCurrentPage === 1) {
-        setMasterItems(masterLibraryItems.items);
-      } else {
-        setMasterItems(prev => {
-          // Prevent duplicates by checking if item already exists
-          const existingIds = new Set(prev.map(item => item.id));
-          const newItems = masterLibraryItems.items.filter(
-            item => !existingIds.has(item.id)
-          );
-          return [...prev, ...newItems];
+    // Only update when we have data and we're not currently fetching
+    if (masterLibraryItems && !masterFetching) {
+      if (masterLibraryItems.items && masterLibraryItems.items.length > 0) {
+        if (masterCurrentPage === 1) {
+          setMasterItems(masterLibraryItems.items);
+        } else {
+          setMasterItems(prev => {
+            // Prevent duplicates by checking if item already exists
+            const existingIds = new Set(prev.map(item => item.id));
+            const newItems = masterLibraryItems.items.filter(
+              item => !existingIds.has(item.id)
+            );
+            return [...prev, ...newItems];
+          });
+        }
+        const hasNextPage = masterLibraryItems.pagination?.hasNextPage || false;
+        console.log("🔍 Master Library Pagination:", {
+          currentPage: masterCurrentPage,
+          totalPages: masterLibraryItems.pagination?.totalPages,
+          totalCount: masterLibraryItems.pagination?.totalCount,
+          hasNextPage,
+          itemsInThisPage: masterLibraryItems.items.length,
         });
-      }
-      const hasNextPage = masterLibraryItems.pagination?.hasNextPage || false;
-      console.log("🔍 Master Library Pagination:", {
-        currentPage: masterCurrentPage,
-        totalPages: masterLibraryItems.pagination?.totalPages,
-        totalCount: masterLibraryItems.pagination?.totalCount,
-        hasNextPage,
-        itemsInThisPage: masterLibraryItems.items.length,
-      });
-      setMasterHasMore(hasNextPage);
-    } else if (masterLibraryItems && masterLibraryItems.items?.length === 0) {
-      if (masterCurrentPage === 1) {
+        setMasterHasMore(hasNextPage);
+      } else if (masterCurrentPage === 1) {
+        // Empty result on first page
         setMasterItems([]);
+        setMasterHasMore(false);
       }
-      setMasterHasMore(false);
     }
-  }, [masterLibraryItems, masterCurrentPage]);
-
-  // Force update when search changes to ensure data is refreshed
-  useEffect(() => {
-    if (masterLibraryItems?.items && masterCurrentPage === 1) {
-      setMasterItems(masterLibraryItems.items);
-      setMasterHasMore(masterLibraryItems.pagination?.hasNextPage || false);
-    }
-  }, [debouncedSearchTerm, selectedCategory, masterLibraryItems]);
+  }, [masterLibraryItems, masterCurrentPage, masterFetching]);
 
   // Debug logging for search issues
   useEffect(() => {
@@ -240,48 +240,89 @@ function LibraryPage() {
     localLibraryItems,
   ]);
 
-  // Handle local library data
+  // Handle local library data - ensure it always updates when data arrives
   useEffect(() => {
-    if (localLibraryItems?.items) {
-      if (localCurrentPage === 1) {
-        setLocalItems(localLibraryItems.items);
-      } else {
-        setLocalItems(prev => {
-          // Prevent duplicates by checking if item already exists
-          const existingIds = new Set(prev.map(item => item.id));
-          const newItems = localLibraryItems.items.filter(
-            item => !existingIds.has(item.id)
-          );
-          return [...prev, ...newItems];
+    // Only update when we have data and we're not currently fetching
+    if (localLibraryItems && !localFetching) {
+      if (localLibraryItems.items && localLibraryItems.items.length > 0) {
+        if (localCurrentPage === 1) {
+          setLocalItems(localLibraryItems.items);
+        } else {
+          setLocalItems(prev => {
+            // Prevent duplicates by checking if item already exists
+            const existingIds = new Set(prev.map(item => item.id));
+            const newItems = localLibraryItems.items.filter(
+              item => !existingIds.has(item.id)
+            );
+            return [...prev, ...newItems];
+          });
+        }
+        const hasNextPage = localLibraryItems.pagination?.hasNextPage || false;
+        console.log("🔍 Local Library Pagination:", {
+          currentPage: localCurrentPage,
+          totalPages: localLibraryItems.pagination?.totalPages,
+          totalCount: localLibraryItems.pagination?.totalCount,
+          hasNextPage,
+          itemsInThisPage: localLibraryItems.items.length,
         });
-      }
-      const hasNextPage = localLibraryItems.pagination?.hasNextPage || false;
-      console.log("🔍 Local Library Pagination:", {
-        currentPage: localCurrentPage,
-        totalPages: localLibraryItems.pagination?.totalPages,
-        totalCount: localLibraryItems.pagination?.totalCount,
-        hasNextPage,
-        itemsInThisPage: localLibraryItems.items.length,
-      });
-      setLocalHasMore(hasNextPage);
-    } else if (localLibraryItems && localLibraryItems.items?.length === 0) {
-      if (localCurrentPage === 1) {
+        setLocalHasMore(hasNextPage);
+      } else if (localCurrentPage === 1) {
+        // Empty result on first page
         setLocalItems([]);
+        setLocalHasMore(false);
       }
-      setLocalHasMore(false);
     }
-  }, [localLibraryItems, localCurrentPage]);
+  }, [localLibraryItems, localCurrentPage, localFetching]);
 
-  // Force update when search changes to ensure data is refreshed
+  // Ensure state syncs when queries return data on mount
+  // This handles the case where component remounts and queries return cached data
   useEffect(() => {
-    if (localLibraryItems?.items && localCurrentPage === 1) {
+    if (
+      activeTab === "master" &&
+      masterLibraryItems?.items &&
+      masterCurrentPage === 1 &&
+      !masterFetching
+    ) {
+      setMasterItems(masterLibraryItems.items);
+      setMasterHasMore(masterLibraryItems.pagination?.hasNextPage || false);
+    } else if (
+      activeTab === "local" &&
+      localLibraryItems?.items &&
+      localCurrentPage === 1 &&
+      !localFetching
+    ) {
       setLocalItems(localLibraryItems.items);
       setLocalHasMore(localLibraryItems.pagination?.hasNextPage || false);
     }
-  }, [debouncedSearchTerm, selectedCategory, localLibraryItems]);
+  }, [
+    activeTab,
+    masterLibraryItems,
+    localLibraryItems,
+    masterCurrentPage,
+    localCurrentPage,
+    masterFetching,
+    localFetching,
+  ]);
 
-  // Reset items when search/category changes
+  // Reset pagination state on mount to ensure fresh start
   useEffect(() => {
+    // Reset to page 1 and clear items when component first mounts
+    setMasterCurrentPage(1);
+    setLocalCurrentPage(1);
+    setMasterItems([]);
+    setLocalItems([]);
+    setMasterHasMore(true);
+    setLocalHasMore(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  // Reset items when search/category changes (but not on initial mount)
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return; // Skip reset on initial mount
+    }
     setMasterItems([]);
     setLocalItems([]);
     setMasterCurrentPage(1);

@@ -243,3 +243,8 @@ global.performance = {
 
 // Note: window.location mocking removed due to Jest compatibility issues
 // Individual tests can mock location methods as needed
+
+// Mock TextEncoder/TextDecoder for Node.js compatibility
+import { TextEncoder, TextDecoder } from "util";
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
