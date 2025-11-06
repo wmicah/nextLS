@@ -80,7 +80,11 @@ export const notesRouter = router({
     }
 
     const notes = await db.clientNote.findMany({
-      where: { clientId: client.id },
+      where: {
+        clientId: client.id,
+        // Clients should only see non-private notes
+        isPrivate: false,
+      },
       include: {
         coach: {
           select: {
@@ -88,7 +92,16 @@ export const notesRouter = router({
             name: true,
           },
         },
-        attachments: true,
+        attachments: {
+          // Ensure attachments are included
+          select: {
+            id: true,
+            fileName: true,
+            fileUrl: true,
+            fileType: true,
+            fileSize: true,
+          },
+        },
         tags: true,
       },
       orderBy: { createdAt: "desc" },
@@ -96,7 +109,14 @@ export const notesRouter = router({
 
     console.log("getMyNotes - client.id:", client.id);
     console.log("getMyNotes - found notes:", notes.length);
-    console.log("getMyNotes - notes:", notes);
+    // Log attachments for debugging
+    notes.forEach((note, index) => {
+      console.log(`Note ${index + 1} (${note.id}):`, {
+        content: note.content.substring(0, 50) + "...",
+        attachmentsCount: note.attachments?.length || 0,
+        attachments: note.attachments,
+      });
+    });
 
     return notes;
   }),
