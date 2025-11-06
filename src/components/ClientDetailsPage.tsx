@@ -409,7 +409,7 @@ export default function ClientDetailsPage({
               {/* Notes removed - now using NotesDisplay component with pinning functionality */}
             </div>
 
-            {/* Softball Pitching Information */}
+            {/* Client Information */}
             <div
               className="rounded-2xl shadow-xl border p-6"
               style={{
@@ -418,139 +418,72 @@ export default function ClientDetailsPage({
               }}
             >
               <h3 className="text-xl font-bold text-white mb-4">
-                Pitching Information
+                Client Information
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {/* Basic Info */}
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">Age</div>
-                  <div className="text-sm font-medium text-white">
-                    {client.age || "Not set"}
+                {/* Default Fields */}
+                {client?.age && (
+                  <div
+                    className="p-3 rounded-lg"
+                    style={{ backgroundColor: "#2A2F2F" }}
+                  >
+                    <div className="text-xs text-gray-400 mb-1">Age</div>
+                    <div className="text-sm font-medium text-white">
+                      {client.age}
+                    </div>
                   </div>
-                </div>
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">Height</div>
-                  <div className="text-sm font-medium text-white">
-                    {client.height || "Not set"}
+                )}
+                {client?.height && (
+                  <div
+                    className="p-3 rounded-lg"
+                    style={{ backgroundColor: "#2A2F2F" }}
+                  >
+                    <div className="text-xs text-gray-400 mb-1">Height</div>
+                    <div className="text-sm font-medium text-white">
+                      {client.height}
+                    </div>
                   </div>
-                </div>
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">
-                    Dominant Hand
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {client.dominantHand || "Not set"}
-                  </div>
-                </div>
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">
-                    Movement Style
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {client.movementStyle || "Not set"}
-                  </div>
-                </div>
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">
-                    Reaching Ability
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {client.reachingAbility || "Not set"}
-                  </div>
-                </div>
+                )}
 
-                {/* Speed Information */}
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">
-                    Average Speed
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {client.averageSpeed
-                      ? `${client.averageSpeed} mph`
-                      : "Not set"}
-                  </div>
-                </div>
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">Top Speed</div>
-                  <div className="text-sm font-medium text-white">
-                    {client.topSpeed ? `${client.topSpeed} mph` : "Not set"}
-                  </div>
-                </div>
-
-                {/* Spin Rates */}
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">
-                    Drop Spin Rate
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {client.dropSpinRate
-                      ? `${client.dropSpinRate} rpm`
-                      : "Not set"}
-                  </div>
-                </div>
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">
-                    Changeup Spin Rate
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {client.changeupSpinRate
-                      ? `${client.changeupSpinRate} rpm`
-                      : "Not set"}
-                  </div>
-                </div>
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">
-                    Rise Spin Rate
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {client.riseSpinRate
-                      ? `${client.riseSpinRate} rpm`
-                      : "Not set"}
-                  </div>
-                </div>
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: "#2A2F2F" }}
-                >
-                  <div className="text-xs text-gray-400 mb-1">
-                    Curve Spin Rate
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {client.curveSpinRate
-                      ? `${client.curveSpinRate} rpm`
-                      : "Not set"}
-                  </div>
-                </div>
+                {/* Custom Fields Display */}
+                {client?.customFields &&
+                  typeof client.customFields === "object" &&
+                  !Array.isArray(client.customFields) &&
+                  Object.keys(client.customFields as Record<string, any>)
+                    .length > 0 && (
+                    <>
+                      <div
+                        className="mt-6 pt-6 border-t"
+                        style={{ borderColor: "#606364" }}
+                      >
+                        <h4 className="text-md font-semibold mb-4 text-white">
+                          Custom Metrics
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {Object.entries(
+                            client.customFields as Record<string, any>
+                          ).map(([key, value]) => (
+                            <div
+                              key={key}
+                              className="p-3 rounded-lg"
+                              style={{ backgroundColor: "#2A2F2F" }}
+                            >
+                              <div className="text-xs text-gray-400 mb-1">
+                                {key}
+                              </div>
+                              <div className="text-sm font-medium text-white">
+                                {typeof value === "boolean"
+                                  ? value
+                                    ? "Yes"
+                                    : "No"
+                                  : String(value)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
               </div>
             </div>
 
@@ -937,7 +870,20 @@ export default function ClientDetailsPage({
       <EditClientModal
         isOpen={showEditClientModal}
         onClose={() => setShowEditClientModal(false)}
-        client={client}
+        client={
+          {
+            ...client,
+            customFields:
+              client.customFields &&
+              typeof client.customFields === "object" &&
+              !Array.isArray(client.customFields)
+                ? (client.customFields as Record<
+                    string,
+                    string | number | boolean
+                  >)
+                : null,
+          } as any
+        }
       />
     </Sidebar>
   );

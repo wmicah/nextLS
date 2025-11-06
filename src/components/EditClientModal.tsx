@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { X } from "lucide-react";
+import { X, Plus, Trash2 } from "lucide-react";
 
 interface EditClientModalProps {
   isOpen: boolean;
@@ -35,15 +35,7 @@ interface EditClientModalProps {
         }>;
     age?: number | null;
     height?: string | null;
-    dominantHand?: string | null;
-    movementStyle?: string | null;
-    reachingAbility?: string | null;
-    averageSpeed?: number | null;
-    topSpeed?: number | null;
-    dropSpinRate?: number | null;
-    changeupSpinRate?: number | null;
-    riseSpinRate?: number | null;
-    curveSpinRate?: number | null;
+    customFields?: Record<string, string | number | boolean> | null;
   };
 }
 
@@ -63,16 +55,23 @@ export default function EditClientModal({
       : "",
     age: client.age || "",
     height: client.height || "",
-    dominantHand: client.dominantHand || "",
-    movementStyle: client.movementStyle || "",
-    reachingAbility: client.reachingAbility || "",
-    averageSpeed: client.averageSpeed || "",
-    topSpeed: client.topSpeed || "",
-    dropSpinRate: client.dropSpinRate || "",
-    changeupSpinRate: client.changeupSpinRate || "",
-    riseSpinRate: client.riseSpinRate || "",
-    curveSpinRate: client.curveSpinRate || "",
   });
+  const [customFields, setCustomFields] = useState<
+    Array<{ key: string; value: string; type: "text" | "number" | "boolean" }>
+  >(
+    client.customFields
+      ? Object.entries(client.customFields).map(([key, value]) => ({
+          key,
+          value: String(value),
+          type:
+            typeof value === "number"
+              ? "number"
+              : typeof value === "boolean"
+              ? "boolean"
+              : "text",
+        }))
+      : []
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailExists, setEmailExists] = useState<boolean | null>(null);
 
@@ -88,16 +87,21 @@ export default function EditClientModal({
       notes: Array.isArray(client.notes) ? "" : client.notes || "",
       age: client.age || "",
       height: client.height || "",
-      dominantHand: client.dominantHand || "",
-      movementStyle: client.movementStyle || "",
-      reachingAbility: client.reachingAbility || "",
-      averageSpeed: client.averageSpeed || "",
-      topSpeed: client.topSpeed || "",
-      dropSpinRate: client.dropSpinRate || "",
-      changeupSpinRate: client.changeupSpinRate || "",
-      riseSpinRate: client.riseSpinRate || "",
-      curveSpinRate: client.curveSpinRate || "",
     });
+    setCustomFields(
+      client.customFields
+        ? Object.entries(client.customFields).map(([key, value]) => ({
+            key,
+            value: String(value),
+            type:
+              typeof value === "number"
+                ? "number"
+                : typeof value === "boolean"
+                ? "boolean"
+                : "text",
+          }))
+        : []
+    );
   }, [client]);
 
   const updateClient = trpc.clients.update.useMutation({
@@ -172,32 +176,22 @@ export default function EditClientModal({
       notes: formData.notes.trim() || undefined,
       age: formData.age ? parseInt(formData.age as string) : undefined,
       height: formData.height.trim() || undefined,
-      dominantHand:
-        (formData.dominantHand as "RIGHT" | "LEFT" | undefined) || undefined,
-      movementStyle:
-        (formData.movementStyle as "AIRPLANE" | "HELICOPTER" | undefined) ||
-        undefined,
-      reachingAbility:
-        (formData.reachingAbility as "REACHER" | "NON_REACHER" | undefined) ||
-        undefined,
-      averageSpeed: formData.averageSpeed
-        ? parseFloat(formData.averageSpeed as string)
-        : undefined,
-      topSpeed: formData.topSpeed
-        ? parseFloat(formData.topSpeed as string)
-        : undefined,
-      dropSpinRate: formData.dropSpinRate
-        ? parseInt(formData.dropSpinRate as string)
-        : undefined,
-      changeupSpinRate: formData.changeupSpinRate
-        ? parseInt(formData.changeupSpinRate as string)
-        : undefined,
-      riseSpinRate: formData.riseSpinRate
-        ? parseInt(formData.riseSpinRate as string)
-        : undefined,
-      curveSpinRate: formData.curveSpinRate
-        ? parseInt(formData.curveSpinRate as string)
-        : undefined,
+      customFields:
+        customFields.length > 0
+          ? customFields.reduce((acc, field) => {
+              if (field.key.trim()) {
+                let value: string | number | boolean = field.value;
+                if (field.type === "number") {
+                  value = parseFloat(field.value) || 0;
+                } else if (field.type === "boolean") {
+                  value =
+                    field.value.toLowerCase() === "true" || field.value === "1";
+                }
+                acc[field.key.trim()] = value;
+              }
+              return acc;
+            }, {} as Record<string, string | number | boolean>)
+          : undefined,
     });
   };
 
@@ -302,10 +296,10 @@ export default function EditClientModal({
             />
           </div>
 
-          {/* Softball Pitching Information */}
+          {/* Client Information */}
           <div className="pt-4 border-t border-gray-600/50">
             <h4 className="text-lg font-semibold text-white mb-4">
-              Pitching Information
+              Client Information
             </h4>
 
             <div className="grid grid-cols-2 gap-4">
@@ -338,189 +332,126 @@ export default function EditClientModal({
                   value={formData.height}
                   onChange={handleInputChange}
                   className="mt-2 bg-gray-800/50 border-gray-600/50 text-white focus:border-blue-500/50"
+                  placeholder="e.g., 5'10\""
                 />
               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label
-                  htmlFor="dominantHand"
-                  className="text-white text-sm font-medium"
-                >
-                  Dominant Hand
-                </Label>
-                <select
-                  id="dominantHand"
-                  name="dominantHand"
-                  value={formData.dominantHand}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full bg-gray-800/50 border border-gray-600/50 text-white focus:border-blue-500/50 rounded-md px-3 py-2"
-                >
-                  <option value="">Select hand</option>
-                  <option value="RIGHT">Right</option>
-                  <option value="LEFT">Left</option>
-                </select>
-              </div>
-
-              <div>
-                <Label
-                  htmlFor="movementStyle"
-                  className="text-white text-sm font-medium"
-                >
-                  Movement Style
-                </Label>
-                <select
-                  id="movementStyle"
-                  name="movementStyle"
-                  value={formData.movementStyle}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full bg-gray-800/50 border border-gray-600/50 text-white focus:border-blue-500/50 rounded-md px-3 py-2"
-                >
-                  <option value="">Select style</option>
-                  <option value="AIRPLANE">Airplane</option>
-                  <option value="HELICOPTER">Helicopter</option>
-                </select>
-              </div>
+          {/* Custom Fields Section */}
+          <div className="pt-4 border-t border-gray-600/50">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-white">
+                Custom Metrics
+              </h4>
+              <Button
+                type="button"
+                onClick={() =>
+                  setCustomFields([
+                    ...customFields,
+                    { key: "", value: "", type: "text" },
+                  ])
+                }
+                className="bg-green-600 hover:bg-green-700 text-white text-sm py-1 px-3"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Field
+              </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label
-                  htmlFor="reachingAbility"
-                  className="text-white text-sm font-medium"
-                >
-                  Reaching Ability
-                </Label>
-                <select
-                  id="reachingAbility"
-                  name="reachingAbility"
-                  value={formData.reachingAbility}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full bg-gray-800/50 border border-gray-600/50 text-white focus:border-blue-500/50 rounded-md px-3 py-2"
-                >
-                  <option value="">Select ability</option>
-                  <option value="REACHER">Reacher</option>
-                  <option value="NON_REACHER">Non Reacher</option>
-                </select>
+            {customFields.length === 0 ? (
+              <p className="text-gray-400 text-sm mb-4">
+                Add custom metrics specific to your coaching needs. For example:
+                "Wing Span", "Weight", "Grip Strength", etc.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {customFields.map((field, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-2 p-3 rounded-lg bg-gray-800/30 border border-gray-600/30"
+                  >
+                    <div className="flex-1 grid grid-cols-12 gap-2">
+                      <div className="col-span-4">
+                        <Input
+                          placeholder="Field name"
+                          value={field.key}
+                          onChange={e => {
+                            const updated = [...customFields];
+                            updated[index].key = e.target.value;
+                            setCustomFields(updated);
+                          }}
+                          className="bg-gray-800/50 border-gray-600/50 text-white text-sm"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <select
+                          value={field.type}
+                          onChange={e => {
+                            const updated = [...customFields];
+                            updated[index].type = e.target.value as
+                              | "text"
+                              | "number"
+                              | "boolean";
+                            // Reset value when type changes
+                            updated[index].value = "";
+                            setCustomFields(updated);
+                          }}
+                          className="w-full bg-gray-800/50 border border-gray-600/50 text-white text-sm rounded-md px-2 py-2"
+                        >
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="boolean">Yes/No</option>
+                        </select>
+                      </div>
+                      <div className="col-span-4">
+                        {field.type === "boolean" ? (
+                          <select
+                            value={field.value}
+                            onChange={e => {
+                              const updated = [...customFields];
+                              updated[index].value = e.target.value;
+                              setCustomFields(updated);
+                            }}
+                            className="w-full bg-gray-800/50 border border-gray-600/50 text-white text-sm rounded-md px-2 py-2"
+                          >
+                            <option value="">Select...</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                          </select>
+                        ) : (
+                          <Input
+                            placeholder={
+                              field.type === "number" ? "Value" : "Enter value"
+                            }
+                            type={field.type === "number" ? "number" : "text"}
+                            step={field.type === "number" ? "0.1" : undefined}
+                            value={field.value}
+                            onChange={e => {
+                              const updated = [...customFields];
+                              updated[index].value = e.target.value;
+                              setCustomFields(updated);
+                            }}
+                            className="bg-gray-800/50 border-gray-600/50 text-white text-sm"
+                          />
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() =>
+                        setCustomFields(
+                          customFields.filter((_, i) => i !== index)
+                        )
+                      }
+                      className="bg-red-600/20 hover:bg-red-600/30 text-red-400 p-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label
-                  htmlFor="averageSpeed"
-                  className="text-white text-sm font-medium"
-                >
-                  Average Speed (mph)
-                </Label>
-                <Input
-                  id="averageSpeed"
-                  name="averageSpeed"
-                  type="number"
-                  step="0.1"
-                  value={formData.averageSpeed}
-                  onChange={handleInputChange}
-                  className="mt-2 bg-gray-800/50 border-gray-600/50 text-white focus:border-blue-500/50"
-                  placeholder="0.0"
-                />
-              </div>
-
-              <div>
-                <Label
-                  htmlFor="topSpeed"
-                  className="text-white text-sm font-medium"
-                >
-                  Top Speed (mph)
-                </Label>
-                <Input
-                  id="topSpeed"
-                  name="topSpeed"
-                  type="number"
-                  step="0.1"
-                  value={formData.topSpeed}
-                  onChange={handleInputChange}
-                  className="mt-2 bg-gray-800/50 border-gray-600/50 text-white focus:border-blue-500/50"
-                  placeholder="0.0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label
-                  htmlFor="dropSpinRate"
-                  className="text-white text-sm font-medium"
-                >
-                  Drop Spin Rate (rpm)
-                </Label>
-                <Input
-                  id="dropSpinRate"
-                  name="dropSpinRate"
-                  type="number"
-                  value={formData.dropSpinRate}
-                  onChange={handleInputChange}
-                  className="mt-2 bg-gray-800/50 border-gray-600/50 text-white focus:border-blue-500/50"
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <Label
-                  htmlFor="changeupSpinRate"
-                  className="text-white text-sm font-medium"
-                >
-                  Changeup Spin Rate (rpm)
-                </Label>
-                <Input
-                  id="changeupSpinRate"
-                  name="changeupSpinRate"
-                  type="number"
-                  value={formData.changeupSpinRate}
-                  onChange={handleInputChange}
-                  className="mt-2 bg-gray-800/50 border-gray-600/50 text-white focus:border-blue-500/50"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label
-                  htmlFor="riseSpinRate"
-                  className="text-white text-sm font-medium"
-                >
-                  Rise Spin Rate (rpm)
-                </Label>
-                <Input
-                  id="riseSpinRate"
-                  name="riseSpinRate"
-                  type="number"
-                  value={formData.riseSpinRate}
-                  onChange={handleInputChange}
-                  className="mt-2 bg-gray-800/50 border-gray-600/50 text-white focus:border-blue-500/50"
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <Label
-                  htmlFor="curveSpinRate"
-                  className="text-white text-sm font-medium"
-                >
-                  Curve Spin Rate (rpm)
-                </Label>
-                <Input
-                  id="curveSpinRate"
-                  name="curveSpinRate"
-                  type="number"
-                  value={formData.curveSpinRate}
-                  onChange={handleInputChange}
-                  className="mt-2 bg-gray-800/50 border-gray-600/50 text-white focus:border-blue-500/50"
-                  placeholder="0"
-                />
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Action Buttons */}
