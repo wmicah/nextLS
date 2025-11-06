@@ -515,8 +515,13 @@ export default function NotesDisplay({
                               className="w-4 h-4"
                               style={{ color: "#4A5A70" }}
                             />
-                          ) : (
+                          ) : attachment.fileType.startsWith("video/") ? (
                             <Video
+                              className="w-4 h-4"
+                              style={{ color: "#4A5A70" }}
+                            />
+                          ) : (
+                            <FileText
                               className="w-4 h-4"
                               style={{ color: "#4A5A70" }}
                             />
@@ -761,8 +766,13 @@ export default function NotesDisplay({
                                   className="w-4 h-4"
                                   style={{ color: "#4A5A70" }}
                                 />
-                              ) : (
+                              ) : attachment.fileType.startsWith("video/") ? (
                                 <Video
+                                  className="w-4 h-4"
+                                  style={{ color: "#4A5A70" }}
+                                />
+                              ) : (
+                                <FileText
                                   className="w-4 h-4"
                                   style={{ color: "#4A5A70" }}
                                 />

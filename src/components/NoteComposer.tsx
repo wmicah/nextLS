@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   X,
@@ -16,6 +16,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { UploadButton } from "@uploadthing/react";
+import type { OurFileRouter } from "@/app/api/uploadthing/core";
 
 interface NoteComposerProps {
   isOpen: boolean;
@@ -50,7 +52,6 @@ export default function NoteComposer({
   onSuccess,
   editingNote = null,
 }: NoteComposerProps) {
-  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [type, setType] = useState<
     | "GENERAL"
@@ -66,32 +67,24 @@ export default function NoteComposer({
     "LOW" | "NORMAL" | "HIGH" | "URGENT"
   >("NORMAL");
   const [isPrivate, setIsPrivate] = useState(false);
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Initialize form when editingNote changes
   React.useEffect(() => {
     if (editingNote && isOpen) {
-      setTitle(editingNote.title || "");
       setContent(editingNote.content);
       setType(editingNote.type as any);
       setPriority(editingNote.priority as any);
       setIsPrivate(editingNote.isPrivate);
-      setTags(editingNote.tags.map(t => t.name));
       setAttachments([]); // Attachments are read-only for now
     } else if (!editingNote && isOpen) {
       // Reset form for new note
-      setTitle("");
       setContent("");
       setType("GENERAL");
       setPriority("NORMAL");
       setIsPrivate(false);
-      setTags([]);
       setAttachments([]);
     }
   }, [editingNote, isOpen]);
@@ -101,12 +94,10 @@ export default function NoteComposer({
       onSuccess?.();
       onClose();
       // Reset form
-      setTitle("");
       setContent("");
       setType("GENERAL");
       setPriority("NORMAL");
       setIsPrivate(false);
-      setTags([]);
       setAttachments([]);
     },
   });
@@ -116,86 +107,58 @@ export default function NoteComposer({
       onSuccess?.();
       onClose();
       // Reset form
-      setTitle("");
       setContent("");
       setType("GENERAL");
       setPriority("NORMAL");
       setIsPrivate(false);
-      setTags([]);
       setAttachments([]);
     },
   });
 
   const addAttachmentMutation = trpc.notes.addAttachment.useMutation();
 
-  const handleFileUpload = async (files: FileList) => {
-    setIsUploading(true);
-    setUploadProgress(0);
+  const handleFileUploadComplete = (res: any) => {
+    if (res && res.length > 0) {
+      res.forEach((file: any) => {
+        // Validate file type
+        const isValidType =
+          file.type?.startsWith("image/") ||
+          file.type?.startsWith("video/") ||
+          file.type === "application/pdf";
 
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-
-        // Validate file type and size
-        if (
-          !file.type.startsWith("image/") &&
-          !file.type.startsWith("video/")
-        ) {
-          alert("Only images and videos are allowed");
-          continue;
+        if (!isValidType) {
+          alert(
+            `File ${file.name} is not a supported type (images, videos, or PDFs only)`
+          );
+          return;
         }
-
-        if (file.size > 50 * 1024 * 1024) {
-          // 50MB limit
-          alert("File size must be less than 50MB");
-          continue;
-        }
-
-        // Simulate upload progress
-        const progressInterval = setInterval(() => {
-          setUploadProgress(prev => Math.min(prev + 10, 90));
-        }, 100);
-
-        // In a real app, you'd upload to your file storage service
-        // For now, we'll create a mock URL
-        const mockFileUrl = URL.createObjectURL(file);
-
-        clearInterval(progressInterval);
-        setUploadProgress(100);
 
         // Add to attachments
         const attachment: Attachment = {
-          id: `temp-${Date.now()}-${i}`,
+          id: `upload-${Date.now()}-${Math.random()}`,
           fileName: file.name,
-          fileUrl: mockFileUrl,
-          fileType: file.type,
+          fileUrl: file.url,
+          fileType: file.type || "application/pdf",
           fileSize: file.size,
         };
 
         setAttachments(prev => [...prev, attachment]);
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      alert("Failed to upload files");
-    } finally {
+      });
+
       setIsUploading(false);
       setUploadProgress(0);
     }
   };
 
+  const handleFileUploadError = (error: Error) => {
+    console.error("Upload error:", error);
+    alert(`Failed to upload files: ${error.message}`);
+    setIsUploading(false);
+    setUploadProgress(0);
+  };
+
   const removeAttachment = (attachmentId: string) => {
     setAttachments(prev => prev.filter(att => att.id !== attachmentId));
-  };
-
-  const addTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags(prev => [...prev, newTag.trim()]);
-      setNewTag("");
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
   };
 
   const handleSubmit = async () => {
@@ -205,34 +168,45 @@ export default function NoteComposer({
     }
 
     try {
+      let noteId: string;
+
       if (editingNote) {
         // Update existing note
-        await updateNoteMutation.mutateAsync({
+        const updatedNote = await updateNoteMutation.mutateAsync({
           noteId: editingNote.id,
-          title: title.trim() || undefined,
           content: content.trim(),
           type,
           priority,
           isPrivate,
-          tags: tags.length > 0 ? tags : undefined,
         });
+        noteId = updatedNote.id;
       } else {
         // Create new note
-        await createNoteMutation.mutateAsync({
+        const newNote = await createNoteMutation.mutateAsync({
           clientId,
-          title: title.trim() || undefined,
           content: content.trim(),
           type,
           priority,
           isPrivate,
-          tags: tags.length > 0 ? tags : undefined,
         });
+        noteId = newNote.id;
 
         // Handle attachments after note creation
         if (attachments.length > 0) {
-          // In a real app, you'd upload files to your storage service
-          // and then add them to the note
-          console.log("Attachments to upload:", attachments);
+          // Add attachments to the newly created note
+          for (const attachment of attachments) {
+            try {
+              await addAttachmentMutation.mutateAsync({
+                noteId,
+                fileName: attachment.fileName,
+                fileUrl: attachment.fileUrl,
+                fileType: attachment.fileType,
+                fileSize: attachment.fileSize,
+              });
+            } catch (error) {
+              console.error("Failed to add attachment:", error);
+            }
+          }
         }
       }
     } catch (error) {
@@ -374,28 +348,6 @@ export default function NoteComposer({
               </div>
             </div>
 
-            {/* Title */}
-            <div>
-              <label
-                className="block text-sm font-medium mb-2"
-                style={{ color: "#C3BCC2" }}
-              >
-                Title (Optional)
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Enter a title for this note..."
-                className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                }}
-              />
-            </div>
-
             {/* Content */}
             <div>
               <label
@@ -418,102 +370,57 @@ export default function NoteComposer({
               />
             </div>
 
-            {/* Tags */}
-            <div>
-              <label
-                className="block text-sm font-medium mb-2"
-                style={{ color: "#C3BCC2" }}
-              >
-                Tags (Optional)
-              </label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={e => setNewTag(e.target.value)}
-                  onKeyPress={e => e.key === "Enter" && addTag()}
-                  placeholder="Add a tag..."
-                  className="flex-1 px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  style={{
-                    backgroundColor: "#2A3133",
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
-                  }}
-                />
-                <button
-                  onClick={addTag}
-                  className="px-3 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
-                  style={{
-                    backgroundColor: "#4A5A70",
-                    color: "#FFFFFF",
-                  }}
-                >
-                  <Tag className="w-4 h-4" />
-                </button>
-              </div>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-                      style={{
-                        backgroundColor: "#4A5A70",
-                        color: "#FFFFFF",
-                      }}
-                    >
-                      {tag}
-                      <button
-                        onClick={() => removeTag(tag)}
-                        className="ml-1 hover:text-red-400"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Attachments */}
             <div>
               <label
                 className="block text-sm font-medium mb-2"
                 style={{ color: "#C3BCC2" }}
               >
-                Attachments (Images & Videos)
+                Attachments (Images, Videos, PDFs)
               </label>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                onChange={e =>
-                  e.target.files && handleFileUpload(e.target.files)
-                }
-                className="hidden"
-              />
-
               <div className="space-y-3">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed transition-all duration-200 hover:scale-105 disabled:opacity-50"
-                  style={{
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
-                  }}
-                >
-                  {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Paperclip className="w-4 h-4" />
-                  )}
-                  {isUploading
-                    ? `Uploading... ${uploadProgress}%`
-                    : "Add Images or Videos"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <UploadButton<OurFileRouter, "noteAttachmentUploader">
+                    endpoint="noteAttachmentUploader"
+                    onBeforeUploadBegin={files => {
+                      setIsUploading(true);
+                      setUploadProgress(0);
+                      return files;
+                    }}
+                    onUploadProgress={(progress: number) => {
+                      setUploadProgress(progress);
+                    }}
+                    onClientUploadComplete={handleFileUploadComplete}
+                    onUploadError={handleFileUploadError}
+                    content={{
+                      button: ({ ready }) => (
+                        <div
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed transition-all duration-200 hover:scale-105 ${
+                            !ready || isUploading ? "opacity-50" : ""
+                          }`}
+                          style={{
+                            borderColor: "#606364",
+                            color: "#C3BCC2",
+                          }}
+                        >
+                          {isUploading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Uploading... {uploadProgress}%</span>
+                            </>
+                          ) : (
+                            <>
+                              <Paperclip className="w-4 h-4" />
+                              <span>Add Images, Videos or PDFs</span>
+                            </>
+                          )}
+                        </div>
+                      ),
+                      allowedContent: "Images, Videos, PDFs (Max 50MB)",
+                    }}
+                  />
+                </div>
 
                 {attachments.length > 0 && (
                   <div className="space-y-2">
@@ -529,8 +436,13 @@ export default function NoteComposer({
                               className="w-5 h-5"
                               style={{ color: "#4A5A70" }}
                             />
-                          ) : (
+                          ) : attachment.fileType.startsWith("video/") ? (
                             <Video
+                              className="w-5 h-5"
+                              style={{ color: "#4A5A70" }}
+                            />
+                          ) : (
+                            <FileText
                               className="w-5 h-5"
                               style={{ color: "#4A5A70" }}
                             />
