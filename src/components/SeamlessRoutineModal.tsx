@@ -335,9 +335,12 @@ interface SortableExerciseItemProps {
   onUpdate: (index: number, field: keyof RoutineExercise, value: any) => void;
   onRemove: (index: number) => void;
   getExerciseColor: (type: string) => string;
-  onCreateSuperset: (exerciseId: string, supersetId: string) => void;
+  onCreateSuperset: (exerciseId: string, existingSupersetId?: string) => void;
   onRemoveSuperset: (exerciseId: string) => void;
-  onOpenSupersetModal: (exercise: RoutineExercise) => void;
+  onOpenSupersetModal: (
+    exercise: RoutineExercise,
+    existingGroupId?: string
+  ) => void;
   getSupersetGroups: () => { name: string; items: RoutineExercise[] }[];
   onEditExercise: (exercise: RoutineExercise) => void;
 }
@@ -385,7 +388,7 @@ function SortableExerciseItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 bg-[#353A3A] rounded-lg border border-gray-600 hover:border-gray-500 transition-colors ${
+      className={`flex items-center gap-2 p-3 bg-[#353A3A] rounded-lg border border-gray-600 hover:border-gray-500 transition-colors overflow-hidden ${
         isDragging ? "opacity-50" : ""
       }`}
     >
@@ -393,58 +396,74 @@ function SortableExerciseItem({
       <div
         {...attributes}
         {...listeners}
-        className="cursor-move text-gray-400 hover:text-gray-300 p-1"
+        className="cursor-move text-gray-400 hover:text-gray-300 p-1 flex-shrink-0"
       >
         <GripVertical className="h-3 w-3" />
       </div>
 
       {/* Exercise number */}
-      <div className="text-xs text-gray-500 font-mono w-6 text-center">
+      <div className="text-xs text-gray-500 font-mono w-6 text-center flex-shrink-0">
         {index + 1}
       </div>
 
       {/* Exercise type badge */}
       <Badge
         variant="outline"
-        className={`${getExerciseColor(exercise.type)} text-xs px-2 py-1`}
+        className={`${getExerciseColor(
+          exercise.type
+        )} text-xs px-2 py-1 flex-shrink-0 whitespace-nowrap`}
       >
         <span className="capitalize">{exercise.type}</span>
       </Badge>
 
-      {/* Exercise name - read-only display */}
-      <div className="bg-[#2A3133] border border-gray-600 text-white text-sm flex-1 h-8 px-3 py-2 rounded-md flex items-center">
-        <span className="truncate">
+      {/* Superset/Circuit indicator */}
+      {isSuperset && supersetGroup && (
+        <Badge
+          variant="outline"
+          className="bg-purple-600/20 border-purple-500/50 text-purple-300 text-xs px-2 py-1 flex-shrink-0 whitespace-nowrap"
+        >
+          {supersetGroup.items.length === 2
+            ? "SUPERSET"
+            : `CIRCUIT (${supersetGroup.items.length})`}
+        </Badge>
+      )}
+
+      {/* Exercise name - read-only display with proper truncation */}
+      <div className="bg-[#2A3133] border border-gray-600 text-white text-sm flex-1 min-w-0 h-8 px-3 py-2 rounded-md flex items-center overflow-hidden">
+        <span className="truncate block w-full">
           {isSuperset && supersetGroup ? (
-            <span>
+            <span className="truncate block">
               {supersetGroup.items.map((item, idx) => (
-                <span key={item.id}>
+                <span key={item.id} className="inline">
                   {item.title || "Untitled Exercise"}
                   {idx < supersetGroup.items.length - 1 && " + "}
                 </span>
               ))}
             </span>
           ) : (
-            exercise.title || "Untitled Exercise"
+            <span className="truncate block">
+              {exercise.title || "Untitled Exercise"}
+            </span>
           )}
         </span>
       </div>
 
       {/* Quick stats display */}
-      <div className="flex flex-col items-center gap-1 text-xs text-gray-400 min-w-0">
+      <div className="flex flex-col items-center gap-1 text-xs text-gray-400 flex-shrink-0">
         <div className="flex items-center gap-1">
           {exercise.sets && (
-            <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs">
+            <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs whitespace-nowrap">
               {exercise.sets}s
             </span>
           )}
           {exercise.reps && (
-            <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs">
+            <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs whitespace-nowrap">
               {exercise.reps}r
             </span>
           )}
         </div>
         {exercise.tempo && (
-          <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs">
+          <span className="bg-[#2A3133] px-1.5 py-0.5 rounded text-xs whitespace-nowrap">
             {exercise.tempo}
           </span>
         )}
@@ -452,7 +471,7 @@ function SortableExerciseItem({
 
       {/* Action buttons - hide when edit form is expanded */}
       <div
-        className="flex items-center gap-1"
+        className="flex items-center gap-1 flex-shrink-0"
         id={`action-buttons-${exercise.id}`}
       >
         <Button
@@ -460,20 +479,20 @@ function SortableExerciseItem({
           variant="ghost"
           size="sm"
           onClick={() => onEditExercise(exercise)}
-          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 p-1 h-6 w-6"
+          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 p-1 h-6 w-6 flex-shrink-0"
         >
           <Edit className="h-3 w-3" />
         </Button>
 
-        {/* Superset Chain Link Button */}
+        {/* Superset/Circuit Chain Link Button */}
         {!exercise.supersetId ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => onOpenSupersetModal(exercise)}
-            className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 p-1 h-6 w-6"
-            title="Add Superset"
+            className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 p-1 h-6 w-6 flex-shrink-0"
+            title="Add Superset or Circuit"
           >
             <svg
               className="h-3 w-3"
@@ -490,28 +509,40 @@ function SortableExerciseItem({
             </svg>
           </Button>
         ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onRemoveSuperset(exercise.id)}
-            className="text-purple-400 hover:text-purple-300 hover:bg-purple-400/10 p-1 h-6 w-6"
-            title="Remove Superset"
-          >
-            <svg
-              className="h-3 w-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenSupersetModal(exercise, exercise.supersetId)}
+              className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 p-1 h-6 w-6 flex-shrink-0"
+              title="Add exercise to group"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-              />
-            </svg>
-          </Button>
+              <Plus className="h-3 w-3" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onRemoveSuperset(exercise.id)}
+              className="text-red-400 hover:text-red-300 hover:bg-red-400/10 p-1 h-6 w-6 flex-shrink-0"
+              title="Remove from group"
+            >
+              <svg
+                className="h-3 w-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
+              </svg>
+            </Button>
+          </>
         )}
 
         <Button
@@ -519,7 +550,7 @@ function SortableExerciseItem({
           variant="ghost"
           size="sm"
           onClick={() => onRemove(index)}
-          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 h-6 w-6"
+          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 h-6 w-6 flex-shrink-0"
         >
           <Trash2 className="h-3 w-3" />
         </Button>
@@ -612,10 +643,17 @@ export default function SeamlessRoutineModal({
     "details" | "exercises" | "review"
   >("details");
 
-  // Superset management state
+  // Superset/Circuit management state
   const [isSupersetModalOpen, setIsSupersetModalOpen] = useState(false);
   const [pendingSupersetExercise, setPendingSupersetExercise] =
     useState<RoutineExercise | null>(null);
+  const [selectedExerciseIds, setSelectedExerciseIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [isAddingToExisting, setIsAddingToExisting] = useState(false);
+  const [existingSupersetId, setExistingSupersetId] = useState<string | null>(
+    null
+  );
 
   // Exercise edit dialog state
   const [isExerciseEditDialogOpen, setIsExerciseEditDialogOpen] =
@@ -1053,29 +1091,62 @@ export default function SeamlessRoutineModal({
   };
 
   // Superset management functions
-  const handleCreateSuperset = (exerciseId: string, supersetId: string) => {
-    const exercise = exercises.find(ex => ex.id === exerciseId);
-    const supersetExercise = exercises.find(ex => ex.id === supersetId);
+  const handleCreateSuperset = (
+    exerciseId: string,
+    selectedExerciseIds: string[]
+  ) => {
+    const firstExercise = exercises.find(ex => ex.id === exerciseId);
 
-    if (exercise && supersetExercise) {
-      // Create a unique superset ID
-      const supersetGroupId = `superset-${Date.now()}`;
+    if (firstExercise && selectedExerciseIds.length > 0) {
+      // Create a unique superset/circuit ID
+      const groupId = `superset-${Date.now()}`;
 
-      // Update both exercises to be part of the same superset
+      // Get all selected exercises
+      const allSelectedExercises = [firstExercise];
+      selectedExerciseIds.forEach(selectedId => {
+        const selectedExercise = exercises.find(ex => ex.id === selectedId);
+        if (selectedExercise) {
+          allSelectedExercises.push(selectedExercise);
+        }
+      });
+
+      // Update all exercises to be part of the same group
+      setExercises(prev =>
+        prev.map(ex => {
+          const selectedIndex = allSelectedExercises.findIndex(
+            sel => sel.id === ex.id
+          );
+          if (selectedIndex !== -1) {
+            return {
+              ...ex,
+              supersetId: groupId,
+              supersetOrder: selectedIndex + 1,
+              type: "superset",
+            };
+          }
+          return ex;
+        })
+      );
+    }
+  };
+
+  const handleAddToSuperset = (supersetId: string, exerciseId: string) => {
+    const existingExercises = exercises.filter(
+      ex => ex.supersetId === supersetId
+    );
+    const exerciseToAdd = exercises.find(ex => ex.id === exerciseId);
+
+    if (exerciseToAdd && existingExercises.length > 0) {
+      const maxOrder = Math.max(
+        ...existingExercises.map(ex => ex.supersetOrder || 0)
+      );
       setExercises(prev =>
         prev.map(ex => {
           if (ex.id === exerciseId) {
             return {
               ...ex,
-              supersetId: supersetGroupId,
-              supersetOrder: 1,
-              type: "superset",
-            };
-          } else if (ex.id === supersetId) {
-            return {
-              ...ex,
-              supersetId: supersetGroupId,
-              supersetOrder: 2,
+              supersetId: supersetId,
+              supersetOrder: maxOrder + 1,
               type: "superset",
             };
           }
@@ -1111,9 +1182,64 @@ export default function SeamlessRoutineModal({
     }
   };
 
-  const handleOpenSupersetModal = (exercise: RoutineExercise) => {
+  const handleOpenSupersetModal = (
+    exercise: RoutineExercise,
+    existingGroupId?: string
+  ) => {
     setPendingSupersetExercise(exercise);
+    setSelectedExerciseIds(new Set());
+    if (existingGroupId) {
+      setIsAddingToExisting(true);
+      setExistingSupersetId(existingGroupId);
+    } else {
+      setIsAddingToExisting(false);
+      setExistingSupersetId(null);
+    }
     setIsSupersetModalOpen(true);
+  };
+
+  const toggleExerciseSelection = (exerciseId: string) => {
+    setSelectedExerciseIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(exerciseId)) {
+        newSet.delete(exerciseId);
+      } else {
+        newSet.add(exerciseId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleConfirmSuperset = () => {
+    if (!pendingSupersetExercise) return;
+
+    if (isAddingToExisting && existingSupersetId) {
+      // Add selected exercises to existing group
+      const selectedArray = Array.from(selectedExerciseIds);
+      selectedArray.forEach(exerciseId => {
+        handleAddToSuperset(existingSupersetId, exerciseId);
+      });
+    } else {
+      // Create new group
+      const selectedArray = Array.from(selectedExerciseIds);
+      if (selectedArray.length === 0) {
+        setIsSupersetModalOpen(false);
+        return;
+      }
+      handleCreateSuperset(pendingSupersetExercise.id, selectedArray);
+    }
+
+    setIsSupersetModalOpen(false);
+    setSelectedExerciseIds(new Set());
+    setPendingSupersetExercise(null);
+    setIsAddingToExisting(false);
+    setExistingSupersetId(null);
+  };
+
+  // Helper function to get group name (Superset for 2, Circuit for 3+)
+  const getGroupName = (groupId: string): string => {
+    const groupExercises = exercises.filter(ex => ex.supersetId === groupId);
+    return groupExercises.length === 2 ? "Superset" : "Circuit";
   };
 
   const getSupersetGroups = () => {
@@ -1126,12 +1252,18 @@ export default function SeamlessRoutineModal({
         groups[exercise.supersetId].push(exercise);
       }
     });
-    return Object.values(groups).map((items, index) => ({
-      name: `Superset ${index + 1}`,
-      items: items.sort(
+    return Object.values(groups).map((items, index) => {
+      const sortedItems = items.sort(
         (a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)
-      ),
-    }));
+      );
+      const isCircuit = sortedItems.length > 2;
+      return {
+        name: isCircuit
+          ? `Circuit ${index + 1} (${sortedItems.length} exercises)`
+          : `Superset ${index + 1}`,
+        items: sortedItems,
+      };
+    });
   };
 
   const canProceedToExercises = name.trim();
@@ -1370,7 +1502,17 @@ export default function SeamlessRoutineModal({
                                 onUpdate={updateExercise}
                                 onRemove={removeExercise}
                                 getExerciseColor={getExerciseColor}
-                                onCreateSuperset={handleCreateSuperset}
+                                onCreateSuperset={(exerciseId, existingId) => {
+                                  const exercise = exercises.find(
+                                    ex => ex.id === exerciseId
+                                  );
+                                  if (exercise) {
+                                    handleOpenSupersetModal(
+                                      exercise,
+                                      existingId
+                                    );
+                                  }
+                                }}
                                 onRemoveSuperset={handleRemoveSuperset}
                                 onOpenSupersetModal={handleOpenSupersetModal}
                                 getSupersetGroups={getSupersetGroups}
@@ -1540,22 +1682,33 @@ export default function SeamlessRoutineModal({
           </div>
         </DialogContent>
 
-        {/* Superset Modal */}
+        {/* Superset/Circuit Modal */}
         <Dialog
           open={isSupersetModalOpen}
           onOpenChange={setIsSupersetModalOpen}
         >
-          <DialogContent className="bg-[#2A3133] border-gray-600 z-[120]">
+          <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl max-h-[80vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle className="text-white">Create Superset</DialogTitle>
+              <DialogTitle className="text-white">
+                {isAddingToExisting
+                  ? `Add to ${
+                      existingSupersetId
+                        ? getGroupName(existingSupersetId)
+                        : "Group"
+                    }`
+                  : "Create Superset or Circuit"}
+              </DialogTitle>
               <DialogDescription className="text-gray-400">
-                Select another exercise from this routine to create a superset
-                (minimal rest between exercises)
+                {isAddingToExisting
+                  ? "Select exercises to add to this group"
+                  : "Select one or more exercises. Select 1 exercise for a Superset (2 total) or 2+ exercises for a Circuit (3+ total)."}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto space-y-4 p-4">
               <div>
-                <Label className="text-white">First Exercise</Label>
+                <Label className="text-white">
+                  {isAddingToExisting ? "Current Group" : "First Exercise"}
+                </Label>
                 <div className="p-3 bg-gray-700 rounded border border-gray-600">
                   <p className="text-white font-medium">
                     {pendingSupersetExercise?.title}
@@ -1566,44 +1719,78 @@ export default function SeamlessRoutineModal({
                 </div>
               </div>
               <div>
-                <Label className="text-white">Second Exercise</Label>
-                <select
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
-                  onChange={e => {
-                    if (e.target.value && pendingSupersetExercise) {
-                      handleCreateSuperset(
-                        pendingSupersetExercise.id,
-                        e.target.value
-                      );
-                      setIsSupersetModalOpen(false);
-                    }
-                  }}
-                >
-                  <option value="">
-                    Select an exercise from this routine...
-                  </option>
+                <Label className="text-white">
+                  {isAddingToExisting
+                    ? "Exercises to Add"
+                    : selectedExerciseIds.size === 0
+                    ? "Select Exercises (1 for Superset, 2+ for Circuit)"
+                    : selectedExerciseIds.size === 1
+                    ? "Selected: Superset (2 exercises)"
+                    : `Selected: Circuit (${
+                        selectedExerciseIds.size + 1
+                      } exercises)`}
+                </Label>
+                <div className="max-h-64 overflow-y-auto border border-gray-600 rounded p-2 space-y-2 bg-gray-800">
                   {exercises
-                    .filter(
-                      ex =>
-                        ex.id !== pendingSupersetExercise?.id && !ex.supersetId
-                    )
+                    .filter(ex => {
+                      // Don't show the pending exercise or exercises already in the group
+                      if (ex.id === pendingSupersetExercise?.id) return false;
+                      if (
+                        isAddingToExisting &&
+                        existingSupersetId &&
+                        ex.supersetId === existingSupersetId
+                      )
+                        return false;
+                      // Don't show exercises already in other groups
+                      if (!isAddingToExisting && ex.supersetId) return false;
+                      return true;
+                    })
                     .map(ex => (
-                      <option key={ex.id} value={ex.id}>
-                        {ex.title}
-                      </option>
+                      <label
+                        key={ex.id}
+                        className="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedExerciseIds.has(ex.id)}
+                          onChange={() => toggleExerciseSelection(ex.id)}
+                          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <p className="text-white text-sm font-medium">
+                            {ex.title}
+                          </p>
+                          {ex.notes && (
+                            <p className="text-gray-400 text-xs">{ex.notes}</p>
+                          )}
+                        </div>
+                      </label>
                     ))}
-                </select>
+                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-6">
+            <DialogFooter className="border-t border-gray-700 p-4">
               <Button
                 variant="outline"
-                onClick={() => setIsSupersetModalOpen(false)}
-                className="border-gray-600 text-gray-300"
+                onClick={() => {
+                  setIsSupersetModalOpen(false);
+                  setSelectedExerciseIds(new Set());
+                  setPendingSupersetExercise(null);
+                  setIsAddingToExisting(false);
+                  setExistingSupersetId(null);
+                }}
+                className="border-gray-600 text-gray-300 hover:bg-gray-700"
               >
                 Cancel
               </Button>
-            </div>
+              <Button
+                onClick={handleConfirmSuperset}
+                disabled={!isAddingToExisting && selectedExerciseIds.size === 0}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isAddingToExisting ? "Add Exercises" : "Create Group"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -1645,7 +1832,13 @@ export default function SeamlessRoutineModal({
               }
             : undefined
         }
-        supersetName="Superset"
+        supersetName={
+          editingSuperset
+            ? editingSuperset.exercises.length === 2
+              ? "Superset"
+              : `Circuit (${editingSuperset.exercises.length})`
+            : "Superset"
+        }
       />
     </>
   );
