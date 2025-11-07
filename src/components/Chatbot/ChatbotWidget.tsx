@@ -5,12 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, X, Send, Bot, User, Sparkles } from "lucide-react";
+import {
+  MessageCircle,
+  X,
+  Send,
+  Bot,
+  User,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import ChatbotQuickActions from "./ChatbotQuickActions";
 import { useChatbot } from "./ChatbotContext";
 import { useMobileDetection } from "@/lib/mobile-detection";
+import BugReportModal from "@/components/BugReportModal";
 
 interface Message {
   id: string;
@@ -37,6 +46,7 @@ export default function ChatbotWidget() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [showBugReport, setShowBugReport] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -158,39 +168,72 @@ export default function ChatbotWidget() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {/* Floating Chat Button */}
-      <AnimatePresence>
-        {!isOpen && !isMobile && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0, opacity: 0, y: 20 }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 25,
-            }}
-            className="relative"
-          >
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-lg animate-pulse" />
-
-            <Button
-              onClick={() => setIsOpen(true)}
-              size="icon"
-              aria-label="Open chat with AI assistant"
-              className="relative h-12 w-12 rounded-full bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-800 shadow-lg border-0 transition-all duration-300 hover:scale-110 hover:shadow-blue-500/20"
+      {/* Floating Buttons Container */}
+      <div className="flex flex-col gap-3 items-end">
+        {/* Bug Report Button - Hidden on mobile */}
+        <AnimatePresence>
+          {!isOpen && !isMobile && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0, opacity: 0, y: 20 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 25,
+                delay: 0.1,
+              }}
+              className="relative"
             >
-              <MessageCircle className="h-5 w-5 text-white" />
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-full blur-lg animate-pulse" />
 
-              {/* AI indicator */}
-              <div className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                <Sparkles className="h-2 w-2 text-white" />
-              </div>
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <Button
+                onClick={() => setShowBugReport(true)}
+                size="icon"
+                aria-label="Report a bug"
+                className="relative h-12 w-12 rounded-full bg-gradient-to-br from-red-600 via-red-600 to-red-700 shadow-lg border-0 transition-all duration-300 hover:scale-110 hover:shadow-red-500/20"
+              >
+                <AlertCircle className="h-5 w-5 text-white" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Floating Chat Button */}
+        <AnimatePresence>
+          {!isOpen && !isMobile && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0, opacity: 0, y: 20 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 25,
+              }}
+              className="relative"
+            >
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-lg animate-pulse" />
+
+              <Button
+                onClick={() => setIsOpen(true)}
+                size="icon"
+                aria-label="Open chat with AI assistant"
+                className="relative h-12 w-12 rounded-full bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-800 shadow-lg border-0 transition-all duration-300 hover:scale-110 hover:shadow-blue-500/20"
+              >
+                <MessageCircle className="h-5 w-5 text-white" />
+
+                {/* AI indicator */}
+                <div className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full flex items-center justify-center border border-white shadow-md">
+                  <Sparkles className="h-2 w-2 text-white" />
+                </div>
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Chat Window */}
       <AnimatePresence>
@@ -454,6 +497,12 @@ export default function ChatbotWidget() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Bug Report Modal */}
+      <BugReportModal
+        isOpen={showBugReport}
+        onClose={() => setShowBugReport(false)}
+      />
     </div>
   );
 }

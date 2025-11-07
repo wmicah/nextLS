@@ -1,9 +1,13 @@
 "use client";
 
-import { MessageCircle, Bell } from "lucide-react";
+import { useState } from "react";
+import { MessageCircle, Bell, AlertCircle } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
+import BugReportModalMobile from "./BugReportModalMobile";
 
 export default function MobileClientBottomNavigation() {
+  const [showBugReport, setShowBugReport] = useState(false);
+
   // Get unread counts
   const { data: unreadMessages = 0, isLoading: messagesLoading } =
     trpc.messaging.getUnreadCount.useQuery(undefined, {
@@ -63,7 +67,24 @@ export default function MobileClientBottomNavigation() {
           </div>
           <span className="text-xs text-gray-400">Messages</span>
         </button>
+
+        {/* Bug Report */}
+        <button
+          onClick={() => setShowBugReport(true)}
+          className="flex flex-col items-center gap-1 p-3 rounded-lg transition-all duration-200 hover:bg-[#4A5A70] active:scale-95 relative"
+        >
+          <div className="relative">
+            <AlertCircle className="h-6 w-6 text-white" />
+          </div>
+          <span className="text-xs text-gray-400">Report Bug</span>
+        </button>
       </div>
+
+      {/* Bug Report Modal */}
+      <BugReportModalMobile
+        isOpen={showBugReport}
+        onClose={() => setShowBugReport(false)}
+      />
     </div>
   );
 }

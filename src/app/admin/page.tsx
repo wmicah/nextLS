@@ -17,6 +17,10 @@ import {
   ArrowLeft,
   X,
   CheckCircle,
+  Bug,
+  Clock,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import PerformanceDashboard from "@/components/PerformanceDashboard";
@@ -62,6 +66,13 @@ export default function AdminDashboard() {
   const { data: stats } = trpc.admin.getStats.useQuery();
   const { data: deletionAnalytics } =
     trpc.user.getAccountDeletionAnalytics.useQuery();
+  const { data: bugReportsData, refetch: refetchBugReports } =
+    trpc.bugReports.list.useQuery({});
+  const updateBugStatusMutation = trpc.bugReports.updateStatus.useMutation({
+    onSuccess: () => {
+      refetchBugReports();
+    },
+  });
 
   const addResourceMutation = trpc.admin.addToMasterLibrary.useMutation({
     onSuccess: () => {
@@ -154,6 +165,7 @@ export default function AdminDashboard() {
     { id: "overview", label: "Overview", icon: TrendingUp },
     { id: "master-library", label: "Master Library", icon: BookOpen },
     { id: "users", label: "User Management", icon: Users },
+    { id: "bug-reports", label: "Bug Reports", icon: AlertTriangle },
     { id: "performance", label: "Performance", icon: TrendingUp },
     { id: "security", label: "Security", icon: Shield },
     { id: "analytics", label: "Account Analytics", icon: AlertTriangle },
@@ -680,6 +692,233 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "bug-reports" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Bug Reports</h2>
+              <p className="text-gray-400">
+                Review and manage bug reports submitted by users
+              </p>
+            </div>
+
+            {/* Bug Reports Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-[#1A1D1E] rounded-xl p-4 border border-[#4A5A70]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-sm">Total Reports</p>
+                    <p className="text-2xl font-bold text-white">
+                      {bugReportsData?.total || 0}
+                    </p>
+                  </div>
+                  <Bug className="w-8 h-8 text-[#4A5A70]" />
+                </div>
+              </div>
+              <div className="bg-[#1A1D1E] rounded-xl p-4 border border-[#4A5A70]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-sm">Open</p>
+                    <p className="text-2xl font-bold text-yellow-500">
+                      {bugReportsData?.bugReports?.filter(
+                        (b: any) => b.status === "OPEN"
+                      ).length || 0}
+                    </p>
+                  </div>
+                  <Clock className="w-8 h-8 text-yellow-500" />
+                </div>
+              </div>
+              <div className="bg-[#1A1D1E] rounded-xl p-4 border border-[#4A5A70]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-sm">In Progress</p>
+                    <p className="text-2xl font-bold text-blue-500">
+                      {bugReportsData?.bugReports?.filter(
+                        (b: any) => b.status === "IN_PROGRESS"
+                      ).length || 0}
+                    </p>
+                  </div>
+                  <Clock className="w-8 h-8 text-blue-500" />
+                </div>
+              </div>
+              <div className="bg-[#1A1D1E] rounded-xl p-4 border border-[#4A5A70]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-sm">Resolved</p>
+                    <p className="text-2xl font-bold text-green-500">
+                      {bugReportsData?.bugReports?.filter(
+                        (b: any) => b.status === "RESOLVED"
+                      ).length || 0}
+                    </p>
+                  </div>
+                  <CheckCircle2 className="w-8 h-8 text-green-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* Bug Reports List */}
+            <div className="bg-[#1A1D1E] rounded-xl border border-[#4A5A70]">
+              <div className="p-6">
+                <h3 className="text-xl font-bold mb-4">All Bug Reports</h3>
+                {bugReportsData?.bugReports &&
+                bugReportsData.bugReports.length > 0 ? (
+                  <div className="space-y-4">
+                    {bugReportsData.bugReports.map((report: any) => {
+                      const priorityColors: Record<string, string> = {
+                        CRITICAL: "bg-red-500",
+                        HIGH: "bg-orange-500",
+                        MEDIUM: "bg-yellow-500",
+                        LOW: "bg-green-500",
+                      };
+                      const statusColors: Record<string, string> = {
+                        OPEN: "bg-yellow-500",
+                        IN_PROGRESS: "bg-blue-500",
+                        RESOLVED: "bg-green-500",
+                        CLOSED: "bg-gray-500",
+                        DUPLICATE: "bg-purple-500",
+                      };
+
+                      return (
+                        <div
+                          key={report.id}
+                          className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="text-lg font-bold text-white">
+                                  {report.title}
+                                </h4>
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                                    priorityColors[report.priority] ||
+                                    "bg-gray-500"
+                                  }`}
+                                >
+                                  {report.priority}
+                                </span>
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                                    statusColors[report.status] || "bg-gray-500"
+                                  }`}
+                                >
+                                  {report.status}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-400 mb-2">
+                                Page:{" "}
+                                <span className="text-white">
+                                  {report.page}
+                                </span>
+                              </p>
+                              <p className="text-sm text-gray-400 mb-2">
+                                Device:{" "}
+                                <span className="text-white">
+                                  {report.device || "Not specified"}
+                                </span>
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Reported by:{" "}
+                                <span className="text-white">
+                                  {report.user?.name || report.user?.email} (
+                                  {report.userRole})
+                                </span>
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-400">
+                                {new Date(
+                                  report.createdAt
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mb-3">
+                            <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                              {report.description}
+                            </p>
+                          </div>
+
+                          {report.imageUrl && (
+                            <div className="mb-3">
+                              <img
+                                src={report.imageUrl}
+                                alt="Bug screenshot"
+                                className="max-w-md rounded-lg border border-[#4A5A70]"
+                              />
+                            </div>
+                          )}
+
+                          {report.videoUrl && (
+                            <div className="mb-3">
+                              <a
+                                href={report.videoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:underline text-sm"
+                              >
+                                View Video →
+                              </a>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2 mt-4">
+                            {report.status === "OPEN" && (
+                              <button
+                                onClick={() => {
+                                  updateBugStatusMutation.mutate({
+                                    id: report.id,
+                                    status: "IN_PROGRESS",
+                                  });
+                                }}
+                                disabled={updateBugStatusMutation.isPending}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+                              >
+                                Mark In Progress
+                              </button>
+                            )}
+                            {report.status === "IN_PROGRESS" && (
+                              <button
+                                onClick={() => {
+                                  updateBugStatusMutation.mutate({
+                                    id: report.id,
+                                    status: "RESOLVED",
+                                  });
+                                }}
+                                disabled={updateBugStatusMutation.isPending}
+                                className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+                              >
+                                Mark Resolved
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                updateBugStatusMutation.mutate({
+                                  id: report.id,
+                                  status: "CLOSED",
+                                });
+                              }}
+                              disabled={updateBugStatusMutation.isPending}
+                              className="px-3 py-1 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition-colors disabled:opacity-50"
+                            >
+                              Close
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Bug className="w-16 h-16 mx-auto mb-4 text-gray-500" />
+                    <p className="text-gray-400">No bug reports yet</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
