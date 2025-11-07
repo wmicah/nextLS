@@ -21,6 +21,7 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  Loader2,
 } from "lucide-react";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import PerformanceDashboard from "@/components/PerformanceDashboard";
@@ -30,6 +31,77 @@ import type { OurFileRouter } from "@/app/api/uploadthing/core";
 import { Youtube } from "lucide-react";
 import { isYouTubeUrl } from "@/lib/youtube-utils";
 import { extractYouTubeVideoId, getYouTubeThumbnail } from "@/lib/youtube";
+
+// Component for sending bug report announcement
+function SendBugReportAnnouncementButton() {
+  const [isSending, setIsSending] = useState(false);
+  const [result, setResult] = useState<{
+    success: number;
+    failed: number;
+  } | null>(null);
+
+  const sendAnnouncementMutation =
+    trpc.admin.sendBugReportAnnouncement.useMutation({
+      onSuccess: data => {
+        setIsSending(false);
+        setResult({ success: data.success, failed: data.failed });
+        alert(
+          `Announcement sent! ${data.success} emails sent successfully, ${data.failed} failed.`
+        );
+      },
+      onError: error => {
+        setIsSending(false);
+        console.error("Failed to send announcement:", error);
+        alert(`Failed to send announcement: ${error.message}`);
+      },
+    });
+
+  const handleSend = () => {
+    if (
+      !confirm(
+        "Are you sure you want to send this announcement to ALL users? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setIsSending(true);
+    setResult(null);
+    sendAnnouncementMutation.mutate();
+  };
+
+  return (
+    <div>
+      <button
+        onClick={handleSend}
+        disabled={isSending}
+        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+      >
+        {isSending ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Sending...
+          </>
+        ) : (
+          <>
+            <AlertTriangle className="w-4 h-4" />
+            Send Bug Report Announcement
+          </>
+        )}
+      </button>
+      {result && (
+        <div className="mt-3 text-sm">
+          <p className="text-green-400">
+            ✓ {result.success} emails sent successfully
+          </p>
+          {result.failed > 0 && (
+            <p className="text-red-400">✗ {result.failed} emails failed</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -924,11 +996,34 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === "settings" && (
-          <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
-            <h2 className="text-xl font-bold mb-4">Admin Settings</h2>
-            <p className="text-gray-400">
-              Admin settings features coming soon...
-            </p>
+          <div className="space-y-6">
+            <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+              <h2 className="text-xl font-bold mb-4">Admin Settings</h2>
+              <p className="text-gray-400 mb-6">
+                Admin settings features coming soon...
+              </p>
+            </div>
+
+            {/* Email Announcements */}
+            <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+              <h2 className="text-xl font-bold mb-4">Email Announcements</h2>
+              <p className="text-gray-400 mb-4">
+                Send website-wide announcements to all users
+              </p>
+
+              <div className="space-y-4">
+                <div className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Bug Report Feature Announcement
+                  </h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Send an email to all users announcing the new bug report
+                    feature and how to use it.
+                  </p>
+                  <SendBugReportAnnouncementButton />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

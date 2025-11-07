@@ -999,4 +999,98 @@ export const completeEmailTemplates = {
       </div>
     `,
   }),
+
+  // BUG REPORT ANNOUNCEMENT
+  bugReportAnnouncement: (userName: string) => ({
+    subject: "New Feature: Report Bugs & Help Us Improve!",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+            New Feature Available!
+          </h1>
+          <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">
+            Bug Reporting System
+          </p>
+        </div>
+        
+        <div style="padding: 40px 30px;">
+          <h2 style="color: #2D3748; margin: 0 0 20px 0; font-size: 24px;">
+            Hi ${userName}!
+          </h2>
+          
+          <p style="color: #4A5568; line-height: 1.6; margin: 0 0 20px 0; font-size: 16px;">
+            We're excited to announce a new feature that makes it easier than ever to help us improve the platform!
+          </p>
+          
+          <div style="background: #F7FAFC; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+            <h3 style="color: #2D3748; margin: 0 0 15px 0; font-size: 20px; font-weight: bold;">
+             Bug Report Feature
+            </h3>
+            <p style="color: #4A5568; line-height: 1.6; margin: 0 0 15px 0; font-size: 16px;">
+              Found a bug or issue? We've made it super easy to report it! Our new bug reporting system allows you to quickly document and submit any problems you encounter.
+            </p>
+          </div>
+          
+          <div style="background: #F7FAFC; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #2D3748; margin: 0 0 15px 0; font-size: 18px;">
+              How to Report a Bug:
+            </h3>
+            <ol style="color: #4A5568; margin: 0; padding-left: 20px; line-height: 1.8;">
+              <li style="margin-bottom: 10px;">
+                <strong>On Desktop:</strong> Look for the red bug icon button in the bottom right corner of your screen (next to the AI chat button)
+              </li>
+              <li style="margin-bottom: 10px;">
+                <strong>On Mobile:</strong> Tap the "Report Bug" button in the bottom navigation bar
+              </li>
+              <li style="margin-bottom: 10px;">
+                Fill out the form with:
+                <ul style="margin-top: 8px; padding-left: 20px;">
+                  <li>Title and description of the issue</li>
+                  <li>Page where you found the bug (auto-detected)</li>
+                  <li>Your device information (e.g., "iPhone 15 Pro", "Samsung Galaxy S24")</li>
+                  <li>Optional: Screenshot or video showing the bug</li>
+                  <li>Optional: Priority level (Low, Medium, High, Critical)</li>
+                </ul>
+              </li>
+              <li style="margin-bottom: 10px;">
+                Click "Submit Bug Report" and you're done!
+              </li>
+            </ol>
+          </div>
+          
+          <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+            <p style="color: #92400E; margin: 0; font-size: 14px; line-height: 1.6;">
+              <strong>Tip:</strong> The more details you provide (especially screenshots or videos), the faster we can fix the issue!
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${
+              process.env.NEXT_PUBLIC_APP_URL || "https://nxlvlcoach.com"
+            }/dashboard" 
+               style="background: #ef4444; color: #ffffff; padding: 15px 30px; text-decoration: none; 
+                      border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+              Go to Dashboard
+            </a>
+          </div>
+          
+          <p style="color: #718096; font-size: 14px; margin: 30px 0 0 0; line-height: 1.6;">
+            Your feedback helps us make NextLevel Coaching better for everyone. Thank you for being part of our community!
+          </p>
+          
+          <p style="color: #718096; font-size: 14px; margin: 10px 0 0 0;">
+            Best regards,<br>
+            The NextLevel Coaching Team
+          </p>
+        </div>
+        
+        <div style="background: #F7FAFC; padding: 20px; text-align: center; border-top: 1px solid #E2E8F0;">
+          <p style="color: #718096; font-size: 12px; margin: 0;">
+            © 2025 NextLevel Coaching. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+  }),
 };

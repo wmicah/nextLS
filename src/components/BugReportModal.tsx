@@ -348,7 +348,7 @@ export default function BugReportModal({
               {!imageUrl && !videoUrl && (
                 <>
                   <div className="flex-1">
-                    <UploadButton<OurFileRouter>
+                    <UploadButton<OurFileRouter, "bugReportImageUploader">
                       endpoint="bugReportImageUploader"
                       onUploadBegin={() => {
                         setIsUploading(true);
@@ -400,7 +400,7 @@ export default function BugReportModal({
                     />
                   </div>
                   <div className="flex-1">
-                    <UploadButton<OurFileRouter>
+                    <UploadButton<OurFileRouter, "feedbackVideoUploader">
                       endpoint="feedbackVideoUploader"
                       onUploadBegin={() => {
                         setIsUploading(true);

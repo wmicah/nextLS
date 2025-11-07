@@ -2,8 +2,9 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { db } from "@/db";
-import { publicProcedure } from "./trpc";
+import { publicProcedure, router } from "./trpc";
 import { validateAdminAccess, logAdminAction } from "@/lib/admin-security";
+import { CompleteEmailService } from "@/lib/complete-email-service";
 
 // Enhanced admin role check helper with audit logging
 const requireAdmin = async (userId: string, action?: string) => {
@@ -575,5 +576,37 @@ export const adminRouter = {
     });
 
     return auditLogs;
+  }),
+
+  // Send bug report announcement to all users
+  sendBugReportAnnouncement: publicProcedure.mutation(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+
+    // Check if user is admin
+    await requireAdmin(user.id, "send_bug_report_announcement");
+
+    const emailService = CompleteEmailService.getInstance();
+    const result = await emailService.sendBugReportAnnouncement();
+
+    // Log admin action
+    await logAdminAction(
+      "sent_bug_report_announcement",
+      {
+        emailsSent: result.success,
+        emailsFailed: result.failed,
+      },
+      user.id
+    );
+
+    return {
+      success: result.success,
+      failed: result.failed,
+      message: `Announcement sent to ${result.success} users. ${result.failed} failed.`,
+    };
   }),
 };

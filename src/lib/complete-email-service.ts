@@ -649,6 +649,71 @@ export class CompleteEmailService {
       return false;
     }
   }
+
+  // SEND BUG REPORT ANNOUNCEMENT TO ALL USERS
+  async sendBugReportAnnouncement(): Promise<{
+    success: number;
+    failed: number;
+  }> {
+    try {
+      console.log(" Starting bug report announcement email process...");
+
+      // Get all users with email addresses
+      const allUsers = await db.user.findMany({
+        where: {
+          email: { not: null as any },
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+
+      console.log(`📊 Found ${allUsers.length} users to notify`);
+
+      let success = 0;
+      let failed = 0;
+
+      for (const user of allUsers) {
+        try {
+          const template = completeEmailTemplates.bugReportAnnouncement(
+            user.name || "User"
+          );
+
+          const result = await resend.emails.send({
+            from: this.fromEmail,
+            to: [user.email!],
+            subject: template.subject,
+            html: template.html,
+          });
+
+          if (result.error) {
+            failed++;
+            console.error(`❌ Failed to send to ${user.email}:`, result.error);
+          } else {
+            success++;
+            console.log(`✅ Bug report announcement sent to ${user.email}`);
+          }
+
+          // Add a small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          failed++;
+          console.error(`❌ Failed to send to ${user.email}:`, error);
+        }
+      }
+
+      console.log(
+        `✅ Bug report announcement process completed: ${success} sent, ${failed} failed`
+      );
+
+      return { success, failed };
+    } catch (error) {
+      console.error("❌ Error in bug report announcement service:", error);
+      return { success: 0, failed: 0 };
+    }
+  }
 }
 
 // Export singleton instance
