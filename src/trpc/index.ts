@@ -44,6 +44,7 @@ import { sidebarRouter } from "./routers/sidebar.router";
 import { blockedTimesRouter } from "./routers/blockedTimes.router";
 import { notesRouter } from "./routers/notes.router";
 import { exerciseCompletionRouter } from "./routers/exerciseCompletion.router";
+import { bugReportsRouter } from "./routers/bugReports.router";
 // import { subscriptionRouter } from "./routers/subscription.router";
 
 /**
@@ -85,6 +86,7 @@ export const appRouter = router({
   blockedTimes: blockedTimesRouter,
   notes: notesRouter,
   exerciseCompletion: exerciseCompletionRouter,
+  bugReports: bugReportsRouter,
   // subscription: subscriptionRouter,
 
   // Admin router

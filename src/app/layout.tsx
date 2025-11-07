@@ -9,6 +9,7 @@ import ConditionalNavbar from "@/components/ConditionalNavbar";
 import Toast from "@/components/common/Toast";
 import ChatbotWrapper from "@/components/Chatbot/ChatbotWrapper";
 import { ChatbotProvider } from "@/components/Chatbot/ChatbotContext";
+import ClientBugReportButton from "@/components/ClientBugReportButton";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 // Lesson reminder service will be initialized via API route instead of layout
 import MessagingServiceProvider from "@/components/MessagingServiceProvider";
@@ -298,6 +299,7 @@ export default function RootLayout({
                     {children}
                     <Toast />
                     <ChatbotWrapper />
+                    <ClientBugReportButton />
                     <CustomAnalytics />
                     <ServiceWorkerRegistration />
                   </PWAProvider>

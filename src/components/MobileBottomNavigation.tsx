@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
-import { MessageCircle, Bell, Bot } from "lucide-react";
+import { MessageCircle, Bell, Bot, AlertCircle } from "lucide-react";
 import { useChatbot } from "./Chatbot/ChatbotContext";
+import BugReportModalMobile from "./BugReportModalMobile";
 
 export default function MobileBottomNavigation() {
   const router = useRouter();
   const { setIsOpen } = useChatbot();
+  const [showBugReport, setShowBugReport] = useState(false);
 
   // Get unread counts with polling
   const { data: unreadMessages = 0, isLoading: messagesLoading } =
@@ -95,7 +98,24 @@ export default function MobileBottomNavigation() {
           </div>
           <span className="text-xs text-white font-medium">AI Chat</span>
         </button>
+
+        {/* Bug Report */}
+        <button
+          onClick={() => setShowBugReport(true)}
+          className="flex flex-col items-center gap-1 p-3 rounded-lg transition-all duration-200 hover:bg-[#4A5A70] active:scale-95 relative"
+        >
+          <div className="relative">
+            <AlertCircle className="h-6 w-6 text-white" />
+          </div>
+          <span className="text-xs text-white font-medium">Report Bug</span>
+        </button>
       </div>
+
+      {/* Bug Report Modal */}
+      <BugReportModalMobile
+        isOpen={showBugReport}
+        onClose={() => setShowBugReport(false)}
+      />
     </div>
   );
 }

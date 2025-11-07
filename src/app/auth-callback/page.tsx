@@ -97,6 +97,63 @@ function AuthCallbackContent() {
       }
     }
 
+    // Get origin parameter from URL to redirect back to original page
+    const origin = searchParams.get("origin");
+    console.log("🔄 Auth callback: origin parameter =", origin);
+
+    // Valid coach routes that can be redirected to (with and without leading slash)
+    const validCoachRoutes = [
+      "/dashboard",
+      "/clients",
+      "/programs",
+      "/schedule",
+      "/messages",
+      "/library",
+      "/videos",
+      "/notifications",
+      "/settings",
+      "/analytics",
+      "/organization",
+      "dashboard",
+      "clients",
+      "programs",
+      "schedule",
+      "messages",
+      "library",
+      "videos",
+      "notifications",
+      "settings",
+      "analytics",
+      "organization",
+    ];
+
+    // Helper function to get redirect destination
+    const getRedirectDestination = (userRole: string | null | undefined) => {
+      // Normalize origin (ensure it starts with /)
+      const normalizedOrigin = origin?.startsWith("/") ? origin : `/${origin}`;
+
+      if (origin && validCoachRoutes.includes(origin)) {
+        // If origin is a valid coach route and user is COACH, redirect there
+        if (userRole === "COACH") {
+          console.log(
+            "🔄 Auth callback: Redirecting to origin:",
+            normalizedOrigin
+          );
+          return normalizedOrigin;
+        }
+      }
+      // Default redirects based on role
+      if (userRole === "COACH") {
+        console.log(
+          "🔄 Auth callback: No valid origin, defaulting to /dashboard"
+        );
+        return "/dashboard";
+      } else if (userRole === "CLIENT") {
+        return "/client-dashboard";
+      }
+      return "/role-selection";
+    };
+
     if (
       data?.success &&
       hasCheckedInviteCode &&
@@ -113,8 +170,9 @@ function AuthCallbackContent() {
         router.push("/client-dashboard");
         return;
       } else if (userRole === "COACH") {
-        console.log("➡️ Going to COACH dashboard");
-        router.push("/dashboard");
+        const destination = getRedirectDestination(userRole);
+        console.log("➡️ Going to COACH destination:", destination);
+        router.push(destination);
         return;
       }
       // If still no role, fall through to role selection
@@ -141,8 +199,9 @@ function AuthCallbackContent() {
         console.log("➡️ User role is:", userRole);
 
         if (userRole === "COACH") {
-          console.log("➡️ Going to COACH dashboard");
-          router.push("/dashboard");
+          const destination = getRedirectDestination(userRole);
+          console.log("➡️ Going to COACH destination:", destination);
+          router.push(destination);
         } else if (userRole === "CLIENT") {
           console.log(
             "➡️ CLIENT role detected, redirecting to client dashboard"

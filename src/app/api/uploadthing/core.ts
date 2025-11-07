@@ -377,6 +377,55 @@ export const ourFileRouter = {
 
       return { uploadedBy: metadata.userId };
     }),
+
+  // Bug report image uploader
+  bugReportImageUploader: f({
+    image: { maxFileSize: "16MB", maxFileCount: 1 },
+  })
+    .middleware(async ({ req, files }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id)
+        throw new Error("Unauthorized - Please log in to upload files");
+
+      if (!uploadRateLimiter.canUpload(user.id)) {
+        throw new Error("Rate limit exceeded - too many uploads");
+      }
+
+      for (const file of files) {
+        const fileData: FileValidationInput = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified,
+        };
+
+        const validation = validateFileSecurity(fileData, "image");
+
+        if (!validation.isValid) {
+          throw new Error(
+            `File security validation failed: ${validation.errors.join(", ")}`
+          );
+        }
+
+        if (validation.riskLevel === "high") {
+          throw new Error("File rejected due to security risk");
+        }
+      }
+
+      return {
+        userId: user.id,
+        userEmail: user.email,
+        timestamp: new Date().toISOString(),
+      };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log(
+        `SECURITY_AUDIT: User ${metadata.userEmail} uploaded bug report image: ${file.name} at ${metadata.timestamp}`
+      );
+      return { uploadedBy: metadata.userId };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

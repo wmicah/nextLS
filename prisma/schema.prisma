@@ -81,6 +81,8 @@ model User {
   blockedTimes             BlockedTime[]
   clientNotes              ClientNote[]
   clientNoteHistory        ClientNoteHistory[]
+  bugReports               BugReport[]              @relation("UserBugReports")
+  resolvedBugReports       BugReport[]              @relation("ResolvedBugReports")
 
   @@map("users")
 }
@@ -1315,4 +1317,50 @@ enum InvoiceStatus {
   PAID
   VOID
   UNCOLLECTIBLE
+}
+
+// Bug Reporting System
+model BugReport {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  page        String        // Page where bug was found
+  priority    BugPriority   @default(MEDIUM)
+  status      BugStatus     @default(OPEN)
+  userId      String
+  userRole    UserRole      // COACH or CLIENT
+  imageUrl    String?
+  videoUrl    String?
+  device      String?       // Specific device name (e.g., "iPhone 15 Pro", "Samsung Galaxy S24", "MacBook Pro 16-inch")
+  userAgent   String?
+  browserInfo String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  resolution  String?
+  
+  user        User          @relation("UserBugReports", fields: [userId], references: [id], onDelete: Cascade)
+  resolver    User?         @relation("ResolvedBugReports", fields: [resolvedBy], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@map("bug_reports")
+}
+
+enum BugPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  DUPLICATE
 }
