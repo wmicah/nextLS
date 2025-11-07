@@ -401,7 +401,7 @@ export const ourFileRouter = {
           lastModified: file.lastModified,
         };
 
-        const validation = validateFileSecurity(fileData, "image");
+        const validation = validateFileSecurity(fileData, "messageAttachment");
 
         if (!validation.isValid) {
           throw new Error(

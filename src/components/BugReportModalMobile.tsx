@@ -336,7 +336,7 @@ export default function BugReportModalMobile({
               {/* Image Upload */}
               {!imageUrl && !videoUrl && (
                 <>
-                  <UploadButton<OurFileRouter>
+                  <UploadButton<OurFileRouter, "bugReportImageUploader">
                     endpoint="bugReportImageUploader"
                     onUploadBegin={() => {
                       setIsUploading(true);
@@ -372,7 +372,7 @@ export default function BugReportModalMobile({
                       ),
                     }}
                   />
-                  <UploadButton<OurFileRouter>
+                  <UploadButton<OurFileRouter, "feedbackVideoUploader">
                     endpoint="feedbackVideoUploader"
                     onUploadBegin={() => {
                       setIsUploading(true);
