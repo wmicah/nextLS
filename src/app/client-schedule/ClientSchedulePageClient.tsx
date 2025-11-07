@@ -41,8 +41,8 @@ import SwapRequests from "@/components/SwapRequests";
 
 function ClientSchedulePageClient() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showRequestModal, setShowRequestModal] = useState(false);
   const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [showSwapRequests, setShowSwapRequests] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -359,9 +359,10 @@ function ClientSchedulePageClient() {
         utils.clientRouter.getCoachScheduleForClient.refetch();
         utils.clientRouter.getClientLessons.refetch();
         utils.clientRouter.getClientUpcomingLessons.refetch();
-        setShowRequestModal(false);
+        setShowDayOverviewModal(false);
         setRequestForm({ date: "", time: "", reason: "", coachId: "" });
         setSelectedDate(null);
+        setSelectedTimeSlot("");
       },
       onError: error => {
         alert(`Error requesting schedule change: ${error.message}`);
@@ -514,11 +515,19 @@ function ClientSchedulePageClient() {
   };
 
   const handleDateClick = (date: Date) => {
+    let defaultCoachId = requestForm.coachId;
+    if (isInOrganization && orgScheduleData?.coaches?.length) {
+      defaultCoachId = defaultCoachId || orgScheduleData.coaches[0]?.id || "";
+    }
+
     setSelectedDate(date);
     setRequestForm({
       ...requestForm,
       date: format(date, "yyyy-MM-dd"),
+      time: "",
+      coachId: defaultCoachId || "",
     });
+    setSelectedTimeSlot("");
     setShowDayOverviewModal(true);
   };
 
@@ -540,244 +549,6 @@ function ClientSchedulePageClient() {
       coachId: requestForm.coachId || undefined, // Include selected coach if in organization
     });
   };
-
-  // Generate time slots based on selected coach's working hours and interval
-  const generateTimeSlots = () => {
-    // Use selected coach if in organization, otherwise use default coach
-    let selectedCoach = coachProfile;
-    let orgCoach:
-      | {
-          id: string;
-          name: string | null;
-          email: string;
-          workingDays: string[];
-          workingHoursStart: string | null;
-          workingHoursEnd: string | null;
-          timeSlotInterval: number;
-        }
-      | undefined;
-
-    if (isInOrganization && requestForm.coachId && orgScheduleData) {
-      orgCoach = orgScheduleData.coaches.find(
-        c => c.id === requestForm.coachId
-      );
-    }
-
-    // Use org coach data if available, otherwise fall back to coachProfile
-    const startTime =
-      orgCoach?.workingHoursStart ||
-      selectedCoach?.workingHours?.startTime ||
-      "9:00 AM";
-    const endTime =
-      orgCoach?.workingHoursEnd ||
-      selectedCoach?.workingHours?.endTime ||
-      "8:00 PM";
-    const interval =
-      orgCoach?.timeSlotInterval ||
-      selectedCoach?.workingHours?.timeSlotInterval ||
-      60;
-    const workingDays = orgCoach?.workingDays ||
-      selectedCoach?.workingHours?.workingDays || [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-      ];
-
-    const slots = [];
-
-    // Check if the selected date is on a working day
-    if (requestForm.date) {
-      const selectedDate = new Date(requestForm.date);
-      const dayName = format(selectedDate, "EEEE");
-      if (!workingDays.includes(dayName)) {
-        return []; // No available slots on non-working days
-      }
-    }
-
-    // Parse start and end times
-    const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-
-    if (!startMatch || !endMatch) {
-      // Fallback to default hours with hourly slots
-      for (let hour = 9; hour < 20; hour++) {
-        const displayHour = hour > 12 ? hour - 12 : hour;
-        const period = hour >= 12 ? "PM" : "AM";
-        slots.push(`${displayHour}:00 ${period}`);
-      }
-      return slots;
-    }
-
-    const [, startHour, startMinute, startPeriod] = startMatch;
-    const [, endHour, endMinute, endPeriod] = endMatch;
-
-    // Convert to 24-hour format and total minutes
-    let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
-    if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
-      startTotalMinutes += 12 * 60;
-    if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
-      startTotalMinutes = parseInt(startMinute);
-
-    let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
-    if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
-      endTotalMinutes += 12 * 60;
-    if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
-      endTotalMinutes = parseInt(endMinute);
-
-    // Get current time to filter out past slots
-    const now = new Date();
-    const isToday =
-      requestForm.date && format(now, "yyyy-MM-dd") === requestForm.date;
-    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-
-    // Generate slots based on interval
-    for (
-      let totalMinutes = startTotalMinutes;
-      totalMinutes < endTotalMinutes;
-      totalMinutes += interval
-    ) {
-      // Skip past time slots for today
-      if (isToday && totalMinutes <= currentTotalMinutes) {
-        continue;
-      }
-
-      const hour24 = Math.floor(totalMinutes / 60);
-      const minute = totalMinutes % 60;
-
-      const displayHour =
-        hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-      const period = hour24 >= 12 ? "PM" : "AM";
-      const minuteStr = minute.toString().padStart(2, "0");
-
-      slots.push(`${displayHour}:${minuteStr} ${period}`);
-    }
-
-    return slots;
-  };
-
-  const generateAvailableTimeSlots = (date: Date) => {
-    console.log("=== GENERATING TIME SLOTS ===");
-    console.log("Date:", date);
-    console.log("Coach profile:", coachProfile);
-
-    const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
-    const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
-    const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
-    const slots = [];
-
-    // Get blocked times for this date
-    const dayBlockedTimes = getBlockedTimesForDate(date);
-
-    // Helper function to check if a time slot conflicts with blocked times
-    const isTimeSlotBlocked = (slotTime: string) => {
-      return dayBlockedTimes.some((blockedTime: any) => {
-        if (blockedTime.isAllDay) return true;
-
-        const blockedStart = new Date(blockedTime.startTime);
-        const blockedEnd = new Date(blockedTime.endTime);
-
-        // Parse the slot time (e.g., "2:00 PM")
-        const slotMatch = slotTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-        if (!slotMatch) return false;
-
-        const [, hour, minute, period] = slotMatch;
-        let hour24 = parseInt(hour);
-        if (period.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
-        if (period.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
-
-        const slotDate = new Date(date);
-        slotDate.setHours(hour24, parseInt(minute), 0, 0);
-
-        return slotDate >= blockedStart && slotDate < blockedEnd;
-      });
-    };
-
-    console.log("Start time:", startTime);
-    console.log("End time:", endTime);
-    console.log("Interval:", interval);
-
-    // Parse start and end times
-    const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-
-    if (!startMatch || !endMatch) {
-      // Fallback to default hours with hourly slots
-      for (let hour = 9; hour < 20; hour++) {
-        const displayHour = hour > 12 ? hour - 12 : hour;
-        const period = hour >= 12 ? "PM" : "AM";
-        slots.push(`${displayHour}:00 ${period}`);
-      }
-      return slots;
-    }
-
-    const [, startHour, startMinute, startPeriod] = startMatch;
-    const [, endHour, endMinute, endPeriod] = endMatch;
-
-    // Convert to 24-hour format and total minutes
-    let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
-    if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
-      startTotalMinutes += 12 * 60;
-    if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
-      startTotalMinutes = parseInt(startMinute);
-
-    let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
-    if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
-      endTotalMinutes += 12 * 60;
-    if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
-      endTotalMinutes = parseInt(endMinute);
-
-    // Get current time to filter out past slots for today
-    const now = new Date();
-    const isToday = format(now, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
-    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-
-    // Get existing lessons for this date
-    const existingLessons = getLessonsForDate(date);
-    const bookedTimes = existingLessons.map((lesson: any) => {
-      const lessonDate = new Date(lesson.date);
-      return format(lessonDate, "h:mm a");
-    });
-
-    // Generate slots based on interval
-    for (
-      let totalMinutes = startTotalMinutes;
-      totalMinutes < endTotalMinutes;
-      totalMinutes += interval
-    ) {
-      // Skip past time slots for today
-      if (isToday && totalMinutes <= currentTotalMinutes) {
-        continue;
-      }
-
-      const hour24 = Math.floor(totalMinutes / 60);
-      const minute = totalMinutes % 60;
-
-      const displayHour =
-        hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-      const period = hour24 >= 12 ? "PM" : "AM";
-      const minuteStr = minute.toString().padStart(2, "0");
-      const timeSlot = `${displayHour}:${minuteStr} ${period}`;
-
-      // Only add if not already booked and not blocked
-      if (!bookedTimes.includes(timeSlot)) {
-        const isBlocked = isTimeSlotBlocked(timeSlot);
-        // For clients, don't show blocked slots at all
-        if (!isBlocked) {
-          slots.push(timeSlot);
-        }
-      }
-    }
-
-    console.log("Generated slots:", slots);
-    console.log("Number of slots:", slots.length);
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -803,6 +574,145 @@ function ClientSchedulePageClient() {
       default:
         return "bg-blue-500/40 text-blue-100 border-blue-400";
     }
+  };
+
+  const generateAvailableTimeSlots = (date: Date) => {
+    let orgCoach:
+      | {
+          id: string;
+          name: string | null;
+          email: string;
+          workingDays: string[];
+          workingHoursStart: string | null;
+          workingHoursEnd: string | null;
+          timeSlotInterval: number;
+        }
+      | undefined;
+
+    if (isInOrganization && requestForm.coachId && orgScheduleData) {
+      orgCoach = orgScheduleData.coaches.find(
+        coach => coach.id === requestForm.coachId
+      );
+    }
+
+    const startTime =
+      orgCoach?.workingHoursStart ||
+      coachProfile?.workingHours?.startTime ||
+      "9:00 AM";
+    const endTime =
+      orgCoach?.workingHoursEnd ||
+      coachProfile?.workingHours?.endTime ||
+      "6:00 PM";
+    const interval =
+      orgCoach?.timeSlotInterval ||
+      coachProfile?.workingHours?.timeSlotInterval ||
+      60;
+    const slots = [];
+
+    // Get blocked times for this date
+    const dayBlockedTimes = getBlockedTimesForDate(date);
+
+    // Get existing lessons for this date
+    const existingLessons = (() => {
+      if (isInOrganization && orgScheduleData) {
+        const targetCoachId = requestForm.coachId || orgCoach?.id;
+        return orgScheduleData.events.filter(event => {
+          if (targetCoachId && event.coachId !== targetCoachId) {
+            return false;
+          }
+
+          const eventDate = toZonedTime(event.date, getUserTimezone());
+          return (
+            eventDate.getFullYear() === date.getFullYear() &&
+            eventDate.getMonth() === date.getMonth() &&
+            eventDate.getDate() === date.getDate()
+          );
+        });
+      }
+
+      return getLessonsForDate(date);
+    })();
+
+    // Convert start and end times to 24-hour format for easier comparison
+    const parseTimeString = (timeString: string) => {
+      const match = timeString.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!match) {
+        return { hour: 0, minute: 0 };
+      }
+
+      let hour = parseInt(match[1], 10);
+      const minute = parseInt(match[2], 10);
+      const period = match[3].toUpperCase();
+
+      if (period === "PM" && hour !== 12) hour += 12;
+      if (period === "AM" && hour === 12) hour = 0;
+
+      return { hour, minute };
+    };
+
+    const { hour: startHour, minute: startMinute } = parseTimeString(startTime);
+    const { hour: endHour, minute: endMinute } = parseTimeString(endTime);
+
+    // Calculate the total minutes for the day
+    const totalMinutes = (endHour - startHour) * 60 + (endMinute - startMinute);
+
+    // Calculate the number of intervals
+    const numIntervals = totalMinutes / interval;
+
+    // Iterate through intervals to find available slots
+    for (let i = 0; i < numIntervals; i++) {
+      const currentTime = new Date(date);
+      const totalMinutesFromStart = startMinute + i * interval;
+      const slotHour = startHour + Math.floor(totalMinutesFromStart / 60);
+      const slotMinute = totalMinutesFromStart % 60;
+      currentTime.setHours(slotHour, slotMinute, 0, 0);
+
+      // Check if the current time is blocked
+      const isBlocked = dayBlockedTimes.some(blockedTime => {
+        const blockedStartTime = new Date(blockedTime.startTime);
+        const blockedEndTime = new Date(blockedTime.endTime);
+
+        // Normalize dates to compare only the date part (ignore time)
+        const currentDateOnly = new Date(
+          currentTime.getFullYear(),
+          currentTime.getMonth(),
+          currentTime.getDate()
+        );
+        const blockedStartDateOnly = new Date(
+          blockedStartTime.getFullYear(),
+          blockedStartTime.getMonth(),
+          blockedStartTime.getDate()
+        );
+        const blockedEndDateOnly = new Date(
+          blockedEndTime.getFullYear(),
+          blockedEndTime.getMonth(),
+          blockedEndTime.getDate()
+        );
+
+        return (
+          currentDateOnly >= blockedStartDateOnly &&
+          currentDateOnly <= blockedEndDateOnly
+        );
+      });
+
+      // Check if the current time is already booked
+      const isBooked = existingLessons.some(lesson => {
+        const lessonTime = toZonedTime(lesson.date, getUserTimezone());
+        return (
+          lessonTime.getFullYear() === currentTime.getFullYear() &&
+          lessonTime.getMonth() === currentTime.getMonth() &&
+          lessonTime.getDate() === currentTime.getDate() &&
+          lessonTime.getHours() === currentTime.getHours() &&
+          lessonTime.getMinutes() === currentTime.getMinutes()
+        );
+      });
+
+      if (!isBlocked && !isBooked) {
+        slots.push(formatTimeInUserTimezone(currentTime.toISOString()));
+      }
+    }
+
+    return slots;
   };
 
   return (
@@ -832,17 +742,19 @@ function ClientSchedulePageClient() {
               </div>
             </div>
             <div className="flex gap-3 w-full md:w-auto">
-              <button
-                onClick={() => setShowRequestModal(true)}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation"
+              <div
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium border"
                 style={{
-                  backgroundColor: "#10B981",
-                  color: "#FFFFFF",
+                  backgroundColor: "rgba(16, 185, 129, 0.08)",
+                  borderColor: "rgba(16, 185, 129, 0.35)",
+                  color: "#4AE3B5",
                 }}
               >
-                <Plus className="h-4 w-4" />
-                <span className="whitespace-nowrap">Request A Lesson</span>
-              </button>
+                <Calendar className="h-4 w-4" />
+                <span className="whitespace-nowrap">
+                  Pick a day and time to request
+                </span>
+              </div>
               <button
                 onClick={() => setShowSwapRequests(true)}
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation"
@@ -1258,191 +1170,6 @@ function ClientSchedulePageClient() {
             </div>
           </div>
 
-          {/* Request Schedule Change Modal */}
-          {showRequestModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div
-                className="rounded-2xl shadow-xl border p-6 w-full max-w-md mx-4"
-                style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-white">
-                    Lesson Request
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setShowRequestModal(false);
-                      setRequestForm({
-                        date: "",
-                        time: "",
-                        reason: "",
-                        coachId: "",
-                      });
-                    }}
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Coach selector - only show in organization mode */}
-                  {isInOrganization &&
-                    orgScheduleData &&
-                    orgScheduleData.coaches.length > 1 && (
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-2">
-                          Select Coach
-                        </label>
-                        <select
-                          value={requestForm.coachId}
-                          onChange={e => {
-                            setRequestForm({
-                              ...requestForm,
-                              coachId: e.target.value,
-                              time: "", // Reset time when coach changes
-                            });
-                          }}
-                          className="w-full p-2 rounded-lg border text-white"
-                          style={{
-                            backgroundColor: "#2A2F2F",
-                            borderColor: "#606364",
-                          }}
-                        >
-                          <option value="">Select a coach</option>
-                          {orgScheduleData.coaches.map(coach => (
-                            <option key={coach.id} value={coach.id}>
-                              {coach.name}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Choose which coach you'd like to request a lesson from
-                        </p>
-                      </div>
-                    )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Date
-                    </label>
-                    <input
-                      type="date"
-                      value={requestForm.date}
-                      onChange={e =>
-                        setRequestForm({
-                          ...requestForm,
-                          date: e.target.value,
-                          time: "", // Reset time when date changes
-                        })
-                      }
-                      className="w-full p-2 rounded-lg border text-white"
-                      style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Time
-                    </label>
-                    <select
-                      value={requestForm.time}
-                      onChange={e =>
-                        setRequestForm({
-                          ...requestForm,
-                          time: e.target.value,
-                        })
-                      }
-                      className="w-full p-2 rounded-lg border text-white"
-                      style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
-                      }}
-                    >
-                      <option value="">Select a time</option>
-                      {timeSlots.map(slot => (
-                        <option key={slot} value={slot}>
-                          {slot}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Reason (Optional)
-                    </label>
-                    <textarea
-                      value={requestForm.reason}
-                      onChange={e =>
-                        setRequestForm({
-                          ...requestForm,
-                          reason: e.target.value,
-                        })
-                      }
-                      placeholder="Why did you request this lesson?"
-                      rows={3}
-                      className="w-full p-2 rounded-lg border text-white"
-                      style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setShowRequestModal(false);
-                      setRequestForm({
-                        date: "",
-                        time: "",
-                        reason: "",
-                        coachId: "",
-                      });
-                    }}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
-                    style={{
-                      backgroundColor: "transparent",
-                      borderColor: "#606364",
-                      color: "#FFFFFF",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleRequestScheduleChange}
-                    disabled={requestScheduleChangeMutation.isPending}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{
-                      backgroundColor: "#10B981",
-                      color: "#FFFFFF",
-                    }}
-                  >
-                    {requestScheduleChangeMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                        Requesting...
-                      </>
-                    ) : (
-                      <>
-                        <Calendar className="h-4 w-4" />
-                        Request
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Day Overview Modal */}
           {showDayOverviewModal && selectedDate && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1468,6 +1195,8 @@ function ClientSchedulePageClient() {
                     onClick={() => {
                       setShowDayOverviewModal(false);
                       setSelectedDate(null);
+                      setSelectedTimeSlot("");
+                      setSelectedSwitchLesson(null);
                     }}
                     className="text-gray-400 hover:text-white transition-colors"
                   >
@@ -1639,49 +1368,139 @@ function ClientSchedulePageClient() {
                   {(() => {
                     const availableSlots =
                       generateAvailableTimeSlots(selectedDate);
-                    console.log("Available slots:", availableSlots);
-                    console.log("Coach profile:", coachProfile);
-                    return availableSlots.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {availableSlots.map((slot, index) => (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              console.log("Time slot clicked:", slot);
-                              console.log("Current requestForm:", requestForm);
 
-                              // Set the time first, then open modal after a brief delay to ensure state update
-                              setRequestForm({
-                                ...requestForm,
-                                time: slot,
-                              });
+                    if (availableSlots.length === 0) {
+                      return (
+                        <div className="text-center py-6">
+                          <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                          <p className="text-gray-400">
+                            No available time slots
+                          </p>
+                          <p className="text-gray-500 text-sm">
+                            All working hours are booked
+                          </p>
+                        </div>
+                      );
+                    }
 
-                              setShowDayOverviewModal(false);
+                    return (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-2">
+                          {availableSlots.map((slot, index) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                setSelectedTimeSlot(slot);
+                                setRequestForm({
+                                  ...requestForm,
+                                  time: slot,
+                                });
+                              }}
+                              className={`p-3 rounded-lg border text-center transition-all duration-200 ${
+                                selectedTimeSlot === slot
+                                  ? "bg-sky-500/20 border-sky-500 text-sky-100"
+                                  : "bg-[#2A2F2F] border-[#606364] text-white hover:bg-sky-500/10 hover:border-sky-500/40"
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </div>
 
-                              // Small delay to ensure state update before opening modal
-                              setTimeout(() => {
-                                console.log("Opening request modal");
-                                setShowRequestModal(true);
-                              }, 10);
-                            }}
-                            className="p-3 rounded-lg border text-center transition-all duration-200 hover:bg-sky-500/10 hover:border-sky-500/30"
-                            style={{
-                              backgroundColor: "#2A2F2F",
-                              borderColor: "#606364",
-                              color: "#FFFFFF",
-                            }}
-                          >
-                            {slot}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-6">
-                        <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                        <p className="text-gray-400">No available time slots</p>
-                        <p className="text-gray-500 text-sm">
-                          All working hours are booked
-                        </p>
+                        <div
+                          className="p-4 rounded-lg border"
+                          style={{
+                            backgroundColor: "#2A2F2F",
+                            borderColor: "#4A5A70",
+                          }}
+                        >
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-sm text-gray-400">
+                                Selected time
+                              </p>
+                              <p className="text-lg font-semibold text-white">
+                                {selectedTimeSlot || "Choose a time above"}
+                              </p>
+                            </div>
+
+                            {isInOrganization && orgScheduleData ? (
+                              <div>
+                                <label className="block text-xs uppercase tracking-wide text-gray-400 mb-1">
+                                  Which coach?
+                                </label>
+                                <select
+                                  value={requestForm.coachId}
+                                  onChange={e =>
+                                    setRequestForm({
+                                      ...requestForm,
+                                      coachId: e.target.value,
+                                    })
+                                  }
+                                  className="w-full p-2 rounded-lg border text-white"
+                                  style={{
+                                    backgroundColor: "#1F2426",
+                                    borderColor: "#4A5A70",
+                                  }}
+                                >
+                                  {orgScheduleData.coaches.map(coach => (
+                                    <option key={coach.id} value={coach.id}>
+                                      {coach.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-300">
+                                Coach: {coachProfile?.name || "Your Coach"}
+                              </div>
+                            )}
+
+                            <div className="flex gap-3 pt-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedTimeSlot("");
+                                  setRequestForm({
+                                    ...requestForm,
+                                    time: "",
+                                  });
+                                }}
+                                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200"
+                                style={{
+                                  backgroundColor: "transparent",
+                                  borderColor: "#606364",
+                                  color: "#FFFFFF",
+                                }}
+                              >
+                                Clear
+                              </button>
+                              <button
+                                onClick={handleRequestScheduleChange}
+                                disabled={
+                                  !selectedTimeSlot ||
+                                  requestScheduleChangeMutation.isPending
+                                }
+                                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                style={{
+                                  backgroundColor: "#10B981",
+                                  color: "#FFFFFF",
+                                }}
+                              >
+                                {requestScheduleChangeMutation.isPending ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                                    Sending...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Calendar className="h-4 w-4" />
+                                    Confirm Request
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     );
                   })()}

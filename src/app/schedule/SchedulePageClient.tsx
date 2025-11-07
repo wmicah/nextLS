@@ -17,6 +17,7 @@ import {
   CheckCircle,
   XCircle,
   Repeat,
+  RefreshCw,
 } from "lucide-react";
 import {
   format,
@@ -195,8 +196,14 @@ function SchedulePageClient() {
   }, [showClientDropdown]);
 
   // Fetch pending schedule requests
-  const { data: pendingRequests = [] } =
-    trpc.clientRouter.getPendingScheduleRequests.useQuery();
+  const {
+    data: pendingRequests = [],
+    isLoading: pendingRequestsLoading,
+    refetch: refetchPendingRequests,
+  } = trpc.clientRouter.getPendingScheduleRequests.useQuery(undefined, {
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  });
 
   const utils = trpc.useUtils();
 
@@ -646,6 +653,30 @@ function SchedulePageClient() {
       return slots;
     }
 
+    const dayBlockedTimes = getBlockedTimesForDate(date);
+
+    const isTimeSlotBlocked = (slotTime: string) => {
+      return dayBlockedTimes.some((blockedTime: any) => {
+        if (blockedTime.isAllDay) return true;
+
+        const blockedStart = new Date(blockedTime.startTime);
+        const blockedEnd = new Date(blockedTime.endTime);
+
+        const slotMatch = slotTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!slotMatch) return false;
+
+        const [, hour, minute, period] = slotMatch;
+        let hour24 = parseInt(hour);
+        if (period.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
+        if (period.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
+
+        const slotDate = new Date(date);
+        slotDate.setHours(hour24, parseInt(minute), 0, 0);
+
+        return slotDate >= blockedStart && slotDate < blockedEnd;
+      });
+    };
+
     const [, startHour, startMinute, startPeriod] = startMatch;
     const [, endHour, endMinute, endPeriod] = endMatch;
 
@@ -692,11 +723,26 @@ function SchedulePageClient() {
         hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
       const period = hour24 >= 12 ? "PM" : "AM";
       const minuteStr = minute.toString().padStart(2, "0");
+
       const timeSlot = `${displayHour}:${minuteStr} ${period}`;
 
-      // Only add if not already booked
+      // Check if this slot is already booked
       if (!bookedTimes.includes(timeSlot)) {
-        slots.push(timeSlot);
+        const isBlocked = isTimeSlotBlocked(timeSlot);
+        slots.push({
+          time: timeSlot,
+          isBlocked: isBlocked,
+          blockedReason: isBlocked
+            ? dayBlockedTimes.find((bt: any) => {
+                if (bt.isAllDay) return true;
+                const blockedStart = new Date(bt.startTime);
+                const blockedEnd = new Date(bt.endTime);
+                const slotDate = new Date(date);
+                slotDate.setHours(hour24, parseInt(minuteStr), 0, 0);
+                return slotDate >= blockedStart && slotDate < blockedEnd;
+              })?.title
+            : null,
+        });
       }
     }
 
@@ -731,6 +777,32 @@ function SchedulePageClient() {
                 {coachSchedule.length}{" "}
                 {coachSchedule.length === 1 ? "Lesson" : "Lessons"} This Month
               </span>
+
+              <span
+                className="px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2"
+                style={{
+                  backgroundColor: "#5B3A1A",
+                  color: "#FCD9A3",
+                  border: "1px solid rgba(252, 217, 163, 0.35)",
+                }}
+              >
+                Pending Requests:
+                {pendingRequestsLoading ? (
+                  <span className="animate-pulse text-xs">…</span>
+                ) : (
+                  <span className="text-base font-semibold">
+                    {pendingRequests.length}
+                  </span>
+                )}
+              </span>
+
+              <button
+                onClick={() => refetchPendingRequests()}
+                className="flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border border-blue-500/40 text-blue-200 hover:bg-blue-500/10 transition"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </button>
             </div>
           </div>
 
