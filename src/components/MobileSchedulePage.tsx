@@ -15,6 +15,7 @@ import {
   Trash2,
   Settings,
   X,
+  RefreshCw,
 } from "lucide-react";
 import WorkingHoursModal from "./WorkingHoursModal";
 import CustomSelect from "./ui/CustomSelect";
@@ -85,8 +86,14 @@ export default function MobileSchedulePage() {
   });
 
   // Fetch pending schedule requests
-  const { data: pendingRequests = [] } =
-    trpc.clientRouter.getPendingScheduleRequests.useQuery();
+  const {
+    data: pendingRequests = [],
+    isLoading: pendingRequestsLoading,
+    refetch: refetchPendingRequests,
+  } = trpc.clientRouter.getPendingScheduleRequests.useQuery(undefined, {
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  });
 
   const utils = trpc.useUtils();
 
@@ -356,6 +363,33 @@ export default function MobileSchedulePage() {
           </button>
         </div>
 
+        {/* Pending Requests Summary */}
+        <div
+          className="p-3 rounded-lg border flex items-center justify-between"
+          style={{ backgroundColor: "#1F2426", borderColor: "#FFA50040" }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-orange-500/15 border border-orange-400/30 flex items-center justify-center">
+              <AlertCircle className="w-4 h-4 text-orange-300" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">
+                Pending Requests
+              </p>
+              <p className="text-lg font-semibold text-orange-100">
+                {pendingRequestsLoading ? "Loading…" : pendingRequests.length}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => refetchPendingRequests()}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full border border-blue-500/40 text-blue-200 hover:bg-blue-500/10 transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </button>
+        </div>
+
         <div className="p-4 space-y-4">
           {/* Today's Overview - Always Visible */}
           {(() => {
@@ -605,6 +639,11 @@ export default function MobileSchedulePage() {
                 const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
                 const lessonsForDay = getLessonsForDate(day);
                 const hasLessons = lessonsForDay.length > 0;
+                const pendingForDay = pendingRequests.filter(
+                  (request: { date: string }) =>
+                    isSameDay(new Date(request.date), day)
+                );
+                const hasPending = pendingForDay.length > 0;
 
                 // Check if this is a working day
                 const dayName = format(day, "EEEE");
@@ -672,6 +711,20 @@ export default function MobileSchedulePage() {
                               title={`+${lessonsForDay.length - 2} more`}
                             />
                           )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pending request indicator */}
+                    {hasPending && (
+                      <div className="mt-1">
+                        <div
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 border border-orange-400/40 text-orange-200"
+                          title={`${pendingForDay.length} pending request${
+                            pendingForDay.length === 1 ? "" : "s"
+                          }`}
+                        >
+                          {pendingForDay.length}
                         </div>
                       </div>
                     )}

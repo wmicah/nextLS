@@ -3504,18 +3504,27 @@ export const clientRouterRouter = router({
       // Get client's PENDING schedule requests for the specified month
       const pendingRequests = await db.event.findMany({
         where: {
-          clientId: client.id,
-          status: "PENDING", // Only return pending requests
-          date: {
-            gte: new Date(input.year, input.month, 1),
-            lt: new Date(input.year, input.month + 1, 1),
-          },
+          coachId: ensureUserId(user.id),
+          status: "PENDING",
+          clientId: { not: null },
         },
         include: {
           coach: { select: { name: true } },
         },
         orderBy: { date: "asc" },
       });
+
+      console.log(
+        "🔍 Pending schedule requests for coach",
+        ensureUserId(user.id),
+        pendingRequests.map(r => ({
+          id: r.id,
+          title: r.title,
+          date: r.date,
+          clientId: r.clientId,
+          status: r.status,
+        }))
+      );
 
       return pendingRequests;
     }),
@@ -3887,10 +3896,7 @@ export const clientRouterRouter = router({
       where: {
         coachId: ensureUserId(user.id),
         status: "PENDING",
-        // Only include lessons that were requested by clients
-        description: {
-          contains: "Client requested",
-        },
+        clientId: { not: null },
       },
       include: {
         client: {
@@ -3905,6 +3911,19 @@ export const clientRouterRouter = router({
         date: "asc",
       },
     });
+
+    console.log(
+      "🔍 Coach pending schedule requests",
+      ensureUserId(user.id),
+      pendingRequests.map(r => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        date: r.date,
+        clientId: r.clientId,
+        status: r.status,
+      }))
+    );
 
     return pendingRequests;
   }),
