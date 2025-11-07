@@ -404,6 +404,13 @@ function ProgramBuilder({
   const [isSupersetModalOpen, setIsSupersetModalOpen] = useState(false);
   const [pendingSupersetDrill, setPendingSupersetDrill] =
     useState<ProgramItem | null>(null);
+  const [selectedExerciseIds, setSelectedExerciseIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [isAddingToExisting, setIsAddingToExisting] = useState(false);
+  const [existingSupersetId, setExistingSupersetId] = useState<string | null>(
+    null
+  );
   const [isSupersetDescriptionModalOpen, setIsSupersetDescriptionModalOpen] =
     useState(false);
   const [pendingSupersetDescription, setPendingSupersetDescription] = useState<{
@@ -1141,39 +1148,44 @@ function ProgramBuilder({
 
   // Superset management
   const handleCreateSuperset = useCallback(
-    (itemId: string, supersetId: string) => {
+    (itemId: string, selectedItemIds: string[]) => {
       const updatedWeeks = weeks.map(week => {
         if (week.id === selectedWeekId) {
           const updatedDays = { ...week.days };
-          const item = updatedDays[selectedDayKey].find(i => i.id === itemId);
-          const superset = updatedDays[selectedDayKey].find(
-            i => i.id === supersetId
+          const firstItem = updatedDays[selectedDayKey].find(
+            i => i.id === itemId
           );
 
-          if (item && superset) {
-            // Create a unique superset ID
-            const supersetGroupId = `superset-${Date.now()}`;
+          if (firstItem && selectedItemIds.length > 0) {
+            // Create a unique superset/circuit ID
+            const groupId = `superset-${Date.now()}`;
 
-            // Set both items as part of the same superset
-            item.supersetId = supersetGroupId;
-            item.supersetOrder = 1;
-            item.type = "superset";
-            superset.supersetId = supersetGroupId;
-            superset.supersetOrder = 2;
-            superset.type = "superset";
-
-            console.log("=== CREATING SUPERSET ===");
-            console.log("First exercise:", {
-              id: item.id,
-              title: item.title,
-              supersetId: item.supersetId,
-              supersetOrder: item.supersetOrder,
+            // Get all selected items
+            const allSelectedItems = [firstItem];
+            selectedItemIds.forEach(selectedId => {
+              const selectedItem = updatedDays[selectedDayKey].find(
+                i => i.id === selectedId
+              );
+              if (selectedItem) {
+                allSelectedItems.push(selectedItem);
+              }
             });
-            console.log("Second exercise:", {
-              id: superset.id,
-              title: superset.title,
-              supersetId: superset.supersetId,
-              supersetOrder: superset.supersetOrder,
+
+            // Set all items as part of the same group
+            allSelectedItems.forEach((item, index) => {
+              item.supersetId = groupId;
+              item.supersetOrder = index + 1;
+              item.type = "superset";
+            });
+
+            console.log("=== CREATING SUPERSET/CIRCUIT ===");
+            console.log(`Created ${allSelectedItems.length} exercise group:`, {
+              groupId,
+              exercises: allSelectedItems.map(item => ({
+                id: item.id,
+                title: item.title,
+                supersetOrder: item.supersetOrder,
+              })),
             });
 
             return { ...week, days: updatedDays };
@@ -1182,6 +1194,49 @@ function ProgramBuilder({
         return week;
       });
       setWeeks(updatedWeeks);
+      onSave?.(updatedWeeks);
+    },
+    [weeks, selectedWeekId, selectedDayKey, onSave]
+  );
+
+  const handleAddToSuperset = useCallback(
+    (supersetId: string, itemId: string) => {
+      const updatedWeeks = weeks.map(week => {
+        if (week.id === selectedWeekId) {
+          const updatedDays = { ...week.days };
+          const existingItems = updatedDays[selectedDayKey].filter(
+            i => i.supersetId === supersetId
+          );
+          const itemToAdd = updatedDays[selectedDayKey].find(
+            i => i.id === itemId
+          );
+
+          if (itemToAdd && existingItems.length > 0) {
+            // Add the item to the existing group
+            const maxOrder = Math.max(
+              ...existingItems.map(i => i.supersetOrder || 0)
+            );
+            itemToAdd.supersetId = supersetId;
+            itemToAdd.supersetOrder = maxOrder + 1;
+            itemToAdd.type = "superset";
+
+            console.log("=== ADDING TO SUPERSET/CIRCUIT ===");
+            console.log(`Added exercise to group ${supersetId}:`, {
+              exercise: {
+                id: itemToAdd.id,
+                title: itemToAdd.title,
+                supersetOrder: itemToAdd.supersetOrder,
+              },
+              totalExercises: maxOrder + 1,
+            });
+
+            return { ...week, days: updatedDays };
+          }
+        }
+        return week;
+      });
+      setWeeks(updatedWeeks);
+      onSave?.(updatedWeeks);
     },
     [weeks, selectedWeekId, selectedDayKey, onSave]
   );
@@ -1216,10 +1271,79 @@ function ProgramBuilder({
     [weeks, selectedWeekId, selectedDayKey, onSave]
   );
 
-  const handleOpenSupersetModal = useCallback((item: ProgramItem) => {
-    setPendingSupersetDrill(item);
-    setIsSupersetModalOpen(true);
-  }, []);
+  const handleOpenSupersetModal = useCallback(
+    (item: ProgramItem, existingGroupId?: string) => {
+      setPendingSupersetDrill(item);
+      setSelectedExerciseIds(new Set());
+      if (existingGroupId) {
+        setIsAddingToExisting(true);
+        setExistingSupersetId(existingGroupId);
+      } else {
+        setIsAddingToExisting(false);
+        setExistingSupersetId(null);
+      }
+      setIsSupersetModalOpen(true);
+    },
+    []
+  );
+
+  const toggleExerciseSelection = (itemId: string) => {
+    setSelectedExerciseIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleConfirmSuperset = () => {
+    if (!pendingSupersetDrill) return;
+
+    if (isAddingToExisting && existingSupersetId) {
+      // Add selected exercises to existing group
+      const selectedArray = Array.from(selectedExerciseIds);
+      selectedArray.forEach(itemId => {
+        handleAddToSuperset(existingSupersetId, itemId);
+      });
+    } else {
+      // Create new group
+      const selectedArray = Array.from(selectedExerciseIds);
+      if (selectedArray.length === 0) {
+        // No exercises selected, close modal
+        setIsSupersetModalOpen(false);
+        return;
+      }
+      handleCreateSuperset(pendingSupersetDrill.id, selectedArray);
+    }
+
+    setIsSupersetModalOpen(false);
+    setSelectedExerciseIds(new Set());
+    setPendingSupersetDrill(null);
+    setIsAddingToExisting(false);
+    setExistingSupersetId(null);
+  };
+
+  // Helper function to get group name (Superset for 2, Circuit for 3+)
+  const getGroupName = useCallback(
+    (groupId: string): string => {
+      const allItems = weeks.flatMap(week => Object.values(week.days).flat());
+      const groupItems = allItems.filter(item => item.supersetId === groupId);
+      return groupItems.length === 2 ? "Superset" : "Circuit";
+    },
+    [weeks]
+  );
+
+  // Helper function to get group exercise count
+  const getGroupExerciseCount = useCallback(
+    (groupId: string): number => {
+      const allItems = weeks.flatMap(week => Object.values(week.days).flat());
+      return allItems.filter(item => item.supersetId === groupId).length;
+    },
+    [weeks]
+  );
 
   const onOpenSupersetDescriptionModal = useCallback(
     (supersetId: string, supersetName: string) => {
@@ -1264,11 +1388,11 @@ function ProgramBuilder({
         currentData: firstExercise
           ? {
               exercises: supersetExercises.map(ex => ({
-                id: ex.supersetOrder?.toString() || "1",
+                id: ex.id || ex.supersetOrder?.toString() || "1",
                 title: ex.title,
                 sets: ex.sets,
                 reps: ex.reps,
-                description: ex.description,
+                description: ex.description || ex.notes,
               })),
               supersetDescription: firstExercise.supersetDescription,
             }
@@ -1298,61 +1422,24 @@ function ProgramBuilder({
           updatedDays[dayKey as DayKey] = updatedDays[dayKey as DayKey].map(
             (item: ProgramItem) => {
               if (item.supersetId === pendingSupersetDescription.supersetId) {
-                // Find the corresponding exercise data based on supersetOrder
-                const exerciseData = data.exercises.find(
-                  ex => ex.id === item.supersetOrder?.toString()
-                );
+                // Match exercise by index (supersetOrder - 1) since exercises array is ordered
+                const exerciseIndex = (item.supersetOrder || 1) - 1;
+                const exerciseData = data.exercises[exerciseIndex];
 
-                console.log("=== SAVING EXERCISE DATA ===");
-                console.log("item.supersetOrder:", item.supersetOrder);
-                console.log("exerciseData:", exerciseData);
-                console.log("item.title:", item.title);
-                console.log("data.exercises:", data.exercises);
-                console.log("data.exercises[0]:", data.exercises[0]);
-                console.log("data.exercises[1]:", data.exercises[1]);
-
-                console.log(
-                  "Before update - item.sets:",
-                  item.sets,
-                  "item.reps:",
-                  item.reps,
-                  "item.description:",
-                  item.description
-                );
-                console.log(
-                  "Before update - item.supersetId:",
-                  item.supersetId,
-                  "item.supersetOrder:",
-                  item.supersetOrder
-                );
-
-                const updatedItem = {
-                  ...item,
-                  sets: exerciseData?.sets,
-                  reps: exerciseData?.reps,
-                  description: exerciseData?.description,
-                  // Only set superset description on the first exercise (supersetOrder = 1)
-                  supersetDescription:
-                    item.supersetOrder === 1
-                      ? data.supersetDescription
-                      : item.supersetDescription,
-                };
-
-                console.log(
-                  "After update - updatedItem.sets:",
-                  updatedItem.sets,
-                  "updatedItem.reps:",
-                  updatedItem.reps,
-                  "updatedItem.description:",
-                  updatedItem.description
-                );
-                console.log(
-                  "After update - updatedItem.supersetId:",
-                  updatedItem.supersetId,
-                  "updatedItem.supersetOrder:",
-                  updatedItem.supersetOrder
-                );
-                return updatedItem;
+                if (exerciseData) {
+                  const updatedItem = {
+                    ...item,
+                    sets: exerciseData.sets,
+                    reps: exerciseData.reps,
+                    description: exerciseData.description,
+                    // Only set superset description on the first exercise (supersetOrder = 1)
+                    supersetDescription:
+                      item.supersetOrder === 1
+                        ? data.supersetDescription
+                        : item.supersetDescription,
+                  };
+                  return updatedItem;
+                }
               }
               return item;
             }
@@ -1573,7 +1660,14 @@ function ProgramBuilder({
             routines={routines}
             sensors={sensors}
             onDragEnd={handleDragEnd}
-            onCreateSuperset={handleCreateSuperset}
+            onCreateSuperset={(itemId, existingId) => {
+              const item = weeks
+                .find(w => w.id === selectedWeekId)
+                ?.days[selectedDayKey]?.find(i => i.id === itemId);
+              if (item) {
+                handleOpenSupersetModal(item, existingId);
+              }
+            }}
             onRemoveSuperset={handleRemoveSuperset}
             onOpenSupersetModal={handleOpenSupersetModal}
             onOpenSupersetDescriptionModal={onOpenSupersetDescriptionModal}
@@ -1601,19 +1695,30 @@ function ProgramBuilder({
         />
       )}
 
-      {/* Superset Modal */}
+      {/* Superset/Circuit Modal */}
       <Dialog open={isSupersetModalOpen} onOpenChange={setIsSupersetModalOpen}>
-        <DialogContent className="bg-[#2A3133] border-gray-600 z-[120]">
+        <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-white">Create Superset</DialogTitle>
+            <DialogTitle className="text-white">
+              {isAddingToExisting
+                ? `Add to ${
+                    existingSupersetId
+                      ? getGroupName(existingSupersetId)
+                      : "Group"
+                  }`
+                : "Create Superset or Circuit"}
+            </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Select another exercise from the same day to create a superset
-              (minimal rest between exercises)
+              {isAddingToExisting
+                ? "Select exercises to add to this group"
+                : "Select one or more exercises from the same day. Select 1 exercise for a Superset (2 total) or 2+ exercises for a Circuit (3+ total)."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-4 p-4">
             <div>
-              <Label className="text-white">First Exercise</Label>
+              <Label className="text-white">
+                {isAddingToExisting ? "Current Group" : "First Exercise"}
+              </Label>
               <div className="p-3 bg-gray-700 rounded border border-gray-600">
                 <p className="text-white font-medium">
                   {pendingSupersetDrill?.title}
@@ -1624,35 +1729,79 @@ function ProgramBuilder({
               </div>
             </div>
             <div>
-              <Label className="text-white">Second Exercise</Label>
-              <select
-                className="w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
-                onChange={e => {
-                  if (e.target.value && pendingSupersetDrill) {
-                    handleCreateSuperset(
-                      pendingSupersetDrill.id,
-                      e.target.value
-                    );
-                    setIsSupersetModalOpen(false);
-                  }
-                }}
-              >
-                <option value="">
-                  Select an exercise from the same day...
-                </option>
+              <Label className="text-white">
+                {isAddingToExisting
+                  ? "Exercises to Add"
+                  : selectedExerciseIds.size === 0
+                  ? "Select Exercises (1 for Superset, 2+ for Circuit)"
+                  : selectedExerciseIds.size === 1
+                  ? "Selected: Superset (2 exercises)"
+                  : `Selected: Circuit (${
+                      selectedExerciseIds.size + 1
+                    } exercises)`}
+              </Label>
+              <div className="max-h-64 overflow-y-auto border border-gray-600 rounded p-2 space-y-2 bg-gray-800">
                 {weeks
                   .find(week => week.id === selectedWeekId)
-                  ?.days[selectedDayKey]?.filter(
-                    item => item.id !== pendingSupersetDrill?.id
-                  )
+                  ?.days[selectedDayKey]?.filter(item => {
+                    // Don't show the pending drill or exercises already in the group
+                    if (item.id === pendingSupersetDrill?.id) return false;
+                    if (
+                      isAddingToExisting &&
+                      existingSupersetId &&
+                      item.supersetId === existingSupersetId
+                    )
+                      return false;
+                    // Don't show exercises already in other groups
+                    if (!isAddingToExisting && item.supersetId) return false;
+                    return true;
+                  })
                   .map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.title}
-                    </option>
+                    <label
+                      key={item.id}
+                      className="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedExerciseIds.has(item.id)}
+                        onChange={() => toggleExerciseSelection(item.id)}
+                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <p className="text-white text-sm font-medium">
+                          {item.title}
+                        </p>
+                        {item.notes && (
+                          <p className="text-gray-400 text-xs">{item.notes}</p>
+                        )}
+                      </div>
+                    </label>
                   ))}
-              </select>
+              </div>
             </div>
           </div>
+          <DialogFooter className="border-t border-gray-700 p-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsSupersetModalOpen(false);
+                setSelectedExerciseIds(new Set());
+                setPendingSupersetDrill(null);
+                setIsAddingToExisting(false);
+                setExistingSupersetId(null);
+              }}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmSuperset}
+              disabled={!isAddingToExisting && selectedExerciseIds.size === 0}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isAddingToExisting ? "Add Exercises" : "Create Group"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -2057,9 +2206,9 @@ interface WeekCardProps {
   routines: Routine[];
   sensors: any; // DndContext sensors
   onDragEnd: (event: DragEndEvent) => void;
-  onCreateSuperset: (itemId: string, supersetId: string) => void;
+  onCreateSuperset: (itemId: string, existingSupersetId?: string) => void;
   onRemoveSuperset: (itemId: string) => void;
-  onOpenSupersetModal: (item: ProgramItem) => void;
+  onOpenSupersetModal: (item: ProgramItem, existingGroupId?: string) => void;
   onOpenSupersetDescriptionModal: (
     supersetId: string,
     supersetName: string
@@ -2228,9 +2377,9 @@ interface DayCardProps {
   onReorderItems: (newItems: ProgramItem[]) => void;
   onAddRoutine: () => void;
   routines: Routine[];
-  onCreateSuperset: (itemId: string, supersetId: string) => void;
+  onCreateSuperset: (itemId: string, existingSupersetId?: string) => void;
   onRemoveSuperset: (itemId: string) => void;
-  onOpenSupersetModal: (item: ProgramItem) => void;
+  onOpenSupersetModal: (item: ProgramItem, existingGroupId?: string) => void;
   onOpenSupersetDescriptionModal: (
     supersetId: string,
     supersetName: string
@@ -2428,8 +2577,14 @@ function DayCard({
                       onDelete={() => onDeleteItem(item.id)}
                       onAddSuperset={() => onOpenSupersetModal(item)}
                       routines={routines}
-                      onCreateSuperset={onCreateSuperset}
+                      onCreateSuperset={(itemId, existingId) => {
+                        const item = items.find(i => i.id === itemId);
+                        if (item) {
+                          onOpenSupersetModal(item, existingId);
+                        }
+                      }}
                       onRemoveSuperset={onRemoveSuperset}
+                      onOpenSupersetModal={onOpenSupersetModal}
                       onOpenSupersetDescriptionModal={
                         onOpenSupersetDescriptionModal
                       }
@@ -2566,8 +2721,9 @@ interface SortableDrillItemProps {
   onDelete: () => void;
   onAddSuperset: () => void;
   routines: Routine[];
-  onCreateSuperset: (itemId: string, supersetId: string) => void;
+  onCreateSuperset: (itemId: string, existingSupersetId?: string) => void;
   onRemoveSuperset: (itemId: string) => void;
+  onOpenSupersetModal: (item: ProgramItem, existingGroupId?: string) => void;
   onOpenSupersetDescriptionModal: (
     supersetId: string,
     supersetName: string
@@ -2583,6 +2739,7 @@ function SortableDrillItem({
   routines,
   onCreateSuperset,
   onRemoveSuperset,
+  onOpenSupersetModal,
   onOpenSupersetDescriptionModal,
   getSupersetGroups,
 }: SortableDrillItemProps) {
@@ -2635,26 +2792,45 @@ function SortableDrillItem({
           : "bg-gray-800 border-gray-600"
       )}
     >
-      {/* Superset indicator */}
-      {isSuperset && (
+      {/* Superset/Circuit indicator */}
+      {isSuperset && supersetGroup && (
         <div className="text-xs text-purple-300 mb-2 flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Link className="h-3 w-3" />
-            <span className="font-medium">SUPERSET</span>
+            <span className="font-medium">
+              {supersetGroup.items.length === 2
+                ? "SUPERSET"
+                : `CIRCUIT (${supersetGroup.items.length} exercises)`}
+            </span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              onOpenSupersetDescriptionModal(
-                item.supersetId!,
-                `Superset ${item.title}`
-              )
-            }
-            className="text-purple-300 hover:text-white hover:bg-purple-600/20 p-1 h-6"
-          >
-            <Edit className="h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const groupName =
+                  supersetGroup.items.length === 2
+                    ? "Superset"
+                    : `Circuit (${supersetGroup.items.length})`;
+                onOpenSupersetDescriptionModal(item.supersetId!, groupName);
+              }}
+              className="text-purple-300 hover:text-white hover:bg-purple-600/20 p-1 h-6"
+              title="Edit group details"
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onOpenSupersetModal(item, item.supersetId!);
+              }}
+              className="text-purple-300 hover:text-white hover:bg-purple-600/20 p-1 h-6"
+              title="Add exercise to group"
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
       )}
 
@@ -2788,7 +2964,7 @@ interface ProgramItemCardProps {
   onDelete: () => void;
   onAddSuperset: () => void;
   routines: Routine[];
-  onCreateSuperset: (itemId: string, supersetId: string) => void;
+  onCreateSuperset: (itemId: string, existingSupersetId?: string) => void;
   onRemoveSuperset: (itemId: string) => void;
   onOpenSupersetDescriptionModal: (
     supersetId: string,
@@ -2839,6 +3015,11 @@ function ProgramItemCard({
   };
 
   const isSuperset = item.supersetId !== undefined;
+  const supersetGroup = isSuperset
+    ? getSupersetGroups().find(group =>
+        group.items.some(groupItem => groupItem.id === item.id)
+      )
+    : null;
 
   return (
     <Card
@@ -2850,13 +3031,15 @@ function ProgramItemCard({
     >
       <CardContent className="p-3">
         {/* Superset Header */}
-        {isSuperset && (
+        {isSuperset && supersetGroup && (
           <div className="mb-3 pb-2 border-b border-purple-500/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Link className="h-4 w-4 text-purple-300" />
                 <span className="text-sm font-medium text-purple-300">
-                  SUPERSET
+                  {supersetGroup.items.length === 2
+                    ? "SUPERSET"
+                    : `CIRCUIT (${supersetGroup.items.length} exercises)`}
                 </span>
               </div>
               <Button
@@ -2865,7 +3048,9 @@ function ProgramItemCard({
                 onClick={() =>
                   onOpenSupersetDescriptionModal(
                     item.supersetId!,
-                    `Superset ${item.title}`
+                    supersetGroup.items.length === 2
+                      ? "Superset"
+                      : `Circuit (${supersetGroup.items.length})`
                   )
                 }
                 className="text-purple-300 hover:text-white hover:bg-purple-600/20 px-2 py-1 h-7 text-xs"

@@ -1099,6 +1099,12 @@ export const clientRouterRouter = router({
                                         videoThumbnail: true,
                                         videoTitle: true,
                                         order: true,
+                                        // Superset/Circuit fields
+                                        supersetId: true,
+                                        supersetOrder: true,
+                                        supersetDescription: true,
+                                        supersetInstructions: true,
+                                        supersetNotes: true,
                                       },
                                       orderBy: {
                                         order: "asc",
@@ -1639,6 +1645,12 @@ export const clientRouterRouter = router({
                                         videoThumbnail: true,
                                         videoTitle: true,
                                         order: true,
+                                        // Superset/Circuit fields
+                                        supersetId: true,
+                                        supersetOrder: true,
+                                        supersetDescription: true,
+                                        supersetInstructions: true,
+                                        supersetNotes: true,
                                       },
                                       orderBy: {
                                         order: "asc",
@@ -1974,6 +1986,25 @@ export const clientRouterRouter = router({
               });
 
               if (day) {
+                // Debug: Log drill data from database
+                console.log("🔍 getProgramDayDetails - Day drills from DB:", {
+                  dayNumber: day.dayNumber,
+                  drillCount: day.drills?.length || 0,
+                  drills:
+                    day.drills?.map((d: any) => ({
+                      id: d.id,
+                      title: d.title,
+                      hasSupersetId: !!d.supersetId,
+                      supersetId: d.supersetId,
+                      supersetOrder: d.supersetOrder,
+                      hasRoutineId: !!d.routineId,
+                      routineExerciseCount: d.routine?.exercises?.length || 0,
+                      routineExercisesWithSuperset:
+                        d.routine?.exercises?.filter((e: any) => e.supersetId)
+                          ?.length || 0,
+                    })) || [],
+                });
+
                 dayData.isRestDay = day.isRestDay;
                 dayData.expectedTime = 0; // Default value since expectedTime is not in the select
 
@@ -2046,6 +2077,12 @@ export const clientRouterRouter = router({
                       videoTitle: drill.videoTitle,
                       videoThumbnail: drill.videoThumbnail,
                       completed: !!isCompleted,
+                      // Superset/Circuit fields
+                      supersetId: drill.supersetId,
+                      supersetOrder: drill.supersetOrder,
+                      supersetDescription: drill.supersetDescription,
+                      supersetInstructions: drill.supersetInstructions,
+                      supersetNotes: drill.supersetNotes,
                     });
                   }
                 }
