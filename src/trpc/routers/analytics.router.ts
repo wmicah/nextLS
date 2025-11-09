@@ -965,7 +965,7 @@ export const analyticsRouter = router({
             ) / clientAnalytics.length
           : 0
       );
-
+      // TODO: Add overall completion rate for all clients in the organization
       // Recent activity (last 10 completions - drills + routine exercises)
       const allCompletions = [
         ...allDrillCompletions.map(completion => ({
