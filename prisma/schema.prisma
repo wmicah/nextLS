@@ -728,6 +728,7 @@ model UserSettings {
   defaultLessonDuration  Int      @default(60)
   autoArchiveDays        Int      @default(90)
   requireClientEmail     Boolean  @default(false)
+  clientScheduleAdvanceLimitDays Int @default(30)
   timezone               String   @default("UTC-5")
   workingDays            Json     @default("[\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\"]")
   twoFactorEnabled       Boolean  @default(false)

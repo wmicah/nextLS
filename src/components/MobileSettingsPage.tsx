@@ -60,6 +60,7 @@ export default function MobileSettingsPage() {
   const [scheduleData, setScheduleData] = useState({
     timezone: "UTC-5",
     workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    clientScheduleAdvanceLimitDays: 30,
   });
 
   const [appearanceData, setAppearanceData] = useState({
@@ -125,10 +126,36 @@ export default function MobileSettingsPage() {
         requireClientEmail: userSettings.requireClientEmail,
       }));
 
+      let workingDays: string[] = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+      ];
+
+      if (userSettings.workingDays) {
+        if (Array.isArray(userSettings.workingDays)) {
+          workingDays = userSettings.workingDays as string[];
+        } else if (typeof userSettings.workingDays === "string") {
+          try {
+            const parsed = JSON.parse(userSettings.workingDays) as string[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              workingDays = parsed;
+            }
+          } catch (error) {
+            console.warn("Failed to parse workingDays from settings:", error);
+          }
+        }
+      }
+
       setScheduleData(prev => ({
         ...prev,
         timezone: userSettings.timezone,
-        workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        workingDays,
+        clientScheduleAdvanceLimitDays:
+          userSettings.clientScheduleAdvanceLimitDays ??
+          prev.clientScheduleAdvanceLimitDays,
       }));
 
       setAppearanceData(prev => ({
@@ -222,6 +249,8 @@ export default function MobileSettingsPage() {
           await updateSettingsMutation.mutateAsync({
             timezone: scheduleData.timezone,
             workingDays: scheduleData.workingDays,
+            clientScheduleAdvanceLimitDays:
+              scheduleData.clientScheduleAdvanceLimitDays,
           });
           break;
         case "billing":
@@ -678,6 +707,32 @@ export default function MobileSettingsPage() {
                   <option value="UTC-7">UTC-7 (Mountain)</option>
                   <option value="UTC-8">UTC-8 (Pacific)</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-300">
+                  Client Scheduling Window (days)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={scheduleData.clientScheduleAdvanceLimitDays}
+                  onChange={e =>
+                    setScheduleData(prev => ({
+                      ...prev,
+                      clientScheduleAdvanceLimitDays: Math.max(
+                        0,
+                        parseInt(e.target.value, 10) || 0
+                      ),
+                    }))
+                  }
+                  className="w-full px-4 py-3 rounded-xl text-sm bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  placeholder="30"
+                />
+                <p className="mt-2 text-xs text-gray-400">
+                  Clients can request lessons up to this many days in advance.
+                  Use 0 for no limit.
+                </p>
               </div>
 
               <div>

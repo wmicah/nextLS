@@ -53,6 +53,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
   const [scheduleData, setScheduleData] = useState({
     timezone: "UTC-5",
     workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    clientScheduleAdvanceLimitDays: 30,
   });
 
   const [clientSettingsData, setClientSettingsData] = useState({
@@ -150,9 +151,34 @@ function SettingsPageClient({}: SettingsPageClientProps) {
     }
 
     if (userSettings) {
+      let workingDays: string[] = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+      ];
+
+      if (userSettings.workingDays) {
+        if (Array.isArray(userSettings.workingDays)) {
+          workingDays = userSettings.workingDays as string[];
+        } else if (typeof userSettings.workingDays === "string") {
+          try {
+            const parsed = JSON.parse(userSettings.workingDays) as string[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              workingDays = parsed;
+            }
+          } catch (error) {
+            console.warn("Failed to parse workingDays from settings:", error);
+          }
+        }
+      }
+
       setScheduleData({
         timezone: userSettings.timezone || "UTC-5",
-        workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        workingDays,
+        clientScheduleAdvanceLimitDays:
+          userSettings.clientScheduleAdvanceLimitDays ?? 30,
       });
 
       const autoArchiveDays = userSettings.autoArchiveDays ?? 90;
@@ -251,6 +277,8 @@ function SettingsPageClient({}: SettingsPageClientProps) {
           await updateSettingsMutation.mutateAsync({
             timezone: scheduleData.timezone,
             workingDays: scheduleData.workingDays,
+            clientScheduleAdvanceLimitDays:
+              scheduleData.clientScheduleAdvanceLimitDays,
           });
           break;
 
@@ -786,6 +814,38 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                             <option value="UTC-8">Pacific Time (UTC-8)</option>
                             <option value="UTC+0">UTC (UTC+0)</option>
                           </select>
+                        </div>
+
+                        <div>
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: "#9ca3af" }}
+                          >
+                            Client Scheduling Window (days)
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={scheduleData.clientScheduleAdvanceLimitDays}
+                            onChange={e =>
+                              setScheduleData(prev => ({
+                                ...prev,
+                                clientScheduleAdvanceLimitDays: Math.max(
+                                  0,
+                                  parseInt(e.target.value, 10) || 0
+                                ),
+                              }))
+                            }
+                            className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                            placeholder="30"
+                          />
+                          <p
+                            className="mt-2 text-xs"
+                            style={{ color: "#6b7280" }}
+                          >
+                            Clients can request lessons up to this many days in
+                            advance. Use 0 for no limit.
+                          </p>
                         </div>
 
                         <div>

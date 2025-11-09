@@ -93,6 +93,7 @@ export const settingsRouter = router({
         // Schedule settings
         timezone: z.string().optional(),
         workingDays: z.array(z.string()).optional(),
+        clientScheduleAdvanceLimitDays: z.number().min(0).optional(),
 
         // Privacy & Security
         twoFactorEnabled: z.boolean().optional(),
@@ -113,16 +114,23 @@ export const settingsRouter = router({
         where: { userId: user.id },
       });
 
+      const { workingDays, clientScheduleAdvanceLimitDays, ...otherInput } =
+        input;
+
+      const transformedData = {
+        ...otherInput,
+        workingDays: workingDays
+          ? (JSON.stringify(workingDays) as any)
+          : undefined,
+        clientScheduleAdvanceLimitDays:
+          clientScheduleAdvanceLimitDays ?? undefined,
+      };
+
       if (existingSettings) {
         // Update existing settings
         const updatedSettings = await db.userSettings.update({
           where: { userId: user.id },
-          data: {
-            ...input,
-            workingDays: input.workingDays
-              ? (JSON.stringify(input.workingDays) as any)
-              : undefined,
-          },
+          data: transformedData,
         });
         return updatedSettings;
       } else {
@@ -130,10 +138,7 @@ export const settingsRouter = router({
         const newSettings = await db.userSettings.create({
           data: {
             userId: user.id,
-            ...input,
-            workingDays: input.workingDays
-              ? (JSON.stringify(input.workingDays) as any)
-              : undefined,
+            ...transformedData,
           },
         });
         return newSettings;
