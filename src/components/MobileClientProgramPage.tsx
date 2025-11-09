@@ -189,6 +189,27 @@ export default function MobileClientProgramPage() {
   // Get coach notes
   const { data: coachNotes } = trpc.notes.getMyNotes.useQuery();
 
+  // Get upcoming lessons/events for client
+  const {
+    data: upcomingEvents = [],
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = trpc.events.getUpcoming.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+
+  // Get next lesson
+  const { data: nextLesson, error: nextLessonError } =
+    trpc.clientRouter.getNextLesson.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+    });
+
   // Debug logging
   console.log("MobileClientProgramPage - programInfo:", programInfo);
   console.log("MobileClientProgramPage - programLoading:", programLoading);
@@ -203,6 +224,15 @@ export default function MobileClientProgramPage() {
     typeof calendarData,
     Array.isArray(calendarData)
   );
+  console.log("MobileClientProgramPage - upcomingEvents:", upcomingEvents);
+  console.log(
+    "MobileClientProgramPage - upcomingEvents length:",
+    upcomingEvents.length
+  );
+  console.log("MobileClientProgramPage - eventsLoading:", eventsLoading);
+  console.log("MobileClientProgramPage - eventsError:", eventsError);
+  console.log("MobileClientProgramPage - nextLesson:", nextLesson);
+  console.log("MobileClientProgramPage - nextLessonError:", nextLessonError);
 
   // Get current week's calendar data
   const currentWeekStart = startOfWeek(new Date());
@@ -331,64 +361,6 @@ export default function MobileClientProgramPage() {
     setCurrentDate(prev =>
       direction === "prev" ? subMonths(prev, 1) : addMonths(prev, 1)
     );
-  };
-
-  // Enhanced touch interactions for mobile
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [isSwiping, setIsSwiping] = useState(false);
-
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-    setIsSwiping(false);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null) return;
-
-    const currentTouch = e.targetTouches[0].clientX;
-    const distance = Math.abs(currentTouch - touchStart);
-
-    // Only start preventing default if we're moving horizontally enough
-    if (distance > 10) {
-      setIsSwiping(true);
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    setTouchEnd(currentTouch);
-  };
-
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStart === null || touchEnd === null) {
-      setTouchStart(null);
-      setTouchEnd(null);
-      setIsSwiping(false);
-      return;
-    }
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe || isRightSwipe) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (isLeftSwipe) {
-        navigateMonth("next");
-      }
-      if (isRightSwipe) {
-        navigateMonth("prev");
-      }
-    }
-
-    setTouchStart(null);
-    setTouchEnd(null);
-    setIsSwiping(false);
   };
 
   // Get day data from calendar data (exact replica of desktop)
@@ -786,7 +758,7 @@ export default function MobileClientProgramPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div className="min-h-[100dvh]" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
       <div className="sticky top-0 z-50 bg-gradient-to-r from-[#2A3133] to-[#353A3A] border-b border-[#4A5A70] px-4 py-4 shadow-lg">
         <div className="flex items-center justify-between">
@@ -805,18 +777,188 @@ export default function MobileClientProgramPage() {
 
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-6">
-        {/* Calendar View */}
+        {/* Upcoming Lessons Card - PROMINENT DISPLAY */}
         <div
-          className={`relative p-6 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl transition-all duration-200 ${
-            isSwiping ? "scale-[0.98] opacity-90" : ""
-          }`}
-          style={{
-            touchAction: "none",
-            userSelect: "none",
-            WebkitUserSelect: "none",
-            WebkitTouchCallout: "none",
-          }}
+          className="rounded-xl p-4 shadow-lg border"
+          style={{ backgroundColor: "#353A3A", borderColor: "#4A5A70" }}
         >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" style={{ color: "#4A5A70" }} />
+              <h2 className="text-base font-bold" style={{ color: "#C3BCC2" }}>
+                Upcoming Lessons
+              </h2>
+            </div>
+            {upcomingEvents.length > 2 && (
+              <a
+                href="/client-schedule"
+                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95"
+                style={{
+                  color: "#C3BCC2",
+                  backgroundColor: "#4A5A70",
+                }}
+              >
+                View All
+              </a>
+            )}
+          </div>
+
+          {upcomingEvents.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingEvents.slice(0, 2).map((event: any, index: number) => {
+                const eventDate = new Date(event.date);
+                const isToday = isSameDay(eventDate, new Date());
+                const isTomorrow =
+                  Math.ceil(
+                    (eventDate.getTime() - new Date().getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  ) === 1;
+                const coachName =
+                  typeof event.coach?.name === "string"
+                    ? event.coach.name.trim()
+                    : "";
+                const trimmedTitle =
+                  typeof event.title === "string" ? event.title.trim() : "";
+                const heading = coachName
+                  ? `Lesson with ${coachName}`
+                  : trimmedTitle.length > 0
+                  ? trimmedTitle
+                  : "Scheduled Lesson";
+
+                return (
+                  <div
+                    key={event.id}
+                    className={`rounded-lg p-4 border shadow-lg ${
+                      index === 0
+                        ? "bg-gradient-to-br from-[#4A5A70] to-[#606364]"
+                        : ""
+                    }`}
+                    style={
+                      index === 0
+                        ? { borderColor: "#4A5A70" }
+                        : {
+                            backgroundColor: "#2A3133",
+                            borderColor: "#606364",
+                          }
+                    }
+                  >
+                    {/* Date Badge */}
+                    <div className="flex items-start justify-between mb-2">
+                      <div
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                          isToday ? "animate-pulse" : ""
+                        }`}
+                        style={{
+                          backgroundColor: isToday
+                            ? "#10b981"
+                            : index === 0
+                            ? "#353A3A"
+                            : "#4A5A70",
+                          color: "#FFFFFF",
+                        }}
+                      >
+                        {isToday
+                          ? "TODAY"
+                          : isTomorrow
+                          ? "TOMORROW"
+                          : eventDate.toLocaleDateString("en-US", {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                      </div>
+                      <div
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                        style={{
+                          backgroundColor: index === 0 ? "#353A3A" : "#4A5A70",
+                        }}
+                      >
+                        <Clock
+                          className="h-3.5 w-3.5"
+                          style={{ color: "#C3BCC2" }}
+                        />
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: "#C3BCC2" }}
+                        >
+                          {eventDate.toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Lesson Info */}
+                    <div className="space-y-1">
+                      <h3
+                        className="text-sm font-bold"
+                        style={{ color: index === 0 ? "#FFFFFF" : "#C3BCC2" }}
+                      >
+                        {heading}
+                      </h3>
+                      {event.description && (
+                        <p
+                          className="text-xs line-clamp-2"
+                          style={{ color: index === 0 ? "#D0D0D0" : "#ABA4AA" }}
+                        >
+                          {event.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* View More Button */}
+              {upcomingEvents.length > 2 && (
+                <div className="text-center pt-2">
+                  <a
+                    href="/client-schedule"
+                    className="text-xs px-4 py-2 rounded-lg inline-flex items-center gap-2 active:scale-95 transition-transform font-medium"
+                    style={{
+                      backgroundColor: "#4A5A70",
+                      color: "#C3BCC2",
+                    }}
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                    View {upcomingEvents.length - 2} More Lesson
+                    {upcomingEvents.length - 2 === 1 ? "" : "s"}
+                  </a>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Calendar
+                className="w-12 h-12 mx-auto mb-3"
+                style={{ color: "#606364" }}
+              />
+              <h3
+                className="text-base font-semibold mb-2"
+                style={{ color: "#C3BCC2" }}
+              >
+                No Upcoming Lessons
+              </h3>
+              <p className="text-sm px-4 mb-4" style={{ color: "#ABA4AA" }}>
+                Your coach will schedule lessons with you soon.
+              </p>
+              <a
+                href="/client-schedule"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95"
+                style={{
+                  backgroundColor: "#4A5A70",
+                  color: "#C3BCC2",
+                }}
+              >
+                <Calendar className="h-4 w-4" />
+                View Schedule
+              </a>
+            </div>
+          )}
+        </div>
+        {/* Calendar View */}
+        <div className="relative p-6 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
           {/* Month Navigation */}
           <div className="flex items-center justify-between p-4 mb-6 rounded-xl bg-gradient-to-r from-[#353A3A] to-[#40454A] shadow-inner">
             <button
@@ -893,17 +1035,7 @@ export default function MobileClientProgramPage() {
           </div>
 
           {/* Day Headers */}
-          <div
-            className="grid grid-cols-7 gap-2 mb-4"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            style={{
-              touchAction: "none",
-              userSelect: "none",
-              WebkitUserSelect: "none",
-            }}
-          >
+          <div className="grid grid-cols-7 gap-2 mb-4">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
               <div
                 key={day}
@@ -915,17 +1047,7 @@ export default function MobileClientProgramPage() {
           </div>
 
           {/* Calendar Grid */}
-          <div
-            className="grid grid-cols-7 gap-2"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            style={{
-              touchAction: "none",
-              userSelect: "none",
-              WebkitUserSelect: "none",
-            }}
-          >
+          <div className="grid grid-cols-7 gap-2">
             {getCalendarDays().map(day => {
               const isToday = isSameDay(day, new Date());
               const isCurrentMonth = isSameMonth(day, currentDate);

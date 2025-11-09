@@ -377,11 +377,30 @@ function ClientProgramPage() {
   // Get next lesson
   const { data: nextLesson } = trpc.clientRouter.getNextLesson.useQuery();
 
+  // Get upcoming lessons/events for client
+  const {
+    data: upcomingEvents = [],
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = trpc.events.getUpcoming.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+
   // Get coach notes
   const { data: coachNotes } = trpc.notes.getMyNotes.useQuery();
 
   // Debug logging
   console.log("ClientProgramPage - coachNotes:", coachNotes);
+  console.log("ClientProgramPage - upcomingEvents:", upcomingEvents);
+  console.log(
+    "ClientProgramPage - upcomingEvents length:",
+    upcomingEvents.length
+  );
+  console.log("ClientProgramPage - eventsError:", eventsError);
+  console.log("ClientProgramPage - nextLesson:", nextLesson);
 
   // Get routine assignments
   const { data: routineAssignments = [] } =
@@ -1069,105 +1088,152 @@ function ClientProgramPage() {
           <div className="mb-6 md:mb-8 px-4">
             <div className="max-w-6xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
-                {/* Upcoming Lesson */}
-                <div
-                  className={`group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border ${
-                    nextLesson?.status === "CONFIRMED"
-                      ? "bg-gradient-to-br from-green-600/20 via-green-700/10 to-green-800/20 border-green-500/40"
-                      : "bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20"
-                  }`}
-                >
+                {/* Upcoming Lessons - Show Next 2 */}
+                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-6 shadow-2xl border bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20 md:col-span-2">
                   {/* Background Pattern */}
                   <div className="absolute inset-0 opacity-5">
-                    <div
-                      className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl ${
-                        nextLesson?.status === "CONFIRMED"
-                          ? "bg-green-400"
-                          : "bg-emerald-400"
-                      }`}
-                    ></div>
-                    <div
-                      className={`absolute bottom-0 left-0 w-24 h-24 rounded-full blur-2xl ${
-                        nextLesson?.status === "CONFIRMED"
-                          ? "bg-green-300"
-                          : "bg-emerald-300"
-                      }`}
-                    ></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-300 rounded-full blur-2xl"></div>
                   </div>
 
                   <div className="relative z-10">
-                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
-                      <div
-                        className={`p-2 md:p-3 rounded-2xl shadow-lg ${
-                          nextLesson?.status === "CONFIRMED"
-                            ? "bg-gradient-to-br from-green-500 to-green-600"
-                            : "bg-gradient-to-br from-emerald-500 to-emerald-600"
-                        }`}
-                      >
-                        <CalendarCheck className="h-4 w-4 md:h-6 md:w-6 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 md:p-3 rounded-2xl shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
+                          <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-white" />
+                        </div>
+                        <h3 className="text-lg md:text-xl font-bold text-white">
+                          Upcoming Lessons
+                        </h3>
                       </div>
-                      <h3 className="text-lg md:text-xl font-bold text-white">
-                        Next Lesson
-                      </h3>
+                      {upcomingEvents.length > 2 && (
+                        <a
+                          href="/client-schedule"
+                          className="text-xs md:text-sm font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-emerald-500/20 text-emerald-300"
+                        >
+                          View All ({upcomingEvents.length})
+                        </a>
+                      )}
                     </div>
 
-                    {nextLesson ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-2 h-2 rounded-full ${
-                              nextLesson.status === "CONFIRMED"
-                                ? "bg-green-400"
-                                : "bg-emerald-400"
-                            }`}
-                          ></div>
-                          <p
-                            className={`text-sm md:text-lg font-semibold ${
-                              nextLesson.status === "CONFIRMED"
-                                ? "text-green-100"
-                                : "text-emerald-100"
-                            }`}
-                          >
-                            {new Date(nextLesson.date).toLocaleDateString(
-                              "en-US",
-                              {
-                                weekday: "long",
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              }
-                            )}
-                          </p>
-                        </div>
-                        <p
-                          className={`text-xs md:text-sm font-medium ${
-                            nextLesson.status === "CONFIRMED"
-                              ? "text-green-200/80"
-                              : "text-emerald-200/80"
-                          }`}
-                        >
-                          {new Date(nextLesson.date).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
+                    {upcomingEvents.length > 0 ? (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        {upcomingEvents
+                          .slice(0, 2)
+                          .map((event: any, index: number) => {
+                            const eventDate = new Date(event.date);
+                            const isToday = isSameDay(eventDate, new Date());
+                            const isTomorrow =
+                              Math.ceil(
+                                (eventDate.getTime() - new Date().getTime()) /
+                                  (1000 * 60 * 60 * 24)
+                              ) === 1;
+                            const coachName =
+                              typeof event.coach?.name === "string"
+                                ? event.coach.name.trim()
+                                : "";
+                            const trimmedTitle =
+                              typeof event.title === "string"
+                                ? event.title.trim()
+                                : "";
+                            const heading = coachName
+                              ? `Lesson with ${coachName}`
+                              : trimmedTitle.length > 0
+                              ? trimmedTitle
+                              : "Scheduled Lesson";
+
+                            return (
+                              <div
+                                key={event.id}
+                                className={`rounded-lg p-4 border shadow-lg ${
+                                  index === 0
+                                    ? "bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70]"
+                                    : "bg-[#2A3133] border-[#606364]"
+                                }`}
+                              >
+                                {/* Date Badge */}
+                                <div className="flex items-start justify-between mb-3">
+                                  <div
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                                      isToday ? "animate-pulse" : ""
+                                    }`}
+                                    style={{
+                                      backgroundColor: isToday
+                                        ? "#10b981"
+                                        : index === 0
+                                        ? "#353A3A"
+                                        : "#4A5A70",
+                                      color: "#FFFFFF",
+                                    }}
+                                  >
+                                    {isToday
+                                      ? "TODAY"
+                                      : isTomorrow
+                                      ? "TOMORROW"
+                                      : eventDate.toLocaleDateString("en-US", {
+                                          weekday: "short",
+                                          month: "short",
+                                          day: "numeric",
+                                        })}
+                                  </div>
+                                  <div
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                                    style={{
+                                      backgroundColor:
+                                        index === 0 ? "#353A3A" : "#4A5A70",
+                                    }}
+                                  >
+                                    <Clock
+                                      className="h-3.5 w-3.5"
+                                      style={{ color: "#C3BCC2" }}
+                                    />
+                                    <span
+                                      className="text-xs font-semibold"
+                                      style={{ color: "#C3BCC2" }}
+                                    >
+                                      {eventDate.toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Lesson Info */}
+                                <div className="space-y-1">
+                                  <h4
+                                    className="text-sm font-bold"
+                                    style={{
+                                      color:
+                                        index === 0 ? "#FFFFFF" : "#C3BCC2",
+                                    }}
+                                  >
+                                    {heading}
+                                  </h4>
+                                  {event.description && (
+                                    <p
+                                      className="text-xs line-clamp-2"
+                                      style={{
+                                        color:
+                                          index === 0 ? "#D0D0D0" : "#ABA4AA",
+                                      }}
+                                    >
+                                      {event.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
                           })}
-                        </p>
-                        {(nextLesson as any).coach && (
-                          <p
-                            className={`text-xs font-medium ${
-                              nextLesson.status === "CONFIRMED"
-                                ? "text-green-300"
-                                : "text-emerald-300"
-                            }`}
-                          >
-                            Coach: {(nextLesson as any).coach.name}
-                          </p>
-                        )}
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                        <p className="text-sm text-gray-400">
-                          No upcoming lesson
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <CalendarX className="h-12 w-12 mb-3 text-emerald-400/50" />
+                        <p className="text-sm text-emerald-200/60 mb-2">
+                          No upcoming lessons
+                        </p>
+                        <p className="text-xs text-emerald-300/40">
+                          Your coach will schedule lessons with you soon
                         </p>
                       </div>
                     )}
