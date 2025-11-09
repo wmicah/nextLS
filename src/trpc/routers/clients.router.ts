@@ -24,6 +24,7 @@ export const clientsRouter = router({
       z
         .object({
           archived: z.boolean().optional(),
+          scope: z.enum(["coach", "organization"]).optional(),
         })
         .optional()
     )
@@ -32,6 +33,9 @@ export const clientsRouter = router({
       const user = await getUser();
 
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const scope = input?.scope ?? "coach";
+      const ensuredUserId = ensureUserId(user.id);
 
       // Verify user is a COACH
       const coach = await db.user.findFirst({
@@ -89,11 +93,68 @@ export const clientsRouter = router({
         }
       }
 
-      const whereClause: any = { coachId: ensureUserId(user.id) };
-
-      // Filter by archived status if provided
+      const whereClause: any = {};
       if (input?.archived !== undefined) {
         whereClause.archived = input.archived;
+      }
+
+      if (scope === "organization") {
+        // Find all active organizations for the coach
+        const activeMemberships = await db.coachOrganization.findMany({
+          where: {
+            coachId: ensuredUserId,
+            isActive: true,
+          },
+          select: {
+            organizationId: true,
+          },
+        });
+
+        const organizationIds = activeMemberships.map(
+          membership => membership.organizationId
+        );
+
+        if (organizationIds.length > 0) {
+          const orgCoaches = await db.coachOrganization.findMany({
+            where: {
+              organizationId: { in: organizationIds },
+              isActive: true,
+            },
+            select: {
+              coachId: true,
+            },
+          });
+
+          const accessibleCoachIds = Array.from(
+            new Set([ensuredUserId, ...orgCoaches.map(c => c.coachId)])
+          );
+
+          const orConditions: any[] = [
+            { coachId: { in: accessibleCoachIds } },
+            { primaryCoachId: { in: accessibleCoachIds } },
+            {
+              assignedCoaches: {
+                some: {
+                  coachId: { in: accessibleCoachIds },
+                  isActive: true,
+                },
+              },
+            },
+          ];
+
+          if (organizationIds.length > 0) {
+            orConditions.push({ organizationId: { in: organizationIds } });
+          }
+
+          // Always include the requesting coach's direct clients
+          orConditions.push({ coachId: ensuredUserId });
+
+          whereClause.OR = orConditions;
+        } else {
+          whereClause.coachId = ensuredUserId;
+        }
+      } else {
+        whereClause.coachId = ensuredUserId;
       }
 
       // Get clients with their basic info
@@ -128,6 +189,7 @@ export const clientsRouter = router({
           changeupSpinRate: true,
           riseSpinRate: true,
           curveSpinRate: true,
+          organizationId: true,
           user: {
             select: {
               id: true,
@@ -138,6 +200,20 @@ export const clientsRouter = router({
                   avatarUrl: true,
                 },
               },
+            },
+          },
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          primaryCoach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
           programAssignments: {
@@ -832,7 +908,6 @@ export const clientsRouter = router({
           changeupSpinRate: true,
           riseSpinRate: true,
           curveSpinRate: true,
-          customFields: true,
           user: {
             select: {
               id: true,
