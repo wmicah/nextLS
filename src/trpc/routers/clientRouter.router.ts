@@ -3,7 +3,7 @@ import { publicProcedure, router } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
 import { z } from "zod";
-import { format, addDays, addMonths } from "date-fns";
+import { format, addDays, addMonths, differenceInCalendarDays } from "date-fns";
 import { fromZonedTime } from "date-fns-tz";
 import {
   extractYouTubeVideoId,
@@ -3693,6 +3693,18 @@ export const clientRouterRouter = router({
 
       const coachIds = orgCoaches.map(c => c.coachId);
 
+      const coachSettings = await db.userSettings.findMany({
+        where: {
+          userId: { in: coachIds },
+        },
+      });
+
+      const coachSettingsMap = coachSettings.reduce((acc, setting) => {
+        acc[setting.userId] =
+          (setting as any)?.clientScheduleAdvanceLimitDays ?? null;
+        return acc;
+      }, {} as Record<string, number | null>);
+
       // Calculate month start and end dates
       const monthStart = new Date(input.year, input.month, 1);
       const monthEnd = new Date(input.year, input.month + 1, 0, 23, 59, 59);
@@ -3745,6 +3757,7 @@ export const clientRouterRouter = router({
           workingHoursStart: co.coach.workingHoursStart,
           workingHoursEnd: co.coach.workingHoursEnd,
           timeSlotInterval: co.coach.timeSlotInterval,
+          scheduleAdvanceLimitDays: coachSettingsMap[co.coach.id] ?? null,
         })),
         events: filteredEvents,
       };
@@ -3851,6 +3864,10 @@ export const clientRouterRouter = router({
       });
     }
 
+    const coachSettings = await db.userSettings.findUnique({
+      where: { userId: coach.id },
+    });
+
     // Format the working hours data to match the expected structure
     return {
       id: coach.id,
@@ -3870,6 +3887,8 @@ export const clientRouterRouter = router({
         ],
         timeSlotInterval: coach.timeSlotInterval || 60,
       },
+      scheduleAdvanceLimitDays:
+        (coachSettings as any)?.clientScheduleAdvanceLimitDays ?? null,
     };
   }),
 
@@ -4323,6 +4342,11 @@ export const clientRouterRouter = router({
       // Check if the requested date is on a working day
       const coach = await db.user.findFirst({
         where: { id: targetCoachId },
+        select: {
+          id: true,
+          name: true,
+          workingDays: true,
+        },
       });
 
       if (coach?.workingDays) {
@@ -4331,6 +4355,35 @@ export const clientRouterRouter = router({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `${coach.name} is not available on ${dayName}s`,
+          });
+        }
+      }
+
+      const coachSettings = await db.userSettings.findUnique({
+        where: { userId: targetCoachId },
+      });
+
+      const advanceLimitDays =
+        (coachSettings as any)?.clientScheduleAdvanceLimitDays ?? null;
+
+      if (advanceLimitDays && advanceLimitDays > 0) {
+        const today = new Date();
+        const startOfToday = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
+        const requestedDateOnly = new Date(
+          utcDateTime.getFullYear(),
+          utcDateTime.getMonth(),
+          utcDateTime.getDate()
+        );
+        const diff = differenceInCalendarDays(requestedDateOnly, startOfToday);
+
+        if (diff > advanceLimitDays) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `You can only request lessons up to ${advanceLimitDays} days in advance.`,
           });
         }
       }

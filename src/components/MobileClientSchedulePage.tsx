@@ -27,6 +27,7 @@ import {
   startOfWeek,
   endOfWeek,
   isSameMonth,
+  differenceInCalendarDays,
 } from "date-fns";
 import {
   formatTimeInUserTimezone,
@@ -124,6 +125,30 @@ export default function MobileClientSchedulePage() {
   // Fetch coach's profile
   const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
 
+  const scheduleAdvanceLimitDays =
+    coachProfile?.scheduleAdvanceLimitDays ?? null;
+
+  const isDateBeyondAdvanceLimit = (date: Date) => {
+    if (!scheduleAdvanceLimitDays || scheduleAdvanceLimitDays <= 0) {
+      return false;
+    }
+
+    const today = new Date();
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const targetDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    const diff = differenceInCalendarDays(targetDate, startOfToday);
+    return diff > scheduleAdvanceLimitDays;
+  };
+
   // Switch mutation
   const createSwitchRequestMutation =
     trpc.timeSwap.createSwapRequestFromLesson.useMutation({
@@ -200,6 +225,17 @@ export default function MobileClientSchedulePage() {
   };
 
   const handleDateClick = (day: Date) => {
+    if (isDateBeyondAdvanceLimit(day)) {
+      if (scheduleAdvanceLimitDays && scheduleAdvanceLimitDays > 0) {
+        alert(
+          `You can only request lessons up to ${scheduleAdvanceLimitDays} days in advance.`
+        );
+      } else {
+        alert("This date is not available for scheduling.");
+      }
+      return;
+    }
+
     setSelectedDate(day);
     setShowDayOverviewModal(true);
   };
@@ -229,6 +265,10 @@ export default function MobileClientSchedulePage() {
   };
 
   const generateAvailableTimeSlots = (date: Date) => {
+    if (isDateBeyondAdvanceLimit(date)) {
+      return [];
+    }
+
     const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
     const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
     const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
@@ -408,6 +448,16 @@ export default function MobileClientSchedulePage() {
             </button>
           </div>
 
+          {scheduleAdvanceLimitDays && scheduleAdvanceLimitDays > 0 && (
+            <div className="px-4 py-3 mb-4 bg-[#1F2426] border border-[#4A5A70] rounded-xl text-xs text-gray-300">
+              You can request lessons up to{" "}
+              <span className="font-semibold text-white">
+                {scheduleAdvanceLimitDays} days
+              </span>{" "}
+              in advance.
+            </div>
+          )}
+
           {/* Day Headers */}
           <div className="grid grid-cols-7 gap-2 mb-4">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
@@ -425,7 +475,7 @@ export default function MobileClientSchedulePage() {
             {getCalendarDays().map(day => {
               const isToday = isSameDay(day, new Date());
               const isCurrentMonth = isSameMonth(day, currentMonth);
-              const isPast = day < new Date();
+              const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
               const dayName = format(day, "EEEE");
               const workingDays = coachProfile?.workingHours?.workingDays || [
                 "Monday",
@@ -437,9 +487,10 @@ export default function MobileClientSchedulePage() {
                 "Sunday",
               ];
               const isWorkingDay = workingDays.includes(dayName);
+              const isBeyondLimit = isDateBeyondAdvanceLimit(day);
 
               const availableSlotsCount =
-                !isPast && isWorkingDay
+                !isPast && isWorkingDay && !isBeyondLimit
                   ? generateAvailableTimeSlots(day).length
                   : 0;
 
@@ -447,12 +498,15 @@ export default function MobileClientSchedulePage() {
                 <div
                   key={day.toISOString()}
                   onClick={() =>
-                    !isPast && isWorkingDay && handleDateClick(day)
+                    !isPast &&
+                    isWorkingDay &&
+                    !isBeyondLimit &&
+                    handleDateClick(day)
                   }
                   className={`
                     aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all duration-200 relative border-2 cursor-pointer active:scale-95 p-1 shadow-md hover:shadow-lg overflow-hidden
                     ${
-                      isPast || !isWorkingDay
+                      isPast || !isWorkingDay || isBeyondLimit
                         ? "cursor-not-allowed opacity-50"
                         : ""
                     }
@@ -463,11 +517,20 @@ export default function MobileClientSchedulePage() {
                         ? "text-gray-500 bg-gray-700/30 border-gray-600"
                         : !isWorkingDay
                         ? "text-orange-400 bg-orange-500/10 border-orange-500/30"
+                        : isBeyondLimit
+                        ? "text-gray-500 bg-gray-700/30 border-gray-600"
                         : isCurrentMonth
                         ? "text-white bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70] hover:from-[#606364] hover:to-[#4A5A70]"
                         : "text-gray-600 bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-700"
                     }
                   `}
+                  title={
+                    isBeyondLimit && scheduleAdvanceLimitDays
+                      ? `This date is beyond your coach's scheduling window (${scheduleAdvanceLimitDays} day limit).`
+                      : isBeyondLimit
+                      ? "This date is beyond your coach's scheduling window."
+                      : undefined
+                  }
                 >
                   <div className="font-bold text-xs flex items-center justify-between w-full">
                     <span>{format(day, "d")}</span>
@@ -479,6 +542,14 @@ export default function MobileClientSchedulePage() {
                       </div>
                     )}
                   </div>
+
+                  {isBeyondLimit && scheduleAdvanceLimitDays && (
+                    <div className="absolute inset-x-1 bottom-2">
+                      <div className="text-[10px] text-amber-200 bg-amber-500/10 border border-amber-400/40 rounded px-1 py-0.5 text-center pointer-events-none">
+                        Available ≤ {scheduleAdvanceLimitDays} days
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -636,6 +707,8 @@ export default function MobileClientSchedulePage() {
                 {(() => {
                   const availableSlots =
                     generateAvailableTimeSlots(selectedDate);
+                  const beyondLimit =
+                    selectedDate && isDateBeyondAdvanceLimit(selectedDate);
                   return availableSlots.length > 0 ? (
                     <div className="grid grid-cols-3 gap-2">
                       {availableSlots.map((slot, index) => (
@@ -659,9 +732,21 @@ export default function MobileClientSchedulePage() {
                   ) : (
                     <div className="text-center py-6 bg-gray-800/30 rounded-lg">
                       <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm">
-                        No available time slots
-                      </p>
+                      {beyondLimit ? (
+                        <>
+                          <p className="text-gray-400 text-sm">
+                            This date is beyond your coach&apos;s scheduling
+                            window.
+                          </p>
+                          <p className="text-gray-500 text-xs">
+                            Please choose an earlier date.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-gray-400 text-sm">
+                          No available time slots
+                        </p>
+                      )}
                     </div>
                   );
                 })()}
@@ -879,6 +964,20 @@ export default function MobileClientSchedulePage() {
                 <button
                   onClick={() => {
                     if (selectedDate && selectedTimeSlot) {
+                      if (isDateBeyondAdvanceLimit(selectedDate)) {
+                        if (
+                          scheduleAdvanceLimitDays &&
+                          scheduleAdvanceLimitDays > 0
+                        ) {
+                          alert(
+                            `You can only request lessons up to ${scheduleAdvanceLimitDays} days in advance.`
+                          );
+                        } else {
+                          alert("This date is not available for scheduling.");
+                        }
+                        return;
+                      }
+
                       // Capture user's timezone
                       const timeZone =
                         Intl.DateTimeFormat().resolvedOptions().timeZone ||

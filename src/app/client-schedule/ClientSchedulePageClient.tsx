@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Calendar,
@@ -27,6 +27,7 @@ import {
   startOfWeek,
   endOfWeek,
   isSameMonth,
+  differenceInCalendarDays,
 } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import {
@@ -81,6 +82,76 @@ function ClientSchedulePageClient() {
   // Determine if client is in an organization
   const isInOrganization =
     orgScheduleData && orgScheduleData.coaches.length > 0;
+
+  useEffect(() => {
+    if (
+      isInOrganization &&
+      orgScheduleData?.coaches?.length &&
+      !requestForm.coachId
+    ) {
+      setRequestForm(prev => ({
+        ...prev,
+        coachId: orgScheduleData.coaches[0]?.id || prev.coachId || "",
+      }));
+    }
+  }, [
+    isInOrganization,
+    orgScheduleData?.coaches?.length,
+    orgScheduleData?.coaches?.[0]?.id,
+    requestForm.coachId,
+  ]);
+
+  const getScheduleAdvanceLimitForCoach = (coachId?: string | null) => {
+    if (isInOrganization && orgScheduleData?.coaches?.length) {
+      const targetCoachId =
+        coachId ||
+        requestForm.coachId ||
+        orgScheduleData.coaches[0]?.id ||
+        null;
+      const targetCoach = orgScheduleData.coaches.find(
+        coach => coach.id === targetCoachId
+      );
+      if (
+        targetCoach &&
+        targetCoach.scheduleAdvanceLimitDays !== null &&
+        targetCoach.scheduleAdvanceLimitDays !== undefined
+      ) {
+        return targetCoach.scheduleAdvanceLimitDays;
+      }
+    }
+    return coachProfile?.scheduleAdvanceLimitDays ?? null;
+  };
+
+  const isDateBeyondAdvanceLimit = (date: Date, coachId?: string | null) => {
+    const limitDays = getScheduleAdvanceLimitForCoach(coachId);
+    if (!limitDays || limitDays <= 0) {
+      return false;
+    }
+
+    const today = new Date();
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const targetDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    const diff = differenceInCalendarDays(targetDate, startOfToday);
+    return diff > limitDays;
+  };
+
+  const defaultCoachId =
+    isInOrganization && orgScheduleData?.coaches?.length
+      ? orgScheduleData.coaches[0]?.id || ""
+      : coachProfile?.id || "";
+
+  const activeCoachId = isInOrganization
+    ? requestForm.coachId || defaultCoachId
+    : coachProfile?.id || "";
 
   // Fetch coach's schedule for the current month and adjacent months
   const { data: coachSchedule = [] } =
@@ -515,9 +586,23 @@ function ClientSchedulePageClient() {
   };
 
   const handleDateClick = (date: Date) => {
-    let defaultCoachId = requestForm.coachId;
+    let selectedCoachId = requestForm.coachId;
     if (isInOrganization && orgScheduleData?.coaches?.length) {
-      defaultCoachId = defaultCoachId || orgScheduleData.coaches[0]?.id || "";
+      selectedCoachId = selectedCoachId || orgScheduleData.coaches[0]?.id || "";
+    } else {
+      selectedCoachId = coachProfile?.id || "";
+    }
+
+    if (isDateBeyondAdvanceLimit(date, selectedCoachId)) {
+      const limitDays = getScheduleAdvanceLimitForCoach(selectedCoachId);
+      if (limitDays && limitDays > 0) {
+        alert(
+          `You can only request lessons up to ${limitDays} days in advance.`
+        );
+      } else {
+        alert("This date is not available for scheduling.");
+      }
+      return;
     }
 
     setSelectedDate(date);
@@ -525,7 +610,7 @@ function ClientSchedulePageClient() {
       ...requestForm,
       date: format(date, "yyyy-MM-dd"),
       time: "",
-      coachId: defaultCoachId || "",
+      coachId: selectedCoachId || "",
     });
     setSelectedTimeSlot("");
     setShowDayOverviewModal(true);
@@ -535,6 +620,25 @@ function ClientSchedulePageClient() {
     if (!requestForm.date || !requestForm.time) {
       alert("Please fill in all required fields");
       return;
+    }
+
+    const targetCoachId = isInOrganization
+      ? requestForm.coachId || defaultCoachId
+      : coachProfile?.id || null;
+
+    if (requestForm.date) {
+      const requestedDate = new Date(`${requestForm.date}T00:00:00`);
+      if (isDateBeyondAdvanceLimit(requestedDate, targetCoachId)) {
+        const limitDays = getScheduleAdvanceLimitForCoach(targetCoachId);
+        if (limitDays && limitDays > 0) {
+          alert(
+            `You can only request lessons up to ${limitDays} days in advance.`
+          );
+        } else {
+          alert("This date is not available for scheduling.");
+        }
+        return;
+      }
     }
 
     // Capture user's timezone
@@ -586,6 +690,7 @@ function ClientSchedulePageClient() {
           workingHoursStart: string | null;
           workingHoursEnd: string | null;
           timeSlotInterval: number;
+          scheduleAdvanceLimitDays: number | null;
         }
       | undefined;
 
@@ -593,6 +698,14 @@ function ClientSchedulePageClient() {
       orgCoach = orgScheduleData.coaches.find(
         coach => coach.id === requestForm.coachId
       );
+    }
+
+    const coachIdForLimit = isInOrganization
+      ? requestForm.coachId || orgCoach?.id || defaultCoachId
+      : coachProfile?.id || null;
+
+    if (isDateBeyondAdvanceLimit(date, coachIdForLimit)) {
+      return [];
     }
 
     const startTime =
@@ -903,6 +1016,27 @@ function ClientSchedulePageClient() {
             </div>
           </div>
 
+          {(() => {
+            const limitDays = getScheduleAdvanceLimitForCoach(activeCoachId);
+            if (limitDays && limitDays > 0) {
+              return (
+                <div
+                  className="mt-4 rounded-lg border px-4 py-3 text-sm"
+                  style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+                >
+                  <span className="text-gray-300">
+                    You can request lessons up to{" "}
+                    <span className="font-semibold text-white">
+                      {limitDays} days
+                    </span>{" "}
+                    in advance.
+                  </span>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {/* Calendar */}
           <div
             className="p-6 rounded-lg border-2"
@@ -942,6 +1076,11 @@ function ClientSchedulePageClient() {
                 const isBlocked = isDayBlocked(day);
                 const hasBlockedTimes = dayBlockedTimes.length > 0;
 
+                const isBeyondLimit = isDateBeyondAdvanceLimit(
+                  day,
+                  activeCoachId
+                );
+
                 const hasCoachLessons = coachLessonsForDay.length > 0;
                 const hasMyPendingLessons =
                   myLessonsForDay.filter(
@@ -951,17 +1090,22 @@ function ClientSchedulePageClient() {
                   myLessonsForDay.filter(
                     lesson => lesson.status === "CONFIRMED"
                   ).length > 0;
+                const limitDaysForDay =
+                  getScheduleAdvanceLimitForCoach(activeCoachId);
 
                 return (
                   <div
                     key={day.toISOString()}
                     onClick={() =>
-                      !isPast && isWorkingDay && handleDateClick(day)
+                      !isPast &&
+                      isWorkingDay &&
+                      !isBeyondLimit &&
+                      handleDateClick(day)
                     }
                     className={`
                       group p-2 md:p-3 text-xs md:text-sm rounded-lg transition-all duration-200 relative min-h-[120px] md:min-h-[140px] border-2 touch-manipulation overflow-hidden
                       ${
-                        isPast || !isWorkingDay
+                        isPast || !isWorkingDay || isBeyondLimit
                           ? "cursor-not-allowed opacity-50"
                           : "cursor-pointer"
                       }
@@ -974,6 +1118,8 @@ function ClientSchedulePageClient() {
                           ? "text-gray-500 bg-gray-700/30 border-gray-600"
                           : !isWorkingDay
                           ? "text-orange-400 bg-orange-500/10 border-orange-500/30"
+                          : isBeyondLimit
+                          ? "text-gray-500 bg-gray-700/30 border-gray-600"
                           : isCurrentMonth
                           ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
                           : "text-gray-600 bg-gray-900/30 border-gray-700"
@@ -984,6 +1130,10 @@ function ClientSchedulePageClient() {
                         ? `Coach unavailable: ${dayBlockedTimes
                             .map(bt => bt.title)
                             .join(", ")}`
+                        : isBeyondLimit
+                        ? limitDaysForDay
+                          ? `This date is beyond your coach's scheduling window (${limitDaysForDay} day limit).`
+                          : "This date is beyond your coach's scheduling window"
                         : !isPast && isCurrentMonth && isWorkingDay
                         ? "Click to request lesson"
                         : !isWorkingDay && isCurrentMonth && !isPast
@@ -1369,16 +1519,34 @@ function ClientSchedulePageClient() {
                     const availableSlots =
                       generateAvailableTimeSlots(selectedDate);
 
+                    const beyondLimit =
+                      selectedDate &&
+                      isDateBeyondAdvanceLimit(selectedDate, activeCoachId);
+
                     if (availableSlots.length === 0) {
                       return (
                         <div className="text-center py-6">
                           <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                          <p className="text-gray-400">
-                            No available time slots
-                          </p>
-                          <p className="text-gray-500 text-sm">
-                            All working hours are booked
-                          </p>
+                          {beyondLimit ? (
+                            <>
+                              <p className="text-gray-400">
+                                This date is outside your coach&apos;s
+                                scheduling window.
+                              </p>
+                              <p className="text-gray-500 text-sm">
+                                Please choose a date closer to today.
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-gray-400">
+                                No available time slots
+                              </p>
+                              <p className="text-gray-500 text-sm">
+                                All working hours are booked
+                              </p>
+                            </>
+                          )}
                         </div>
                       );
                     }
@@ -1431,12 +1599,41 @@ function ClientSchedulePageClient() {
                                 </label>
                                 <select
                                   value={requestForm.coachId}
-                                  onChange={e =>
-                                    setRequestForm({
-                                      ...requestForm,
-                                      coachId: e.target.value,
-                                    })
-                                  }
+                                  onChange={e => {
+                                    const newCoachId = e.target.value;
+                                    if (
+                                      selectedDate &&
+                                      isDateBeyondAdvanceLimit(
+                                        selectedDate,
+                                        newCoachId
+                                      )
+                                    ) {
+                                      setSelectedTimeSlot("");
+                                      setRequestForm({
+                                        ...requestForm,
+                                        coachId: newCoachId,
+                                        time: "",
+                                      });
+                                      const limitDays =
+                                        getScheduleAdvanceLimitForCoach(
+                                          newCoachId
+                                        );
+                                      if (limitDays && limitDays > 0) {
+                                        alert(
+                                          `This coach only accepts requests up to ${limitDays} days in advance. Please choose an earlier date.`
+                                        );
+                                      } else {
+                                        alert(
+                                          "This coach does not accept requests this far in advance."
+                                        );
+                                      }
+                                    } else {
+                                      setRequestForm({
+                                        ...requestForm,
+                                        coachId: newCoachId,
+                                      });
+                                    }
+                                  }}
                                   className="w-full p-2 rounded-lg border text-white"
                                   style={{
                                     backgroundColor: "#1F2426",
@@ -1538,6 +1735,14 @@ function ClientSchedulePageClient() {
                   </div>
                   <SwapRequests />
                 </div>
+
+                {isBeyondLimit && limitDaysForDay && (
+                  <div className="absolute inset-x-2 bottom-2">
+                    <div className="text-[10px] text-amber-200 bg-amber-500/10 border border-amber-400/40 rounded px-1.5 py-0.5 text-center pointer-events-none">
+                      Available up to {limitDaysForDay} days
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
