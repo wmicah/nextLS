@@ -187,6 +187,23 @@ export const clientsRouter = router({
               email: true,
             },
           },
+          notes: {
+            select: {
+              id: true,
+              title: true,
+              content: true,
+              createdAt: true,
+              coachId: true,
+              type: true,
+              priority: true,
+              isPrivate: true,
+              updatedAt: true,
+              clientId: true,
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
           programAssignments: {
             include: {
               program: {
@@ -895,6 +912,23 @@ export const clientsRouter = router({
                 },
               },
               role: true,
+            },
+          },
+          notes: {
+            select: {
+              id: true,
+              title: true,
+              content: true,
+              createdAt: true,
+              coachId: true,
+              type: true,
+              priority: true,
+              isPrivate: true,
+              updatedAt: true,
+              clientId: true,
+            },
+            orderBy: {
+              createdAt: "desc",
             },
           },
           user: {
