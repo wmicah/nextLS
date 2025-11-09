@@ -203,6 +203,7 @@ function MessagesPage({}: MessagesPageProps) {
   // Get clients for conversation creation
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
+    scope: "organization",
   });
 
   // Mutations
@@ -431,7 +432,9 @@ function MessagesPage({}: MessagesPageProps) {
     const searchLower = clientSearchTerm.toLowerCase();
     return (
       client.name?.toLowerCase().includes(searchLower) ||
-      client.email?.toLowerCase().includes(searchLower)
+      client.email?.toLowerCase().includes(searchLower) ||
+      client.coach?.name?.toLowerCase().includes(searchLower) ||
+      client.primaryCoach?.name?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -1301,6 +1304,15 @@ function MessagesPage({}: MessagesPageProps) {
                             </span>
                           )}
                         </div>
+                        {(client.primaryCoach?.name || client.coach?.name) && (
+                          <p
+                            className="text-xs mt-1"
+                            style={{ color: "#787F82" }}
+                          >
+                            Assigned Coach:{" "}
+                            {client.primaryCoach?.name || client.coach?.name}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </button>

@@ -22,6 +22,7 @@ export default function MassMessageModal({
   // Get coach's clients
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
+    scope: "organization",
   });
 
   // Debug: Log client data
@@ -96,7 +97,9 @@ export default function MassMessageModal({
     const searchLower = searchTerm.toLowerCase();
     return (
       client.name?.toLowerCase().includes(searchLower) ||
-      client.email?.toLowerCase().includes(searchLower)
+      client.email?.toLowerCase().includes(searchLower) ||
+      client.coach?.name?.toLowerCase().includes(searchLower) ||
+      client.primaryCoach?.name?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -229,6 +232,15 @@ export default function MassMessageModal({
                       <div className="text-sm" style={{ color: "#ABA4AA" }}>
                         {client.email}
                       </div>
+                      {(client.primaryCoach?.name || client.coach?.name) && (
+                        <div
+                          className="text-xs mt-1"
+                          style={{ color: "#787F82" }}
+                        >
+                          Assigned Coach:{" "}
+                          {client.primaryCoach?.name || client.coach?.name}
+                        </div>
+                      )}
                     </div>
                     {selectedClients.includes(client.id) && (
                       <CheckCircle

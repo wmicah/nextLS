@@ -153,7 +153,10 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   );
 
   // Get coach's clients for conversation creation
-  const { data: otherClients = [] } = trpc.clients.list.useQuery();
+  const { data: otherClients = [] } = trpc.clients.list.useQuery({
+    archived: false,
+    scope: "organization",
+  });
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
@@ -339,7 +342,9 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
     const searchLower = clientSearchTerm.toLowerCase();
     return (
       client.name?.toLowerCase().includes(searchLower) ||
-      client.email?.toLowerCase().includes(searchLower)
+      client.email?.toLowerCase().includes(searchLower) ||
+      client.coach?.name?.toLowerCase().includes(searchLower) ||
+      client.primaryCoach?.name?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -990,6 +995,17 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                                 </span>
                               )}
                             </div>
+                            {(client.primaryCoach?.name ||
+                              client.coach?.name) && (
+                              <p
+                                className="text-xs mt-1"
+                                style={{ color: "#787F82" }}
+                              >
+                                Assigned Coach:{" "}
+                                {client.primaryCoach?.name ||
+                                  client.coach?.name}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </button>

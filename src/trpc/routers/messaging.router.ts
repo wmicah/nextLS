@@ -425,23 +425,27 @@ export const messagingRouter = router({
       }
 
       // Check if coach is in an organization
-      const coachOrganization = await db.coachOrganization.findFirst({
+      const ensuredUserId = ensureUserId(user.id);
+      const activeMemberships = await db.coachOrganization.findMany({
         where: {
-          coachId: ensureUserId(user.id),
+          coachId: ensuredUserId,
           isActive: true,
+        },
+        select: {
+          organizationId: true,
         },
       });
 
-      // Build the where clause
-      let whereClause: any = {
-        id: input.clientId,
-      };
+      const organizationIds = activeMemberships.map(
+        membership => membership.organizationId
+      );
 
-      if (coachOrganization?.organizationId) {
-        // Get all coaches in the organization
+      let accessibleCoachIds: string[] = [ensuredUserId];
+
+      if (organizationIds.length > 0) {
         const orgCoaches = await db.coachOrganization.findMany({
           where: {
-            organizationId: coachOrganization.organizationId,
+            organizationId: { in: organizationIds },
             isActive: true,
           },
           select: {
@@ -449,17 +453,35 @@ export const messagingRouter = router({
           },
         });
 
-        const orgCoachIds = orgCoaches.map(c => c.coachId);
+        accessibleCoachIds = Array.from(
+          new Set([ensuredUserId, ...orgCoaches.map(c => c.coachId)])
+        );
+      }
 
-        // Allow access if client belongs to any coach in the organization
-        whereClause.coachId = { in: orgCoachIds };
+      const clientWhereClause: any = {
+        id: input.clientId,
+      };
+
+      if (organizationIds.length > 0) {
+        clientWhereClause.OR = [
+          { coachId: { in: accessibleCoachIds } },
+          { primaryCoachId: { in: accessibleCoachIds } },
+          { organizationId: { in: organizationIds } },
+          {
+            assignedCoaches: {
+              some: {
+                coachId: { in: accessibleCoachIds },
+                isActive: true,
+              },
+            },
+          },
+        ];
       } else {
-        // Not in an organization, only allow access to own clients
-        whereClause.coachId = ensureUserId(user.id);
+        clientWhereClause.coachId = ensuredUserId;
       }
 
       const client = await db.client.findFirst({
-        where: whereClause,
+        where: clientWhereClause,
         select: {
           id: true,
           name: true,
@@ -695,10 +717,59 @@ export const messagingRouter = router({
       console.log("🔍 Coach ID:", user.id);
 
       // Verify all clients belong to this coach
+      const ensuredUserId = ensureUserId(user.id);
+      const activeMemberships = await db.coachOrganization.findMany({
+        where: {
+          coachId: ensuredUserId,
+          isActive: true,
+        },
+        select: {
+          organizationId: true,
+        },
+      });
+
+      const organizationIds = activeMemberships.map(
+        membership => membership.organizationId
+      );
+
+      let accessibleCoachIds: string[] = [ensuredUserId];
+
+      if (organizationIds.length > 0) {
+        const orgCoaches = await db.coachOrganization.findMany({
+          where: {
+            organizationId: { in: organizationIds },
+            isActive: true,
+          },
+          select: {
+            coachId: true,
+          },
+        });
+
+        accessibleCoachIds = Array.from(
+          new Set([ensuredUserId, ...orgCoaches.map(c => c.coachId)])
+        );
+      }
+
       const clients = await db.client.findMany({
         where: {
           id: { in: input.clientIds },
-          coachId: user.id,
+          ...(organizationIds.length > 0
+            ? {
+                OR: [
+                  { coachId: { in: accessibleCoachIds } },
+                  { primaryCoachId: { in: accessibleCoachIds } },
+                  { organizationId: { in: organizationIds } },
+                  {
+                    assignedCoaches: {
+                      some: {
+                        coachId: { in: accessibleCoachIds },
+                        isActive: true,
+                      },
+                    },
+                  },
+                ],
+              }
+            : { coachId: ensuredUserId }),
         },
         select: {
           id: true,
