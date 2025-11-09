@@ -2,6 +2,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { publicProcedure, router } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
+import { Prisma } from "../../../generated/prisma";
 import { z } from "zod";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
 import { CompleteEmailService } from "@/lib/complete-email-service";
@@ -563,7 +564,7 @@ export const userRouter = router({
             "Sunday",
           ],
           timeSlotInterval: input.timeSlotInterval || 60,
-          customWorkingHours: normalizedCustomWorkingHours,
+          customWorkingHours: normalizedCustomWorkingHours ?? Prisma.JsonNull,
         },
       });
 
