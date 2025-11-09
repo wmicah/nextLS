@@ -128,6 +128,67 @@ export default function MobileClientSchedulePage() {
   const scheduleAdvanceLimitDays =
     coachProfile?.scheduleAdvanceLimitDays ?? null;
 
+  const defaultWorkingDays = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+
+  const getWorkingProfile = () => ({
+    startTime: coachProfile?.workingHours?.startTime || "9:00 AM",
+    endTime: coachProfile?.workingHours?.endTime || "6:00 PM",
+    workingDays:
+      coachProfile?.workingHours?.workingDays || defaultWorkingDays,
+    timeSlotInterval: coachProfile?.workingHours?.timeSlotInterval || 60,
+    customWorkingHours:
+      (coachProfile?.workingHours as any)?.customWorkingHours ||
+      (coachProfile as any)?.customWorkingHours ||
+      null,
+  });
+
+  const getWorkingHoursForDate = (
+    date: Date
+  ): {
+    isWorkingDay: boolean;
+    startTime: string;
+    endTime: string;
+    timeSlotInterval: number;
+  } => {
+    const profile = getWorkingProfile();
+    const dayName = format(date, "EEEE");
+    const custom = profile.customWorkingHours;
+
+    if (custom && typeof custom === "object") {
+      const dayConfig = (custom as any)[dayName];
+      if (dayConfig && typeof dayConfig === "object") {
+        const enabled =
+          (dayConfig as any).enabled !== undefined
+            ? (dayConfig as any).enabled !== false
+            : profile.workingDays.includes(dayName);
+        const start =
+          (dayConfig as any).startTime || profile.startTime;
+        const end = (dayConfig as any).endTime || profile.endTime;
+        return {
+          isWorkingDay: enabled,
+          startTime: start,
+          endTime: end,
+          timeSlotInterval: profile.timeSlotInterval,
+        };
+      }
+    }
+
+    return {
+      isWorkingDay: profile.workingDays.includes(dayName),
+      startTime: profile.startTime,
+      endTime: profile.endTime,
+      timeSlotInterval: profile.timeSlotInterval,
+    };
+  };
+
   const isDateBeyondAdvanceLimit = (date: Date) => {
     if (!scheduleAdvanceLimitDays || scheduleAdvanceLimitDays <= 0) {
       return false;
@@ -269,9 +330,15 @@ export default function MobileClientSchedulePage() {
       return [];
     }
 
-    const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
-    const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
-    const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
+    const workingHours = getWorkingHoursForDate(date);
+
+    if (!workingHours.isWorkingDay) {
+      return [];
+    }
+
+    const startTime = workingHours.startTime;
+    const endTime = workingHours.endTime;
+    const interval = workingHours.timeSlotInterval;
     const slots = [];
 
     const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -362,6 +429,8 @@ export default function MobileClientSchedulePage() {
     }
   };
 
+  const workingProfile = getWorkingProfile();
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
@@ -391,21 +460,15 @@ export default function MobileClientSchedulePage() {
             </h2>
           </div>
           <p className="text-gray-300 text-sm">
-            {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
-            {coachProfile?.workingHours?.endTime || "6:00 PM"}
+            {workingProfile.startTime} - {workingProfile.endTime}
           </p>
+          {workingProfile.customWorkingHours && (
+            <p className="text-xs text-emerald-300 mt-1">
+              Custom daily hours enabled
+            </p>
+          )}
           <div className="mt-2 flex flex-wrap gap-1">
-            {(
-              coachProfile?.workingHours?.workingDays || [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-              ]
-            ).map((day: string) => (
+            {workingProfile.workingDays.map((day: string) => (
               <span
                 key={day}
                 className="px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-xs"
@@ -476,17 +539,8 @@ export default function MobileClientSchedulePage() {
               const isToday = isSameDay(day, new Date());
               const isCurrentMonth = isSameMonth(day, currentMonth);
               const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
-              const dayName = format(day, "EEEE");
-              const workingDays = coachProfile?.workingHours?.workingDays || [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-              ];
-              const isWorkingDay = workingDays.includes(dayName);
+              const workingHoursForDay = getWorkingHoursForDate(day);
+              const isWorkingDay = workingHoursForDay.isWorkingDay;
               const isBeyondLimit = isDateBeyondAdvanceLimit(day);
 
               const availableSlotsCount =
@@ -573,8 +627,12 @@ export default function MobileClientSchedulePage() {
                   {format(selectedDate, "MMM d, yyyy")}
                 </h2>
                 <p className="text-gray-400 text-xs">
-                  {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
-                  {coachProfile?.workingHours?.endTime || "6:00 PM"}
+                  {(() => {
+                    const hours = getWorkingHoursForDate(selectedDate);
+                    return hours.isWorkingDay
+                      ? `${hours.startTime} - ${hours.endTime}`
+                      : "Unavailable";
+                  })()}
                 </p>
               </div>
               <button

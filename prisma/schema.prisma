@@ -22,6 +22,7 @@ model User {
   role                     UserRole?
   workingHoursStart        String?                 @map("working_hours_start")
   workingHoursEnd          String?                 @map("working_hours_end")
+  customWorkingHours       Json?                   @map("custom_working_hours")
   isAdmin                  Boolean                 @default(false)
   inviteCode               String?                 @unique @map("invite_code")
   organizationId           String?                 @map("organization_id")

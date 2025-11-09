@@ -16,6 +16,25 @@ import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { isYouTubeUrl, extractYouTubeId } from "@/lib/youtube-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
 
+const convertTimeStringToMinutes = (time: string | null | undefined) => {
+  if (!time) return null;
+  const match = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return null;
+
+  let hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+
+  if (period === "PM" && hour !== 12) {
+    hour += 12;
+  }
+  if (period === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  return hour * 60 + minute;
+};
+
 /**
  * ClientRouter Router
  */
@@ -3686,6 +3705,7 @@ export const clientRouterRouter = router({
               workingHoursStart: true,
               workingHoursEnd: true,
               timeSlotInterval: true,
+              customWorkingHours: true,
             },
           },
         },
@@ -3758,6 +3778,11 @@ export const clientRouterRouter = router({
           workingHoursEnd: co.coach.workingHoursEnd,
           timeSlotInterval: co.coach.timeSlotInterval,
           scheduleAdvanceLimitDays: coachSettingsMap[co.coach.id] ?? null,
+          customWorkingHours:
+            (co.coach as any)?.customWorkingHours &&
+            typeof (co.coach as any)?.customWorkingHours === "object"
+              ? (co.coach as any)?.customWorkingHours
+              : null,
         })),
         events: filteredEvents,
       };
@@ -3854,6 +3879,7 @@ export const clientRouterRouter = router({
         workingHoursEnd: true,
         workingDays: true,
         timeSlotInterval: true,
+        customWorkingHours: true,
       },
     });
 
@@ -3869,6 +3895,11 @@ export const clientRouterRouter = router({
     });
 
     // Format the working hours data to match the expected structure
+    const customWorkingHours =
+      (coach as any)?.customWorkingHours && typeof (coach as any)?.customWorkingHours === "object"
+        ? (coach as any).customWorkingHours
+        : null;
+
     return {
       id: coach.id,
       name: coach.name,
@@ -3886,9 +3917,11 @@ export const clientRouterRouter = router({
           "Sunday",
         ],
         timeSlotInterval: coach.timeSlotInterval || 60,
+        customWorkingHours: customWorkingHours,
       },
       scheduleAdvanceLimitDays:
         (coachSettings as any)?.clientScheduleAdvanceLimitDays ?? null,
+      customWorkingHours,
     };
   }),
 
@@ -4346,15 +4379,83 @@ export const clientRouterRouter = router({
           id: true,
           name: true,
           workingDays: true,
+          workingHoursStart: true,
+          workingHoursEnd: true,
+          timeSlotInterval: true,
+          customWorkingHours: true,
         },
       });
 
-      if (coach?.workingDays) {
+      const minuteInt = parseInt(minute, 10);
+      const requestedMinutes = hour24 * 60 + minuteInt;
+
+      if (coach) {
         const dayName = format(new Date(fullDateStr), "EEEE");
-        if (!coach.workingDays.includes(dayName)) {
+        const defaultWorkingDays =
+          coach.workingDays && coach.workingDays.length > 0
+            ? coach.workingDays
+            : [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ];
+
+        const customWorkingHours =
+          (coach as any)?.customWorkingHours &&
+          typeof (coach as any)?.customWorkingHours === "object"
+            ? (coach as any)?.customWorkingHours
+            : null;
+
+        let isWorkingDay = defaultWorkingDays.includes(dayName);
+        let allowedStart = coach.workingHoursStart || "9:00 AM";
+        let allowedEnd = coach.workingHoursEnd || "6:00 PM";
+
+        if (customWorkingHours) {
+          const dayConfig = customWorkingHours[dayName];
+          if (dayConfig && typeof dayConfig === "object") {
+            if (
+              (dayConfig as any).enabled !== undefined &&
+              (dayConfig as any).enabled === false
+            ) {
+              isWorkingDay = false;
+            } else {
+              isWorkingDay =
+                (dayConfig as any).enabled === undefined
+                  ? isWorkingDay
+                  : (dayConfig as any).enabled !== false;
+            }
+
+            if ((dayConfig as any).startTime) {
+              allowedStart = (dayConfig as any).startTime;
+            }
+            if ((dayConfig as any).endTime) {
+              allowedEnd = (dayConfig as any).endTime;
+            }
+          }
+        }
+
+        if (!isWorkingDay) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `${coach.name} is not available on ${dayName}s`,
+            message: `${coach.name || "This coach"} is not available on ${dayName}s`,
+          });
+        }
+
+        const startMinutes = convertTimeStringToMinutes(allowedStart);
+        const endMinutes = convertTimeStringToMinutes(allowedEnd);
+
+        if (
+          startMinutes !== null &&
+          endMinutes !== null &&
+          (requestedMinutes < startMinutes || requestedMinutes >= endMinutes)
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `${coach.name || "This coach"} accepts requests between ${allowedStart} and ${allowedEnd} on ${dayName}s.`,
           });
         }
       }
