@@ -1735,14 +1735,6 @@ function ClientSchedulePageClient() {
                   </div>
                   <SwapRequests />
                 </div>
-
-                {isBeyondLimit && limitDaysForDay && (
-                  <div className="absolute inset-x-2 bottom-2">
-                    <div className="text-[10px] text-amber-200 bg-amber-500/10 border border-amber-400/40 rounded px-1.5 py-0.5 text-center pointer-events-none">
-                      Available up to {limitDaysForDay} days
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
