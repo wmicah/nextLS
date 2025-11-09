@@ -11,6 +11,34 @@ import {
   sendClientJoinNotification,
 } from "@/lib/notification-utils";
 
+const parseTimeToMinutes = (time: string) => {
+  const match = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return null;
+
+  let [_, hourStr, minuteStr, period] = match;
+  let hour = parseInt(hourStr, 10);
+  const minute = parseInt(minuteStr, 10);
+  period = period.toUpperCase();
+
+  if (period === "PM" && hour !== 12) {
+    hour += 12;
+  }
+  if (period === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  return hour * 60 + minute;
+};
+
+const isEndTimeAfterStartTime = (start: string, end: string) => {
+  const startMinutes = parseTimeToMinutes(start);
+  const endMinutes = parseTimeToMinutes(end);
+
+  if (startMinutes === null || endMinutes === null) return false;
+
+  return endMinutes > startMinutes;
+};
+
 /**
  * User Router
  * Handles user profile, settings, notifications, and account management
@@ -412,6 +440,18 @@ export const userRouter = router({
         endTime: z.string(),
         workingDays: z.array(z.string()).optional(),
         timeSlotInterval: z.number().min(15).max(120).optional(),
+        customWorkingHours: z
+          .record(
+            z.string(),
+            z
+              .object({
+                enabled: z.boolean().optional(),
+                startTime: z.string().optional(),
+                endTime: z.string().optional(),
+              })
+              .optional()
+          )
+          .optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -444,6 +484,70 @@ export const userRouter = router({
         });
       }
 
+      const dayNames = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ];
+
+      let normalizedCustomWorkingHours: Record<
+        string,
+        { enabled: boolean; startTime?: string; endTime?: string }
+      > | null = null;
+
+      if (input.customWorkingHours) {
+        normalizedCustomWorkingHours = {};
+
+        for (const [day, config] of Object.entries(input.customWorkingHours)) {
+          if (!dayNames.includes(day)) {
+            console.warn(
+              `Ignoring invalid custom working hours entry for day: ${day}`
+            );
+            continue;
+          }
+
+          if (!config) continue;
+
+          const enabled = config.enabled ?? true;
+          const start = config.startTime;
+          const end = config.endTime;
+
+          if (enabled) {
+            if (!start || !end) {
+              console.warn(
+                `Custom working hours for ${day} missing start or end time; skipping.`
+              );
+              continue;
+            }
+
+            if (!isEndTimeAfterStartTime(start, end)) {
+              console.warn(
+                `Custom working hours for ${day} have end time before start time; skipping.`
+              );
+              continue;
+            }
+
+            normalizedCustomWorkingHours[day] = {
+              enabled: true,
+              startTime: start,
+              endTime: end,
+            };
+          } else {
+            normalizedCustomWorkingHours[day] = {
+              enabled: false,
+            };
+          }
+        }
+
+        if (Object.keys(normalizedCustomWorkingHours).length === 0) {
+          normalizedCustomWorkingHours = null;
+        }
+      }
+
       const updatedUser = await db.user.update({
         where: { id: user.id },
         data: {
@@ -459,6 +563,7 @@ export const userRouter = router({
             "Sunday",
           ],
           timeSlotInterval: input.timeSlotInterval || 60,
+          customWorkingHours: normalizedCustomWorkingHours,
         },
       });
 
@@ -840,6 +945,12 @@ export const userRouter = router({
     if (!dbUser) return null;
 
     // Transform the data to include workingHours object
+    const customWorkingHours = (dbUser as any)?.customWorkingHours || null;
+    const normalizedCustomWorkingHours =
+      customWorkingHours && typeof customWorkingHours === "object"
+        ? customWorkingHours
+        : null;
+
     return {
       ...dbUser,
       workingHours:
@@ -857,8 +968,15 @@ export const userRouter = router({
                 "Sunday",
               ],
               timeSlotInterval: dbUser.timeSlotInterval || 60,
+              customWorkingHours: normalizedCustomWorkingHours,
             }
           : null,
+      customWorkingHours: normalizedCustomWorkingHours,
+      hasCustomWorkingHours:
+        normalizedCustomWorkingHours &&
+        Object.values(normalizedCustomWorkingHours).some(
+          (value: any) => value && value.enabled !== false
+        ),
     };
   }),
 

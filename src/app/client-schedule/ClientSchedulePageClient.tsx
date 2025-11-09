@@ -83,6 +83,104 @@ function ClientSchedulePageClient() {
   const isInOrganization =
     orgScheduleData && orgScheduleData.coaches.length > 0;
 
+  const defaultWorkingDays = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+
+  const getCoachWorkingProfile = (coachId?: string | null) => {
+    if (isInOrganization && orgScheduleData?.coaches?.length) {
+      const targetCoachId =
+        coachId ||
+        requestForm.coachId ||
+        orgScheduleData.coaches[0]?.id ||
+        null;
+      const targetCoach = orgScheduleData.coaches.find(
+        coach => coach.id === targetCoachId
+      );
+      if (targetCoach) {
+        return {
+          startTime:
+            targetCoach.workingHoursStart ||
+            coachProfile?.workingHours?.startTime ||
+            "9:00 AM",
+          endTime:
+            targetCoach.workingHoursEnd ||
+            coachProfile?.workingHours?.endTime ||
+            "6:00 PM",
+          workingDays:
+            targetCoach.workingDays && targetCoach.workingDays.length > 0
+              ? targetCoach.workingDays
+              : coachProfile?.workingHours?.workingDays || defaultWorkingDays,
+          timeSlotInterval:
+            targetCoach.timeSlotInterval ||
+            coachProfile?.workingHours?.timeSlotInterval ||
+            60,
+          customWorkingHours:
+            (targetCoach as any)?.customWorkingHours || null,
+        };
+      }
+    }
+
+    return {
+      startTime: coachProfile?.workingHours?.startTime || "9:00 AM",
+      endTime: coachProfile?.workingHours?.endTime || "6:00 PM",
+      workingDays:
+        coachProfile?.workingHours?.workingDays || defaultWorkingDays,
+      timeSlotInterval:
+        coachProfile?.workingHours?.timeSlotInterval || 60,
+      customWorkingHours:
+        (coachProfile?.workingHours as any)?.customWorkingHours ||
+        (coachProfile as any)?.customWorkingHours ||
+        null,
+    };
+  };
+
+  const getWorkingHoursForDate = (
+    date: Date,
+    coachId?: string | null
+  ): {
+    isWorkingDay: boolean;
+    startTime: string;
+    endTime: string;
+    timeSlotInterval: number;
+  } => {
+    const profile = getCoachWorkingProfile(coachId);
+    const dayName = format(date, "EEEE");
+    const custom = profile.customWorkingHours;
+
+    if (custom && typeof custom === "object") {
+      const dayConfig = (custom as any)[dayName];
+      if (dayConfig && typeof dayConfig === "object") {
+        const enabled =
+          (dayConfig as any).enabled !== undefined
+            ? (dayConfig as any).enabled !== false
+            : profile.workingDays.includes(dayName);
+        const start =
+          (dayConfig as any).startTime || profile.startTime;
+        const end = (dayConfig as any).endTime || profile.endTime;
+        return {
+          isWorkingDay: enabled,
+          startTime: start,
+          endTime: end,
+          timeSlotInterval: profile.timeSlotInterval,
+        };
+      }
+    }
+
+    return {
+      isWorkingDay: profile.workingDays.includes(dayName),
+      startTime: profile.startTime,
+      endTime: profile.endTime,
+      timeSlotInterval: profile.timeSlotInterval,
+    };
+  };
+
   useEffect(() => {
     if (
       isInOrganization &&
@@ -152,6 +250,8 @@ function ClientSchedulePageClient() {
   const activeCoachId = isInOrganization
     ? requestForm.coachId || defaultCoachId
     : coachProfile?.id || "";
+
+  const activeCoachProfile = getCoachWorkingProfile(activeCoachId);
 
   // Fetch coach's schedule for the current month and adjacent months
   const { data: coachSchedule = [] } =
@@ -708,18 +808,18 @@ function ClientSchedulePageClient() {
       return [];
     }
 
-    const startTime =
-      orgCoach?.workingHoursStart ||
-      coachProfile?.workingHours?.startTime ||
-      "9:00 AM";
-    const endTime =
-      orgCoach?.workingHoursEnd ||
-      coachProfile?.workingHours?.endTime ||
-      "6:00 PM";
-    const interval =
-      orgCoach?.timeSlotInterval ||
-      coachProfile?.workingHours?.timeSlotInterval ||
-      60;
+    const workingHoursForDate = getWorkingHoursForDate(
+      date,
+      coachIdForLimit
+    );
+
+    if (!workingHoursForDate.isWorkingDay) {
+      return [];
+    }
+
+    const startTime = workingHoursForDate.startTime;
+    const endTime = workingHoursForDate.endTime;
+    const interval = workingHoursForDate.timeSlotInterval;
     const slots = [];
 
     // Get blocked times for this date
@@ -937,14 +1037,17 @@ function ClientSchedulePageClient() {
                 </h2>
               </div>
               <p className="text-gray-300">
-                {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
-                {coachProfile?.workingHours?.endTime || "6:00 PM"}
+                {activeCoachProfile.startTime} - {activeCoachProfile.endTime}
               </p>
               <p className="text-gray-400 text-sm mt-1">
                 Working Days:{" "}
-                {coachProfile?.workingHours?.workingDays?.join(", ") ||
-                  "Monday - Sunday"}
+                {activeCoachProfile.workingDays.join(", ")}
               </p>
+              {activeCoachProfile.customWorkingHours && (
+                <p className="text-xs text-emerald-300 mt-1">
+                  Custom daily hours enabled
+                </p>
+              )}
             </div>
           )}
 
@@ -1059,17 +1162,11 @@ function ClientSchedulePageClient() {
                 const myLessonsForDay = getClientLessonsForDate(day);
 
                 // Check if this day is a working day
-                const dayName = format(day, "EEEE");
-                const workingDays = coachProfile?.workingHours?.workingDays || [
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday",
-                  "Saturday",
-                  "Sunday",
-                ];
-                const isWorkingDay = workingDays.includes(dayName);
+                const workingHoursForDay = getWorkingHoursForDate(
+                  day,
+                  activeCoachId
+                );
+                const isWorkingDay = workingHoursForDay.isWorkingDay;
 
                 // Check for blocked times
                 const dayBlockedTimes = getBlockedTimesForDate(day);
@@ -1337,8 +1434,15 @@ function ClientSchedulePageClient() {
                     </h2>
                     <p className="text-gray-400 text-sm">
                       Working Hours:{" "}
-                      {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
-                      {coachProfile?.workingHours?.endTime || "6:00 PM"}
+                      {(() => {
+                        const hours = getWorkingHoursForDate(
+                          selectedDate,
+                          activeCoachId
+                        );
+                        return hours.isWorkingDay
+                          ? `${hours.startTime} - ${hours.endTime}`
+                          : "Unavailable";
+                      })()}
                     </p>
                   </div>
                   <button
