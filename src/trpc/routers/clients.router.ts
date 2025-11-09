@@ -160,36 +160,7 @@ export const clientsRouter = router({
       // Get clients with their basic info
       const clients = await db.client.findMany({
         where: whereClause,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          notes: true,
-          coachId: true,
-          createdAt: true,
-          updatedAt: true,
-          nextLessonDate: true,
-          lastCompletedWorkout: true,
-          avatar: true,
-          dueDate: true,
-          lastActivity: true,
-          updates: true,
-          userId: true,
-          archived: true,
-          archivedAt: true,
-          age: true,
-          height: true,
-          dominantHand: true,
-          movementStyle: true,
-          reachingAbility: true,
-          averageSpeed: true,
-          topSpeed: true,
-          dropSpinRate: true,
-          changeupSpinRate: true,
-          riseSpinRate: true,
-          curveSpinRate: true,
-          organizationId: true,
+        include: {
           user: {
             select: {
               id: true,
@@ -830,16 +801,21 @@ export const clientsRouter = router({
       }
 
       // Check if coach is in an organization
-      const coachOrganization = await db.coachOrganization.findFirst({
+      const ensuredUserId = ensureUserId(user.id);
+      const memberships = await db.coachOrganization.findMany({
         where: {
-          coachId: ensureUserId(user.id),
+          coachId: ensuredUserId,
           isActive: true,
+        },
+        select: {
+          organizationId: true,
         },
       });
 
+      const organizationIds = memberships.map(member => member.organizationId);
+
       console.log(`🔍 Coach organization lookup for user ${user.id}:`, {
-        hasOrganization: !!coachOrganization,
-        organizationId: coachOrganization?.organizationId,
+        organizationIds,
       });
 
       // Build the where clause - if coach is in an organization, allow access to:
@@ -850,11 +826,10 @@ export const clientsRouter = router({
         archived: false,
       };
 
-      if (coachOrganization?.organizationId) {
-        // Get all coaches in the organization
+      if (organizationIds.length > 0) {
         const orgCoaches = await db.coachOrganization.findMany({
           where: {
-            organizationId: coachOrganization.organizationId,
+            organizationId: { in: organizationIds },
             isActive: true,
           },
           select: {
@@ -862,15 +837,28 @@ export const clientsRouter = router({
           },
         });
 
-        const orgCoachIds = orgCoaches.map(c => c.coachId);
+        const accessibleCoachIds = Array.from(
+          new Set([ensuredUserId, ...orgCoaches.map(c => c.coachId)])
+        );
 
-        console.log(`🔍 Organization coaches:`, orgCoachIds);
+        console.log(`🔍 Organization coaches:`, accessibleCoachIds);
 
-        // Allow access if client belongs to any coach in the organization
-        whereClause.coachId = { in: orgCoachIds };
+        whereClause.OR = [
+          { coachId: { in: accessibleCoachIds } },
+          { primaryCoachId: { in: accessibleCoachIds } },
+          { organizationId: { in: organizationIds } },
+          {
+            assignedCoaches: {
+              some: {
+                coachId: { in: accessibleCoachIds },
+                isActive: true,
+              },
+            },
+          },
+        ];
       } else {
         // Not in an organization, only allow access to own clients
-        whereClause.coachId = ensureUserId(user.id);
+        whereClause.coachId = ensuredUserId;
       }
 
       console.log(
@@ -880,34 +868,35 @@ export const clientsRouter = router({
 
       const client = await db.client.findFirst({
         where: whereClause,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          coachId: true,
-          createdAt: true,
-          updatedAt: true,
-          nextLessonDate: true,
-          lastCompletedWorkout: true,
-          avatar: true,
-          dueDate: true,
-          lastActivity: true,
-          updates: true,
-          userId: true,
-          archived: true,
-          archivedAt: true,
-          age: true,
-          height: true,
-          dominantHand: true,
-          movementStyle: true,
-          reachingAbility: true,
-          averageSpeed: true,
-          topSpeed: true,
-          dropSpinRate: true,
-          changeupSpinRate: true,
-          riseSpinRate: true,
-          curveSpinRate: true,
+        include: {
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          primaryCoach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          assignedCoaches: {
+            where: { isActive: true },
+            select: {
+              coachId: true,
+              coach: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+              role: true,
+            },
+          },
           user: {
             select: {
               id: true,
