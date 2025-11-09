@@ -114,7 +114,7 @@ export default function MobileClientDashboard() {
   if (authLoading || profileLoading) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-[100dvh] flex items-center justify-center"
         style={{ backgroundColor: "#2B3038" }}
       >
         <div
@@ -134,7 +134,7 @@ export default function MobileClientDashboard() {
   if (!isAuthenticated) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-[100dvh] flex items-center justify-center"
         style={{ backgroundColor: "#2B3038" }}
       >
         <div className="text-center">
@@ -166,7 +166,7 @@ export default function MobileClientDashboard() {
 
   return (
     <ClientTopNav>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      <div className="min-h-[100dvh]" style={{ backgroundColor: "#2A3133" }}>
         {/* Mobile Header */}
         <div className="mb-4">
           <div className="flex items-center justify-between">
@@ -201,11 +201,12 @@ export default function MobileClientDashboard() {
           </div>
         </div>
 
-        {/* Quick Stats - Horizontal Scroll */}
+        {/* Quick Stats - Horizontal Scroll with Links */}
         <div className="mb-4">
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            <div
-              className="flex-shrink-0 w-24 rounded-lg border p-2"
+          <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth">
+            <a
+              href="/client-program"
+              className="flex-shrink-0 w-24 rounded-lg border p-2 snap-start active:scale-95 transition-transform"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
               <div className="text-center">
@@ -214,20 +215,21 @@ export default function MobileClientDashboard() {
                 </div>
                 <div className="text-xs text-gray-400">Drills</div>
               </div>
-            </div>
-            <div
-              className="flex-shrink-0 w-24 rounded-lg border p-2"
+            </a>
+            <a
+              href="/client-schedule"
+              className="flex-shrink-0 w-24 rounded-lg border p-2 snap-start active:scale-95 transition-transform"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
               <div className="text-center">
                 <div className="text-lg font-bold text-white">
                   {upcomingSessionsCount}
                 </div>
-                <div className="text-xs text-gray-400">Sessions</div>
+                <div className="text-xs text-gray-400">Lessons</div>
               </div>
-            </div>
+            </a>
             <div
-              className="flex-shrink-0 w-24 rounded-lg border p-2"
+              className="flex-shrink-0 w-24 rounded-lg border p-2 snap-start"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
               <div className="text-center">
@@ -238,7 +240,7 @@ export default function MobileClientDashboard() {
               </div>
             </div>
             <div
-              className="flex-shrink-0 w-24 rounded-lg border p-2"
+              className="flex-shrink-0 w-24 rounded-lg border p-2 snap-start"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
               <div className="text-center">
@@ -248,8 +250,9 @@ export default function MobileClientDashboard() {
                 <div className="text-xs text-gray-400">Assignments</div>
               </div>
             </div>
-            <div
-              className="flex-shrink-0 w-24 rounded-lg border p-2"
+            <a
+              href="/client-program"
+              className="flex-shrink-0 w-24 rounded-lg border p-2 snap-start active:scale-95 transition-transform"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
               <div className="text-center">
@@ -258,7 +261,7 @@ export default function MobileClientDashboard() {
                 </div>
                 <div className="text-xs text-gray-400">Routines</div>
               </div>
-            </div>
+            </a>
           </div>
         </div>
 
@@ -530,96 +533,219 @@ export default function MobileClientDashboard() {
           </div>
         </div>
 
-        {/* Next Lesson Card */}
-        {nextLesson && (
-          <div
-            className="rounded-xl p-4 mb-4 shadow-lg border"
-            style={{ backgroundColor: "#2B3038", borderColor: "#606364" }}
-          >
-            <div className="flex items-center gap-2 mb-3">
+        {/* Upcoming Lessons Card - ALWAYS SHOW */}
+        <div
+          className="rounded-xl p-4 mb-4 shadow-lg border"
+          style={{ backgroundColor: "#2B3038", borderColor: "#606364" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" style={{ color: "#4A5A70" }} />
               <h2 className="text-base font-bold" style={{ color: "#C3BCC2" }}>
-                Next Lesson
+                Upcoming Lessons
               </h2>
             </div>
-
-            <div
-              className="rounded-lg p-3 shadow-lg border mb-3"
+            <a
+              href="/client-schedule"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
               style={{
-                background: "linear-gradient(to right, #4A5A70, #606364)",
-                borderColor: "#4A5A70",
+                color: "#C3BCC2",
+                backgroundColor: "#4A5A70",
               }}
             >
-              <div className="text-center">
-                <div
-                  className="text-sm opacity-90 mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  Next Lesson
-                </div>
-                <div
-                  className="text-2xl font-bold mb-1"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {Math.ceil(
-                    (new Date(nextLesson.date).getTime() -
-                      new Date().getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  )}{" "}
-                  Days
-                </div>
-                <div
-                  className="text-sm opacity-90"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {nextLesson.title}
-                </div>
-              </div>
-            </div>
+              View All
+            </a>
+          </div>
 
-            <div
-              className="rounded-lg p-3 border transition-all duration-200 shadow-lg"
-              style={{
-                backgroundColor: "#2B3038",
-                borderColor: "#606364",
-                borderWidth: "1px",
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+          {nextLesson ? (
+            <>
+              {/* Next Lesson - Prominent Display */}
+              <div
+                className="rounded-lg p-3 shadow-lg border mb-3"
+                style={{
+                  background: "linear-gradient(to right, #4A5A70, #606364)",
+                  borderColor: "#4A5A70",
+                }}
+              >
+                <div className="text-center">
                   <div
-                    className="text-sm font-semibold px-2 py-1 rounded border"
-                    style={{
-                      color: "#C3BCC2",
-                      backgroundColor: "#606364",
-                      borderColor: "#ABA4AA",
-                    }}
+                    className="text-xs opacity-90 mb-1"
+                    style={{ color: "#C3BCC2" }}
+                  >
+                    Next Lesson
+                  </div>
+                  <div
+                    className="text-2xl font-bold mb-1"
+                    style={{ color: "#FFFFFF" }}
+                  >
+                    {Math.ceil(
+                      (new Date(nextLesson.date).getTime() -
+                        new Date().getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    ) === 0
+                      ? "TODAY"
+                      : `${Math.ceil(
+                          (new Date(nextLesson.date).getTime() -
+                            new Date().getTime()) /
+                            (1000 * 60 * 60 * 24)
+                        )} Day${
+                          Math.ceil(
+                            (new Date(nextLesson.date).getTime() -
+                              new Date().getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          ) === 1
+                            ? ""
+                            : "s"
+                        }`}
+                  </div>
+                  <div
+                    className="text-xs opacity-90"
+                    style={{ color: "#C3BCC2" }}
                   >
                     {new Date(nextLesson.date).toLocaleDateString("en-US", {
-                      month: "short",
+                      weekday: "long",
+                      month: "long",
                       day: "numeric",
                     })}
                   </div>
-                  <div>
+                </div>
+              </div>
+
+              {/* Lesson Details */}
+              <div
+                className="rounded-lg p-3 border transition-all duration-200 shadow-lg mb-3"
+                style={{
+                  backgroundColor: "#353A3A",
+                  borderColor: "#606364",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
                     <div
-                      className="text-sm font-semibold"
-                      style={{ color: "#C3BCC2" }}
+                      className="text-sm font-semibold px-2 py-1 rounded border"
+                      style={{
+                        color: "#C3BCC2",
+                        backgroundColor: "#4A5A70",
+                        borderColor: "#606364",
+                      }}
                     >
-                      {nextLesson.title}
-                    </div>
-                    <div className="text-xs" style={{ color: "#ABA4AA" }}>
                       {new Date(nextLesson.date).toLocaleTimeString("en-US", {
                         hour: "numeric",
                         minute: "2-digit",
                       })}
                     </div>
+                    <div>
+                      <div
+                        className="text-sm font-semibold"
+                        style={{ color: "#C3BCC2" }}
+                      >
+                        {nextLesson.title || "Lesson"}
+                      </div>
+                      <div className="text-xs" style={{ color: "#ABA4AA" }}>
+                        {nextLesson.description ||
+                          "Training session with coach"}
+                      </div>
+                    </div>
                   </div>
+                  <Clock className="w-4 h-4" style={{ color: "#ABA4AA" }} />
                 </div>
-                <Clock className="w-4 h-4" style={{ color: "#ABA4AA" }} />
               </div>
+
+              {/* Other Upcoming Lessons */}
+              {upcomingEvents.length > 1 && (
+                <div className="space-y-2">
+                  <div
+                    className="text-xs font-semibold"
+                    style={{ color: "#ABA4AA" }}
+                  >
+                    Other Upcoming Lessons ({upcomingEvents.length - 1})
+                  </div>
+                  {upcomingEvents.slice(1, 3).map((event: any) => (
+                    <div
+                      key={event.id}
+                      className="rounded-lg p-2 border"
+                      style={{
+                        backgroundColor: "#353A3A",
+                        borderColor: "#606364",
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calendar
+                            className="h-3 w-3"
+                            style={{ color: "#ABA4AA" }}
+                          />
+                          <div>
+                            <div
+                              className="text-xs font-medium"
+                              style={{ color: "#C3BCC2" }}
+                            >
+                              {new Date(event.date).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                }
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs" style={{ color: "#ABA4AA" }}>
+                          {new Date(event.date).toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {upcomingEvents.length > 3 && (
+                    <div className="text-center">
+                      <a
+                        href="/client-schedule"
+                        className="text-xs px-3 py-1.5 rounded-lg inline-block"
+                        style={{
+                          backgroundColor: "#4A5A70",
+                          color: "#C3BCC2",
+                        }}
+                      >
+                        View {upcomingEvents.length - 3} More Lessons
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-6">
+              <Calendar
+                className="w-12 h-12 mx-auto mb-3"
+                style={{ color: "#606364" }}
+              />
+              <h3
+                className="text-base font-semibold mb-2"
+                style={{ color: "#C3BCC2" }}
+              >
+                No Upcoming Lessons
+              </h3>
+              <p className="text-sm px-4 mb-4" style={{ color: "#ABA4AA" }}>
+                You don't have any lessons scheduled yet. Your coach will
+                schedule sessions with you.
+              </p>
+              <a
+                href="/client-schedule"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  backgroundColor: "#4A5A70",
+                  color: "#C3BCC2",
+                }}
+              >
+                <Calendar className="h-4 w-4" />
+                View Schedule
+              </a>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Video Library Section */}
         <div

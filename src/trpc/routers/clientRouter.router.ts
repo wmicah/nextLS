@@ -310,6 +310,20 @@ export const clientRouterRouter = router({
       orderBy: { date: "asc" },
     });
 
+    console.log("getNextLesson - Client ID:", client.id);
+    console.log(
+      "getNextLesson - Found lesson:",
+      nextLesson
+        ? {
+            id: nextLesson.id,
+            date: nextLesson.date,
+            status: nextLesson.status,
+            coachName: nextLesson.coach?.name,
+            coachId: nextLesson.coachId,
+          }
+        : "NONE"
+    );
+
     return nextLesson;
   }),
 
