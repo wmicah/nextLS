@@ -3896,7 +3896,8 @@ export const clientRouterRouter = router({
 
     // Format the working hours data to match the expected structure
     const customWorkingHours =
-      (coach as any)?.customWorkingHours && typeof (coach as any)?.customWorkingHours === "object"
+      (coach as any)?.customWorkingHours &&
+      typeof (coach as any)?.customWorkingHours === "object"
         ? (coach as any).customWorkingHours
         : null;
 
@@ -4441,7 +4442,9 @@ export const clientRouterRouter = router({
         if (!isWorkingDay) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `${coach.name || "This coach"} is not available on ${dayName}s`,
+            message: `${
+              coach.name || "This coach"
+            } is not available on ${dayName}s`,
           });
         }
 
@@ -4455,7 +4458,9 @@ export const clientRouterRouter = router({
         ) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `${coach.name || "This coach"} accepts requests between ${allowedStart} and ${allowedEnd} on ${dayName}s.`,
+            message: `${
+              coach.name || "This coach"
+            } accepts requests between ${allowedStart} and ${allowedEnd} on ${dayName}s.`,
           });
         }
       }
