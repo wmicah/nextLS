@@ -4781,60 +4781,86 @@ export const clientRouterRouter = router({
         });
       }
 
-      const videoSubmission = await db.clientVideoSubmission.create({
-        data: {
-          clientId: client.id,
-          coachId: client.coachId!,
-          title: input.title,
-          description: input.description,
-          comment: input.comment,
-          videoUrl: input.videoUrl,
-          thumbnail: input.thumbnail,
-          drillId: input.drillId,
-          isPublic: input.isPublic,
-        },
-      });
+      // Create video submission with error handling
+      let videoSubmission;
+      try {
+        videoSubmission = await db.clientVideoSubmission.create({
+          data: {
+            clientId: client.id,
+            coachId: client.coachId,
+            title: input.title,
+            description: input.description || null,
+            comment: input.comment || null,
+            videoUrl: input.videoUrl,
+            thumbnail: input.thumbnail || null,
+            drillId: input.drillId || null,
+            isPublic: input.isPublic ?? false,
+          },
+        });
+      } catch (error: any) {
+        console.error("Error creating video submission:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create video submission: ${
+            error.message || "Unknown error"
+          }`,
+        });
+      }
 
       // Create or find conversation between client and coach
       let conversation = await db.conversation.findFirst({
         where: {
-          coachId: client.coachId!,
-          clientId: ensureUserId(user.id),
+          coachId: client.coachId,
+          clientId: user.id,
         },
       });
 
       if (!conversation) {
-        conversation = await db.conversation.create({
-          data: {
-            coachId: client.coachId!,
-            clientId: ensureUserId(user.id),
-            type: "COACH_CLIENT",
-          },
-        });
+        try {
+          conversation = await db.conversation.create({
+            data: {
+              coachId: client.coachId,
+              clientId: user.id,
+              type: "COACH_CLIENT",
+            },
+          });
+        } catch (error: any) {
+          console.error("Error creating conversation:", error);
+          // Don't fail the entire request if conversation creation fails
+          // The video submission was successful
+        }
       }
 
-      // Create message in conversation
-      const messageContent = input.comment
-        ? `📹 **Video Submission: ${input.title}**\n\n${input.comment}`
-        : `📹 **Video Submission: ${input.title}**`;
+      // Create message in conversation (only if conversation exists)
+      if (conversation) {
+        const messageContent = input.comment
+          ? `📹 **Video Submission: ${input.title}**\n\n${input.comment}`
+          : `📹 **Video Submission: ${input.title}**`;
 
-      await db.message.create({
-        data: {
-          conversationId: conversation.id,
-          senderId: user.id,
-          content: messageContent,
-          attachmentUrl: input.videoUrl,
-          attachmentType: "video/mp4", // Set proper MIME type for video
-          attachmentName: input.title,
-          attachmentSize: null, // We don't have size info from UploadThing
-        },
-      });
+        try {
+          await db.message.create({
+            data: {
+              conversationId: conversation.id,
+              senderId: user.id,
+              content: messageContent,
+              attachmentUrl: input.videoUrl,
+              attachmentType: "video/mp4", // Set proper MIME type for video
+              attachmentName: input.title,
+              attachmentSize: null, // We don't have size info from UploadThing
+            },
+          });
 
-      // Update conversation timestamp
-      await db.conversation.update({
-        where: { id: conversation.id },
-        data: { updatedAt: new Date() },
-      });
+          // Update conversation timestamp
+          await db.conversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
+          });
+        } catch (error: any) {
+          console.error("Error creating message:", error);
+          // Don't fail the entire request if message creation fails
+          // The video submission was successful
+        }
+      }
 
       // Create notification for the coach (only if coach exists)
       if (client.coachId) {

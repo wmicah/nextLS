@@ -91,7 +91,7 @@ export const ourFileRouter = {
 
   // Video uploader for training resources (VIDEO ONLY)
   videoUploader: f({
-    video: { maxFileSize: "512MB", maxFileCount: 1 },
+    video: { maxFileSize: "1024MB", maxFileCount: 1 }, // Increased to 1GB for mobile videos
   })
     .middleware(async ({ req, files }) => {
       // Authenticate user

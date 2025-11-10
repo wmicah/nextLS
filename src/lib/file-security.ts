@@ -1,6 +1,42 @@
 // NextLevel Coaching - File Upload Security
 import { z } from "zod";
 
+// Allowed video file extensions (for mobile device compatibility)
+export const ALLOWED_VIDEO_EXTENSIONS = [
+  ".mp4",
+  ".webm",
+  ".mov",
+  ".avi",
+  ".m4v",
+  ".3gp",
+  ".3gpp",
+  ".mkv",
+  ".flv",
+  ".wmv",
+  ".ogv",
+  ".mpeg",
+  ".mpg",
+  ".m4a", // Sometimes used for video on mobile
+] as const;
+
+// Allowed video MIME types (for mobile device compatibility)
+export const ALLOWED_VIDEO_MIME_TYPES = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-m4v",
+  "video/3gpp",
+  "video/3gpp2",
+  "video/x-matroska",
+  "video/x-flv",
+  "video/x-ms-wmv",
+  "video/ogg",
+  "video/mpeg",
+  "video/x-m4a", // Sometimes used for video on mobile
+  "video/*", // Fallback for any video type
+] as const;
+
 // Allowed file types with their MIME types and extensions
 export const ALLOWED_FILE_TYPES = {
   // Images
@@ -9,11 +45,20 @@ export const ALLOWED_FILE_TYPES = {
   "image/webp": [".webp"],
   "image/gif": [".gif"],
 
-  // Videos
+  // Videos - expanded for mobile compatibility
   "video/mp4": [".mp4"],
   "video/webm": [".webm"],
   "video/quicktime": [".mov"],
   "video/x-msvideo": [".avi"],
+  "video/x-m4v": [".m4v"],
+  "video/3gpp": [".3gp", ".3gpp"],
+  "video/3gpp2": [".3gpp2"],
+  "video/x-matroska": [".mkv"],
+  "video/x-flv": [".flv"],
+  "video/x-ms-wmv": [".wmv"],
+  "video/ogg": [".ogv"],
+  "video/mpeg": [".mpeg", ".mpg"],
+  "video/x-m4a": [".m4a"],
 
   // Audio
   "audio/mpeg": [".mp3"],
@@ -34,7 +79,7 @@ export const ALLOWED_FILE_TYPES = {
 // File size limits (in bytes)
 export const FILE_SIZE_LIMITS = {
   profilePicture: 4 * 1024 * 1024, // 4MB
-  video: 512 * 1024 * 1024, // 512MB
+  video: 1024 * 1024 * 1024, // 1GB (increased for mobile videos)
   audio: 64 * 1024 * 1024, // 64MB
   document: 32 * 1024 * 1024, // 32MB
   messageAttachment: 16 * 1024 * 1024, // 16MB
@@ -114,15 +159,69 @@ export function validateFileSecurity(
     riskLevel = "high";
   }
 
+  // Extract file name and extension once for all checks
+  const fileName = file.name.toLowerCase();
+  const fileExtension = fileName.substring(fileName.lastIndexOf("."));
+
   // 2. Check file type
-  if (!ALLOWED_FILE_TYPES[file.type as keyof typeof ALLOWED_FILE_TYPES]) {
-    errors.push(`File type '${file.type}' is not allowed`);
-    riskLevel = "high";
+  // For video uploads, be more lenient - accept any video/* MIME type or check extension
+  if (uploadType === "video" || uploadType === "feedbackVideo") {
+    // Check if it's a video MIME type (starts with "video/")
+    const isVideoMimeType = file.type && file.type.startsWith("video/");
+
+    // Check if extension is in allowed video extensions
+    const isVideoExtension =
+      fileExtension && ALLOWED_VIDEO_EXTENSIONS.includes(fileExtension as any);
+
+    // Check if MIME type is empty/unknown (common on mobile devices)
+    const isUnknownMimeType =
+      !file.type ||
+      file.type === "" ||
+      file.type === "application/octet-stream";
+
+    // Allow if:
+    // 1. MIME type starts with "video/" (any video format)
+    // 2. MIME type is unknown BUT extension is valid (mobile devices)
+    // Reject if:
+    // 1. MIME type is not video AND extension is not video
+    // 2. MIME type is unknown AND extension is not video
+    if (isVideoMimeType) {
+      // Valid video MIME type - allow
+    } else if (isUnknownMimeType && isVideoExtension) {
+      // Unknown MIME type but valid extension - allow with warning (common on mobile)
+      warnings.push(
+        "File MIME type is unknown, but extension suggests it's a video file"
+      );
+    } else if (!isVideoExtension) {
+      // Invalid extension
+      errors.push(
+        `File extension '${
+          fileExtension || "none"
+        }' is not allowed. Please upload a video file. Supported formats: ${ALLOWED_VIDEO_EXTENSIONS.join(
+          ", "
+        )}`
+      );
+      riskLevel = "high";
+    } else {
+      // Known MIME type that's not video
+      errors.push(
+        `File type '${
+          file.type
+        }' is not allowed. Please upload a video file. Supported formats: ${ALLOWED_VIDEO_EXTENSIONS.join(
+          ", "
+        )}`
+      );
+      riskLevel = "high";
+    }
+  } else {
+    // For non-video uploads, use strict MIME type checking
+    if (!ALLOWED_FILE_TYPES[file.type as keyof typeof ALLOWED_FILE_TYPES]) {
+      errors.push(`File type '${file.type}' is not allowed`);
+      riskLevel = "high";
+    }
   }
 
   // 3. Check file extension
-  const fileName = file.name.toLowerCase();
-  const fileExtension = fileName.substring(fileName.lastIndexOf("."));
 
   if (DANGEROUS_EXTENSIONS.includes(fileExtension)) {
     errors.push(`File extension '${fileExtension}' is not allowed`);
