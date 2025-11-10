@@ -274,8 +274,23 @@ function RecentNotificationsSection() {
 
 // Today's Schedule Section Component
 function TodaysScheduleSection() {
+  const router = useRouter();
   const today = new Date();
-  const { data: todaysLessons = [], isLoading: lessonsLoading } =
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  const endOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    23,
+    59,
+    59
+  );
+
+  const { data: thisMonthLessons = [], isLoading: lessonsLoading } =
     trpc.scheduling.getCoachSchedule.useQuery({
       month: today.getMonth(),
       year: today.getFullYear(),
@@ -310,17 +325,18 @@ function TodaysScheduleSection() {
     );
   }
 
-  // Filter lessons for today
-  const todaysLessonsFiltered = todaysLessons.filter((lesson: any) => {
+  // Filter lessons for today (including all of today, not just future)
+  const todaysLessonsFiltered = thisMonthLessons.filter((lesson: any) => {
     const lessonDate = new Date(lesson.date);
-    return lessonDate.toDateString() === today.toDateString();
+    return lessonDate >= startOfToday && lessonDate <= endOfToday;
   });
 
   // Filter reminders for today
   const todaysReminders = events.filter((event: any) => {
     const eventDate = new Date(event.date);
     return (
-      eventDate.toDateString() === today.toDateString() &&
+      eventDate >= startOfToday &&
+      eventDate <= endOfToday &&
       event.status === "PENDING" &&
       event.clientId === null
     );
@@ -369,72 +385,121 @@ function TodaysScheduleSection() {
             </div>
             Today's Schedule
           </h3>
+          {todaysSchedule.length > 0 && (
+            <Link
+              href="/schedule"
+              className="text-sm text-blue-400 hover:text-blue-300 font-medium"
+            >
+              View All
+            </Link>
+          )}
         </div>
 
         {todaysSchedule.length > 0 ? (
           <div className="space-y-3">
-            {todaysSchedule.slice(0, 5).map((item: any, index: number) => (
-              <div
-                key={item.id}
-                className="p-3 rounded-lg border transition-colors"
-                style={{
-                  backgroundColor: "#2A2F2F",
-                  borderColor: "#606364",
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {item.type === "lesson" ? (
-                      <Clock className="h-4 w-4 text-blue-400" />
-                    ) : (
-                      <Bell className="h-4 w-4 text-orange-400" />
-                    )}
-                    <div>
-                      <p className="text-white font-medium">
-                        {new Date(item.date).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      <p className="text-gray-400 text-sm">
-                        {item.type === "lesson"
-                          ? item.client?.name || "Unknown Client"
-                          : item.title}
-                      </p>
+            {todaysSchedule.slice(0, 5).map((item: any) => {
+              const isPast = new Date(item.date).getTime() < Date.now();
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.type === "lesson" && item.clientId) {
+                      router.push(`/clients/${item.clientId}`);
+                    } else {
+                      router.push("/schedule");
+                    }
+                  }}
+                  className="w-full p-3 rounded-lg border transition-colors hover:bg-[#3A4040] text-left"
+                  style={{
+                    backgroundColor: "#2A2F2F",
+                    borderColor: "#606364",
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {item.type === "lesson" ? (
+                        <Clock
+                          className={`h-4 w-4 flex-shrink-0 ${
+                            isPast ? "text-gray-500" : "text-blue-400"
+                          }`}
+                        />
+                      ) : (
+                        <Bell className="h-4 w-4 flex-shrink-0 text-orange-400" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-white font-medium ${
+                            isPast ? "opacity-60" : ""
+                          }`}
+                        >
+                          {new Date(item.date).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        <p
+                          className={`text-gray-400 text-sm truncate ${
+                            isPast ? "opacity-60" : ""
+                          }`}
+                        >
+                          {item.type === "lesson"
+                            ? item.client?.name || "Unknown Client"
+                            : item.title}
+                        </p>
+                      </div>
                     </div>
+                    <span
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ml-2"
+                      style={{
+                        backgroundColor:
+                          item.type === "lesson"
+                            ? item.status === "CONFIRMED"
+                              ? isPast
+                                ? "#6B7280"
+                                : "#10B981"
+                              : "#F59E0B"
+                            : "#F59E0B",
+                        color:
+                          item.type === "lesson"
+                            ? item.status === "CONFIRMED"
+                              ? isPast
+                                ? "#D1D5DB"
+                                : "#DCFCE7"
+                              : "#FEF3C7"
+                            : "#FEF3C7",
+                      }}
+                    >
+                      {item.type === "lesson"
+                        ? isPast
+                          ? "Completed"
+                          : item.status
+                        : "REMINDER"}
+                    </span>
                   </div>
-                  <span
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                    style={{
-                      backgroundColor:
-                        item.type === "lesson"
-                          ? item.status === "CONFIRMED"
-                            ? "#10B981"
-                            : "#F59E0B"
-                          : "#F59E0B",
-                      color:
-                        item.type === "lesson"
-                          ? item.status === "CONFIRMED"
-                            ? "#DCFCE7"
-                            : "#FEF3C7"
-                          : "#FEF3C7",
-                    }}
-                  >
-                    {item.type === "lesson" ? item.status : "REMINDER"}
-                  </span>
-                </div>
-              </div>
-            ))}
+                </button>
+              );
+            })}
             {todaysSchedule.length > 5 && (
-              <p className="text-sm text-gray-400 text-center">
-                +{todaysSchedule.length - 5} more items today
-              </p>
+              <Link
+                href="/schedule"
+                className="block text-center text-sm text-blue-400 hover:text-blue-300 font-medium py-2"
+              >
+                +{todaysSchedule.length - 5} more items today →
+              </Link>
             )}
           </div>
         ) : (
           <div className="text-center py-8">
             <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-            <p className="text-gray-400">No lessons or reminders for today</p>
+            <p className="text-gray-400 mb-2">
+              No lessons or reminders for today
+            </p>
+            <Link
+              href="/schedule"
+              className="text-sm text-blue-400 hover:text-blue-300 font-medium"
+            >
+              View Schedule →
+            </Link>
           </div>
         )}
       </div>

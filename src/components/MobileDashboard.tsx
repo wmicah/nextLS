@@ -152,12 +152,13 @@ export default function MobileDashboard() {
 
 // Quick Stats Section Component
 function QuickStatsSection() {
-  const { data: clients = [] } = trpc.clients.list.useQuery({
-    archived: false,
-  });
+  const { data: clients = [], isLoading: clientsLoading } =
+    trpc.clients.list.useQuery({
+      archived: false,
+    });
 
   const today = new Date();
-  const { data: todaysLessons = [] } =
+  const { data: thisMonthLessons = [], isLoading: lessonsLoading } =
     trpc.scheduling.getCoachSchedule.useQuery({
       month: today.getMonth(),
       year: today.getFullYear(),
@@ -165,13 +166,15 @@ function QuickStatsSection() {
 
   // Fetch events and programs for analytics
   const { data: events = [] } = trpc.events.getUpcoming.useQuery();
-  const { data: programs = [] } = trpc.programs.list.useQuery();
-  const { data: analyticsData } = trpc.analytics.getDashboardData.useQuery({
-    timeRange: "4w",
-  });
+  const { data: programs = [], isLoading: programsLoading } =
+    trpc.programs.list.useQuery();
+  const { data: analyticsData, isLoading: analyticsLoading } =
+    trpc.analytics.getDashboardData.useQuery({
+      timeRange: "4w",
+    });
 
-  // Calculate total lessons (all time)
-  const totalLessons = todaysLessons.length;
+  // Calculate total upcoming lessons (this month)
+  const totalUpcomingLessons = thisMonthLessons.length;
 
   // Calculate analytics - total programs created
   const totalPrograms = programs.length;
@@ -179,28 +182,31 @@ function QuickStatsSection() {
   // Get completion rate from analytics data
   const completionRate = analyticsData?.completionRate || 0;
 
+  const isLoading =
+    clientsLoading || lessonsLoading || programsLoading || analyticsLoading;
+
   const stats = [
     {
       label: "Active Clients",
-      value: clients.length,
+      value: isLoading ? "..." : clients.length,
       icon: Users,
       color: "#3B82F6", // Blue
     },
     {
-      label: "Scheduled Lessons",
-      value: totalLessons,
+      label: "Upcoming Lessons",
+      value: isLoading ? "..." : totalUpcomingLessons,
       icon: Clock,
       color: "#10B981", // Green
     },
     {
       label: "Programs Created",
-      value: totalPrograms,
+      value: isLoading ? "..." : totalPrograms,
       icon: Target,
       color: "#8B5CF6", // Purple
     },
     {
       label: "Completion Rate",
-      value: `${completionRate}%`,
+      value: isLoading ? "..." : `${completionRate}%`,
       icon: TrendingUpIcon,
       color: "#F59E0B", // Yellow
     },
@@ -328,27 +334,44 @@ function RecentNotificationsSection() {
 
 // Today's Schedule Section Component
 function TodaysScheduleSection() {
+  const router = useRouter();
   const today = new Date();
-  const { data: todaysLessons = [] } =
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  const endOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    23,
+    59,
+    59
+  );
+
+  const { data: thisMonthLessons = [], isLoading: lessonsLoading } =
     trpc.scheduling.getCoachSchedule.useQuery({
       month: today.getMonth(),
       year: today.getFullYear(),
     });
 
   // Fetch events (which includes reminders)
-  const { data: events = [] } = trpc.events.getUpcoming.useQuery();
+  const { data: events = [], isLoading: eventsLoading } =
+    trpc.events.getUpcoming.useQuery();
 
-  // Filter lessons for today
-  const todaysLessonsFiltered = todaysLessons.filter((lesson: any) => {
+  // Filter lessons for today (including all of today, not just future)
+  const todaysLessonsFiltered = thisMonthLessons.filter((lesson: any) => {
     const lessonDate = new Date(lesson.date);
-    return lessonDate.toDateString() === today.toDateString();
+    return lessonDate >= startOfToday && lessonDate <= endOfToday;
   });
 
   // Filter reminders for today
   const todaysReminders = events.filter((event: any) => {
     const eventDate = new Date(event.date);
     return (
-      eventDate.toDateString() === today.toDateString() &&
+      eventDate >= startOfToday &&
+      eventDate <= endOfToday &&
       event.status === "PENDING" &&
       event.clientId === null
     );
@@ -368,75 +391,141 @@ function TodaysScheduleSection() {
     })),
   ].sort((a, b) => a.time - b.time);
 
+  const isLoading = lessonsLoading || eventsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4">
+        <div className="flex items-center gap-3 mb-4">
+          <Calendar className="h-5 w-5 text-white" />
+          <h3 className="text-lg font-bold text-white">Today's Schedule</h3>
+        </div>
+        <div className="text-center py-6">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4A5A70] mx-auto mb-2" />
+          <p className="text-gray-400 text-sm">Loading schedule...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4">
-      <div className="flex items-center gap-3 mb-4">
-        <Calendar className="h-5 w-5 text-white" />
-        <h3 className="text-lg font-bold text-white">Today's Schedule</h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Calendar className="h-5 w-5 text-white" />
+          <h3 className="text-lg font-bold text-white">Today's Schedule</h3>
+        </div>
+        {todaysSchedule.length > 0 && (
+          <Link
+            href="/schedule"
+            className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+          >
+            View All
+          </Link>
+        )}
       </div>
 
       {todaysSchedule.length > 0 ? (
-        <div className="space-y-3">
-          {todaysSchedule.slice(0, 5).map((item: any, index: number) => (
-            <div
-              key={item.id}
-              className="p-3 rounded-lg bg-[#2A2F2F] border border-[#606364]"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {item.type === "lesson" ? (
-                    <Clock className="h-4 w-4 text-blue-400" />
-                  ) : (
-                    <Bell className="h-4 w-4 text-orange-400" />
-                  )}
-                  <div>
-                    <p className="text-white font-medium text-sm">
-                      {new Date(item.date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                    <p className="text-gray-400 text-xs">
-                      {item.type === "lesson"
-                        ? item.client?.name || "Unknown Client"
-                        : item.title}
-                    </p>
+        <div className="space-y-2">
+          {todaysSchedule.slice(0, 5).map((item: any) => {
+            const isPast = new Date(item.date).getTime() < Date.now();
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.type === "lesson" && item.clientId) {
+                    router.push(`/clients/${item.clientId}`);
+                  } else {
+                    router.push("/schedule");
+                  }
+                }}
+                className="w-full p-3 rounded-lg bg-[#2A2F2F] border border-[#606364] hover:bg-[#353A3A] transition-colors text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {item.type === "lesson" ? (
+                      <Clock
+                        className={`h-4 w-4 flex-shrink-0 ${
+                          isPast ? "text-gray-500" : "text-blue-400"
+                        }`}
+                      />
+                    ) : (
+                      <Bell className="h-4 w-4 flex-shrink-0 text-orange-400" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-white font-medium text-sm ${
+                          isPast ? "opacity-60" : ""
+                        }`}
+                      >
+                        {new Date(item.date).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                      <p
+                        className={`text-gray-400 text-xs truncate ${
+                          isPast ? "opacity-60" : ""
+                        }`}
+                      >
+                        {item.type === "lesson"
+                          ? item.client?.name || "Unknown Client"
+                          : item.title}
+                      </p>
+                    </div>
                   </div>
+                  <span
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ml-2"
+                    style={{
+                      backgroundColor:
+                        item.type === "lesson"
+                          ? item.status === "CONFIRMED"
+                            ? isPast
+                              ? "#6B7280"
+                              : "#10B981"
+                            : "#F59E0B"
+                          : "#F59E0B",
+                      color:
+                        item.type === "lesson"
+                          ? item.status === "CONFIRMED"
+                            ? isPast
+                              ? "#D1D5DB"
+                              : "#DCFCE7"
+                            : "#FEF3C7"
+                          : "#FEF3C7",
+                    }}
+                  >
+                    {item.type === "lesson"
+                      ? isPast
+                        ? "Completed"
+                        : item.status
+                      : "REMINDER"}
+                  </span>
                 </div>
-                <span
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor:
-                      item.type === "lesson"
-                        ? item.status === "CONFIRMED"
-                          ? "#10B981"
-                          : "#F59E0B"
-                        : "#F59E0B",
-                    color:
-                      item.type === "lesson"
-                        ? item.status === "CONFIRMED"
-                          ? "#DCFCE7"
-                          : "#FEF3C7"
-                        : "#FEF3C7",
-                  }}
-                >
-                  {item.type === "lesson" ? item.status : "REMINDER"}
-                </span>
-              </div>
-            </div>
-          ))}
+              </button>
+            );
+          })}
           {todaysSchedule.length > 5 && (
-            <p className="text-sm text-gray-400 text-center">
-              +{todaysSchedule.length - 5} more items today
-            </p>
+            <Link
+              href="/schedule"
+              className="block text-center text-sm text-blue-400 hover:text-blue-300 font-medium py-2"
+            >
+              +{todaysSchedule.length - 5} more items today →
+            </Link>
           )}
         </div>
       ) : (
         <div className="text-center py-6">
           <Calendar className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-400 text-sm mb-2">
             No lessons or reminders for today
           </p>
+          <Link
+            href="/schedule"
+            className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+          >
+            View Schedule →
+          </Link>
         </div>
       )}
     </div>
