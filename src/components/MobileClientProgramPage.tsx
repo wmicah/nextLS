@@ -51,8 +51,12 @@ import {
   addDays,
   isToday,
 } from "date-fns";
-import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
+import {
+  formatTimeInUserTimezone,
+  getUserTimezone,
+} from "@/lib/timezone-utils";
 import { processVideoUrl } from "@/lib/youtube-utils";
+import { toZonedTime } from "date-fns-tz";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 import ClientProgramDayModal from "./ClientProgramDayModal";
@@ -156,6 +160,29 @@ export default function MobileClientProgramPage() {
     viewMode: "month",
   });
 
+  // Get current week's calendar data (for better accuracy in current week)
+  const currentWeekStart = startOfWeek(new Date());
+  const currentWeekEnd = endOfWeek(new Date());
+  const startDateString = `${currentWeekStart.getFullYear()}-${(
+    currentWeekStart.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${currentWeekStart
+    .getDate()
+    .toString()
+    .padStart(2, "0")}`;
+  const endDateString = `${currentWeekEnd.getFullYear()}-${(
+    currentWeekEnd.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${currentWeekEnd.getDate().toString().padStart(2, "0")}`;
+
+  const { data: weekCalendarData } =
+    trpc.clientRouter.getProgramWeekCalendar.useQuery({
+      startDate: startDateString,
+      endDate: endDateString,
+    });
+
   // Detailed day data - only loaded when a day is selected
   const [selectedDateForDetails, setSelectedDateForDetails] = useState<
     string | null
@@ -210,6 +237,19 @@ export default function MobileClientProgramPage() {
       refetchOnWindowFocus: true,
     });
 
+  // Get pitching data
+  const { data: pitchingData } = trpc.clientRouter.getPitchingData.useQuery();
+
+  // Get library items for video lookup
+  const { data: libraryItems = [] } = trpc.library.list.useQuery({});
+
+  // Get client's lessons
+  const { data: clientLessons = [] } =
+    trpc.clientRouter.getClientLessons.useQuery({
+      month: currentDate.getMonth(),
+      year: currentDate.getFullYear(),
+    });
+
   // Debug logging
   console.log("MobileClientProgramPage - programInfo:", programInfo);
   console.log("MobileClientProgramPage - programLoading:", programLoading);
@@ -233,30 +273,6 @@ export default function MobileClientProgramPage() {
   console.log("MobileClientProgramPage - eventsError:", eventsError);
   console.log("MobileClientProgramPage - nextLesson:", nextLesson);
   console.log("MobileClientProgramPage - nextLessonError:", nextLessonError);
-
-  // Get current week's calendar data
-  const currentWeekStart = startOfWeek(new Date());
-  const currentWeekEnd = endOfWeek(new Date());
-  const startDateString = `${currentWeekStart.getFullYear()}-${(
-    currentWeekStart.getMonth() + 1
-  )
-    .toString()
-    .padStart(2, "0")}-${currentWeekStart
-    .getDate()
-    .toString()
-    .padStart(2, "0")}`;
-  const endDateString = `${currentWeekEnd.getFullYear()}-${(
-    currentWeekEnd.getMonth() + 1
-  )
-    .toString()
-    .padStart(2, "0")}-${currentWeekEnd.getDate().toString().padStart(2, "0")}`;
-
-  const { data: currentWeekData, isLoading: currentWeekLoading } =
-    trpc.clientRouter.getProgramCalendar.useQuery({
-      year: currentWeekStart.getFullYear(),
-      month: currentWeekStart.getMonth() + 1,
-      viewMode: "week",
-    });
 
   // Initialize video assignments completion state
   React.useEffect(() => {
@@ -363,14 +379,45 @@ export default function MobileClientProgramPage() {
     );
   };
 
-  // Get day data from calendar data (exact replica of desktop)
+  // Get lessons for a specific date (with timezone handling, like desktop)
+  const getLessonsForDate = (date: Date) => {
+    const now = new Date();
+    const timeZone = getUserTimezone();
+    const lessons = clientLessons.filter((lesson: { date: string }) => {
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
+      // Compare only the date part, not the time
+      const lessonDateOnly = new Date(
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
+      );
+      const targetDateOnly = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+      const isSame = lessonDateOnly.getTime() === targetDateOnly.getTime();
+      const isFuture = lessonDateInUserTz > now;
+      return isSame && isFuture;
+    });
+    return lessons;
+  };
+
+  // Get day data from calendar data (prefer week data for current week, like desktop)
   const getDayData = (date: Date): DayData | null => {
-    if (!calendarData) return null;
     // Use local date format to avoid timezone conversion issues
     const dateString = `${date.getFullYear()}-${(date.getMonth() + 1)
       .toString()
       .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
-    return (calendarData as any)[dateString] || null;
+
+    // Prefer week data for current week; fall back to month data
+    return (
+      (weekCalendarData && (weekCalendarData as any)[dateString]) ||
+      (calendarData && (calendarData as any)[dateString]) ||
+      null
+    );
   };
 
   // Calculate completion counts for a specific day (same logic as desktop)
@@ -1051,49 +1098,82 @@ export default function MobileClientProgramPage() {
             {getCalendarDays().map(day => {
               const isToday = isSameDay(day, new Date());
               const isCurrentMonth = isSameMonth(day, currentDate);
-              const dayString = format(day, "yyyy-MM-dd");
-              const dayData =
-                calendarData &&
-                typeof calendarData === "object" &&
-                !Array.isArray(calendarData)
-                  ? (calendarData as any)[dayString]
-                  : Array.isArray(calendarData)
-                  ? calendarData.find((d: DayData) => d.date === dayString)
-                  : undefined;
+              const dayData = getDayData(day);
+              const lessonsForDay = getLessonsForDate(day);
               // Calculate completion counts using the same logic as desktop
               const completionCounts = calculateDayCompletionCounts(
                 dayData,
                 day
               );
+
+              // Check if there are routines for this day
+              const routinesForDay = getRoutinesForDate(day);
+              const hasRoutines = routinesForDay.length > 0;
+
+              // Check if there are video assignments for this day
+              const hasVideoAssignments =
+                dayData?.videoAssignments &&
+                dayData.videoAssignments.length > 0;
+
+              // Also check for direct drills in dayData (backward compatibility)
+              const hasDirectDrills =
+                dayData?.drills && dayData.drills.length > 0;
+
+              // Check if there are programs with actual drills (not just rest days)
+              const hasActivePrograms =
+                dayData?.programs &&
+                dayData.programs.some(
+                  (program: ProgramData) =>
+                    !program.isRestDay &&
+                    ((program.drills && program.drills.length > 0) ||
+                      (program.totalDrills && program.totalDrills > 0))
+                );
+
+              // Only show indicators if there's actual work to do (exclude rest days)
+              // Rest days should not show any indicators
+              const hasWorkToDo =
+                !dayData?.isRestDay &&
+                (completionCounts.totalDrills > 0 ||
+                  hasRoutines ||
+                  hasVideoAssignments ||
+                  hasDirectDrills ||
+                  hasActivePrograms);
+
               const hasWorkout =
                 dayData &&
                 !dayData.isRestDay &&
                 completionCounts.totalDrills > 0;
               const isCompleted =
-                dayData &&
+                completionCounts.totalDrills > 0 &&
                 completionCounts.completedDrills ===
-                  completionCounts.totalDrills &&
-                completionCounts.totalDrills > 0;
+                  completionCounts.totalDrills;
               const isPartial =
-                dayData &&
+                completionCounts.totalDrills > 0 &&
                 completionCounts.completedDrills > 0 &&
                 completionCounts.completedDrills < completionCounts.totalDrills;
 
-              // Get program indicators for this day
+              // Get program indicators for this day (excluding rest days)
               const programIndicators =
-                dayData?.programs?.map(
-                  (program: ProgramData, index: number) => {
+                dayData?.programs
+                  ?.filter((program: ProgramData) => !program.isRestDay) // Only show non-rest day programs
+                  ?.filter((program: ProgramData) => {
+                    // Only include programs that have actual drills
+                    return (
+                      (program.drills && program.drills.length > 0) ||
+                      (program.totalDrills && program.totalDrills > 0)
+                    );
+                  })
+                  ?.map((program: ProgramData, index: number) => {
                     // Use the completion counts from the hook for accurate counts
                     const remaining =
                       completionCounts.totalDrills -
                       completionCounts.completedDrills;
-                    const isRestDay = program.isRestDay;
 
                     return {
                       id: program.programId,
                       title: program.programTitle,
                       remaining,
-                      isRestDay,
+                      isRestDay: false, // We've already filtered these out
                       color:
                         index === 0
                           ? "blue"
@@ -1103,45 +1183,28 @@ export default function MobileClientProgramPage() {
                           ? "purple"
                           : "orange",
                     };
-                  }
-                ) || [];
+                  }) || [];
 
               // Get routine indicators for this day
-              const routineIndicators = routineAssignments
-                .filter((assignment: any) => {
-                  if (!assignment.startDate) return false;
-                  const assignmentDate = new Date(assignment.startDate);
-                  const dayDate = new Date(day);
-
-                  // Set time to start of day for accurate comparison
-                  assignmentDate.setHours(0, 0, 0, 0);
-                  dayDate.setHours(0, 0, 0, 0);
-
-                  const isMatch =
-                    assignmentDate.getTime() === dayDate.getTime();
-                  if (isMatch) {
-                    console.log(
-                      "Found routine assignment for",
-                      dayString,
-                      assignment
-                    );
-                  }
-                  return isMatch;
-                })
-                .map((assignment: any, index: number) => ({
+              const routineIndicators = routinesForDay.map(
+                (assignment: any, index: number) => ({
                   id: `routine-${assignment.id}`,
                   title: assignment.routine?.name || "Routine",
                   remaining: assignment.routine?.exercises?.length || 0,
                   isRestDay: false,
                   color: "green", // Green for standalone routines
                   type: "routine",
-                }));
+                })
+              );
 
               // Combine all indicators (programs and routines)
               const allIndicators = [
                 ...programIndicators,
                 ...routineIndicators,
               ];
+
+              // Only show workout indicator if there's actual work (no rest days)
+              const shouldShowWorkoutIndicator = hasWorkToDo;
 
               return (
                 <div
@@ -1153,7 +1216,8 @@ export default function MobileClientProgramPage() {
                         isToday
                           ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-400 shadow-blue-500/30 font-bold"
                           : isCurrentMonth
-                          ? allIndicators.length > 0
+                          ? shouldShowWorkoutIndicator ||
+                            lessonsForDay.length > 0
                             ? "text-white bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70] hover:from-[#606364] hover:to-[#4A5A70]"
                             : "text-[#ABA4AA] bg-gradient-to-br from-[#353A3A] to-[#40454A] border-[#606364] hover:from-[#4A5A70] hover:to-[#606364]"
                           : "text-gray-600 bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-700"
@@ -1163,42 +1227,83 @@ export default function MobileClientProgramPage() {
                   <div className="font-bold text-xs leading-none">
                     {format(day, "d")}
                   </div>
-                  {allIndicators.length > 0 && (
-                    <div className="flex justify-center items-center gap-0.5 mt-0.5">
-                      {allIndicators
-                        .slice(0, 2)
-                        .map((indicator: any, idx: number) => (
+
+                  {/* Workout/Exercise Indicators */}
+                  <div className="flex flex-col items-center gap-0.5 mt-0.5 w-full min-h-[16px]">
+                    {/* Show workout indicator if there's work to do */}
+                    {shouldShowWorkoutIndicator && (
+                      <div className="flex justify-center items-center gap-0.5 flex-wrap">
+                        {allIndicators.length > 0 ? (
+                          <>
+                            {allIndicators
+                              .slice(0, 2)
+                              .map((indicator: any, idx: number) => (
+                                <div
+                                  key={
+                                    indicator.id || `${indicator.title}-${idx}`
+                                  }
+                                  className={`w-2.5 h-2.5 rounded-full flex items-center justify-center text-[7px] font-bold shadow-sm border transition-all duration-200 ${
+                                    isCompleted
+                                      ? "bg-green-500 text-white border-green-400 shadow-lg shadow-green-500/50"
+                                      : isPartial
+                                      ? "bg-yellow-500 text-white border-yellow-400"
+                                      : indicator.color === "blue"
+                                      ? "bg-blue-500 text-white border-blue-400"
+                                      : indicator.color === "green"
+                                      ? "bg-green-500 text-white border-green-400"
+                                      : indicator.color === "purple"
+                                      ? "bg-purple-500 text-white border-purple-400"
+                                      : "bg-sky-500 text-white border-sky-400"
+                                  }`}
+                                  title={`${indicator.title}: ${completionCounts.completedDrills}/${completionCounts.totalDrills} exercises`}
+                                >
+                                  {isCompleted
+                                    ? "✓"
+                                    : completionCounts.totalDrills > 0
+                                    ? completionCounts.totalDrills
+                                    : indicator.remaining || ""}
+                                </div>
+                              ))}
+                            {allIndicators.length > 2 && (
+                              <div className="w-2.5 h-2.5 rounded-full bg-gray-500 text-white border border-gray-400 flex items-center justify-center text-[7px] font-bold">
+                                +
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          // Fallback: Show generic workout indicator if we have drills but no program/routine data
                           <div
-                            key={indicator.id || `${indicator.title}-${idx}`}
-                            className={`w-2 h-2 rounded-full flex items-center justify-center text-[6px] font-bold shadow-sm border transition-all duration-200 ${
-                              indicator.isRestDay
-                                ? "bg-orange-500 text-white border-orange-400"
-                                : indicator.remaining === 0
+                            className={`w-2.5 h-2.5 rounded-full flex items-center justify-center text-[7px] font-bold shadow-sm border transition-all duration-200 ${
+                              isCompleted
                                 ? "bg-green-500 text-white border-green-400 shadow-lg shadow-green-500/50"
-                                : indicator.color === "blue"
-                                ? "bg-blue-500 text-white border-blue-400"
-                                : indicator.color === "green"
-                                ? "bg-green-500 text-white border-green-400"
-                                : indicator.color === "purple"
-                                ? "bg-purple-500 text-white border-purple-400"
-                                : "bg-orange-500 text-white border-orange-400"
+                                : isPartial
+                                ? "bg-yellow-500 text-white border-yellow-400"
+                                : "bg-sky-500 text-white border-sky-400"
                             }`}
-                            title={`${indicator.title}: ${indicator.remaining} exercises remaining`}
+                            title={`${completionCounts.completedDrills}/${completionCounts.totalDrills} exercises`}
                           >
-                            {indicator.isRestDay
-                              ? "R"
-                              : indicator.remaining === 0
+                            {isCompleted
                               ? "✓"
-                              : indicator.remaining}
+                              : completionCounts.totalDrills > 0
+                              ? completionCounts.totalDrills
+                              : "•"}
                           </div>
-                        ))}
-                      {allIndicators.length > 2 && (
-                        <div className="w-2 h-2 rounded-full bg-gray-500 text-white border border-gray-400 flex items-center justify-center text-[6px] font-bold">
-                          +
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
+
+                    {/* Show lesson indicator if there are lessons on this day */}
+                    {lessonsForDay.length > 0 && (
+                      <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                        <Clock className="h-2.5 w-2.5 text-blue-400 flex-shrink-0" />
+                        {lessonsForDay.length > 1 && (
+                          <span className="text-[8px] font-bold text-blue-400">
+                            {lessonsForDay.length}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -1226,7 +1331,9 @@ export default function MobileClientProgramPage() {
             []
           }
           routineAssignments={selectedDayRoutineAssignments}
+          lessonsForDate={selectedDate ? getLessonsForDate(selectedDate) : []}
           onMarkDrillComplete={handleMarkDrillComplete}
+          onMarkVideoAssignmentComplete={handleMarkVideoAssignmentComplete}
           onMarkAllComplete={handleMarkAllComplete}
           onOpenVideo={handleOpenVideo}
           onOpenCommentModal={handleOpenCommentModal}
@@ -1314,15 +1421,88 @@ export default function MobileClientProgramPage() {
             return { totalDrills, completedDrills };
           }}
           calculateDayAssignmentCounts={(dayData, selectedDate) => {
-            if (!dayData)
+            if (!dayData && !selectedDate)
               return { totalAssignments: 0, completedAssignments: 0 };
-            return {
-              totalAssignments: 0,
-              completedAssignments: 0,
-            };
+
+            let totalAssignments = 0;
+            let completedAssignments = 0;
+
+            // Count program assignments (excluding rest days)
+            if (dayData && "programs" in dayData && dayData.programs) {
+              (dayData as any).programs.forEach((program: ProgramData) => {
+                if (!program.isRestDay) {
+                  totalAssignments++;
+                  // Check if all drills in this program are completed using new system
+                  if (program.drills) {
+                    const dateKey = selectedDate
+                      ? selectedDate.toISOString().split("T")[0]
+                      : undefined;
+                    const allDrillsCompleted = program.drills.every(
+                      (drill: Drill) => {
+                        if (drill.id.includes("-routine-")) {
+                          // This is a routine exercise within a program
+                          const exerciseId = drill.id.split("-routine-")[1];
+                          const programDrillId = drill.id.split("-routine-")[0];
+                          return isExerciseCompleted(
+                            exerciseId,
+                            programDrillId,
+                            dateKey
+                          );
+                        } else {
+                          // This is a regular drill
+                          return isExerciseCompleted(
+                            drill.id,
+                            undefined,
+                            dateKey
+                          );
+                        }
+                      }
+                    );
+                    if (allDrillsCompleted) {
+                      completedAssignments++;
+                    }
+                  } else {
+                    // If we only have lightweight data, use pre-calculated completion status
+                    const totalDrills = program.totalDrills || 0;
+                    const completedDrills = program.completedDrills || 0;
+                    if (totalDrills > 0 && completedDrills === totalDrills) {
+                      completedAssignments++;
+                    }
+                  }
+                }
+              });
+            }
+
+            // Count routine assignments for the selected date
+            if (selectedDate) {
+              const routinesForDate = getRoutinesForDate(selectedDate);
+              routinesForDate.forEach((routineAssignment: any) => {
+                if (routineAssignment.routine?.exercises) {
+                  totalAssignments++;
+                  // Check if all exercises in this routine are completed using new system
+                  const dateKey = selectedDate
+                    ? selectedDate.toISOString().split("T")[0]
+                    : undefined;
+                  const allExercisesCompleted =
+                    routineAssignment.routine.exercises.every(
+                      (exercise: any) => {
+                        return isExerciseCompleted(
+                          exercise.id,
+                          routineAssignment.id,
+                          dateKey
+                        );
+                      }
+                    );
+                  if (allExercisesCompleted) {
+                    completedAssignments++;
+                  }
+                }
+              });
+            }
+
+            return { totalAssignments, completedAssignments };
           }}
           onMarkRoutineExerciseComplete={handleMarkRoutineExerciseComplete}
-          onMarkVideoAssignmentComplete={handleMarkVideoAssignmentComplete}
           completedVideoAssignments={completedVideoAssignments}
           isLoadingDetails={dayDetailsLoading}
           detailsError={dayDetailsError}
