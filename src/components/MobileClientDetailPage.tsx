@@ -32,6 +32,7 @@ import {
   Zap,
   Edit,
   MessageCircle,
+  MessageSquare,
   Archive,
   MoreVertical,
   Filter,
@@ -69,8 +70,15 @@ import QuickAssignProgramModal from "./QuickAssignProgramModal";
 import QuickAssignRoutineFromDayModal from "./QuickAssignRoutineFromDayModal";
 import AssignRoutineModal from "./AssignRoutineModal";
 import AssignVideoModal from "./AssignVideoModal";
-import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "./ui/dropdown-menu";
+import ClientProfileModal from "./ClientProfileModal";
 
 interface MobileClientDetailPageProps {
   clientId: string;
@@ -103,6 +111,7 @@ export default function MobileClientDetailPage({
     setShowQuickAssignRoutineFromDayModal,
   ] = useState(false);
   const [showAssignVideoModal, setShowAssignVideoModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Fetch client data
   const {
@@ -591,7 +600,7 @@ export default function MobileClientDetailPage({
     }
   };
 
-  // Generate calendar days based on view mode (same as desktop)
+  // Generate calendar days based on view mode (same as desktop - Sunday through Saturday)
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
 
@@ -600,12 +609,12 @@ export default function MobileClientDetailPage({
 
   if (viewMode === "week") {
     // For week view, show the week containing the current date
-    calendarStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-    calendarEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+    calendarStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+    calendarEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
   } else {
     // For month view, show the full month with surrounding days
-    calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+    calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   }
 
   const calendarDays = eachDayOfInterval({
@@ -620,7 +629,7 @@ export default function MobileClientDetailPage({
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
       <div
-        className="sticky top-0 z-40 px-4 py-4 border-b"
+        className="sticky top-0 z-40 px-4 py-3 border-b"
         style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
       >
         <div className="flex items-center gap-3">
@@ -630,36 +639,101 @@ export default function MobileClientDetailPage({
           >
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-white">Client Details</h1>
-            <p className="text-sm text-gray-400">{client.name}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold text-white truncate">
+              {client.name}
+            </h1>
+            <p className="text-xs text-gray-400">Client Details</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1">
+            {/* Primary action - Schedule Lesson */}
             <button
               onClick={() => setShowScheduleModal(true)}
               className="p-2 rounded-lg transition-all duration-200"
-              style={{ backgroundColor: "#10B981" }}
+              style={{ backgroundColor: "#F59E0B" }}
               title="Schedule Lesson"
             >
               <Calendar className="w-5 h-5 text-white" />
             </button>
-            <button
-              onClick={() => setShowQuickAssignProgramModal(true)}
-              className="p-2 rounded-lg transition-all duration-200"
-              style={{ backgroundColor: "#3B82F6" }}
-              title="Assign Program"
-            >
-              <BookOpen className="w-5 h-5 text-white" />
-            </button>
-            <button
-              onClick={() => setShowAssignRoutineModal(true)}
-              className="p-2 rounded-lg transition-all duration-200"
-              style={{ backgroundColor: "#059669" }}
-              title="Assign Routine"
-            >
-              <Target className="w-5 h-5 text-white" />
-            </button>
-            <MobileClientNavigation currentPage="clients" />
+            {/* Dropdown for other actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="p-2 rounded-lg transition-all duration-200 hover:bg-[#4A5A70]"
+                  title="More actions"
+                >
+                  <MoreVertical className="w-5 h-5 text-white" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="min-w-[200px] rounded-lg border shadow-xl"
+                style={{
+                  backgroundColor: "#1F2323",
+                  borderColor: "#606364",
+                }}
+              >
+                <DropdownMenuItem
+                  onClick={() => {
+                    setShowQuickAssignProgramModal(true);
+                  }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                  style={{ color: "#C3BCC2" }}
+                >
+                  <BookOpen className="h-4 w-4" style={{ color: "#3B82F6" }} />
+                  Assign Program
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setShowAssignRoutineModal(true);
+                  }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                  style={{ color: "#C3BCC2" }}
+                >
+                  <Target className="h-4 w-4" style={{ color: "#10B981" }} />
+                  Assign Routine
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setShowAssignVideoModal(true);
+                  }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                  style={{ color: "#C3BCC2" }}
+                >
+                  <Video className="h-4 w-4" style={{ color: "#8B5CF6" }} />
+                  Assign Video
+                </DropdownMenuItem>
+                <DropdownMenuSeparator
+                  className="my-1"
+                  style={{ backgroundColor: "#606364" }}
+                />
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (client.userId) {
+                      router.push(`/messages?clientId=${client.userId}`);
+                    }
+                  }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                  style={{ color: "#C3BCC2" }}
+                >
+                  <MessageSquare
+                    className="h-4 w-4"
+                    style={{ color: "#10B981" }}
+                  />
+                  Send Message
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setShowProfileModal(true);
+                  }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                  style={{ color: "#C3BCC2" }}
+                >
+                  <Edit className="h-4 w-4" style={{ color: "#3B82F6" }} />
+                  Edit Client
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -883,6 +957,7 @@ export default function MobileClientDetailPage({
             {viewMode === "month" ? (
               // Month view - simplified for mobile
               <div className="grid grid-cols-7 gap-1">
+                {/* Day headers: Sunday through Saturday */}
                 {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
                   <div
                     key={`day-header-${index}`}
@@ -1155,6 +1230,20 @@ export default function MobileClientDetailPage({
           />
         )}
 
+        {/* Client Profile Modal */}
+        {showProfileModal && client && (
+          <ClientProfileModal
+            isOpen={showProfileModal}
+            onClose={() => setShowProfileModal(false)}
+            clientId={client.id}
+            clientName={client.name}
+            clientEmail={client.email}
+            clientPhone={client.phone}
+            clientNotes={extractNoteContent(client.notes)}
+            clientAvatar={client.avatar}
+          />
+        )}
+
         {/* Day Overview Modal */}
         {showDayOverviewModal && selectedDate && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1183,18 +1272,21 @@ export default function MobileClientDetailPage({
               </div>
               <div className="p-4">
                 {/* Quick Actions */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
+                <div className="grid grid-cols-2 gap-3 mb-6">
                   <button
                     onClick={() => {
                       setShowDayOverviewModal(false);
                       setShowScheduleModal(true);
                     }}
-                    className="flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#F59E0B" }}
+                    className="flex items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105 border"
+                    style={{
+                      backgroundColor: "#F59E0B",
+                      borderColor: "#F59E0B",
+                    }}
                   >
-                    <Calendar className="h-5 w-5 text-white" />
-                    <span className="text-xs font-medium text-white">
-                      Lesson
+                    <Calendar className="h-5 w-5 text-white flex-shrink-0" />
+                    <span className="text-sm font-medium text-white">
+                      Schedule Lesson
                     </span>
                   </button>
                   <button
@@ -1202,12 +1294,15 @@ export default function MobileClientDetailPage({
                       setShowDayOverviewModal(false);
                       setShowQuickAssignProgramModal(true);
                     }}
-                    className="flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#3B82F6" }}
+                    className="flex items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105 border"
+                    style={{
+                      backgroundColor: "#3B82F6",
+                      borderColor: "#3B82F6",
+                    }}
                   >
-                    <BookOpen className="h-5 w-5 text-white" />
-                    <span className="text-xs font-medium text-white">
-                      Program
+                    <BookOpen className="h-5 w-5 text-white flex-shrink-0" />
+                    <span className="text-sm font-medium text-white">
+                      Assign Program
                     </span>
                   </button>
                   <button
@@ -1215,12 +1310,15 @@ export default function MobileClientDetailPage({
                       setShowDayOverviewModal(false);
                       setShowQuickAssignRoutineFromDayModal(true);
                     }}
-                    className="flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#10B981" }}
+                    className="flex items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105 border"
+                    style={{
+                      backgroundColor: "#10B981",
+                      borderColor: "#10B981",
+                    }}
                   >
-                    <Target className="h-5 w-5 text-white" />
-                    <span className="text-xs font-medium text-white">
-                      Routine
+                    <Target className="h-5 w-5 text-white flex-shrink-0" />
+                    <span className="text-sm font-medium text-white">
+                      Assign Routine
                     </span>
                   </button>
                   <button
@@ -1228,12 +1326,15 @@ export default function MobileClientDetailPage({
                       setShowDayOverviewModal(false);
                       setShowAssignVideoModal(true);
                     }}
-                    className="flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#8B5CF6" }}
+                    className="flex items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105 border"
+                    style={{
+                      backgroundColor: "#8B5CF6",
+                      borderColor: "#8B5CF6",
+                    }}
                   >
-                    <Video className="h-5 w-5 text-white" />
-                    <span className="text-xs font-medium text-white">
-                      Video
+                    <Video className="h-5 w-5 text-white flex-shrink-0" />
+                    <span className="text-sm font-medium text-white">
+                      Assign Video
                     </span>
                   </button>
                 </div>
@@ -1325,107 +1426,145 @@ export default function MobileClientDetailPage({
                                     {program.description}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => {
-                                      // Handle temporary program days
-                                      if (
-                                        program.isTemporary &&
-                                        program.replacementId
-                                      ) {
-                                        handleRemoveProgram(program);
-                                        return;
-                                      }
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      className="p-2 rounded-lg hover:bg-[#4A5A70]/50 transition-colors"
+                                      title="Program actions"
+                                    >
+                                      <MoreVertical
+                                        className="h-4 w-4"
+                                        style={{ color: "#ABA4AA" }}
+                                      />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="min-w-[180px] rounded-lg border shadow-xl"
+                                    style={{
+                                      backgroundColor: "#1F2323",
+                                      borderColor: "#606364",
+                                    }}
+                                  >
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        // Replace with lesson functionality
+                                        const replacementData = {
+                                          assignmentId:
+                                            program.assignment?.id ||
+                                            program.assignmentId,
+                                          programId:
+                                            program.assignment?.programId ||
+                                            program.programId,
+                                          programTitle: program.title,
+                                          dayDate:
+                                            selectedDate
+                                              ?.toISOString()
+                                              .split("T")[0] ||
+                                            new Date()
+                                              .toISOString()
+                                              .split("T")[0],
+                                        };
+                                        setReplacementData(replacementData);
+                                        setShowScheduleModal(true);
+                                        setShowDayOverviewModal(false);
+                                      }}
+                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                                      style={{ color: "#C3BCC2" }}
+                                    >
+                                      <Calendar
+                                        className="h-4 w-4"
+                                        style={{ color: "#F59E0B" }}
+                                      />
+                                      Replace with Lesson
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator
+                                      className="my-1"
+                                      style={{ backgroundColor: "#606364" }}
+                                    />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        // Handle temporary program days
+                                        if (
+                                          program.isTemporary &&
+                                          program.replacementId
+                                        ) {
+                                          handleRemoveProgram(program);
+                                          return;
+                                        }
 
-                                      // Create programData object like desktop version
-                                      const programData = {
-                                        assignmentId:
-                                          program.assignment?.id || program.id,
-                                        programId:
-                                          program.assignment?.programId ||
-                                          program.programId,
-                                        programTitle: program.title,
-                                        dayDate:
-                                          selectedDate
-                                            ?.toISOString()
-                                            .split("T")[0] ||
-                                          new Date()
-                                            .toISOString()
-                                            .split("T")[0],
-                                      };
-                                      handleRemoveProgram(
-                                        programData,
-                                        "entire"
-                                      );
-                                    }}
-                                    className="px-2 py-1 text-xs font-medium rounded transition-colors bg-red-500/20 text-red-300 hover:bg-red-500/30"
-                                    title="Remove entire program"
-                                  >
-                                    Entire
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      // Handle temporary program days
-                                      if (
-                                        program.isTemporary &&
-                                        program.replacementId
-                                      ) {
-                                        handleRemoveProgram(program);
-                                        return;
-                                      }
+                                        // Create programData object like desktop version
+                                        const programData = {
+                                          assignmentId:
+                                            program.assignment?.id ||
+                                            program.id,
+                                          programId:
+                                            program.assignment?.programId ||
+                                            program.programId,
+                                          programTitle: program.title,
+                                          dayDate:
+                                            selectedDate
+                                              ?.toISOString()
+                                              .split("T")[0] ||
+                                            new Date()
+                                              .toISOString()
+                                              .split("T")[0],
+                                        };
+                                        handleRemoveProgram(programData, "day");
+                                      }}
+                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                                      style={{ color: "#C3BCC2" }}
+                                    >
+                                      <X
+                                        className="h-4 w-4"
+                                        style={{ color: "#F59E0B" }}
+                                      />
+                                      Remove This Day
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        // Handle temporary program days
+                                        if (
+                                          program.isTemporary &&
+                                          program.replacementId
+                                        ) {
+                                          handleRemoveProgram(program);
+                                          return;
+                                        }
 
-                                      // Create programData object like desktop version
-                                      const programData = {
-                                        assignmentId:
-                                          program.assignment?.id || program.id,
-                                        programId:
-                                          program.assignment?.programId ||
-                                          program.programId,
-                                        programTitle: program.title,
-                                        dayDate:
-                                          selectedDate
-                                            ?.toISOString()
-                                            .split("T")[0] ||
-                                          new Date()
-                                            .toISOString()
-                                            .split("T")[0],
-                                      };
-                                      handleRemoveProgram(programData, "day");
-                                    }}
-                                    className="px-2 py-1 text-xs font-medium rounded transition-colors bg-orange-500/20 text-orange-300 hover:bg-orange-500/30"
-                                    title="Remove just this day"
-                                  >
-                                    Day
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      // Replace with lesson functionality
-                                      const replacementData = {
-                                        assignmentId:
-                                          program.assignment?.id ||
-                                          program.assignmentId,
-                                        programId:
-                                          program.assignment?.programId ||
-                                          program.programId,
-                                        programTitle: program.title,
-                                        dayDate:
-                                          selectedDate
-                                            ?.toISOString()
-                                            .split("T")[0] ||
-                                          new Date()
-                                            .toISOString()
-                                            .split("T")[0],
-                                      };
-                                      setReplacementData(replacementData);
-                                      setShowScheduleModal(true);
-                                      setShowDayOverviewModal(false);
-                                    }}
-                                    className="px-2 py-1 text-xs font-medium rounded transition-colors bg-green-500/20 text-green-300 hover:bg-green-500/30"
-                                    title="Replace with lesson"
-                                  >
-                                    Lesson
-                                  </button>
-                                </div>
+                                        // Create programData object like desktop version
+                                        const programData = {
+                                          assignmentId:
+                                            program.assignment?.id ||
+                                            program.id,
+                                          programId:
+                                            program.assignment?.programId ||
+                                            program.programId,
+                                          programTitle: program.title,
+                                          dayDate:
+                                            selectedDate
+                                              ?.toISOString()
+                                              .split("T")[0] ||
+                                            new Date()
+                                              .toISOString()
+                                              .split("T")[0],
+                                        };
+                                        handleRemoveProgram(
+                                          programData,
+                                          "entire"
+                                        );
+                                      }}
+                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
+                                      style={{ color: "#EF4444" }}
+                                    >
+                                      <X
+                                        className="h-4 w-4"
+                                        style={{ color: "#EF4444" }}
+                                      />
+                                      Remove Entire Program
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             ))}
                           </div>

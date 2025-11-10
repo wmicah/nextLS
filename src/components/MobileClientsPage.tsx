@@ -24,6 +24,7 @@ import {
   Mail,
   Phone,
   MessageCircle,
+  MessageSquare,
   MoreVertical,
   X,
   Check,
@@ -34,14 +35,14 @@ import {
   Copy,
   XCircle,
   Loader2,
-  Pin,
-  PinOff,
+  PenTool,
 } from "lucide-react";
 import { format } from "date-fns";
 import ClientProfileModal from "./ClientProfileModal";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
+import NotesDisplay from "./NotesDisplay";
 
 interface Client {
   id: string;
@@ -639,9 +640,8 @@ export default function MobileClientsPage() {
     null
   );
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [feedbackClient, setFeedbackClient] = useState<Client | null>(null);
-  const [feedbackText, setFeedbackText] = useState("");
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [notesClient, setNotesClient] = useState<Client | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
   const [selectedClientForProfile, setSelectedClientForProfile] =
@@ -677,43 +677,9 @@ export default function MobileClientsPage() {
   });
   const utils = trpc.useUtils();
 
-  // Fetch notes for the selected client
-  const { data: clientNotes = [], refetch: refetchNotes } =
-    trpc.clients.getClientNotes.useQuery(
-      { clientId: feedbackClient?.id || "" },
-      { enabled: !!feedbackClient }
-    );
-
-  // Mutation to update notes (legacy - keeping for backward compatibility)
-  const updateNotes = trpc.clients.updateNotes.useMutation({
-    onSuccess: () => {
-      utils.clients.list.invalidate();
-      refetchNotes();
-    },
-    onError: error => {
-      console.error("Failed to update notes:", error);
-    },
-  });
-
-  // Mutation to toggle pin status
-  const togglePinNote = trpc.clients.togglePinNote.useMutation({
-    onSuccess: () => {
-      refetchNotes();
-    },
-    onError: error => {
-      console.error("Failed to toggle pin:", error);
-    },
-  });
-
-  const openFeedback = (client: Client) => {
-    setFeedbackClient(client);
-    setFeedbackText("");
-    setIsFeedbackOpen(true);
-  };
-
-  const submitFeedback = () => {
-    if (!feedbackClient || !feedbackText.trim()) return;
-    updateNotes.mutate({ clientId: feedbackClient.id, notes: feedbackText });
+  const openNotes = (client: Client) => {
+    setNotesClient(client);
+    setIsNotesModalOpen(true);
   };
 
   const archiveClient = trpc.clients.archive.useMutation({
@@ -1326,19 +1292,6 @@ export default function MobileClientsPage() {
                           <p className="text-sm truncate text-[#ABA4AA]">
                             {client.email || "No email"}
                           </p>
-                          <div className="mt-2">
-                            <p className="text-xs font-medium mb-1 text-[#ABA4AA]">
-                              Next Lesson:
-                            </p>
-                            <p className="text-sm font-semibold text-[#C3BCC2]">
-                              {isValidLessonDate(client.nextLessonDate)
-                                ? format(
-                                    new Date(client.nextLessonDate!),
-                                    "MMM d, yyyy"
-                                  )
-                                : "No lesson scheduled"}
-                            </p>
-                          </div>
                         </div>
                       </div>
 
@@ -1346,12 +1299,24 @@ export default function MobileClientsPage() {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            openFeedback(client);
+                            router.push(
+                              `/messages?clientId=${client.userId || client.id}`
+                            );
+                          }}
+                          className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040]"
+                          title="Send message"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            openNotes(client);
                           }}
                           className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040]"
                           title="Add feedback"
                         >
-                          <MessageCircle className="h-4 w-4" />
+                          <PenTool className="h-4 w-4" />
                         </button>
                         <button
                           onClick={e => {
@@ -1450,22 +1415,55 @@ export default function MobileClientsPage() {
                               {client.email}
                             </p>
                           )}
-                          <div className="mt-2">
-                            <p className="text-xs font-medium mb-1 text-[#ABA4AA]">
-                              Next Lesson:
-                            </p>
-                            <p className="text-sm font-semibold text-[#C3BCC2]">
-                              {isValidLessonDate(client.nextLessonDate)
-                                ? format(
-                                    new Date(client.nextLessonDate!),
-                                    "MMM d, yyyy"
-                                  )
-                                : "No lesson scheduled"}
-                            </p>
-                          </div>
+                          {isValidLessonDate(client.nextLessonDate) && (
+                            <div className="mt-2">
+                              <p className="text-xs font-medium mb-1 text-[#ABA4AA]">
+                                Next Lesson:
+                              </p>
+                              <p className="text-sm font-semibold text-[#C3BCC2]">
+                                {format(
+                                  new Date(client.nextLessonDate!),
+                                  "MMM d, yyyy"
+                                )}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            router.push(
+                              `/messages?clientId=${client.userId || client.id}`
+                            );
+                          }}
+                          className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040]"
+                          title="Send message"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            openNotes(client);
+                          }}
+                          className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040]"
+                          title="Add feedback"
+                        >
+                          <PenTool className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedClientForProfile(client);
+                            setIsProfileModalOpen(true);
+                          }}
+                          className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040]"
+                          title="Edit client"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={e => {
                             e.stopPropagation();
@@ -1476,7 +1474,12 @@ export default function MobileClientsPage() {
                             }
                           }}
                           disabled={archivingClientId === client.id}
-                          className="p-2 rounded-xl text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040] disabled:opacity-50"
+                          className="p-2 rounded-lg text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#3A4040] disabled:opacity-50"
+                          title={
+                            activeTab === "active"
+                              ? "Archive client"
+                              : "Unarchive client"
+                          }
                         >
                           {archivingClientId === client.id ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#F59E0B]" />
@@ -1511,116 +1514,36 @@ export default function MobileClientsPage() {
         />
       )}
 
-      {/* Feedback Modal */}
-      {isFeedbackOpen && feedbackClient && (
+      {/* Notes Modal */}
+      {isNotesModalOpen && notesClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/60"
             onClick={() => {
-              setIsFeedbackOpen(false);
-              setFeedbackText("");
+              setIsNotesModalOpen(false);
+              setNotesClient(null);
             }}
           />
           <div className="relative w-full max-w-lg rounded-xl shadow-2xl border p-4 max-h-[90vh] overflow-y-auto bg-[#2B3038] border-[#606364]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[#C3BCC2]">
-                Notes for {feedbackClient.name}
+                Notes for {notesClient.name}
               </h3>
               <button
                 onClick={() => {
-                  setIsFeedbackOpen(false);
-                  setFeedbackText("");
+                  setIsNotesModalOpen(false);
+                  setNotesClient(null);
                 }}
                 className="p-1 rounded-lg hover:bg-[#4A5A70] transition-colors"
               >
                 <X className="h-5 w-5 text-[#ABA4AA]" />
               </button>
             </div>
-
-            {/* Existing Notes List */}
-            {clientNotes.length > 0 && (
-              <div className="mb-4 space-y-2">
-                {clientNotes.map(note => (
-                  <div
-                    key={note.id}
-                    className={`p-3 rounded-lg border ${
-                      note.isPinned
-                        ? "bg-[#4A5A70]/20 border-[#4A5A70]"
-                        : "bg-[#2A3133] border-[#606364]"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        {note.title && (
-                          <p className="font-semibold text-[#C3BCC2] mb-1">
-                            {note.title}
-                          </p>
-                        )}
-                        <p className="text-sm text-[#ABA4AA] whitespace-pre-wrap">
-                          {note.content}
-                        </p>
-                        <p className="text-xs text-[#606364] mt-2">
-                          {format(
-                            new Date(note.createdAt),
-                            "MMM d, yyyy 'at' h:mm a"
-                          )}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() =>
-                          togglePinNote.mutate({ noteId: note.id })
-                        }
-                        disabled={togglePinNote.isPending}
-                        className={`p-2 rounded-lg transition-all ${
-                          note.isPinned
-                            ? "bg-[#4A5A70] text-yellow-400"
-                            : "hover:bg-[#4A5A70] text-[#ABA4AA]"
-                        }`}
-                        title={note.isPinned ? "Unpin note" : "Pin note"}
-                      >
-                        {note.isPinned ? (
-                          <Pin className="h-4 w-4 fill-current" />
-                        ) : (
-                          <PinOff className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add New Note */}
-            <div className="border-t border-[#606364] pt-4">
-              <h4 className="text-sm font-semibold mb-2 text-[#C3BCC2]">
-                Add New Note
-              </h4>
-              <textarea
-                value={feedbackText}
-                onChange={e => setFeedbackText(e.target.value)}
-                className="w-full rounded-lg p-3 border mb-3 text-sm resize-none bg-[#2A3133] border-[#606364] text-[#C3BCC2]"
-                rows={4}
-                placeholder="Type your note here..."
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setIsFeedbackOpen(false);
-                    setFeedbackText("");
-                  }}
-                  className="flex-1 px-4 py-2 rounded-lg border bg-transparent border-[#606364] text-[#ABA4AA]"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={submitFeedback}
-                  disabled={updateNotes.isPending || !feedbackText.trim()}
-                  className="flex-1 px-4 py-2 rounded-lg shadow-lg border disabled:opacity-50 bg-[#4A5A70] border-[#606364] text-[#C3BCC2]"
-                >
-                  {updateNotes.isPending ? "Saving..." : "Save Note"}
-                </button>
-              </div>
-            </div>
+            <NotesDisplay
+              clientId={notesClient.id}
+              isClientView={false}
+              showComposer={true}
+            />
           </div>
         </div>
       )}
