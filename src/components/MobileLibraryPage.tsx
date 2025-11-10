@@ -527,6 +527,8 @@ export default function MobileLibraryPage() {
           onNext={navigateToNext}
           currentIndex={currentItemIndex}
           totalItems={libraryItems.length}
+          libraryItems={libraryItems}
+          forceMobileLayout={true}
         />
       )}
     </div>
