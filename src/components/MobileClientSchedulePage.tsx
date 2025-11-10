@@ -46,6 +46,7 @@ export default function MobileClientSchedulePage() {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [requestReason, setRequestReason] = useState("");
+  const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
 
   // Fetch all schedule data for current and adjacent months
   const { data: coachSchedule = [] } =
@@ -125,8 +126,20 @@ export default function MobileClientSchedulePage() {
   // Fetch coach's profile
   const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
 
+  const { data: organizationSchedule } =
+    trpc.clientRouter.getOrganizationCoachesSchedules.useQuery({
+      month: currentMonth.getMonth(),
+      year: currentMonth.getFullYear(),
+    });
+
   const scheduleAdvanceLimitDays =
     coachProfile?.scheduleAdvanceLimitDays ?? null;
+
+  const primaryCoachId = coachProfile?.id || null;
+  const isInOrganization =
+    !!organizationSchedule && organizationSchedule.coaches.length > 0;
+  const organizationCoaches = organizationSchedule?.coaches ?? [];
+  const organizationEvents = organizationSchedule?.events ?? [];
 
   const defaultWorkingDays = [
     "Monday",
@@ -138,27 +151,58 @@ export default function MobileClientSchedulePage() {
     "Sunday",
   ];
 
-  const getWorkingProfile = () => ({
-    startTime: coachProfile?.workingHours?.startTime || "9:00 AM",
-    endTime: coachProfile?.workingHours?.endTime || "6:00 PM",
-    workingDays:
-      coachProfile?.workingHours?.workingDays || defaultWorkingDays,
-    timeSlotInterval: coachProfile?.workingHours?.timeSlotInterval || 60,
-    customWorkingHours:
-      (coachProfile?.workingHours as any)?.customWorkingHours ||
-      (coachProfile as any)?.customWorkingHours ||
-      null,
-  });
+  const getWorkingProfile = (coachId?: string | null) => {
+    if (isInOrganization && organizationCoaches.length > 0) {
+      const targetCoach =
+        organizationCoaches.find(coach => coach.id === coachId) ||
+        organizationCoaches[0];
+
+      if (targetCoach) {
+        return {
+          startTime: targetCoach.workingHoursStart || "9:00 AM",
+          endTime: targetCoach.workingHoursEnd || "6:00 PM",
+          workingDays:
+            (targetCoach.workingDays && targetCoach.workingDays.length > 0
+              ? targetCoach.workingDays
+              : defaultWorkingDays) || defaultWorkingDays,
+          timeSlotInterval: targetCoach.timeSlotInterval || 60,
+          customWorkingHours: (targetCoach as any)?.customWorkingHours || null,
+          scheduleAdvanceLimit:
+            typeof targetCoach.scheduleAdvanceLimitDays === "number"
+              ? targetCoach.scheduleAdvanceLimitDays
+              : scheduleAdvanceLimitDays,
+          coachId: targetCoach.id,
+          coachName: targetCoach.name || "Coach",
+        };
+      }
+    }
+
+    return {
+      startTime: coachProfile?.workingHours?.startTime || "9:00 AM",
+      endTime: coachProfile?.workingHours?.endTime || "6:00 PM",
+      workingDays:
+        coachProfile?.workingHours?.workingDays || defaultWorkingDays,
+      timeSlotInterval: coachProfile?.workingHours?.timeSlotInterval || 60,
+      customWorkingHours:
+        (coachProfile?.workingHours as any)?.customWorkingHours ||
+        (coachProfile as any)?.customWorkingHours ||
+        null,
+      scheduleAdvanceLimit: scheduleAdvanceLimitDays,
+      coachId: primaryCoachId,
+      coachName: coachProfile?.name || "Coach",
+    };
+  };
 
   const getWorkingHoursForDate = (
-    date: Date
+    date: Date,
+    coachId?: string | null
   ): {
     isWorkingDay: boolean;
     startTime: string;
     endTime: string;
     timeSlotInterval: number;
   } => {
-    const profile = getWorkingProfile();
+    const profile = getWorkingProfile(coachId);
     const dayName = format(date, "EEEE");
     const custom = profile.customWorkingHours;
 
@@ -169,8 +213,7 @@ export default function MobileClientSchedulePage() {
           (dayConfig as any).enabled !== undefined
             ? (dayConfig as any).enabled !== false
             : profile.workingDays.includes(dayName);
-        const start =
-          (dayConfig as any).startTime || profile.startTime;
+        const start = (dayConfig as any).startTime || profile.startTime;
         const end = (dayConfig as any).endTime || profile.endTime;
         return {
           isWorkingDay: enabled,
@@ -189,8 +232,9 @@ export default function MobileClientSchedulePage() {
     };
   };
 
-  const isDateBeyondAdvanceLimit = (date: Date) => {
-    if (!scheduleAdvanceLimitDays || scheduleAdvanceLimitDays <= 0) {
+  const isDateBeyondAdvanceLimit = (date: Date, coachId?: string | null) => {
+    const limit = getScheduleAdvanceLimitForCoach(coachId);
+    if (!limit || limit <= 0) {
       return false;
     }
 
@@ -207,7 +251,7 @@ export default function MobileClientSchedulePage() {
     );
 
     const diff = differenceInCalendarDays(targetDate, startOfToday);
-    return diff > scheduleAdvanceLimitDays;
+    return diff > limit;
   };
 
   // Switch mutation
@@ -285,18 +329,38 @@ export default function MobileClientSchedulePage() {
     );
   };
 
-  const handleDateClick = (day: Date) => {
-    if (isDateBeyondAdvanceLimit(day)) {
-      if (scheduleAdvanceLimitDays && scheduleAdvanceLimitDays > 0) {
-        alert(
-          `You can only request lessons up to ${scheduleAdvanceLimitDays} days in advance.`
-        );
+  const handleDateClick = (
+    day: Date,
+    options: { ignoreAdvanceLimit?: boolean } = {}
+  ) => {
+    const ignoreAdvanceLimit = options.ignoreAdvanceLimit ?? false;
+
+    const workingCoachesForDay = getCoachesWorkingOnDate(day);
+    let defaultCoachId: string | null = primaryCoachId;
+
+    if (isInOrganization) {
+      if (!workingCoachesForDay.some(coach => coach.id === defaultCoachId)) {
+        if (workingCoachesForDay.length > 0) {
+          defaultCoachId = workingCoachesForDay[0].id;
+        } else {
+          defaultCoachId = organizationCoaches[0]?.id || defaultCoachId;
+        }
+      }
+    }
+
+    if (!ignoreAdvanceLimit && isDateBeyondAdvanceLimit(day, defaultCoachId)) {
+      const limit = getScheduleAdvanceLimitForCoach(defaultCoachId);
+      if (limit && limit > 0) {
+        alert(`You can only request lessons up to ${limit} days in advance.`);
       } else {
         alert("This date is not available for scheduling.");
       }
       return;
     }
 
+    setSelectedCoachId(defaultCoachId);
+    setSelectedTimeSlot(null);
+    setRequestReason("");
     setSelectedDate(day);
     setShowDayOverviewModal(true);
   };
@@ -325,12 +389,23 @@ export default function MobileClientSchedulePage() {
     );
   };
 
-  const generateAvailableTimeSlots = (date: Date) => {
-    if (isDateBeyondAdvanceLimit(date)) {
+  const generateAvailableTimeSlots = (
+    date: Date,
+    coachIdOverride?: string | null
+  ) => {
+    const activeCoachId = isInOrganization
+      ? coachIdOverride || selectedCoachId || organizationCoaches[0]?.id || null
+      : primaryCoachId || null;
+
+    if (isInOrganization && !activeCoachId) {
       return [];
     }
 
-    const workingHours = getWorkingHoursForDate(date);
+    if (isDateBeyondAdvanceLimit(date, activeCoachId)) {
+      return [];
+    }
+
+    const workingHours = getWorkingHoursForDate(date, activeCoachId);
 
     if (!workingHours.isWorkingDay) {
       return [];
@@ -339,7 +414,7 @@ export default function MobileClientSchedulePage() {
     const startTime = workingHours.startTime;
     const endTime = workingHours.endTime;
     const interval = workingHours.timeSlotInterval;
-    const slots = [];
+    const slots: string[] = [];
 
     const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
     const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -372,7 +447,20 @@ export default function MobileClientSchedulePage() {
     const isToday = format(now, "yyyy-MM-dd") === format(date, "yyyy-MM-dd");
     const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-    const existingLessons = getLessonsForDate(date);
+    const existingLessons = isInOrganization
+      ? organizationEvents.filter(event => {
+          if (!event.coachId) return false;
+          if (!activeCoachId) return false;
+          if (event.coachId !== activeCoachId) return false;
+          const eventDate = new Date(event.date);
+          return (
+            eventDate.getFullYear() === date.getFullYear() &&
+            eventDate.getMonth() === date.getMonth() &&
+            eventDate.getDate() === date.getDate()
+          );
+        })
+      : getLessonsForDate(date);
+
     const bookedTimes = existingLessons.map((lesson: any) => {
       const lessonDate = new Date(lesson.date);
       return format(lessonDate, "h:mm a");
@@ -429,7 +517,63 @@ export default function MobileClientSchedulePage() {
     }
   };
 
-  const workingProfile = getWorkingProfile();
+  const workingProfile = getWorkingProfile(primaryCoachId);
+
+  const coachColorPalette = [
+    "bg-blue-500",
+    "bg-purple-500",
+    "bg-orange-500",
+    "bg-pink-500",
+    "bg-yellow-500",
+    "bg-indigo-500",
+    "bg-red-500",
+    "bg-cyan-500",
+  ];
+
+  const getCoachColor = (coachId: string | null | undefined) => {
+    if (!coachId || !isInOrganization) {
+      return "bg-sky-500";
+    }
+
+    const index = organizationCoaches.findIndex(coach => coach.id === coachId);
+    if (index === -1) {
+      return "bg-sky-500";
+    }
+
+    return coachColorPalette[index % coachColorPalette.length];
+  };
+
+  const getCoachName = (coachId: string | null | undefined) => {
+    if (!coachId) return "Coach";
+    const coach = organizationCoaches.find(c => c.id === coachId);
+    return coach?.name || "Coach";
+  };
+  const upcomingLessonsPreview = upcomingLessons.slice(0, 2);
+  const remainingUpcomingLessons = Math.max(
+    0,
+    upcomingLessons.length - upcomingLessonsPreview.length
+  );
+
+  const getCoachesWorkingOnDate = (date: Date) => {
+    if (!isInOrganization) {
+      return [];
+    }
+
+    return organizationCoaches.filter(coach => {
+      const hours = getWorkingHoursForDate(date, coach.id);
+      return hours.isWorkingDay;
+    });
+  };
+
+  const getScheduleAdvanceLimitForCoach = (coachId?: string | null) => {
+    if (isInOrganization && coachId) {
+      const coach = organizationCoaches.find(c => c.id === coachId);
+      if (coach && typeof coach.scheduleAdvanceLimitDays === "number") {
+        return coach.scheduleAdvanceLimitDays;
+      }
+    }
+    return scheduleAdvanceLimitDays;
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
@@ -451,33 +595,76 @@ export default function MobileClientSchedulePage() {
 
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-6">
-        {/* Coach's Working Hours */}
-        <div className="p-4 rounded-xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="h-5 w-5 text-sky-400" />
-            <h2 className="text-lg font-semibold text-white">
-              Coach's Working Hours
-            </h2>
+        {/* Coach / Organization Working Hours */}
+        {isInOrganization && organizationCoaches.length > 0 ? (
+          <div className="p-4 rounded-xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl space-y-3">
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-sky-400" />
+              <h2 className="text-lg font-semibold text-white">
+                Organization Coaches&apos; Hours
+              </h2>
+            </div>
+            <div className="space-y-2">
+              {organizationCoaches.map(coach => (
+                <div
+                  key={coach.id}
+                  className="p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: "#2A3133",
+                    borderColor: "#4A5A70",
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span
+                      className={`inline-block w-2.5 h-2.5 rounded-full ${getCoachColor(
+                        coach.id
+                      )}`}
+                    />
+                    <h3 className="text-sm font-semibold text-white">
+                      {coach.name || "Coach"}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    {(coach.workingHoursStart as string) || "9:00 AM"} -{" "}
+                    {(coach.workingHoursEnd as string) || "6:00 PM"}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {coach.workingDays && coach.workingDays.length > 0
+                      ? coach.workingDays.join(", ")
+                      : "Monday - Sunday"}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="text-gray-300 text-sm">
-            {workingProfile.startTime} - {workingProfile.endTime}
-          </p>
-          {workingProfile.customWorkingHours && (
-            <p className="text-xs text-emerald-300 mt-1">
-              Custom daily hours enabled
+        ) : (
+          <div className="p-4 rounded-xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
+            <div className="flex items-center gap-3 mb-2">
+              <Clock className="h-5 w-5 text-sky-400" />
+              <h2 className="text-lg font-semibold text-white">
+                Coach&apos;s Working Hours
+              </h2>
+            </div>
+            <p className="text-gray-300 text-sm">
+              {workingProfile.startTime} - {workingProfile.endTime}
             </p>
-          )}
-          <div className="mt-2 flex flex-wrap gap-1">
-            {workingProfile.workingDays.map((day: string) => (
-              <span
-                key={day}
-                className="px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-xs"
-              >
-                {day.slice(0, 3)}
-              </span>
-            ))}
+            {workingProfile.customWorkingHours && (
+              <p className="text-xs text-emerald-300 mt-1">
+                Custom daily hours enabled
+              </p>
+            )}
+            <div className="mt-2 flex flex-wrap gap-1">
+              {workingProfile.workingDays.map((day: string) => (
+                <span
+                  key={day}
+                  className="px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-xs"
+                >
+                  {day.slice(0, 3)}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3">
@@ -489,6 +676,61 @@ export default function MobileClientSchedulePage() {
             Switch Requests
           </button>
         </div>
+
+        {/* Upcoming Lessons Preview */}
+        {upcomingLessons.length > 0 && (
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  Upcoming Lessons
+                </h2>
+                <p className="text-xs text-[#ABA4AA]">
+                  Next {Math.min(upcomingLessons.length, 2)} scheduled sessions
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {upcomingLessonsPreview.map(lesson => (
+                <div
+                  key={lesson.id}
+                  className="p-3 rounded-lg border border-[#4A5A70] bg-[#2A3133] flex items-center justify-between shadow-inner"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {format(new Date(lesson.date), "EEE, MMM d")}
+                    </p>
+                    <p className="text-xs text-[#C3BCC2]">
+                      {format(new Date(lesson.date), "h:mm a")}
+                    </p>
+                    {lesson.title && (
+                      <p className="text-xs text-[#ABA4AA] mt-1 line-clamp-1">
+                        {lesson.title}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedCoachId(lesson.coachId || primaryCoachId);
+                      handleDateClick(new Date(lesson.date), {
+                        ignoreAdvanceLimit: true,
+                      });
+                    }}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 bg-[#4A5A70] text-[#C3BCC2] hover:bg-[#606364]"
+                  >
+                    View Day
+                  </button>
+                </div>
+              ))}
+            </div>
+            {remainingUpcomingLessons > 0 && (
+              <div className="text-center text-xs text-[#ABA4AA]">
+                +{remainingUpcomingLessons} more scheduled lesson
+                {remainingUpcomingLessons === 1 ? "" : "s"}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Calendar */}
         <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
@@ -534,36 +776,64 @@ export default function MobileClientSchedulePage() {
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-2 pb-2">
             {getCalendarDays().map(day => {
               const isToday = isSameDay(day, new Date());
               const isCurrentMonth = isSameMonth(day, currentMonth);
               const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
-              const workingHoursForDay = getWorkingHoursForDate(day);
+              const workingHoursForDay = getWorkingHoursForDate(
+                day,
+                primaryCoachId
+              );
               const isWorkingDay = workingHoursForDay.isWorkingDay;
-              const isBeyondLimit = isDateBeyondAdvanceLimit(day);
+              const isBeyondLimit = isDateBeyondAdvanceLimit(
+                day,
+                primaryCoachId
+              );
 
-              const availableSlotsCount =
-                !isPast && isWorkingDay && !isBeyondLimit
-                  ? generateAvailableTimeSlots(day).length
-                  : 0;
+              const myLessonsForDay = getClientLessonsForDate(day);
+              const hasMyLessons = myLessonsForDay.length > 0;
+              const workingCoachesForDay = getCoachesWorkingOnDate(day);
+              const otherCoachesWorking = isInOrganization
+                ? workingCoachesForDay.some(
+                    coach => coach.id !== primaryCoachId
+                  )
+                : false;
+              const otherCoachColors = isInOrganization
+                ? workingCoachesForDay
+                    .filter(coach => coach.id !== primaryCoachId)
+                    .map(coach => getCoachColor(coach.id))
+                : [];
+
+              const canRequestOnDay = !isPast && isWorkingDay && !isBeyondLimit;
+              const canOpenDay =
+                canRequestOnDay || hasMyLessons || otherCoachesWorking;
+              const isSelected =
+                selectedDate !== null && isSameDay(day, selectedDate);
 
               return (
                 <div
                   key={day.toISOString()}
-                  onClick={() =>
-                    !isPast &&
-                    isWorkingDay &&
-                    !isBeyondLimit &&
-                    handleDateClick(day)
-                  }
-                  className={`
-                    aspect-square flex flex-col items-center justify-center text-xs rounded-xl transition-all duration-200 relative border-2 cursor-pointer active:scale-95 p-1 shadow-md hover:shadow-lg overflow-hidden
-                    ${
-                      isPast || !isWorkingDay || isBeyondLimit
-                        ? "cursor-not-allowed opacity-50"
-                        : ""
+                  role={canOpenDay ? "button" : "presentation"}
+                  tabIndex={canOpenDay ? 0 : -1}
+                  aria-disabled={!canOpenDay}
+                  onClick={() => {
+                    if (!canOpenDay) return;
+                    handleDateClick(day, {
+                      ignoreAdvanceLimit: hasMyLessons && !canRequestOnDay,
+                    });
+                  }}
+                  onKeyDown={event => {
+                    if (!canOpenDay) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleDateClick(day, {
+                        ignoreAdvanceLimit: hasMyLessons && !canRequestOnDay,
+                      });
                     }
+                  }}
+                  className={`
+                    aspect-square flex flex-col items-center justify-between text-xs rounded-xl transition-all duration-200 relative border-2 p-1 shadow-md hover:shadow-lg overflow-hidden
                     ${
                       isToday
                         ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-400 shadow-blue-500/30 font-bold"
@@ -577,6 +847,12 @@ export default function MobileClientSchedulePage() {
                         ? "text-white bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70] hover:from-[#606364] hover:to-[#4A5A70]"
                         : "text-gray-600 bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-700"
                     }
+                    ${
+                      canOpenDay
+                        ? "cursor-pointer active:scale-95"
+                        : "cursor-not-allowed opacity-60"
+                    }
+                    ${isSelected ? "ring-2 ring-offset-1 ring-blue-300" : ""}
                   `}
                   title={
                     isBeyondLimit && scheduleAdvanceLimitDays
@@ -586,22 +862,36 @@ export default function MobileClientSchedulePage() {
                       : undefined
                   }
                 >
-                  <div className="font-bold text-xs flex items-center justify-between w-full">
+                  <div className="w-full flex items-start justify-between text-[11px] font-semibold">
                     <span>{format(day, "d")}</span>
-                    {availableSlotsCount > 0 && (
-                      <div className="w-3 h-3 rounded-full bg-green-500/40 border border-green-400 flex items-center justify-center">
-                        <span className="text-[6px] font-bold text-white">
-                          {availableSlotsCount}
-                        </span>
-                      </div>
-                    )}
                   </div>
 
-                  {isBeyondLimit && scheduleAdvanceLimitDays && (
-                    <div className="absolute inset-x-1 bottom-2">
-                      <div className="text-[10px] text-amber-200 bg-amber-500/10 border border-amber-400/40 rounded px-1 py-0.5 text-center pointer-events-none">
-                        Available ≤ {scheduleAdvanceLimitDays} days
-                      </div>
+                  {(hasMyLessons || otherCoachColors.length > 0) && (
+                    <div className="absolute top-1 right-1 flex flex-col gap-0.5 items-center">
+                      {hasMyLessons && (
+                        <span
+                          className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-300 border border-emerald-100/70 shadow-[0_0_6px_rgba(16,185,129,0.6)]"
+                          title={`${myLessonsForDay.length} of your lesson${
+                            myLessonsForDay.length === 1 ? "" : "s"
+                          }`}
+                        />
+                      )}
+                      {!hasMyLessons &&
+                        otherCoachColors
+                          .slice(0, 3)
+                          .map((colorClass, idx) => (
+                            <span
+                              key={`${day.toISOString()}-coach-${idx}`}
+                              className={`inline-block w-2 h-1 rounded-full border border-white/40 shadow-[0_0_4px_rgba(255,255,255,0.35)] ${colorClass}`}
+                              title="Other coach available"
+                            />
+                          ))}
+                    </div>
+                  )}
+
+                  {isBeyondLimit && scheduleAdvanceLimitDays && isSelected && (
+                    <div className="text-[9px] text-amber-200 bg-amber-500/10 border border-amber-400/40 rounded px-1 py-0.5 text-center pointer-events-none mt-auto">
+                      ≤ {scheduleAdvanceLimitDays} days
                     </div>
                   )}
                 </div>
@@ -636,7 +926,13 @@ export default function MobileClientSchedulePage() {
                 </p>
               </div>
               <button
-                onClick={() => setShowDayOverviewModal(false)}
+                onClick={() => {
+                  setShowDayOverviewModal(false);
+                  setSelectedDate(null);
+                  setSelectedCoachId(null);
+                  setSelectedTimeSlot(null);
+                  setRequestReason("");
+                }}
                 className="p-2 rounded-lg transition-colors hover:bg-gray-700"
                 style={{ color: "#C3BCC2" }}
               >
@@ -708,43 +1004,85 @@ export default function MobileClientSchedulePage() {
                       lesson.clientId !== null &&
                       !myClientIds.includes(lesson.clientId)
                   );
+                  const coachLessonsByCoach = isInOrganization
+                    ? otherClientLessons.reduce(
+                        (acc: Record<string, any[]>, lesson: any) => {
+                          if (!lesson.coachId) {
+                            acc._default = acc._default || [];
+                            acc._default.push(lesson);
+                            return acc;
+                          }
+                          if (!acc[lesson.coachId]) {
+                            acc[lesson.coachId] = [];
+                          }
+                          acc[lesson.coachId].push(lesson);
+                          return acc;
+                        },
+                        {}
+                      )
+                    : { _default: otherClientLessons };
 
                   return otherClientLessons.length > 0 ? (
                     <div className="space-y-2">
-                      {otherClientLessons.map((lesson: any, index: number) => {
-                        const isPast = new Date(lesson.date) < new Date();
-                        return (
+                      {Object.entries(coachLessonsByCoach).map(
+                        (
+                          [coachId, lessons]: [string, any[]],
+                          index: number
+                        ) => (
                           <div
-                            key={index}
-                            className="flex items-center justify-between p-3 rounded-lg border bg-sky-500/10 border-sky-500/20"
+                            key={`${coachId || "default"}-${index}`}
+                            className="space-y-2"
                           >
-                            <div className="flex-1">
-                              <div className="font-medium text-sky-300 text-sm">
-                                {format(new Date(lesson.date), "h:mm a")}
+                            {isInOrganization && coachId !== "_default" && (
+                              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-sky-200">
+                                <span
+                                  className={`inline-block w-2 h-2 rounded-full ${getCoachColor(
+                                    coachId
+                                  )}`}
+                                />
+                                <span>{getCoachName(coachId)}</span>
                               </div>
-                              <div className="text-xs text-sky-200">Client</div>
-                            </div>
-                            {!isPast &&
-                              upcomingLessons.length > 0 &&
-                              !hasPendingRequestWithTarget(lesson) && (
-                                <button
-                                  onClick={() =>
-                                    setSelectedSwitchLesson(lesson)
-                                  }
-                                  className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded-lg text-xs"
-                                >
-                                  <ArrowRightLeft className="h-3 w-3" />
-                                  Switch
-                                </button>
-                              )}
-                            {!isPast && hasPendingRequestWithTarget(lesson) && (
-                              <span className="text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded">
-                                Pending
-                              </span>
                             )}
+                            {lessons.map((lesson: any, lessonIndex: number) => {
+                              const isPast = new Date(lesson.date) < new Date();
+                              return (
+                                <div
+                                  key={`${lesson.id}-${lessonIndex}`}
+                                  className="flex items-center justify-between p-3 rounded-lg border bg-sky-500/10 border-sky-500/20"
+                                >
+                                  <div className="flex-1">
+                                    <div className="font-medium text-sky-300 text-sm">
+                                      {format(new Date(lesson.date), "h:mm a")}
+                                    </div>
+                                    <div className="text-xs text-sky-200">
+                                      Client
+                                    </div>
+                                  </div>
+                                  {!isPast &&
+                                    upcomingLessons.length > 0 &&
+                                    !hasPendingRequestWithTarget(lesson) && (
+                                      <button
+                                        onClick={() =>
+                                          setSelectedSwitchLesson(lesson)
+                                        }
+                                        className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded-lg text-xs"
+                                      >
+                                        <ArrowRightLeft className="h-3 w-3" />
+                                        Switch
+                                      </button>
+                                    )}
+                                  {!isPast &&
+                                    hasPendingRequestWithTarget(lesson) && (
+                                      <span className="text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded">
+                                        Pending
+                                      </span>
+                                    )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
+                        )
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-6 bg-gray-800/30 rounded-lg">
@@ -761,31 +1099,130 @@ export default function MobileClientSchedulePage() {
               <div>
                 <h3 className="text-lg font-semibold text-white mb-3">
                   Available Time Slots
+                  {isInOrganization && (
+                    <span className="block text-xs text-[#ABA4AA] font-normal mt-1">
+                      {selectedCoachId
+                        ? `Coach: ${
+                            getWorkingProfile(selectedCoachId).coachName
+                          }`
+                        : "Select a coach to view available times"}
+                    </span>
+                  )}
                 </h3>
                 {(() => {
+                  const workingCoaches = getCoachesWorkingOnDate(selectedDate);
+                  const effectiveCoachId =
+                    selectedCoachId || workingCoaches[0]?.id || primaryCoachId;
+                  const activeCoachProfile =
+                    getWorkingProfile(effectiveCoachId);
+                  const coachIdsToOffer = isInOrganization
+                    ? workingCoaches.map(coach => coach.id)
+                    : [primaryCoachId].filter(
+                        (id): id is string | null => id !== undefined
+                      );
+
+                  const slotsByCoach = coachIdsToOffer.reduce(
+                    (acc: Record<string, string[]>, coachId) => {
+                      if (!coachId) return acc;
+                      const slots = generateAvailableTimeSlots(
+                        selectedDate,
+                        coachId
+                      );
+                      acc[coachId] = slots;
+                      return acc;
+                    },
+                    {}
+                  );
+
                   const availableSlots =
-                    generateAvailableTimeSlots(selectedDate);
+                    (effectiveCoachId && slotsByCoach[effectiveCoachId]) || [];
                   const beyondLimit =
-                    selectedDate && isDateBeyondAdvanceLimit(selectedDate);
+                    selectedDate &&
+                    isDateBeyondAdvanceLimit(selectedDate, effectiveCoachId);
+
+                  if (isInOrganization) {
+                    if (workingCoaches.length === 0) {
+                      return (
+                        <div className="text-center py-6 bg-gray-800/30 rounded-lg">
+                          <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                          <p className="text-gray-400 text-sm">
+                            No coaches are scheduled to work this day.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    if (!effectiveCoachId || availableSlots.length === 0) {
+                      return (
+                        <div className="text-center py-6 bg-gray-800/30 rounded-lg">
+                          <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                          <p className="text-gray-400 text-sm">
+                            No available time slots for{" "}
+                            {activeCoachProfile.coachName}.
+                          </p>
+                          <div className="space-y-2 mt-3">
+                            <p className="text-gray-500 text-xs">
+                              Try a different coach:
+                            </p>
+                            <div className="flex flex-wrap gap-2 justify-center">
+                              {workingCoaches.map(coach => (
+                                <button
+                                  key={coach.id}
+                                  onClick={() => setSelectedCoachId(coach.id)}
+                                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 border ${
+                                    coach.id === effectiveCoachId
+                                      ? "bg-sky-500/20 border-sky-500 text-sky-100"
+                                      : "bg-[#2A2F2F] text-gray-200 border-[#606364] hover:bg-[#353A3A]"
+                                  }`}
+                                >
+                                  {coach.name || "Coach"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+
                   return availableSlots.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2">
-                      {availableSlots.map((slot, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setSelectedTimeSlot(slot);
-                            setShowRequestModal(true);
-                          }}
-                          className="p-2 rounded-lg border text-center transition-all duration-200 text-xs hover:bg-blue-500/20 hover:border-blue-400"
-                          style={{
-                            backgroundColor: "#2A2F2F",
-                            borderColor: "#606364",
-                            color: "#FFFFFF",
-                          }}
-                        >
-                          {slot}
-                        </button>
-                      ))}
+                    <div className="space-y-3">
+                      {isInOrganization && workingCoaches.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {workingCoaches.map(coach => (
+                            <button
+                              key={coach.id}
+                              onClick={() => setSelectedCoachId(coach.id)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 border ${
+                                coach.id === effectiveCoachId
+                                  ? "bg-sky-500/20 border-sky-500 text-sky-100"
+                                  : "bg-[#2A2F2F] text-gray-200 border-[#606364] hover:bg-[#353A3A]"
+                              }`}
+                            >
+                              {coach.name || "Coach"}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div className="grid grid-cols-3 gap-2">
+                        {availableSlots.map((slot, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              setSelectedTimeSlot(slot);
+                              setShowRequestModal(true);
+                            }}
+                            className="p-2 rounded-lg border text-center transition-all duration-200 text-xs hover:bg-blue-500/20 hover:border-blue-400"
+                            style={{
+                              backgroundColor: "#2A2F2F",
+                              borderColor: "#606364",
+                              color: "#FFFFFF",
+                            }}
+                          >
+                            {slot}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-6 bg-gray-800/30 rounded-lg">
@@ -793,17 +1230,38 @@ export default function MobileClientSchedulePage() {
                       {beyondLimit ? (
                         <>
                           <p className="text-gray-400 text-sm">
-                            This date is beyond your coach&apos;s scheduling
-                            window.
+                            This date is beyond {activeCoachProfile.coachName}
+                            &apos;s scheduling window.
                           </p>
                           <p className="text-gray-500 text-xs">
                             Please choose an earlier date.
                           </p>
                         </>
                       ) : (
-                        <p className="text-gray-400 text-sm">
-                          No available time slots
-                        </p>
+                        <div className="space-y-2">
+                          <p className="text-gray-400 text-sm">
+                            No available time slots for{" "}
+                            {activeCoachProfile.coachName}.
+                          </p>
+                          {isInOrganization && workingCoaches.length > 0 && (
+                            <div className="space-y-1">
+                              {workingCoaches.map(coach => (
+                                <button
+                                  key={coach.id}
+                                  onClick={() => setSelectedCoachId(coach.id)}
+                                  className="px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 bg-[#2A2F2F] text-gray-200 border border-[#606364] hover:bg-[#353A3A]"
+                                >
+                                  {coach.name || "Coach"} has availability
+                                </button>
+                              ))}
+                              {workingCoaches.length === 0 && (
+                                <p className="text-gray-500 text-xs">
+                                  No other coaches are working this day.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   );
@@ -813,260 +1271,6 @@ export default function MobileClientSchedulePage() {
           </div>
         </div>
       )}
-
-      {/* Switch Requests Modal */}
-      {showSwitchRequests && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div
-            className="rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-            style={{ backgroundColor: "#2A3133" }}
-          >
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
-                  Time Switch Requests
-                </h2>
-                <button
-                  onClick={() => setShowSwitchRequests(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <XCircle className="h-5 w-5" />
-                </button>
-              </div>
-              <MobileSwapRequests />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lesson Selection Modal for Switch */}
-      {selectedSwitchLesson && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div
-            className="rounded-2xl shadow-xl border p-4 w-full max-w-md max-h-[80vh] overflow-y-auto"
-            style={{
-              backgroundColor: "#353A3A",
-              borderColor: "#606364",
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-white">
-                  Choose Your Lesson to Switch
-                </h2>
-                <p className="text-gray-400 text-xs">
-                  Select which of your lessons you want to switch
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedSwitchLesson(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <div className="bg-blue-500/10 border border-blue-400/20 rounded-lg p-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-400" />
-                  <div>
-                    <p className="font-medium text-blue-300 text-sm">
-                      Target:{" "}
-                      {format(new Date(selectedSwitchLesson.date), "MMM d")} at{" "}
-                      {format(new Date(selectedSwitchLesson.date), "h:mm a")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <h3 className="text-sm font-semibold text-white mb-2">
-                Your Available Lessons:
-              </h3>
-
-              {isLoadingSwitchRequests ? (
-                <div className="text-center py-6">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto mb-2" />
-                  <p className="text-gray-400 text-xs">Loading...</p>
-                </div>
-              ) : upcomingLessons.length > 0 ? (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {upcomingLessons.map((myLesson: any, index: number) => {
-                    const hasPendingRequest = hasPendingSwitchRequest(
-                      myLesson.id
-                    );
-                    const hasPendingWithTarget =
-                      hasPendingRequestWithTarget(selectedSwitchLesson);
-                    const isDisabled =
-                      hasPendingRequest ||
-                      hasPendingWithTarget ||
-                      createSwitchRequestMutation.isPending;
-
-                    return (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          if (!isDisabled) {
-                            createSwitchRequestMutation.mutate({
-                              targetEventId: selectedSwitchLesson.id,
-                              requesterEventId: myLesson.id,
-                            });
-                          }
-                        }}
-                        disabled={isDisabled}
-                        className={`w-full p-3 rounded-lg border text-left transition-all duration-200 text-xs ${
-                          isDisabled
-                            ? "opacity-50 cursor-not-allowed"
-                            : "hover:bg-sky-500/10 hover:border-sky-500/30"
-                        }`}
-                        style={{
-                          backgroundColor: isDisabled ? "#1F2937" : "#2A2F2F",
-                          borderColor: isDisabled ? "#4B5563" : "#606364",
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-white">
-                              {format(new Date(myLesson.date), "MMM d")} at{" "}
-                              {format(new Date(myLesson.date), "h:mm a")}
-                              {hasPendingRequest && (
-                                <span className="ml-1 text-yellow-400">
-                                  (Pending)
-                                </span>
-                              )}
-                            </p>
-                            <p className="text-gray-300">{myLesson.title}</p>
-                          </div>
-                          {createSwitchRequestMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
-                          ) : (
-                            <ArrowRightLeft className="h-4 w-4 text-blue-400" />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-6 bg-gray-800/30 rounded-lg">
-                  <Calendar className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                  <p className="text-gray-400 text-xs">
-                    No lessons available to switch
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => setSelectedSwitchLesson(null)}
-              className="w-full px-4 py-2 border rounded-lg text-sm"
-              style={{
-                backgroundColor: "#2A2F2F",
-                borderColor: "#606364",
-                color: "#E5E7EB",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Lesson Request Modal */}
-      {showRequestModal && selectedDate && selectedTimeSlot && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div
-            className="rounded-2xl shadow-xl border w-full max-w-md max-h-[90vh] overflow-y-auto"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-          >
-            <div
-              className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div>
-                <h2 className="text-xl font-bold text-white">Request Lesson</h2>
-                <p className="text-gray-400 text-xs">
-                  {format(selectedDate, "MMM d, yyyy")} at {selectedTimeSlot}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowRequestModal(false)}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-700"
-                style={{ color: "#C3BCC2" }}
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Reason for lesson request (optional)
-                </label>
-                <textarea
-                  value={requestReason}
-                  onChange={e => setRequestReason(e.target.value)}
-                  placeholder="Any specific goals or areas you'd like to focus on..."
-                  className="w-full p-3 rounded-lg border text-white placeholder-gray-400 bg-[#2A2F2F] border-[#606364] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowRequestModal(false)}
-                  className="flex-1 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 bg-[#4A5A70] hover:bg-[#606364] text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (selectedDate && selectedTimeSlot) {
-                      if (isDateBeyondAdvanceLimit(selectedDate)) {
-                        if (
-                          scheduleAdvanceLimitDays &&
-                          scheduleAdvanceLimitDays > 0
-                        ) {
-                          alert(
-                            `You can only request lessons up to ${scheduleAdvanceLimitDays} days in advance.`
-                          );
-                        } else {
-                          alert("This date is not available for scheduling.");
-                        }
-                        return;
-                      }
-
-                      // Capture user's timezone
-                      const timeZone =
-                        Intl.DateTimeFormat().resolvedOptions().timeZone ||
-                        "America/New_York";
-
-                      // Format date as YYYY-MM-DD to match desktop version
-                      const formattedDate = format(selectedDate, "yyyy-MM-dd");
-
-                      requestScheduleChangeMutation.mutate({
-                        requestedDate: formattedDate,
-                        requestedTime: selectedTimeSlot,
-                        reason: requestReason,
-                        timeZone: timeZone,
-                      });
-                    }
-                  }}
-                  disabled={requestScheduleChangeMutation.isPending}
-                  className="flex-1 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {requestScheduleChangeMutation.isPending
-                    ? "Sending..."
-                    : "Send Request"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Navigation */}
-      <MobileClientBottomNavigation />
     </div>
   );
 }
