@@ -11,9 +11,6 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
-  FileText,
-  Users,
-  Settings,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -521,13 +518,14 @@ export default function VideoViewerModal({
         className={`${
           isMobile
             ? "w-full max-w-md rounded-xl overflow-hidden flex flex-col shadow-2xl"
-            : "rounded-lg w-full max-w-7xl max-h-[95vh] overflow-y-auto"
+            : "rounded-lg w-full max-w-[85vw] max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
         }`}
         style={{
-          backgroundColor: isMobile ? "#000000" : "#353A3A",
-          height: isMobile ? "100%" : "auto",
-          maxHeight: isMobile ? "100%" : "95vh",
-          width: isMobile ? "100%" : "auto",
+          backgroundColor: isMobile ? "#000000" : "#0F0F0F",
+          height: isMobile ? "100%" : "85vh",
+          maxHeight: isMobile ? "100%" : "85vh",
+          width: isMobile ? "100%" : "85vw",
+          maxWidth: isMobile ? "100%" : "85vw",
           boxSizing: "border-box",
         }}
         onClick={e => e.stopPropagation()}
@@ -584,69 +582,49 @@ export default function VideoViewerModal({
             </button>
           </div>
         ) : (
+          // Desktop: YouTube-style minimal header
           <div
-            className="flex items-center justify-between p-6 border-b sticky top-0 z-10"
+            className="flex items-center justify-between px-8 py-4 flex-shrink-0"
             style={{
-              borderColor: "#606364",
-              backgroundColor: "#353A3A",
+              backgroundColor: "#0F0F0F",
+              borderBottom: "1px solid #272727",
             }}
           >
-            <div className="flex items-center gap-3">
-              <span
-                className="px-3 py-1 text-sm font-medium rounded-full"
-                style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#C3BCC2",
-                }}
-              >
-                {item.category}
-              </span>
-              {item.isYoutube && (
-                <span
-                  className="px-3 py-1 text-sm rounded-full"
-                  style={{
-                    backgroundColor: "#DC2626",
-                    color: "#C3BCC2",
-                  }}
-                >
-                  YouTube
-                </span>
-              )}
-              {item.isOnForm && (
-                <span
-                  className="px-3 py-1 text-sm rounded-full"
-                  style={{
-                    backgroundColor: "#F59E0B",
-                    color: "#FFFFFF",
-                  }}
-                >
-                  OnForm
-                </span>
-              )}
+            {/* Left side - Navigation controls */}
+            <div className="flex items-center gap-4">
               {totalItems > 1 && (
-                <span
-                  className="px-3 py-1 text-sm font-medium rounded-full"
-                  style={{
-                    backgroundColor: "#606364",
-                    color: "#FFFFFF",
-                  }}
-                >
-                  {currentIndex + 1} of {totalItems}
-                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={onPrevious}
+                    disabled={currentIndex === 0}
+                    className="p-2.5 rounded-full transition-all duration-200 hover:bg-[#272727] disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ color: "#FFFFFF" }}
+                    aria-label="Previous video"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </button>
+                  <span className="text-base text-gray-400 font-medium">
+                    {currentIndex + 1}/{totalItems}
+                  </span>
+                  <button
+                    onClick={onNext}
+                    disabled={currentIndex >= totalItems - 1}
+                    className="p-2.5 rounded-full transition-all duration-200 hover:bg-[#272727] disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ color: "#FFFFFF" }}
+                    aria-label="Next video"
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </button>
+                </div>
               )}
             </div>
+
+            {/* Right side - Close button */}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
-              style={{ color: "#ABA4AA" }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#606364";
-                e.currentTarget.style.color = "#C3BCC2";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = "#ABA4AA";
-              }}
+              className="p-2.5 rounded-full transition-all duration-200 hover:bg-[#272727]"
+              style={{ color: "#FFFFFF" }}
+              aria-label="Close"
             >
               <X className="h-6 w-6" />
             </button>
@@ -656,7 +634,9 @@ export default function VideoViewerModal({
         {/* Video/Content Area - Scrollable */}
         <div
           className={
-            isMobile ? "overflow-y-auto flex-1 overscroll-contain" : "p-6"
+            isMobile
+              ? "overflow-y-auto flex-1 overscroll-contain"
+              : "overflow-y-auto flex-1 overscroll-contain"
           }
           style={
             isMobile
@@ -664,14 +644,17 @@ export default function VideoViewerModal({
                   minHeight: 0, // Allows flex child to shrink
                   WebkitOverflowScrolling: "touch", // Smooth scrolling on iOS
                 }
-              : {}
+              : {
+                  minHeight: 0,
+                  backgroundColor: "#0F0F0F",
+                }
           }
         >
           {/* Video Error Message */}
           {videoError && (
             <div
               className={`${
-                isMobile ? "m-4" : "mb-4"
+                isMobile ? "m-4" : "mx-6 mt-4"
               } p-4 bg-red-900 border border-red-700 rounded-lg`}
             >
               <div className="flex items-center gap-2 mb-2">
@@ -686,14 +669,17 @@ export default function VideoViewerModal({
             </div>
           )}
 
-          <div className={isMobile ? "" : "mb-6"}>
-            {/* Video Player - YouTube-style full width on mobile */}
+          <div className={isMobile ? "" : "px-8 pt-6 pb-4 flex justify-center"}>
+            {/* Video Player - YouTube-style, slightly smaller on desktop */}
             <div
-              className={`w-full ${
-                isMobile ? "aspect-video" : "rounded-lg"
+              className={`${
+                isMobile
+                  ? "w-full aspect-video"
+                  : "w-full max-w-[90%] aspect-video"
               } overflow-hidden transition-all duration-300`}
               style={{
                 backgroundColor: "#000000",
+                borderRadius: isMobile ? "0.5rem" : "0.75rem",
               }}
             >
               <div className="relative w-full h-full">
@@ -887,655 +873,312 @@ export default function VideoViewerModal({
               )}
             </div>
           ) : (
-            // Desktop Layout: Original layout
-            <div className="space-y-8">
-              {/* Top Section: Description and Actions Side by Side */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Description Column */}
-                <div className="space-y-6">
-                  {/* Modern Title Section */}
-                  <div className="mb-8">
-                    <h1
-                      id="video-modal-title"
-                      className="text-4xl font-bold mb-3 leading-tight"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      {item.title}
-                    </h1>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span
-                        className="px-3 py-1 rounded-full font-medium"
-                        style={{
-                          backgroundColor: "#4A5A70",
-                          color: "#FFFFFF",
-                        }}
-                      >
-                        {item.category}
-                      </span>
-                      {item.duration && (
-                        <div className="flex items-center gap-2">
-                          <Play
-                            className="h-4 w-4"
-                            style={{ color: "#ABA4AA" }}
-                          />
-                          <span style={{ color: "#ABA4AA" }}>
-                            {item.duration}
-                          </span>
-                        </div>
-                      )}
-                      {item.isYoutube && (
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: "#DC2626",
-                            color: "#FFFFFF",
-                          }}
-                        >
-                          YouTube
-                        </span>
-                      )}
-                      {item.isOnForm && (
-                        <span
-                          className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: "#F59E0B",
-                            color: "#FFFFFF",
-                          }}
-                        >
-                          OnForm
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* For Master Library Items - Show Limited Info for Non-Admins */}
-                  {isMasterLibraryItem && !isAdmin ? (
-                    <div className="space-y-6 max-w-4xl">
-                      {/* Modern Description Card */}
-                      <div
-                        className="rounded-xl p-8 border-2 shadow-lg"
-                        style={{
-                          backgroundColor: "#2A3133",
-                          borderColor: "#4A5A70",
-                        }}
-                      >
-                        <div className="flex items-center gap-3 mb-4">
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center"
-                            style={{ backgroundColor: "#4A5A70" }}
-                          >
-                            <FileText
-                              className="h-4 w-4"
-                              style={{ color: "#C3BCC2" }}
-                            />
-                          </div>
-                          <h3
-                            className="text-xl font-semibold"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Description
-                          </h3>
-                        </div>
-                        <p
-                          style={{ color: "#D1D5DB" }}
-                          className="leading-relaxed whitespace-pre-wrap text-base"
-                        >
-                          {item.description || "No description available."}
-                        </p>
-                      </div>
-
-                      {/* Modern Master Library Notice */}
-                      <div
-                        className="rounded-xl p-8 border-2 shadow-lg"
-                        style={{
-                          backgroundColor: "#1E3A8A",
-                          borderColor: "#3B82F6",
-                        }}
-                      >
-                        <div className="flex items-center gap-4 mb-4">
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center"
-                            style={{ backgroundColor: "#3B82F6" }}
-                          >
-                            <Shield
-                              className="h-6 w-6"
-                              style={{ color: "#FFFFFF" }}
-                            />
-                          </div>
-                          <div>
-                            <h3
-                              className="text-xl font-bold"
-                              style={{ color: "#DBEAFE" }}
-                            >
-                              Master Library Content
-                            </h3>
-                            <p style={{ color: "#93C5FD" }} className="text-sm">
-                              Premium training content
-                            </p>
-                          </div>
-                        </div>
-                        <p
-                          style={{ color: "#BFDBFE" }}
-                          className="leading-relaxed text-base"
-                        >
-                          This is premium training content from the master
-                          library. Only administrators can modify this content.
-                          Coaches can view and assign these videos to clients.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    /* For Regular Library Items or Admin Users - Show Full Info */
+            // Desktop Layout: YouTube-style layout
+            <div className="px-8 pb-6">
+              {/* Video Info Section - YouTube style */}
+              <div className="mt-6 mb-4">
+                <h1
+                  id="video-modal-title"
+                  className="text-2xl font-semibold text-white mb-4 leading-tight"
+                >
+                  {item.title}
+                </h1>
+                <div className="flex items-center gap-3 text-base text-gray-400 mb-6">
+                  {item.category && (
                     <>
-                      {/* Modern Description Card */}
-                      <div
-                        className={`rounded-xl p-8 border-2 shadow-lg ${
-                          !isAdmin ? "max-w-4xl" : ""
-                        }`}
-                        style={{
-                          backgroundColor: "#2A3133",
-                          borderColor: "#4A5A70",
-                        }}
-                      >
-                        <div className="flex items-center gap-3 mb-4">
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center"
-                            style={{ backgroundColor: "#4A5A70" }}
-                          >
-                            <FileText
-                              className="h-4 w-4"
-                              style={{ color: "#C3BCC2" }}
-                            />
-                          </div>
-                          <h3
-                            className="text-xl font-semibold"
-                            style={{ color: "#C3BCC2" }}
-                          >
-                            Description
-                          </h3>
-                        </div>
-                        <p
-                          style={{ color: "#D1D5DB" }}
-                          className="leading-relaxed whitespace-pre-wrap text-base"
-                        >
-                          {item.description || "No description available."}
-                        </p>
-                      </div>
-
-                      {/* Modern Client Comments */}
-                      {clientComments.length > 0 && (
-                        <div
-                          className={`rounded-xl p-8 border-2 shadow-lg mt-8 ${
-                            !isAdmin ? "max-w-4xl" : ""
-                          }`}
-                          style={{
-                            backgroundColor: "#2A3133",
-                            borderColor: "#4A5A70",
-                          }}
-                        >
-                          <div className="flex items-center gap-3 mb-6">
-                            <div
-                              className="w-8 h-8 rounded-lg flex items-center justify-center"
-                              style={{ backgroundColor: "#4A5A70" }}
-                            >
-                              <Users
-                                className="h-4 w-4"
-                                style={{ color: "#C3BCC2" }}
-                              />
-                            </div>
-                            <h3
-                              className="text-xl font-semibold"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              Client Comments
-                            </h3>
-                            <span
-                              className="px-3 py-1 rounded-full text-sm font-medium"
-                              style={{
-                                backgroundColor: "#4A5A70",
-                                color: "#FFFFFF",
-                              }}
-                            >
-                              {clientComments.length}
-                            </span>
-                          </div>
-                          <div className="space-y-6">
-                            {clientComments.map((comment: any) => (
-                              <div
-                                key={comment.id}
-                                className="p-6 rounded-xl border-2 shadow-md"
-                                style={{
-                                  backgroundColor: "#353A3A",
-                                  borderColor: "#606364",
-                                }}
-                              >
-                                <div className="flex items-center gap-4 mb-4">
-                                  {comment.client?.avatar ? (
-                                    <Image
-                                      src={comment.client.avatar}
-                                      alt={comment.client.name}
-                                      width={40}
-                                      height={40}
-                                      className="w-10 h-10 rounded-full object-cover border-2"
-                                      style={{ borderColor: "#4A5A70" }}
-                                    />
-                                  ) : (
-                                    <div
-                                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm text-white font-bold border-2"
-                                      style={{
-                                        backgroundColor: "#4A5A70",
-                                        borderColor: "#606364",
-                                      }}
-                                    >
-                                      {comment.client?.name?.charAt(0) || "C"}
-                                    </div>
-                                  )}
-                                  <div className="flex-1">
-                                    <div
-                                      className="font-semibold text-lg"
-                                      style={{ color: "#C3BCC2" }}
-                                    >
-                                      {comment.client?.name || "Unknown Client"}
-                                    </div>
-                                    <div
-                                      className="text-sm"
-                                      style={{ color: "#ABA4AA" }}
-                                    >
-                                      {new Date(
-                                        comment.createdAt
-                                      ).toLocaleDateString()}
-                                    </div>
-                                  </div>
-                                </div>
-                                <p
-                                  style={{ color: "#D1D5DB" }}
-                                  className="leading-relaxed text-base"
-                                >
-                                  {comment.comment}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      <span>{item.category}</span>
+                      {(item.duration || item.createdAt) && (
+                        <span className="text-gray-600">•</span>
                       )}
                     </>
                   )}
-                </div>
-
-                {/* Actions Column - Show for Admin users or for non-master library items */}
-                {(isAdmin || !isMasterLibraryItem) && (
-                  <div className="space-y-6">
-                    {/* Modern Actions Panel */}
-                    <div
-                      className="rounded-xl p-8 border-2 shadow-lg"
-                      style={{
-                        backgroundColor: "#2A3133",
-                        borderColor: "#4A5A70",
-                      }}
-                    >
-                      <div className="flex items-center gap-3 mb-6">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: "#4A5A70" }}
-                        >
-                          <Settings
-                            className="h-4 w-4"
-                            style={{ color: "#C3BCC2" }}
-                          />
-                        </div>
-                        <h3
-                          className="text-xl font-semibold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          Actions
-                        </h3>
-                      </div>
-                      <div className="space-y-4">
-                        {item.isYoutube ? (
-                          <button
-                            onClick={() => window.open(item.url, "_blank")}
-                            className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                            style={{
-                              backgroundColor: "#DC2626",
-                              color: "#FFFFFF",
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.backgroundColor = "#B91C1C";
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.backgroundColor = "#DC2626";
-                            }}
-                          >
-                            <Play className="h-5 w-5" />
-                            Watch on YouTube
-                          </button>
-                        ) : item.isOnForm ? (
-                          <button
-                            onClick={() => window.open(item.url, "_blank")}
-                            className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                            style={{
-                              backgroundColor: "#F59E0B",
-                              color: "#FFFFFF",
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.backgroundColor = "#D97706";
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.backgroundColor = "#F59E0B";
-                            }}
-                          >
-                            <Play className="h-5 w-5" />
-                            Watch on OnForm
-                          </button>
-                        ) : isMasterLibraryItem ? (
-                          <div
-                            className="text-center py-6 px-4 rounded-xl border-2"
-                            style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                            }}
-                          >
-                            <div
-                              className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
-                              style={{ backgroundColor: "#4A5A70" }}
-                            >
-                              <Shield
-                                className="h-6 w-6"
-                                style={{ color: "#C3BCC2" }}
-                              />
-                            </div>
-                            <p
-                              style={{ color: "#D1D5DB" }}
-                              className="text-base font-medium"
-                            >
-                              Protected Content
-                            </p>
-                            <p
-                              style={{ color: "#ABA4AA" }}
-                              className="text-sm mt-1"
-                            >
-                              This video can only be viewed here
-                            </p>
-                          </div>
-                        ) : (
-                          <div
-                            className="text-center py-6 px-4 rounded-xl border-2"
-                            style={{
-                              backgroundColor: "#2A3133",
-                              borderColor: "#4A5A70",
-                            }}
-                          >
-                            <div
-                              className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
-                              style={{ backgroundColor: "#4A5A70" }}
-                            >
-                              <Play
-                                className="h-6 w-6"
-                                style={{ color: "#C3BCC2" }}
-                              />
-                            </div>
-                            <p
-                              style={{ color: "#D1D5DB" }}
-                              className="text-base font-medium"
-                            >
-                              Regular Library Content
-                            </p>
-                            <p
-                              style={{ color: "#ABA4AA" }}
-                              className="text-sm mt-1"
-                            >
-                              This video can be viewed and downloaded
-                            </p>
-                          </div>
-                        )}
-
-                        {/* For Master Library Items - Show Different Actions Based on User Role */}
-                        {isMasterLibraryItem ? (
-                          /* Admin Actions for Master Library */
-                          <>
-                            <button
-                              onClick={() => setIsEditModalOpen(true)}
-                              className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02] border-2"
-                              style={{
-                                backgroundColor: "#4A5A70",
-                                borderColor: "#606364",
-                                color: "#FFFFFF",
-                              }}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  "#606364";
-                                e.currentTarget.style.borderColor = "#4A5A70";
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  "#4A5A70";
-                                e.currentTarget.style.borderColor = "#606364";
-                              }}
-                            >
-                              <Edit3 className="h-5 w-5" />
-                              Edit Master Library Video
-                            </button>
-
-                            <button
-                              onClick={() => setShowDeleteConfirm(true)}
-                              className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base border-2 hover:shadow-lg transform hover:scale-[1.02]"
-                              style={{
-                                backgroundColor: "transparent",
-                                borderColor: "#DC2626",
-                                color: "#DC2626",
-                              }}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  "#DC2626";
-                                e.currentTarget.style.color = "#FFFFFF";
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  "transparent";
-                                e.currentTarget.style.color = "#DC2626";
-                              }}
-                            >
-                              <Trash2 className="h-5 w-5" />
-                              Delete from Master Library
-                            </button>
-                          </>
-                        ) : (
-                          /* Regular Library Items - Show Edit/Delete for Coaches */
-                          <>
-                            <button
-                              onClick={() => setIsEditModalOpen(true)}
-                              className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-[1.02] border-2"
-                              style={{
-                                backgroundColor: "#4A5A70",
-                                borderColor: "#606364",
-                                color: "#FFFFFF",
-                              }}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  "#606364";
-                                e.currentTarget.style.borderColor = "#4A5A70";
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  "#4A5A70";
-                                e.currentTarget.style.borderColor = "#606364";
-                              }}
-                            >
-                              <Edit3 className="h-5 w-5" />
-                              Edit Video
-                            </button>
-
-                            <button
-                              onClick={() => setShowDeleteConfirm(true)}
-                              className="w-full flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 font-semibold text-base border-2 hover:shadow-lg transform hover:scale-[1.02]"
-                              style={{
-                                backgroundColor: "transparent",
-                                borderColor: "#DC2626",
-                                color: "#DC2626",
-                              }}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  "#DC2626";
-                                e.currentTarget.style.color = "#FFFFFF";
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.backgroundColor =
-                                  "transparent";
-                                e.currentTarget.style.color = "#DC2626";
-                              }}
-                            >
-                              <Trash2 className="h-5 w-5" />
-                              Delete Resource
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Section: Details Panel - Full Width */}
-              {(isAdmin || !isMasterLibraryItem) && (
-                <div
-                  className="rounded-xl p-8 border-2 shadow-lg"
-                  style={{ backgroundColor: "#2A3133", borderColor: "#4A5A70" }}
-                >
-                  <div className="flex items-center gap-3 mb-6">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: "#4A5A70" }}
-                    >
-                      <FileText
-                        className="h-4 w-4"
-                        style={{ color: "#C3BCC2" }}
-                      />
-                    </div>
-                    <h3
-                      className="text-xl font-semibold"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Details
-                    </h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div
-                      className="flex justify-between items-center py-2 border-b"
-                      style={{ borderColor: "#606364" }}
-                    >
+                  {item.duration && (
+                    <>
+                      <span>{item.duration}</span>
+                      {item.createdAt && (
+                        <span className="text-gray-600">•</span>
+                      )}
+                    </>
+                  )}
+                  {item.createdAt && (
+                    <span>
+                      {new Date(item.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
+                  {item.isYoutube && (
+                    <>
+                      <span className="text-gray-600">•</span>
                       <span
-                        style={{ color: "#ABA4AA" }}
-                        className="font-medium"
-                      >
-                        Type:
-                      </span>
-                      <span
-                        style={{ color: "#C3BCC2" }}
-                        className="capitalize font-semibold"
-                      >
-                        {item.isYoutube
-                          ? "YouTube Video"
-                          : item.isOnForm
-                          ? "OnForm Video"
-                          : item.type}
-                      </span>
-                    </div>
-                    <div
-                      className="flex justify-between items-center py-2 border-b"
-                      style={{ borderColor: "#606364" }}
-                    >
-                      <span
-                        style={{ color: "#ABA4AA" }}
-                        className="font-medium"
-                      >
-                        Category:
-                      </span>
-                      <span
-                        style={{ color: "#C3BCC2" }}
-                        className="font-semibold"
-                      >
-                        {item.category}
-                      </span>
-                    </div>
-
-                    {/* Show additional details only to admins or for non-master library items */}
-                    {(isAdmin || !isMasterLibraryItem) && (
-                      <>
-                        {item.duration && (
-                          <div
-                            className="flex justify-between items-center py-2 border-b"
-                            style={{ borderColor: "#606364" }}
-                          >
-                            <span
-                              style={{ color: "#ABA4AA" }}
-                              className="font-medium"
-                            >
-                              Duration:
-                            </span>
-                            <span
-                              style={{ color: "#C3BCC2" }}
-                              className="font-semibold"
-                            >
-                              {item.duration}
-                            </span>
-                          </div>
-                        )}
-                        {item.filename && (
-                          <div
-                            className="flex justify-between items-center py-2 border-b"
-                            style={{ borderColor: "#606364" }}
-                          >
-                            <span
-                              style={{ color: "#ABA4AA" }}
-                              className="font-medium"
-                            >
-                              File:
-                            </span>
-                            <span
-                              style={{ color: "#C3BCC2" }}
-                              className="text-sm truncate font-semibold"
-                            >
-                              {item.filename}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex justify-between items-center py-2">
-                          <span
-                            style={{ color: "#ABA4AA" }}
-                            className="font-medium"
-                          >
-                            Added:
-                          </span>
-                          <span
-                            style={{ color: "#C3BCC2" }}
-                            className="font-semibold"
-                          >
-                            {item.createdAt
-                              ? new Date(item.createdAt).toLocaleDateString()
-                              : "Unknown"}
-                          </span>
-                        </div>
-                      </>
-                    )}
-
-                    {/* For Master Library Items - Show Special Notice */}
-                    {isMasterLibraryItem && !isAdmin && (
-                      <div
-                        className="mt-6 p-4 rounded-xl border-2"
+                        className="px-2 py-0.5 text-xs rounded"
                         style={{
-                          borderColor: "#3B82F6",
-                          backgroundColor: "#1E3A8A",
+                          backgroundColor: "#DC2626",
+                          color: "#FFFFFF",
                         }}
                       >
-                        <p
-                          style={{ color: "#BFDBFE" }}
-                          className="text-sm text-center font-medium"
+                        YouTube
+                      </span>
+                    </>
+                  )}
+                  {item.isOnForm && (
+                    <>
+                      <span className="text-gray-600">•</span>
+                      <span
+                        className="px-2 py-0.5 text-xs rounded"
+                        style={{
+                          backgroundColor: "#F59E0B",
+                          color: "#FFFFFF",
+                        }}
+                      >
+                        OnForm
+                      </span>
+                    </>
+                  )}
+                  {/* Actions dropdown for admin/edit */}
+                  {(isAdmin || !isMasterLibraryItem) && (
+                    <>
+                      <span className="text-gray-600">•</span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
+                            style={{ backgroundColor: "transparent" }}
+                          >
+                            More actions
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="min-w-[200px]"
+                          style={{
+                            backgroundColor: "#272727",
+                            borderColor: "#606060",
+                          }}
                         >
-                          🔒 Additional details are restricted to administrators
-                        </p>
-                      </div>
-                    )}
+                          {!isMasterLibraryItem && (
+                            <DropdownMenuItem
+                              onClick={() => setIsEditModalOpen(true)}
+                              className="cursor-pointer"
+                              style={{
+                                color: "#FFFFFF",
+                              }}
+                            >
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Edit Video
+                            </DropdownMenuItem>
+                          )}
+                          {isAdmin && isMasterLibraryItem && (
+                            <DropdownMenuItem
+                              onClick={() => setIsEditModalOpen(true)}
+                              className="cursor-pointer"
+                              style={{
+                                color: "#FFFFFF",
+                              }}
+                            >
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Edit Video
+                            </DropdownMenuItem>
+                          )}
+                          {!isMasterLibraryItem && onDelete && (
+                            <>
+                              <DropdownMenuSeparator
+                                style={{ backgroundColor: "#606060" }}
+                              />
+                              <DropdownMenuItem
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="cursor-pointer text-red-400"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Video
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Description - YouTube style collapsible */}
+              {item.description && (
+                <div
+                  className="mb-6 p-5 rounded-xl"
+                  style={{
+                    backgroundColor: "#272727",
+                  }}
+                >
+                  <div
+                    className={`text-base text-white whitespace-pre-wrap break-words ${
+                      !showFullDescription ? "line-clamp-3" : ""
+                    }`}
+                    style={{ lineHeight: "1.6" }}
+                  >
+                    {item.description}
                   </div>
+                  {item.description.length > 200 && (
+                    <button
+                      onClick={() =>
+                        setShowFullDescription(!showFullDescription)
+                      }
+                      className="mt-3 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                    >
+                      {showFullDescription ? "Show less" : "Show more"}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Client Comments - YouTube style */}
+              {clientComments.length > 0 && (
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-white">
+                      {clientComments.length}{" "}
+                      {clientComments.length === 1 ? "Comment" : "Comments"}
+                    </h3>
+                  </div>
+                  <div className="space-y-6">
+                    {clientComments.map((comment: any) => (
+                      <div key={comment.id} className="flex gap-4">
+                        {/* Avatar */}
+                        {comment.client?.avatar ? (
+                          <Image
+                            src={comment.client.avatar}
+                            alt={comment.client.name}
+                            width={48}
+                            height={48}
+                            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div
+                            className="w-12 h-12 rounded-full flex items-center justify-center text-base text-white font-semibold flex-shrink-0"
+                            style={{ backgroundColor: "#606060" }}
+                          >
+                            {comment.client?.name?.charAt(0).toUpperCase() ||
+                              "C"}
+                          </div>
+                        )}
+                        {/* Comment Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-base font-medium text-white">
+                              {comment.client?.name || "Unknown Client"}
+                            </span>
+                            <span className="text-sm text-gray-400">
+                              {(() => {
+                                const date = new Date(comment.createdAt);
+                                const now = new Date();
+                                const diffMs = now.getTime() - date.getTime();
+                                const diffMins = Math.floor(diffMs / 60000);
+                                const diffHours = Math.floor(diffMs / 3600000);
+                                const diffDays = Math.floor(diffMs / 86400000);
+
+                                if (diffMins < 1) return "now";
+                                if (diffMins < 60) return `${diffMins}m ago`;
+                                if (diffHours < 24) return `${diffHours}h ago`;
+                                if (diffDays < 7) return `${diffDays}d ago`;
+                                return date.toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                });
+                              })()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-white leading-relaxed whitespace-pre-wrap break-words">
+                            {comment.comment}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Video Details - Collapsed by default (YouTube style) */}
+              {(isAdmin || !isMasterLibraryItem) && (
+                <div className="mt-8">
+                  <button
+                    onClick={() => setShowDetails(!showDetails)}
+                    className="flex items-center gap-2 text-base font-medium text-gray-400 hover:text-white transition-colors mb-3"
+                  >
+                    {showDetails ? (
+                      <ChevronUp className="h-5 w-5" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5" />
+                    )}
+                    Show details
+                  </button>
+                  {showDetails && (
+                    <div
+                      className="p-5 rounded-xl space-y-3 text-base"
+                      style={{
+                        backgroundColor: "#272727",
+                      }}
+                    >
+                      <div className="flex justify-between py-2 border-b border-gray-700">
+                        <span className="text-gray-400 font-medium">Type:</span>
+                        <span className="text-white">
+                          {item.isYoutube
+                            ? "YouTube Video"
+                            : item.isOnForm
+                            ? "OnForm Video"
+                            : item.type}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-2 border-b border-gray-700">
+                        <span className="text-gray-400 font-medium">
+                          Category:
+                        </span>
+                        <span className="text-white">{item.category}</span>
+                      </div>
+                      {item.filename && (
+                        <div className="flex justify-between py-2 border-b border-gray-700">
+                          <span className="text-gray-400 font-medium">
+                            File:
+                          </span>
+                          <span className="text-white text-right max-w-[70%] truncate">
+                            {item.filename}
+                          </span>
+                        </div>
+                      )}
+                      {item.createdAt && (
+                        <div className="flex justify-between py-2">
+                          <span className="text-gray-400 font-medium">
+                            Added:
+                          </span>
+                          <span className="text-white">
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Master Library Notice */}
+              {isMasterLibraryItem && !isAdmin && (
+                <div
+                  className="mt-8 p-5 rounded-xl"
+                  style={{
+                    backgroundColor: "#1E3A8A",
+                    border: "1px solid #3B82F6",
+                  }}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <Shield className="h-6 w-6 text-blue-300" />
+                    <h3 className="text-lg font-semibold text-blue-200">
+                      Master Library Content
+                    </h3>
+                  </div>
+                  <p className="text-base text-blue-300 leading-relaxed">
+                    This is premium training content from the master library.
+                    Only administrators can modify this content.
+                  </p>
                 </div>
               )}
             </div>
