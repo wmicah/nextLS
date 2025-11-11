@@ -346,14 +346,6 @@ export default function MobileSchedulePage() {
         {/* Quick Actions */}
         <div className="flex gap-3">
           <button
-            onClick={() => setShowScheduleModal(true)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200"
-            style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
-          >
-            <Plus className="w-4 h-4" />
-            Schedule Lesson
-          </button>
-          <button
             onClick={() => setShowWorkingHoursModal(true)}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200"
             style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
