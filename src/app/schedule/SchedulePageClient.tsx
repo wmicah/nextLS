@@ -912,20 +912,6 @@ function SchedulePageClient() {
               {/* Right: Action Buttons */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowScheduleModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                  style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#059669";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#10B981";
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Schedule Lesson
-                </button>
-                <button
                   onClick={() => setShowBlockedTimesModal(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
                   style={{ backgroundColor: "#b76e79", color: "#FFFFFF" }}
