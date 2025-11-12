@@ -205,7 +205,15 @@ export const clientsRouter = router({
             },
           },
           programAssignments: {
-            include: {
+            select: {
+              id: true,
+              programId: true,
+              clientId: true,
+              assignedAt: true,
+              startDate: true,
+              progress: true,
+              completed: true,
+              completedAt: true,
               program: {
                 select: {
                   id: true,
@@ -213,6 +221,7 @@ export const clientsRouter = router({
                   status: true,
                   sport: true,
                   level: true,
+                  duration: true,
                 },
               },
             },
@@ -940,7 +949,15 @@ export const clientsRouter = router({
             },
           },
           programAssignments: {
-            include: {
+            select: {
+              id: true,
+              programId: true,
+              clientId: true,
+              assignedAt: true,
+              startDate: true,
+              progress: true,
+              completed: true,
+              completedAt: true,
               program: {
                 select: {
                   id: true,
@@ -948,11 +965,9 @@ export const clientsRouter = router({
                   status: true,
                   sport: true,
                   level: true,
+                  duration: true,
                 },
               },
-            },
-            orderBy: {
-              assignedAt: "desc",
             },
           },
         },
@@ -1195,7 +1210,15 @@ export const clientsRouter = router({
         data,
         include: {
           programAssignments: {
-            include: {
+            select: {
+              id: true,
+              programId: true,
+              clientId: true,
+              assignedAt: true,
+              startDate: true,
+              progress: true,
+              completed: true,
+              completedAt: true,
               program: {
                 select: {
                   id: true,
@@ -1203,6 +1226,7 @@ export const clientsRouter = router({
                   status: true,
                   sport: true,
                   level: true,
+                  duration: true,
                 },
               },
             },
