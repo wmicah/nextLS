@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import {
@@ -50,13 +50,13 @@ import { Skeleton } from "./ui/skeleton";
 import { useToast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SeamlessProgramModal from "./SeamlessProgramModal";
-import MobileCreateProgramModal from "./MobileCreateProgramModal";
+import MobileSeamlessProgramModal from "./MobileSeamlessProgramModal";
 import SimpleAssignProgramModal from "./SimpleAssignProgramModal";
 import MobileSimpleAssignProgramModal from "./MobileSimpleAssignProgramModal";
 import ProgramDetailsModal from "./ProgramDetailsModal";
 import MobileProgramDetailsModal from "./MobileProgramDetailsModal";
 import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
-import MobileCreateRoutineModal from "@/components/MobileCreateRoutineModal";
+import MobileSeamlessRoutineModal from "@/components/MobileSeamlessRoutineModal";
 import RoutinesTab from "@/components/RoutinesTab";
 import MobileRoutinesTab from "@/components/MobileRoutinesTab";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
@@ -116,7 +116,8 @@ interface ProgramListItem {
 interface RoutineExercise {
   id: string;
   title: string;
-  type: "exercise" | "drill" | "video" | "routine";
+  type: "exercise" | "drill" | "video" | "routine" | "superset";
+  description?: string;
   notes?: string;
   sets?: number;
   reps?: number;
@@ -126,6 +127,19 @@ interface RoutineExercise {
   videoId?: string;
   videoTitle?: string;
   videoThumbnail?: string;
+  supersetId?: string;
+  supersetOrder?: number;
+  supersetDescription?: string;
+  supersetInstructions?: string;
+  supersetNotes?: string;
+  coachInstructions?: {
+    whatToDo: string;
+    howToDoIt: string;
+    keyPoints: string[];
+    commonMistakes: string[];
+    equipment?: string;
+    setup?: string;
+  };
 }
 
 interface Routine {
@@ -184,8 +198,10 @@ export default function MobileProgramsPage() {
     error,
   } = trpc.programs.list.useQuery();
 
+  // Fetch coach's active clients (including organization clients if coach is in an org)
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
+    scope: "organization", // Include organization clients if coach is in an organization
   });
 
   // Fetch program categories
@@ -204,8 +220,13 @@ export default function MobileProgramsPage() {
       id: exercise.id,
       title: exercise.title,
       type:
-        (exercise.type as "exercise" | "drill" | "video" | "routine") ||
-        "exercise",
+        (exercise.type as
+          | "exercise"
+          | "drill"
+          | "video"
+          | "routine"
+          | "superset") || "exercise",
+      description: exercise.description || "",
       notes: exercise.notes || "",
       sets: exercise.sets ?? undefined,
       reps: exercise.reps ?? undefined,
@@ -215,6 +236,23 @@ export default function MobileProgramsPage() {
       videoTitle: exercise.videoTitle || "",
       videoThumbnail: exercise.videoThumbnail || "",
       videoUrl: exercise.videoUrl || "",
+      supersetId: exercise.supersetId || undefined,
+      supersetOrder: exercise.supersetOrder ?? undefined,
+      supersetDescription: exercise.supersetDescription || undefined,
+      supersetInstructions: exercise.supersetInstructions || undefined,
+      supersetNotes: exercise.supersetNotes || undefined,
+      coachInstructions:
+        exercise.coachInstructionsWhatToDo ||
+        exercise.coachInstructionsHowToDoIt
+          ? {
+              whatToDo: exercise.coachInstructionsWhatToDo || "",
+              howToDoIt: exercise.coachInstructionsHowToDoIt || "",
+              keyPoints: exercise.coachInstructionsKeyPoints || [],
+              commonMistakes: exercise.coachInstructionsCommonMistakes || [],
+              equipment: exercise.coachInstructionsEquipment || undefined,
+              setup: exercise.coachInstructionsSetup || undefined,
+            }
+          : undefined,
     })),
     createdAt: new Date(routine.createdAt).toISOString(),
     updatedAt: new Date(routine.updatedAt).toISOString(),
@@ -229,6 +267,26 @@ export default function MobileProgramsPage() {
       toast({
         title: "Program created",
         description: "Your new program has been created successfully.",
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateProgram = trpc.programs.update.useMutation({
+    onSuccess: () => {
+      utils.programs.list.invalidate();
+      setIsEditModalOpen(false);
+      setSelectedProgram(null);
+      toast({
+        title: "Program updated",
+        description: "Your program has been updated successfully.",
       });
     },
     onError: (error: unknown) => {
@@ -325,7 +383,7 @@ export default function MobileProgramsPage() {
 
   const handleProgramClick = (program: ProgramListItem) => {
     setSelectedProgram(program);
-    setIsDetailsModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
   const handleAssignProgram = (program: ProgramListItem) => {
@@ -411,6 +469,18 @@ export default function MobileProgramsPage() {
       // Default: updated (most recently updated first)
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
+
+  // Filter clients with email for routine assignment
+  const clientsWithEmail = useMemo(() => {
+    if (!clients) return [];
+    const result: any[] = [];
+    for (const client of clients) {
+      if (client.email !== null) {
+        result.push(client);
+      }
+    }
+    return result;
+  }, [clients]);
 
   // Calculate stats
   const totalAssignments = programs.reduce(
@@ -702,9 +772,6 @@ export default function MobileProgramsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs px-2 py-1 rounded bg-[#4A5A70] text-[#C3BCC2]">
-                              {program.level}
-                            </span>
                             <span className="text-xs px-2 py-1 rounded bg-[#F59E0B] text-white">
                               {program.duration} weeks
                             </span>
@@ -784,9 +851,6 @@ export default function MobileProgramsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm px-3 py-1 rounded-lg bg-[#4A5A70] text-[#C3BCC2]">
-                              {program.level}
-                            </span>
                             <span className="text-sm px-3 py-1 rounded-lg bg-[#F59E0B] text-white">
                               {program.duration} weeks
                             </span>
@@ -808,7 +872,7 @@ export default function MobileProgramsPage() {
 
         {activeTab === "routines" && (
           <MobileRoutinesTab
-            routines={routines}
+            routines={routines as any}
             onRoutineClick={handleRoutineClick}
             onEditRoutine={handleEditRoutine}
             onAssignRoutine={handleAssignRoutine}
@@ -828,52 +892,17 @@ export default function MobileProgramsPage() {
       <MobileBottomNavigation />
 
       {/* Modals */}
-      <MobileCreateProgramModal
+      <MobileSeamlessProgramModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setSelectedVideoFromLibrary(null);
+        }}
         onSubmit={async data => {
           try {
-            // Transform the weeks data to match the TRPC endpoint format
-            const transformedWeeks = data.weeks.map((week, weekIndex) => ({
-              weekNumber: weekIndex + 1,
-              title: week.name,
-              description: "",
-              days: Object.entries(week.days).map(
-                ([dayKey, exercises], dayIndex) => ({
-                  dayNumber: dayIndex + 1,
-                  title: dayKey.charAt(0).toUpperCase() + dayKey.slice(1), // "mon" -> "Mon"
-                  description: "",
-                  drills: exercises.map((exercise, exerciseIndex) => ({
-                    order: exerciseIndex + 1,
-                    title: exercise.title,
-                    description: exercise.description || "",
-                    duration: exercise.duration || "",
-                    videoUrl: exercise.videoUrl || "",
-                    notes: exercise.notes || "",
-                    sets: exercise.sets || undefined,
-                    reps: exercise.reps || undefined,
-                    tempo: exercise.tempo || "",
-                    supersetId: exercise.supersetId || undefined,
-                    supersetOrder: exercise.supersetOrder || undefined,
-                    // Coach Instructions
-                    coachInstructions: exercise.coachInstructions
-                      ? {
-                          whatToDo: exercise.coachInstructions.whatToDo || "",
-                          howToDoIt: exercise.coachInstructions.howToDoIt || "",
-                          keyPoints: exercise.coachInstructions.keyPoints || [],
-                          commonMistakes:
-                            exercise.coachInstructions.commonMistakes || [],
-                          equipment: exercise.coachInstructions.equipment || "",
-                        }
-                      : undefined,
-                  })),
-                })
-              ),
-            }));
-
             await createProgram.mutateAsync({
               title: data.title,
-              description: data.description,
+              description: data.description || undefined,
               level: data.level as
                 | "Drive"
                 | "Whip"
@@ -881,7 +910,7 @@ export default function MobileProgramsPage() {
                 | "Stability"
                 | "Extension",
               duration: data.duration,
-              weeks: transformedWeeks,
+              weeks: data.weeks,
             });
             toast({
               title: "Program created",
@@ -896,15 +925,86 @@ export default function MobileProgramsPage() {
             });
           }
         }}
+        onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
+        selectedVideoFromLibrary={selectedVideoFromLibrary}
+        onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
       />
 
-      <SeamlessProgramModal
+      <MobileSeamlessProgramModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSubmit={data => {
-          console.log("Program updated:", data);
+        program={selectedProgram || null}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedProgram(null);
+          setSelectedVideoFromLibrary(null);
+        }}
+        onSubmit={async data => {
+          if (selectedProgram) {
+            // Convert ProgramFormData to update format (remove order field from drills)
+            const convertedWeeks = data.weeks.map(week => ({
+              weekNumber: week.weekNumber,
+              title: week.title,
+              description: week.description,
+              days: week.days.map(day => ({
+                dayNumber: day.dayNumber,
+                title: day.title,
+                description: day.description,
+                drills: day.drills.map(drill => {
+                  // Remove order field and ensure all required fields are present
+                  const { order, ...drillWithoutOrder } = drill;
+                  return {
+                    id: drill.id || `temp-${Date.now()}`,
+                    title: drill.title,
+                    description: drill.description,
+                    duration: drill.duration,
+                    videoUrl: drill.videoUrl,
+                    notes: drill.notes,
+                    type: drill.type,
+                    sets: drill.sets,
+                    reps: drill.reps,
+                    tempo: drill.tempo,
+                    videoId: drill.videoId,
+                    videoTitle: drill.videoTitle,
+                    videoThumbnail: drill.videoThumbnail,
+                    routineId: drill.routineId,
+                    supersetId: drill.supersetId,
+                    supersetOrder: drill.supersetOrder,
+                    supersetDescription: drill.supersetDescription,
+                    supersetInstructions: drill.supersetInstructions,
+                    supersetNotes: drill.supersetNotes,
+                    coachInstructionsWhatToDo: drill.coachInstructionsWhatToDo,
+                    coachInstructionsHowToDoIt:
+                      drill.coachInstructionsHowToDoIt,
+                    coachInstructionsKeyPoints:
+                      drill.coachInstructionsKeyPoints,
+                    coachInstructionsCommonMistakes:
+                      drill.coachInstructionsCommonMistakes,
+                    coachInstructionsEasier: drill.coachInstructionsEasier,
+                    coachInstructionsHarder: drill.coachInstructionsHarder,
+                    coachInstructionsEquipment:
+                      drill.coachInstructionsEquipment,
+                    coachInstructionsSetup: drill.coachInstructionsSetup,
+                  };
+                }),
+              })),
+            }));
+
+            // Update existing program
+            updateProgram.mutate({
+              id: selectedProgram.id,
+              title: data.title,
+              description: data.description || undefined,
+              weeks: convertedWeeks,
+            });
+          }
+        }}
+        onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
+        selectedVideoFromLibrary={selectedVideoFromLibrary}
+        onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
+        onSuccess={() => {
           utils.programs.list.invalidate();
           setIsEditModalOpen(false);
+          setSelectedProgram(null);
         }}
       />
 
@@ -937,13 +1037,32 @@ export default function MobileProgramsPage() {
         />
       )}
 
-      <MobileCreateRoutineModal
+      <MobileSeamlessRoutineModal
         isOpen={isRoutineModalOpen}
-        onClose={() => setIsRoutineModalOpen(false)}
+        onClose={() => {
+          setIsRoutineModalOpen(false);
+          setSelectedRoutine(null);
+          setSelectedVideoFromLibrary(null);
+        }}
+        routine={selectedRoutine}
+        onOpenVideoLibrary={() => setIsVideoLibraryOpen(true)}
+        selectedVideoFromLibrary={selectedVideoFromLibrary}
+        onVideoProcessed={() => setSelectedVideoFromLibrary(null)}
         onSuccess={() => {
           utils.routines.list.invalidate();
           setIsRoutineModalOpen(false);
         }}
+      />
+
+      {/* Video Library Dialog - Shared between program and routine modals */}
+      <VideoLibraryDialog
+        isOpen={isVideoLibraryOpen}
+        onClose={() => setIsVideoLibraryOpen(false)}
+        onSelectVideo={video => {
+          setSelectedVideoFromLibrary(video);
+          setIsVideoLibraryOpen(false);
+        }}
+        editingItem={null}
       />
 
       {selectedRoutine && (
@@ -951,9 +1070,7 @@ export default function MobileProgramsPage() {
           isOpen={isAssignRoutineModalOpen}
           onClose={() => setIsAssignRoutineModalOpen(false)}
           routine={selectedRoutine}
-          clients={
-            (clients?.filter(client => client.email !== null) as any) || []
-          }
+          clients={clientsWithEmail}
           onSuccess={() => {
             setIsAssignRoutineModalOpen(false);
           }}

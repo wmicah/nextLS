@@ -36,7 +36,8 @@ import { cn } from "@/lib/utils";
 interface RoutineExercise {
   id: string;
   title: string;
-  type: "exercise" | "drill" | "video" | "routine";
+  type: "exercise" | "drill" | "video" | "routine" | "superset";
+  description?: string;
   notes?: string;
   sets?: number;
   reps?: number;
@@ -47,6 +48,19 @@ interface RoutineExercise {
   videoTitle?: string;
   videoThumbnail?: string;
   routineId?: string;
+  supersetId?: string;
+  supersetOrder?: number;
+  supersetDescription?: string;
+  supersetInstructions?: string;
+  supersetNotes?: string;
+  coachInstructions?: {
+    whatToDo: string;
+    howToDoIt: string;
+    keyPoints: string[];
+    commonMistakes: string[];
+    equipment?: string;
+    setup?: string;
+  };
 }
 
 interface Routine {

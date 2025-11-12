@@ -140,8 +140,8 @@ export default function MobileProgramDetailsModal({
   const currentProgram = programDetails || program;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-[#2A3133] w-full max-w-md rounded-xl max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-[#2A3133] w-full max-w-md rounded-xl max-h-[90vh] overflow-hidden relative z-[10000]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#606364]">
           <div className="flex items-center gap-3">

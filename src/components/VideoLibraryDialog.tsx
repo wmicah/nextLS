@@ -149,9 +149,9 @@ export default function VideoLibraryDialog({
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent
-        className="bg-[#1A1F21] border-gray-600 max-w-4xl max-h-[90vh] z-[100] overflow-hidden flex flex-col shadow-2xl"
+        nested={true}
+        className="bg-[#1A1F21] border-gray-600 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
         style={{
-          zIndex: 100,
           boxShadow:
             "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 20px rgba(59, 130, 246, 0.3)",
         }}

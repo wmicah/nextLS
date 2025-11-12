@@ -2271,13 +2271,13 @@ function WeekCard({
       className="bg-[#353A3A] border-gray-600 shadow-xl w-full"
     >
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleCollapse}
-              className="p-1 h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-600"
+              className="p-1 h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-600 flex-shrink-0"
             >
               {week.collapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -2285,34 +2285,34 @@ function WeekCard({
                 <ChevronDown className="h-4 w-4" />
               )}
             </Button>
-            <CardTitle className="text-xl font-bold text-white">
+            <CardTitle className="text-xl font-bold text-white truncate">
               {week.name}
             </CardTitle>
             <Badge
               variant="outline"
-              className="bg-blue-500/10 text-blue-400 border-blue-500/20"
+              className="bg-blue-500/10 text-blue-400 border-blue-500/20 flex-shrink-0"
             >
               {weekIndex + 1}
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={onDuplicate}
-              className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+              className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white h-8 w-8 p-0"
+              title="Duplicate week"
             >
-              <Copy className="h-4 w-4 mr-1" />
-              Duplicate
+              <Copy className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="border-red-500 text-red-400 hover:bg-red-500/10"
+              className="border-red-500 text-red-400 hover:bg-red-500/10 h-8 w-8 p-0"
+              title="Delete week"
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
