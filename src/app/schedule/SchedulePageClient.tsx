@@ -158,8 +158,10 @@ function SchedulePageClient() {
     trpc.scheduling.getCoachUpcomingLessons.useQuery();
 
   // Fetch coach's active clients for scheduling (exclude archived)
+  // Include organization clients if coach is in an organization
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
+    scope: "organization", // Include organization clients if coach is in an organization
   });
 
   // Filter clients based on search term
