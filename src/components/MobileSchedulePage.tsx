@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
   Calendar,
@@ -16,9 +16,11 @@ import {
   Settings,
   X,
   RefreshCw,
+  Ban,
 } from "lucide-react";
 import WorkingHoursModal from "./WorkingHoursModal";
-import CustomSelect from "./ui/CustomSelect";
+import BlockedTimesModal from "./BlockedTimesModal";
+import AddTimeModal from "./AddTimeModal";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import {
@@ -33,6 +35,7 @@ import {
   endOfWeek,
   isSameMonth,
 } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import {
   formatTimeInUserTimezone,
   formatDateTimeInUserTimezone,
@@ -41,36 +44,61 @@ import {
 
 export default function MobileSchedulePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showWorkingHoursModal, setShowWorkingHoursModal] = useState(false);
+  const [showBlockedTimesModal, setShowBlockedTimesModal] = useState(false);
+  const [showAddTimeModal, setShowAddTimeModal] = useState(false);
   const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [scheduleForm, setScheduleForm] = useState({
     clientId: "",
     time: "",
     date: "",
   });
-  const [workingHours, setWorkingHours] = useState({
-    startTime: "9:00 AM",
-    endTime: "6:00 PM",
-    workingDays: [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-      "Sunday",
-    ],
-    timeSlotInterval: 60,
-  });
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [showAllPendingRequests, setShowAllPendingRequests] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch coach's schedule for the current month
+  // Fetch coach's schedule for the current month and adjacent months
   const { data: coachSchedule = [] } =
     trpc.scheduling.getCoachSchedule.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
+    });
+
+  // Fetch coach's schedule for previous month (for cross-month days)
+  const { data: prevMonthSchedule = [] } =
+    trpc.scheduling.getCoachSchedule.useQuery({
+      month: currentMonth.getMonth() === 0 ? 11 : currentMonth.getMonth() - 1,
+      year:
+        currentMonth.getMonth() === 0
+          ? currentMonth.getFullYear() - 1
+          : currentMonth.getFullYear(),
+    });
+
+  // Fetch coach's schedule for next month (for cross-month days)
+  const { data: nextMonthSchedule = [] } =
+    trpc.scheduling.getCoachSchedule.useQuery({
+      month: currentMonth.getMonth() === 11 ? 0 : currentMonth.getMonth() + 1,
+      year:
+        currentMonth.getMonth() === 11
+          ? currentMonth.getFullYear() + 1
+          : currentMonth.getFullYear(),
+    });
+
+  // Combine all schedule data
+  const allCoachSchedule = [
+    ...coachSchedule,
+    ...prevMonthSchedule,
+    ...nextMonthSchedule,
+  ];
+
+  // Fetch blocked times for the current month
+  const { data: blockedTimes = [] } =
+    trpc.blockedTimes.getBlockedTimesForSchedule.useQuery({
+      startDate: startOfMonth(currentMonth).toISOString(),
+      endDate: endOfMonth(currentMonth).toISOString(),
     });
 
   // Fetch coach's upcoming lessons
@@ -84,6 +112,38 @@ export default function MobileSchedulePage() {
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
   });
+
+  // Filter clients based on search term
+  const filteredClients = useMemo(() => {
+    if (!clientSearch.trim()) return clients;
+    const searchLower = clientSearch.toLowerCase();
+    return clients.filter((client: any) => {
+      return (
+        client.name?.toLowerCase().includes(searchLower) ||
+        client.email?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [clients, clientSearch]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowClientDropdown(false);
+      }
+    };
+
+    if (showClientDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showClientDropdown]);
 
   // Fetch pending schedule requests
   const {
@@ -101,9 +161,11 @@ export default function MobileSchedulePage() {
     onSuccess: () => {
       utils.scheduling.getCoachSchedule.invalidate();
       utils.scheduling.getCoachUpcomingLessons.invalidate();
-      setShowScheduleModal(false);
+      setShowDayOverviewModal(false);
       setScheduleForm({ clientId: "", time: "", date: "" });
       setSelectedDate(null);
+      setSelectedTimeSlot("");
+      setClientSearch("");
     },
     onError: error => {
       alert(`Error scheduling lesson: ${error.message}`);
@@ -162,6 +224,34 @@ export default function MobileSchedulePage() {
     );
   };
 
+  // Check if a day has blocked times
+  const getBlockedTimesForDate = (date: Date) => {
+    return blockedTimes.filter((blockedTime: any) => {
+      const startDate = new Date(blockedTime.startTime);
+      const endDate = new Date(blockedTime.endTime);
+
+      // Normalize dates to compare only the date part (ignore time)
+      const targetDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+      const blockedStartDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate()
+      );
+      const blockedEndDate = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate()
+      );
+
+      // Check if the date falls within the blocked time range
+      return targetDate >= blockedStartDate && targetDate <= blockedEndDate;
+    });
+  };
+
   const getLessonsForDate = (date: Date) => {
     const now = new Date();
     const lessons = coachSchedule.filter((lesson: { date: string }) => {
@@ -183,71 +273,45 @@ export default function MobileSchedulePage() {
     return lessons;
   };
 
+  const getAllLessonsForDate = (date: Date) => {
+    const lessons = allCoachSchedule.filter((lesson: { date: string }) => {
+      // Convert UTC lesson date to user's timezone for proper date comparison
+      const timeZone = getUserTimezone();
+      const lessonDateInUserTz = toZonedTime(lesson.date, timeZone);
+
+      // Compare only the date part, not the time
+      const lessonDateOnly = new Date(
+        lessonDateInUserTz.getFullYear(),
+        lessonDateInUserTz.getMonth(),
+        lessonDateInUserTz.getDate()
+      );
+      const targetDateOnly = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+      const isSame = lessonDateOnly.getTime() === targetDateOnly.getTime();
+
+      return isSame;
+    });
+
+    // Sort by time
+    return lessons.sort(
+      (a: { date: string }, b: { date: string }) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  };
+
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setScheduleForm({
-      ...scheduleForm,
+      clientId: "",
+      time: "",
       date: format(date, "yyyy-MM-dd"),
     });
+    setSelectedTimeSlot("");
+    setClientSearch("");
     setShowDayOverviewModal(true);
-  };
-
-  const handleScheduleLesson = () => {
-    if (!scheduleForm.clientId || !scheduleForm.time || !scheduleForm.date) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    const selectedClient = clients.find(
-      (c: { id: string }) => c.id === scheduleForm.clientId
-    );
-    if (!selectedClient) {
-      alert("Please select a valid client");
-      return;
-    }
-
-    const dateStr = scheduleForm.date;
-    const timeStr = scheduleForm.time;
-    const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-
-    if (!timeMatch) {
-      alert("Invalid time format");
-      return;
-    }
-
-    const [, hour, minute, period] = timeMatch;
-    let hour24 = parseInt(hour);
-
-    if (period.toUpperCase() === "PM" && hour24 !== 12) {
-      hour24 += 12;
-    } else if (period.toUpperCase() === "AM" && hour24 === 12) {
-      hour24 = 0;
-    }
-
-    const fullDateStr = `${dateStr}T${hour24
-      .toString()
-      .padStart(2, "0")}:${minute}:00`;
-    const lessonDate = new Date(fullDateStr);
-
-    if (isNaN(lessonDate.getTime())) {
-      alert("Invalid date/time combination");
-      return;
-    }
-
-    const now = new Date();
-    if (lessonDate <= now) {
-      alert(
-        "Cannot schedule lessons in the past. Please select a future date and time."
-      );
-      return;
-    }
-
-    const timeZone = getUserTimezone();
-    scheduleLessonMutation.mutate({
-      clientId: scheduleForm.clientId,
-      lessonDate: fullDateStr,
-      timeZone,
-    });
   };
 
   const handleDeleteLesson = (lessonId: string, lessonTitle: string) => {
@@ -255,68 +319,6 @@ export default function MobileSchedulePage() {
       deleteLessonMutation.mutate({ lessonId: lessonId });
     }
   };
-
-  // Generate time slots based on coach's working hours
-  const generateTimeSlots = () => {
-    const startTime = coachProfile?.workingHours?.startTime || "9:00 AM";
-    const endTime = coachProfile?.workingHours?.endTime || "6:00 PM";
-    const interval = coachProfile?.workingHours?.timeSlotInterval || 60;
-
-    const slots = [];
-    const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
-
-    if (!startMatch || !endMatch) {
-      for (let hour = 9; hour < 18; hour++) {
-        const displayHour = hour > 12 ? hour - 12 : hour;
-        const period = hour >= 12 ? "PM" : "AM";
-        slots.push(`${displayHour}:00 ${period}`);
-      }
-      return slots;
-    }
-
-    const [, startHour, startMinute, startPeriod] = startMatch;
-    const [, endHour, endMinute, endPeriod] = endMatch;
-
-    let startTotalMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
-    if (startPeriod.toUpperCase() === "PM" && parseInt(startHour) !== 12)
-      startTotalMinutes += 12 * 60;
-    if (startPeriod.toUpperCase() === "AM" && parseInt(startHour) === 12)
-      startTotalMinutes = parseInt(startMinute);
-
-    let endTotalMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
-    if (endPeriod.toUpperCase() === "PM" && parseInt(endHour) !== 12)
-      endTotalMinutes += 12 * 60;
-    if (endPeriod.toUpperCase() === "AM" && parseInt(endHour) === 12)
-      endTotalMinutes = parseInt(endMinute);
-
-    const now = new Date();
-    const isToday =
-      scheduleForm.date && format(now, "yyyy-MM-dd") === scheduleForm.date;
-    const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
-
-    for (
-      let totalMinutes = startTotalMinutes;
-      totalMinutes < endTotalMinutes;
-      totalMinutes += interval
-    ) {
-      if (isToday && totalMinutes <= currentTotalMinutes) {
-        continue;
-      }
-
-      const hour24 = Math.floor(totalMinutes / 60);
-      const minute = totalMinutes % 60;
-      const displayHour =
-        hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-      const period = hour24 >= 12 ? "PM" : "AM";
-      const minuteStr = minute.toString().padStart(2, "0");
-      slots.push(`${displayHour}:${minuteStr} ${period}`);
-    }
-
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
@@ -344,14 +346,33 @@ export default function MobileSchedulePage() {
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-6">
         {/* Quick Actions */}
-        <div className="flex gap-3">
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            onClick={() => setShowBlockedTimesModal(true)}
+            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-all duration-200"
+            style={{ backgroundColor: "#b76e79", color: "#FFFFFF" }}
+          >
+            <Ban className="w-4 h-4" />
+            <span className="hidden sm:inline">Block Times</span>
+            <span className="sm:hidden">Block</span>
+          </button>
+          <button
+            onClick={() => setShowAddTimeModal(true)}
+            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-all duration-200"
+            style={{ backgroundColor: "#5a7fa4", color: "#FFFFFF" }}
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Time</span>
+            <span className="sm:hidden">Add</span>
+          </button>
           <button
             onClick={() => setShowWorkingHoursModal(true)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200"
+            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-all duration-200"
             style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
           >
             <Settings className="w-4 h-4" />
-            Working Hours
+            <span className="hidden sm:inline">Working Hours</span>
+            <span className="sm:hidden">Hours</span>
           </button>
         </div>
 
@@ -735,146 +756,15 @@ export default function MobileSchedulePage() {
           </div>
         </div>
 
-        {/* Schedule Lesson Modal */}
-        {showScheduleModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div
-              className="rounded-2xl shadow-xl border w-full max-w-md max-h-[80vh] overflow-y-auto"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div
-                className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-              >
-                <h2 className="text-xl font-bold text-white">
-                  Schedule Lesson
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowScheduleModal(false);
-                    setScheduleForm({ clientId: "", time: "", date: "" });
-                  }}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="p-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Client
-                  </label>
-                  <CustomSelect
-                    value={scheduleForm.clientId}
-                    onChange={value =>
-                      setScheduleForm({
-                        ...scheduleForm,
-                        clientId: value,
-                      })
-                    }
-                    options={[
-                      { value: "", label: "Select a client" },
-                      ...clients.map((client: any) => ({
-                        value: client.id,
-                        label: client.name || client.email,
-                      })),
-                    ]}
-                    placeholder="Select a client"
-                    searchable={true}
-                    style={{
-                      backgroundColor: "#2A2F2F",
-                      borderColor: "#606364",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={scheduleForm.date}
-                    onChange={e =>
-                      setScheduleForm({ ...scheduleForm, date: e.target.value })
-                    }
-                    className="w-full p-3 rounded-lg border text-white text-base min-h-[48px]"
-                    style={{
-                      backgroundColor: "#2A2F2F",
-                      borderColor: "#606364",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Time
-                  </label>
-                  <CustomSelect
-                    value={scheduleForm.time}
-                    onChange={value =>
-                      setScheduleForm({ ...scheduleForm, time: value })
-                    }
-                    options={[
-                      { value: "", label: "Select a time" },
-                      ...timeSlots.map(slot => ({
-                        value: slot,
-                        label: slot,
-                      })),
-                    ]}
-                    placeholder="Select a time"
-                    style={{
-                      backgroundColor: "#2A2F2F",
-                      borderColor: "#606364",
-                    }}
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={() => {
-                      setShowScheduleModal(false);
-                      setScheduleForm({ clientId: "", time: "", date: "" });
-                    }}
-                    className="flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 border"
-                    style={{
-                      backgroundColor: "transparent",
-                      borderColor: "#606364",
-                      color: "#FFFFFF",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleScheduleLesson}
-                    disabled={scheduleLessonMutation.isPending}
-                    className="flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
-                  >
-                    {scheduleLessonMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                        Scheduling...
-                      </>
-                    ) : (
-                      <>
-                        <Calendar className="h-4 w-4" />
-                        Schedule Lesson
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Day Overview Modal */}
         {showDayOverviewModal && selectedDate && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div
-              className="rounded-2xl shadow-xl border w-full max-w-md max-h-[80vh] overflow-y-auto"
+              className="rounded-2xl shadow-xl border w-full max-w-md max-h-[85vh] overflow-y-auto"
               style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
             >
               <div
-                className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
+                className="sticky top-0 border-b px-4 py-4 flex items-center justify-between z-10"
                 style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
               >
                 <div>
@@ -886,11 +776,36 @@ export default function MobileSchedulePage() {
                     {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
                     {coachProfile?.workingHours?.endTime || "6:00 PM"}
                   </p>
+                  {(() => {
+                    const dayName = format(selectedDate, "EEEE");
+                    const workingDays = coachProfile?.workingHours
+                      ?.workingDays || [
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday",
+                      "Sunday",
+                    ];
+                    const isWorkingDay = workingDays.includes(dayName);
+                    if (!isWorkingDay) {
+                      return (
+                        <p className="text-orange-300 text-xs mt-1">
+                          ⚠️ Not a normal working day
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <button
                   onClick={() => {
                     setShowDayOverviewModal(false);
                     setSelectedDate(null);
+                    setSelectedTimeSlot("");
+                    setClientSearch("");
+                    setScheduleForm({ clientId: "", time: "", date: "" });
                   }}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
@@ -898,80 +813,452 @@ export default function MobileSchedulePage() {
                 </button>
               </div>
               <div className="p-4">
-                {(() => {
-                  const dayLessons = getLessonsForDate(selectedDate);
-                  return dayLessons.length > 0 ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-white">
-                          Scheduled Lessons
-                        </h3>
-                        <button
-                          onClick={() => {
-                            setShowDayOverviewModal(false);
-                            setShowScheduleModal(true);
-                          }}
-                          className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200"
-                          style={{
-                            backgroundColor: "#10B981",
-                            color: "#FFFFFF",
-                          }}
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add Lesson
-                        </button>
-                      </div>
+                {/* Existing Lessons */}
+                <div className="mb-6">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-white">
+                      Scheduled Lessons
+                    </h3>
+                  </div>
+
+                  {(() => {
+                    const dayLessons = getAllLessonsForDate(selectedDate);
+                    return dayLessons.length > 0 ? (
                       <div className="space-y-3">
-                        {dayLessons.map((lesson: any, index: number) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-4 rounded-lg border group bg-emerald-500/10 border-emerald-500/20"
-                          >
-                            <div className="flex-1">
-                              <div className="font-medium text-emerald-300">
-                                {formatTimeInUserTimezone(lesson.date)}
-                              </div>
-                              <div className="text-sm text-emerald-200">
-                                {lesson.client?.name ||
-                                  lesson.client?.email ||
-                                  "Client"}
-                              </div>
-                              <div className="text-xs text-emerald-400">
-                                {lesson.title}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() =>
-                                handleDeleteLesson(lesson.id, lesson.title)
-                              }
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
-                              title="Delete lesson"
+                        {dayLessons.map((lesson: any, index: number) => {
+                          const lessonDate = new Date(lesson.date);
+                          const isPast = lessonDate < new Date();
+                          return (
+                            <div
+                              key={index}
+                              className={`flex items-center justify-between p-3 rounded-lg border group ${
+                                isPast
+                                  ? "bg-gray-800/20 border-gray-600/30"
+                                  : "bg-emerald-500/10 border-emerald-500/20"
+                              }`}
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
+                              <div className="flex-1">
+                                <div
+                                  className={`font-medium ${
+                                    isPast
+                                      ? "text-gray-400"
+                                      : "text-emerald-300"
+                                  }`}
+                                >
+                                  {formatTimeInUserTimezone(lesson.date)}
+                                </div>
+                                <div
+                                  className={`text-sm ${
+                                    isPast
+                                      ? "text-gray-500"
+                                      : "text-emerald-200"
+                                  }`}
+                                >
+                                  {lesson.client?.name ||
+                                    lesson.client?.email ||
+                                    "Client"}
+                                </div>
+                                <div
+                                  className={`text-xs ${
+                                    isPast
+                                      ? "text-gray-600"
+                                      : "text-emerald-400"
+                                  }`}
+                                >
+                                  {lesson.title}
+                                </div>
+                              </div>
+                              {!isPast && (
+                                <button
+                                  onClick={() =>
+                                    handleDeleteLesson(lesson.id, lesson.title)
+                                  }
+                                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-2 rounded hover:bg-red-500/20 active:bg-red-500/20 text-red-400 hover:text-red-300 active:text-red-300"
+                                  title="Delete lesson"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Calendar className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                      <p className="text-gray-400">
-                        No lessons scheduled for this day
-                      </p>
-                      <button
-                        onClick={() => {
-                          setShowDayOverviewModal(false);
-                          setShowScheduleModal(true);
-                        }}
-                        className="mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                        style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
-                      >
-                        Schedule Lesson
-                      </button>
-                    </div>
-                  );
-                })()}
+                    ) : (
+                      <div className="text-center py-6">
+                        <Calendar className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                        <p className="text-gray-400">
+                          No lessons scheduled for this day
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Available Time Slots */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Available Time Slots
+                  </h3>
+                  {(() => {
+                    // Check if this is a working day
+                    const dayName = format(selectedDate, "EEEE");
+                    const workingDays = coachProfile?.workingHours
+                      ?.workingDays || [
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday",
+                      "Sunday",
+                    ];
+                    const isWorkingDay = workingDays.includes(dayName);
+
+                    // Generate time slots for the day
+                    const generateTimeSlotsForDay = (date: Date) => {
+                      const startTime =
+                        coachProfile?.workingHours?.startTime || "9:00 AM";
+                      const endTime =
+                        coachProfile?.workingHours?.endTime || "6:00 PM";
+                      const interval =
+                        coachProfile?.workingHours?.timeSlotInterval || 60;
+                      const slots = [];
+
+                      // Get blocked times for this date
+                      const dayBlockedTimes = getBlockedTimesForDate(date);
+
+                      // Helper function to check if a time slot conflicts with blocked times
+                      const isTimeSlotBlocked = (slotTime: string) => {
+                        return dayBlockedTimes.some((blockedTime: any) => {
+                          if (blockedTime.isAllDay) return true;
+
+                          const blockedStart = new Date(blockedTime.startTime);
+                          const blockedEnd = new Date(blockedTime.endTime);
+
+                          // Parse the slot time (e.g., "2:00 PM")
+                          const slotMatch = slotTime.match(
+                            /(\d+):(\d+)\s*(AM|PM)/i
+                          );
+                          if (!slotMatch) return false;
+
+                          const [, hour, minute, period] = slotMatch;
+                          let hour24 = parseInt(hour);
+                          if (period.toUpperCase() === "PM" && hour24 !== 12)
+                            hour24 += 12;
+                          if (period.toUpperCase() === "AM" && hour24 === 12)
+                            hour24 = 0;
+
+                          const slotDate = new Date(date);
+                          slotDate.setHours(hour24, parseInt(minute), 0, 0);
+
+                          return (
+                            slotDate >= blockedStart && slotDate < blockedEnd
+                          );
+                        });
+                      };
+
+                      // Parse start and end times
+                      const startMatch = startTime.match(
+                        /(\d+):(\d+)\s*(AM|PM)/i
+                      );
+                      const endMatch = endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+
+                      if (!startMatch || !endMatch) {
+                        // Fallback to default hours with hourly slots
+                        for (let hour = 9; hour < 18; hour++) {
+                          const displayHour = hour > 12 ? hour - 12 : hour;
+                          const period = hour >= 12 ? "PM" : "AM";
+                          slots.push(`${displayHour}:00 ${period}`);
+                        }
+                        return slots;
+                      }
+
+                      const [, startHour, startMinute, startPeriod] =
+                        startMatch;
+                      const [, endHour, endMinute, endPeriod] = endMatch;
+
+                      // Convert to 24-hour format and total minutes
+                      let startTotalMinutes =
+                        parseInt(startHour) * 60 + parseInt(startMinute);
+                      if (
+                        startPeriod.toUpperCase() === "PM" &&
+                        parseInt(startHour) !== 12
+                      )
+                        startTotalMinutes += 12 * 60;
+                      if (
+                        startPeriod.toUpperCase() === "AM" &&
+                        parseInt(startHour) === 12
+                      )
+                        startTotalMinutes = parseInt(startMinute);
+
+                      let endTotalMinutes =
+                        parseInt(endHour) * 60 + parseInt(endMinute);
+                      if (
+                        endPeriod.toUpperCase() === "PM" &&
+                        parseInt(endHour) !== 12
+                      )
+                        endTotalMinutes += 12 * 60;
+                      if (
+                        endPeriod.toUpperCase() === "AM" &&
+                        parseInt(endHour) === 12
+                      )
+                        endTotalMinutes = parseInt(endMinute);
+
+                      // Get current time to filter out past slots for today
+                      const now = new Date();
+                      const isToday =
+                        format(now, "yyyy-MM-dd") ===
+                        format(date, "yyyy-MM-dd");
+                      const currentTotalMinutes =
+                        now.getHours() * 60 + now.getMinutes();
+
+                      // Get existing lessons for this date
+                      const existingLessons = getAllLessonsForDate(date);
+                      const bookedTimes = existingLessons.map(
+                        (lesson: { date: string }) => {
+                          const lessonDate = new Date(lesson.date);
+                          return format(lessonDate, "h:mm a");
+                        }
+                      );
+
+                      // Generate slots based on interval
+                      for (
+                        let totalMinutes = startTotalMinutes;
+                        totalMinutes < endTotalMinutes;
+                        totalMinutes += interval
+                      ) {
+                        // Skip past time slots for today
+                        if (isToday && totalMinutes <= currentTotalMinutes) {
+                          continue;
+                        }
+
+                        const hour24 = Math.floor(totalMinutes / 60);
+                        const minute = totalMinutes % 60;
+
+                        const displayHour =
+                          hour24 === 0
+                            ? 12
+                            : hour24 > 12
+                            ? hour24 - 12
+                            : hour24;
+                        const period = hour24 >= 12 ? "PM" : "AM";
+                        const minuteStr = minute.toString().padStart(2, "0");
+
+                        const timeSlot = `${displayHour}:${minuteStr} ${period}`;
+
+                        // Check if this slot is already booked
+                        if (!bookedTimes.includes(timeSlot)) {
+                          const isBlocked = isTimeSlotBlocked(timeSlot);
+                          slots.push({
+                            time: timeSlot,
+                            isBlocked: isBlocked,
+                            blockedReason: isBlocked
+                              ? dayBlockedTimes.find((bt: any) => {
+                                  if (bt.isAllDay) return true;
+                                  const blockedStart = new Date(bt.startTime);
+                                  const blockedEnd = new Date(bt.endTime);
+                                  const slotDate = new Date(date);
+                                  slotDate.setHours(
+                                    hour24,
+                                    parseInt(minuteStr),
+                                    0,
+                                    0
+                                  );
+                                  return (
+                                    slotDate >= blockedStart &&
+                                    slotDate < blockedEnd
+                                  );
+                                })?.title
+                              : null,
+                          });
+                        }
+                      }
+
+                      return slots;
+                    };
+
+                    const availableSlots =
+                      generateTimeSlotsForDay(selectedDate);
+
+                    return availableSlots.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-3 gap-2">
+                          {availableSlots.map((slot: any, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedTimeSlot(slot.time)}
+                              className={`p-2.5 rounded-lg border text-center transition-all duration-200 text-sm ${
+                                selectedTimeSlot === slot.time
+                                  ? "bg-sky-500 border-sky-400 text-white"
+                                  : "hover:bg-sky-500/10 hover:border-sky-500/30"
+                              }`}
+                              style={{
+                                backgroundColor:
+                                  selectedTimeSlot === slot.time
+                                    ? "#0EA5E9"
+                                    : "#2A2F2F",
+                                borderColor: slot.isBlocked
+                                  ? "#EF4444"
+                                  : selectedTimeSlot === slot.time
+                                  ? "#0EA5E9"
+                                  : "#606364",
+                                color: slot.isBlocked ? "#EF4444" : "#FFFFFF",
+                              }}
+                              title={
+                                slot.isBlocked
+                                  ? `Blocked: ${slot.blockedReason} (Coach can override)`
+                                  : ""
+                              }
+                            >
+                              {slot.time}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Schedule Lesson Section */}
+                        {selectedTimeSlot && (
+                          <div
+                            className="mt-4 pt-4 border-t"
+                            style={{ borderColor: "#606364" }}
+                          >
+                            <div className="space-y-3">
+                              <div>
+                                <p className="text-sm text-gray-400 mb-2">
+                                  Selected time:{" "}
+                                  <span className="text-white font-medium">
+                                    {selectedTimeSlot}
+                                  </span>
+                                </p>
+                                <p className="text-xs text-gray-500 mb-2">
+                                  Choose a client to schedule the lesson
+                                </p>
+                              </div>
+                              <div className="relative" ref={dropdownRef}>
+                                <input
+                                  type="text"
+                                  placeholder="Search for a client..."
+                                  value={clientSearch}
+                                  onChange={e => {
+                                    setClientSearch(e.target.value);
+                                    setShowClientDropdown(true);
+                                  }}
+                                  onFocus={() => setShowClientDropdown(true)}
+                                  className="w-full p-2.5 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border"
+                                  style={{
+                                    backgroundColor: "#2A2F2F",
+                                    borderColor: "#606364",
+                                  }}
+                                />
+
+                                {/* Dropdown */}
+                                {showClientDropdown && (
+                                  <div
+                                    className="absolute z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg w-full"
+                                    style={{
+                                      backgroundColor: "#353A3A",
+                                      borderColor: "#606364",
+                                    }}
+                                  >
+                                    {filteredClients.length > 0 ? (
+                                      filteredClients.map((client: any) => (
+                                        <button
+                                          key={client.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setScheduleForm({
+                                              ...scheduleForm,
+                                              clientId: client.id,
+                                            });
+                                            setClientSearch(
+                                              client.name || client.email || ""
+                                            );
+                                            setShowClientDropdown(false);
+                                          }}
+                                          className="w-full px-3 py-2 text-left hover:bg-[#4A5A70] transition-colors flex items-center gap-3"
+                                          style={{ color: "#C3BCC2" }}
+                                        >
+                                          <div className="flex-1">
+                                            <div className="font-medium text-sm">
+                                              {client.name || "Unnamed"}
+                                            </div>
+                                            {client.email && (
+                                              <div className="text-xs opacity-70">
+                                                {client.email}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </button>
+                                      ))
+                                    ) : (
+                                      <div
+                                        className="px-3 py-2 text-center text-sm"
+                                        style={{ color: "#ABA4AA" }}
+                                      >
+                                        No clients found
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (
+                                    scheduleForm.clientId &&
+                                    selectedDate &&
+                                    selectedTimeSlot
+                                  ) {
+                                    // Construct the full date string
+                                    const dateStr = selectedDate
+                                      .toISOString()
+                                      .split("T")[0];
+                                    const [time, period] =
+                                      selectedTimeSlot.split(" ");
+                                    const [hour, minute] = time.split(":");
+                                    const hour24 =
+                                      period === "PM" && hour !== "12"
+                                        ? parseInt(hour) + 12
+                                        : period === "AM" && hour === "12"
+                                        ? 0
+                                        : parseInt(hour);
+
+                                    const fullDateStr = `${dateStr}T${hour24
+                                      .toString()
+                                      .padStart(2, "0")}:${minute}:00`;
+
+                                    // Schedule the lesson
+                                    scheduleLessonMutation.mutate({
+                                      clientId: scheduleForm.clientId,
+                                      lessonDate: fullDateStr,
+                                    });
+                                  }
+                                }}
+                                disabled={!scheduleForm.clientId}
+                                className="w-full px-4 py-2.5 hover:opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
+                                style={{
+                                  backgroundColor: scheduleForm.clientId
+                                    ? "#10B981"
+                                    : "#4A5A70",
+                                }}
+                              >
+                                {scheduleLessonMutation.isPending
+                                  ? "Scheduling..."
+                                  : "Schedule Lesson"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                        <p className="text-gray-400">No available time slots</p>
+                        <p className="text-gray-500 text-sm">
+                          All working hours are booked
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           </div>
@@ -989,6 +1276,23 @@ export default function MobileSchedulePage() {
                 }
               : undefined
           }
+        />
+
+        {/* Blocked Times Modal */}
+        <BlockedTimesModal
+          isOpen={showBlockedTimesModal}
+          onClose={() => setShowBlockedTimesModal(false)}
+          selectedDate={selectedDate || undefined}
+          month={currentMonth.getMonth()}
+          year={currentMonth.getFullYear()}
+        />
+
+        {/* Add Time Modal */}
+        <AddTimeModal
+          isOpen={showAddTimeModal}
+          onClose={() => setShowAddTimeModal(false)}
+          selectedDate={selectedDate || undefined}
+          clients={clients}
         />
       </div>
       <MobileBottomNavigation />
