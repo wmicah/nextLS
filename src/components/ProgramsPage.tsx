@@ -195,8 +195,10 @@ function ProgramsPage() {
     error,
   } = trpc.programs.list.useQuery();
 
+  // Fetch coach's active clients (including organization clients if coach is in an org)
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
+    scope: "organization", // Include organization clients if coach is in an organization
   });
 
   // Fetch program categories

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CustomSelect from "./ui/CustomSelect";
+import SupersetDescriptionModal from "./SupersetDescriptionModal";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import {
   Plus,
   Trash2,
@@ -95,6 +95,9 @@ interface ProgramItem {
   routineId?: string;
   supersetId?: string;
   supersetOrder?: number;
+  supersetDescription?: string;
+  supersetInstructions?: string;
+  supersetNotes?: string;
 }
 
 interface Routine {
@@ -134,6 +137,7 @@ interface ProgramBuilderProps {
     thumbnail?: string;
   } | null;
   onVideoProcessed?: () => void;
+  hideHeader?: boolean;
 }
 
 const DAY_LABELS: Record<DayKey, string> = {
@@ -155,6 +159,7 @@ export default function MobileProgramBuilder({
   onOpenVideoLibrary,
   selectedVideoFromLibrary,
   onVideoProcessed,
+  hideHeader = false,
 }: ProgramBuilderProps) {
   const [weeks, setWeeks] = useState<Week[]>(initialWeeks);
   const [selectedWeekId, setSelectedWeekId] = useState<string>("");
@@ -170,9 +175,30 @@ export default function MobileProgramBuilder({
     url?: string;
     thumbnail?: string;
   } | null>(null);
+  const [isExerciseEditDialogOpen, setIsExerciseEditDialogOpen] =
+    useState(false);
+  const [editingExercise, setEditingExercise] = useState<ProgramItem | null>(
+    null
+  );
   const [isSupersetModalOpen, setIsSupersetModalOpen] = useState(false);
   const [pendingSupersetDrill, setPendingSupersetDrill] =
     useState<ProgramItem | null>(null);
+  const [isSupersetDescriptionModalOpen, setIsSupersetDescriptionModalOpen] =
+    useState(false);
+  const [pendingSupersetDescription, setPendingSupersetDescription] = useState<{
+    supersetId: string;
+    supersetName: string;
+    currentData?: {
+      exercises?: Array<{
+        id: string;
+        title: string;
+        sets?: number;
+        reps?: number;
+        description?: string;
+      }>;
+      supersetDescription?: string;
+    };
+  } | null>(null);
   const [isCreateRoutineModalOpen, setIsCreateRoutineModalOpen] =
     useState(false);
   const [isAddRoutineModalOpen, setIsAddRoutineModalOpen] = useState(false);
@@ -416,11 +442,50 @@ export default function MobileProgramBuilder({
       setSelectedDayKey(dayKey);
       setEditingItem(item);
 
-      if (item.type === "video") {
-        onOpenVideoLibrary?.();
+      // If item is part of a superset, open SupersetDescriptionModal instead
+      if (item.supersetId) {
+        // Find all exercises in the superset within the same week and day
+        const week = weeks.find(w => w.id === weekId);
+        if (week) {
+          const supersetExercises = week.days[dayKey]
+            .filter(ex => ex.supersetId === item.supersetId)
+            .sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0));
+
+          const firstExercise = supersetExercises[0];
+          const supersetName =
+            supersetExercises.length === 2
+              ? "Superset"
+              : `Circuit (${supersetExercises.length})`;
+
+          setPendingSupersetDescription({
+            supersetId: item.supersetId,
+            supersetName,
+            currentData: firstExercise
+              ? {
+                  exercises: supersetExercises.map(ex => ({
+                    id: ex.id || ex.supersetOrder?.toString() || "1",
+                    title: ex.title,
+                    sets: ex.sets,
+                    reps: ex.reps,
+                    description: ex.description || ex.notes || "",
+                  })),
+                  supersetDescription:
+                    firstExercise.supersetDescription ||
+                    firstExercise.supersetInstructions ||
+                    firstExercise.supersetNotes ||
+                    "",
+                }
+              : undefined,
+          });
+          setIsSupersetDescriptionModalOpen(true);
+        }
+      } else {
+        // Regular exercise edit
+        setEditingExercise(item);
+        setIsExerciseEditDialogOpen(true);
       }
     },
-    []
+    [weeks]
   );
 
   const openAddFromLibrary = useCallback(
@@ -517,6 +582,98 @@ export default function MobileProgramBuilder({
       addItem,
       editItem,
     ]
+  );
+
+  const handleExerciseEditSubmit = useCallback(
+    (details: {
+      title: string;
+      description?: string;
+      sets?: number;
+      reps?: number;
+      tempo?: string;
+      duration?: string;
+    }) => {
+      if (!editingExercise) return;
+
+      const updatedItem: Partial<ProgramItem> = {
+        title: details.title,
+        description: details.description || "",
+        sets: details.sets,
+        reps: details.reps,
+        tempo: details.tempo || "",
+        duration: details.duration || "",
+      };
+
+      editItem(selectedWeekId, selectedDayKey, editingExercise.id, updatedItem);
+      setIsExerciseEditDialogOpen(false);
+      setEditingExercise(null);
+      setEditingItem(null);
+    },
+    [editingExercise, selectedWeekId, selectedDayKey, editItem]
+  );
+
+  const handleSupersetDescriptionSave = useCallback(
+    (data: {
+      exercises: Array<{
+        id: string;
+        title: string;
+        sets?: number;
+        reps?: number;
+        description?: string;
+      }>;
+      supersetDescription?: string;
+    }) => {
+      if (!pendingSupersetDescription || !selectedWeekId || !selectedDayKey)
+        return;
+
+      const updatedWeeks = weeks.map(week => {
+        if (week.id === selectedWeekId) {
+          const updatedDays = { ...week.days };
+          updatedDays[selectedDayKey] = updatedDays[selectedDayKey].map(
+            (item: ProgramItem) => {
+              if (item.supersetId === pendingSupersetDescription.supersetId) {
+                // Match exercise by index (supersetOrder - 1) since exercises array is ordered
+                const exerciseIndex = (item.supersetOrder || 1) - 1;
+                const exerciseData = data.exercises[exerciseIndex];
+
+                if (exerciseData) {
+                  const updatedItem = {
+                    ...item,
+                    sets: exerciseData.sets,
+                    reps: exerciseData.reps,
+                    description: exerciseData.description || "",
+                    notes: exerciseData.description || item.notes || "",
+                    // Only set superset description on the first exercise (supersetOrder = 1)
+                    supersetDescription:
+                      item.supersetOrder === 1
+                        ? data.supersetDescription || ""
+                        : item.supersetDescription,
+                    supersetInstructions:
+                      item.supersetOrder === 1
+                        ? data.supersetDescription || ""
+                        : item.supersetInstructions,
+                    supersetNotes:
+                      item.supersetOrder === 1
+                        ? data.supersetDescription || ""
+                        : item.supersetNotes,
+                  };
+                  return updatedItem;
+                }
+              }
+              return item;
+            }
+          );
+          return { ...week, days: updatedDays };
+        }
+        return week;
+      });
+
+      setWeeks(updatedWeeks);
+      onSave?.(updatedWeeks);
+      setIsSupersetDescriptionModalOpen(false);
+      setPendingSupersetDescription(null);
+    },
+    [weeks, pendingSupersetDescription, selectedWeekId, selectedDayKey, onSave]
   );
 
   // Routine management
@@ -687,63 +844,43 @@ export default function MobileProgramBuilder({
 
   return (
     <div
-      className="min-h-screen w-full max-w-full overflow-x-hidden"
-      style={{ backgroundColor: "#2A3133" }}
+      className="w-full max-w-full overflow-x-hidden"
+      style={{ backgroundColor: hideHeader ? "transparent" : "#2A3133" }}
     >
-      {/* Mobile Header */}
-      <div className="sticky top-0 z-30 bg-[#2A3133] border-b border-[#606364] py-3 px-4">
-        <div className="flex items-center justify-between w-full min-w-0">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {programDetails?.onBack && (
-              <Button
-                variant="ghost"
-                onClick={programDetails.onBack}
-                className="p-2 text-[#C3BCC2] hover:text-white hover:bg-[#353A3A] min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
+      {/* Mobile Header - Hide when embedded */}
+      {!hideHeader && (
+        <div className="sticky top-0 z-30 bg-[#2A3133] border-b border-[#606364] py-3 px-4">
+          <div className="flex items-center justify-between w-full min-w-0">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Calendar className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg font-bold text-[#C3BCC2] break-words truncate">
-                  {programDetails?.title || "Program Builder"}
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span
-                    className="px-2 py-1 rounded-full text-xs font-medium"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                  >
-                    {weeks.length} week{weeks.length !== 1 ? "s" : ""}
-                  </span>
-                  {programDetails?.level && (
-                    <span
-                      className="px-2 py-1 rounded-full text-xs font-medium"
-                      style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
-                    >
-                      {programDetails.level}
-                    </span>
-                  )}
+              {programDetails?.onBack && (
+                <Button
+                  variant="ghost"
+                  onClick={programDetails.onBack}
+                  className="p-2 text-[#C3BCC2] hover:text-white hover:bg-[#353A3A] min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              )}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-lg font-bold text-[#C3BCC2] break-words truncate">
+                    {programDetails?.title || "Program Builder"}
+                  </h1>
                 </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              onClick={handleSave}
-              disabled={programDetails?.isSaving}
-              className="p-3 rounded-lg bg-green-600 hover:bg-green-700 text-white min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
-            >
-              <Save className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                onClick={handleSave}
+                disabled={programDetails?.isSaving}
+                className="p-3 rounded-lg bg-green-600 hover:bg-green-700 text-white min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
+              >
+                <Save className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Program Details Card */}
       {programDetails && (
@@ -759,20 +896,7 @@ export default function MobileProgramBuilder({
                     {programDetails.description || "No description provided"}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="bg-green-500/10 text-green-400 border-green-500/20 text-xs"
-                  >
-                    {programDetails.level}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-xs"
-                  >
-                    {programDetails.duration} weeks
-                  </Badge>
-                </div>
+                <div className="flex items-center gap-2"></div>
                 {programDetails.lastSaved && (
                   <p className="text-xs text-[#ABA4AA]">
                     Last saved: {programDetails.lastSaved.toLocaleTimeString()}
@@ -863,6 +987,30 @@ export default function MobileProgramBuilder({
         }}
         onSubmit={handleVideoDetailsSubmit}
         video={selectedVideo}
+      />
+
+      {/* Exercise Edit Dialog */}
+      <ExerciseEditDialog
+        isOpen={isExerciseEditDialogOpen}
+        onClose={() => {
+          setIsExerciseEditDialogOpen(false);
+          setEditingExercise(null);
+          setEditingItem(null);
+        }}
+        onSubmit={handleExerciseEditSubmit}
+        exercise={editingExercise}
+      />
+
+      {/* Superset Description Modal */}
+      <SupersetDescriptionModal
+        isOpen={isSupersetDescriptionModalOpen}
+        onClose={() => {
+          setIsSupersetDescriptionModalOpen(false);
+          setPendingSupersetDescription(null);
+        }}
+        onSave={handleSupersetDescriptionSave}
+        initialData={pendingSupersetDescription?.currentData}
+        supersetName={pendingSupersetDescription?.supersetName || "Superset"}
       />
 
       {/* Superset Modal */}
@@ -1330,8 +1478,8 @@ function MobileWeekCard({
       style={style}
       className="bg-[#353A3A] border-[#606364] shadow-lg w-full rounded-xl"
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+      <CardHeader className="pb-3 px-4">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Button
               variant="ghost"
@@ -1350,36 +1498,30 @@ function MobileWeekCard({
                 {week.name}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
-                <Badge
-                  variant="outline"
-                  className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs"
-                >
-                  Week {weekIndex + 1}
-                </Badge>
                 <span className="text-xs text-[#ABA4AA]">
                   {Object.values(week.days).flat().length} exercises
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={onDuplicate}
-              className="border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] h-9 px-3 rounded-lg"
+              className="border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] h-8 w-8 p-0 rounded-lg"
+              title="Copy week"
             >
-              <Copy className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Copy</span>
+              <Copy className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="border-red-500 text-red-400 hover:bg-red-500/10 h-9 px-3 rounded-lg"
+              className="border-red-500 text-red-400 hover:bg-red-500/10 h-8 w-8 p-0 rounded-lg"
+              title="Delete week"
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Delete</span>
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
@@ -1680,21 +1822,6 @@ function MobileSortableDrillItem({
           : "bg-[#2A3133] border-[#606364]"
       )}
     >
-      {/* Superset indicator */}
-      {isSuperset && (
-        <div className="text-xs text-purple-300 mb-2 flex items-center gap-1">
-          <Link className="h-3 w-3" />
-          <span className="font-medium">SUPERSET</span>
-        </div>
-      )}
-
-      {/* Routine indicator */}
-      {isRoutine && (
-        <div className="flex items-center gap-2 mb-2 p-2 bg-green-900/30 rounded-lg">
-          <span className="text-green-300 text-xs font-medium">Routine</span>
-        </div>
-      )}
-
       <div className="flex items-start gap-3">
         {/* Drag handle */}
         <div
@@ -1818,6 +1945,210 @@ function MobileSortableDrillItem({
   );
 }
 
+// Exercise Edit Dialog Component
+interface ExerciseEditDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (details: {
+    title: string;
+    description?: string;
+    sets?: number;
+    reps?: number;
+    tempo?: string;
+    duration?: string;
+  }) => void;
+  exercise: ProgramItem | null;
+}
+
+function ExerciseEditDialog({
+  isOpen,
+  onClose,
+  onSubmit,
+  exercise,
+}: ExerciseEditDialogProps) {
+  const [formData, setFormData] = useState({
+    title: exercise?.title || "",
+    description: exercise?.description || "",
+    sets: exercise?.sets || undefined,
+    reps: exercise?.reps || undefined,
+    tempo: exercise?.tempo || "",
+    duration: exercise?.duration || "",
+  });
+
+  // Update form data when exercise changes or dialog opens
+  useEffect(() => {
+    if (isOpen && exercise) {
+      setFormData({
+        title: exercise.title || "",
+        description: exercise.description ?? "",
+        sets: exercise.sets || undefined,
+        reps: exercise.reps || undefined,
+        tempo: exercise.tempo || "",
+        duration: exercise.duration || "",
+      });
+    }
+  }, [exercise, isOpen]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim()) return;
+    onSubmit(formData);
+  };
+
+  if (!isOpen || !exercise) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent
+        nested={true}
+        className="bg-[#2A3133] border-[#606364] max-w-[95vw] w-[95vw] max-h-[90vh] overflow-y-auto"
+      >
+        <DialogHeader>
+          <DialogTitle className="text-[#C3BCC2]">Edit Exercise</DialogTitle>
+          <DialogDescription className="text-[#ABA4AA]">
+            Update the exercise details and instructions
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Title */}
+          <div>
+            <Label htmlFor="title" className="text-[#C3BCC2] text-sm">
+              Exercise Title *
+            </Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={e =>
+                setFormData(prev => ({ ...prev, title: e.target.value }))
+              }
+              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+              placeholder="Exercise name"
+              required
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="description" className="text-[#C3BCC2] text-sm">
+                Description
+              </Label>
+              <span className="text-xs text-[#ABA4AA]">
+                {formData.description.length}/120
+              </span>
+            </div>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={e => {
+                const value = e.target.value;
+                if (value.length <= 120) {
+                  setFormData(prev => ({ ...prev, description: value }));
+                }
+              }}
+              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+              placeholder="Describe how to perform this exercise..."
+              rows={3}
+              maxLength={120}
+            />
+          </div>
+
+          {/* Sets, Reps, Tempo */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label htmlFor="sets" className="text-[#C3BCC2] text-sm">
+                Sets
+              </Label>
+              <Input
+                id="sets"
+                type="number"
+                value={formData.sets || ""}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    sets: e.target.value ? parseInt(e.target.value) : undefined,
+                  }))
+                }
+                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="reps" className="text-[#C3BCC2] text-sm">
+                Reps
+              </Label>
+              <Input
+                id="reps"
+                type="number"
+                value={formData.reps || ""}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    reps: e.target.value ? parseInt(e.target.value) : undefined,
+                  }))
+                }
+                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="tempo" className="text-[#C3BCC2] text-sm">
+                Tempo
+              </Label>
+              <Input
+                id="tempo"
+                value={formData.tempo}
+                onChange={e =>
+                  setFormData(prev => ({ ...prev, tempo: e.target.value }))
+                }
+                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+                placeholder="e.g., 2-0-2"
+              />
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <Label htmlFor="duration" className="text-[#C3BCC2] text-sm">
+              Duration (optional)
+            </Label>
+            <Input
+              id="duration"
+              value={formData.duration}
+              onChange={e =>
+                setFormData(prev => ({ ...prev, duration: e.target.value }))
+              }
+              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+              placeholder="e.g., 30 seconds"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="w-full sm:w-auto border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2]"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Video Details Dialog Component
 interface VideoDetailsDialogProps {
   isOpen: boolean;
@@ -1866,7 +2197,7 @@ function VideoDetailsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] z-[100]">
+      <DialogContent className="bg-[#2A3133] border-[#606364] text-[#C3BCC2]">
         <DialogHeader>
           <DialogTitle>Add Video Details</DialogTitle>
           <DialogDescription className="text-[#ABA4AA] break-words">
