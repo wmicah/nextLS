@@ -108,9 +108,10 @@ export default function MobileSchedulePage() {
   // Fetch coach's profile for working hours
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
 
-  // Fetch coach's active clients
+  // Fetch coach's active clients (including organization clients if coach is in an org)
   const { data: clients = [] } = trpc.clients.list.useQuery({
     archived: false,
+    scope: "organization", // Include organization clients if coach is in an organization
   });
 
   // Filter clients based on search term
