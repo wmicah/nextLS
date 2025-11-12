@@ -96,13 +96,17 @@ interface Client {
     id: string;
     programId: string;
     assignedAt: string;
+    startDate: string | null;
     progress: number;
+    completed: boolean;
+    completedAt: string | null;
     program: {
       id: string;
       title: string;
       status: string;
       sport: string | null;
       level: string;
+      duration: number;
     };
   }[];
 }
@@ -865,18 +869,167 @@ export default function MobileClientsPage() {
     )
     .sort((a: Client, b: Client) => {
       let aValue: any, bValue: any;
+      const now = new Date(); // Declare once for use in multiple cases
 
       switch (sortBy) {
         case "name":
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
           break;
+        case "dueDate": {
+          // Calculate the latest program end date for each client
+          // Handles multiple programs by finding the latest end date (when program sequence ends)
+          const getClosestProgramEndDate = (
+            client: Client
+          ): {
+            overdue: Date | null;
+            upcoming: Date | null;
+            latest: Date | null;
+          } | null => {
+            if (
+              !client.programAssignments ||
+              client.programAssignments.length === 0
+            ) {
+              return { overdue: null, upcoming: null, latest: null };
+            }
+
+            let latestEndDate: Date | null = null; // Track the latest end date across all programs
+            let latestOverdueDate: Date | null = null; // Track latest overdue date
+            let latestUpcomingDate: Date | null = null; // Track latest upcoming date
+
+            // Process all active, non-completed program assignments
+            for (const assignment of client.programAssignments) {
+              // Skip completed assignments
+              if (assignment.completed) continue;
+
+              // Use startDate if available, otherwise use assignedAt
+              const startDate = assignment.startDate
+                ? new Date(assignment.startDate)
+                : new Date(assignment.assignedAt);
+
+              // Calculate end date: startDate + (duration * 7 days)
+              const endDate = new Date(startDate);
+              endDate.setDate(
+                endDate.getDate() + assignment.program.duration * 7
+              );
+
+              // Normalize to start of day (midnight) for consistent comparison
+              const endDateNormalized = new Date(
+                endDate.getFullYear(),
+                endDate.getMonth(),
+                endDate.getDate()
+              );
+
+              // Track the latest end date overall (furthest in future)
+              if (!latestEndDate || endDateNormalized > latestEndDate) {
+                latestEndDate = endDateNormalized;
+              }
+
+              // Separate overdue programs (past end date but not completed) from upcoming ones
+              // Normalize 'now' to start of day for consistent comparison
+              const nowNormalized = new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate()
+              );
+
+              if (endDateNormalized < nowNormalized) {
+                // This program is overdue - find the earliest overdue date
+                // (most overdue - earliest past date)
+                if (
+                  !latestOverdueDate ||
+                  endDateNormalized < latestOverdueDate
+                ) {
+                  latestOverdueDate = endDateNormalized;
+                }
+              } else {
+                // This program hasn't ended yet - find the EARLIEST upcoming end date
+                // (when the NEXT program ends - the one ending soonest)
+                if (
+                  !latestUpcomingDate ||
+                  endDateNormalized < latestUpcomingDate
+                ) {
+                  latestUpcomingDate = endDateNormalized;
+                }
+              }
+            }
+
+            // Return the dates
+            // If client has upcoming programs, use the earliest upcoming date (next program ending)
+            // If client only has overdue programs, use the earliest overdue date (most overdue)
+            // Priority: upcoming > overdue > null
+            return {
+              overdue: latestOverdueDate, // Most overdue (earliest past date)
+              upcoming: latestUpcomingDate, // Next program ending (earliest upcoming date)
+              latest: latestEndDate, // Overall latest end date (for reference)
+            };
+          };
+
+          const aDates = getClosestProgramEndDate(a);
+          const bDates = getClosestProgramEndDate(b);
+
+          // Prioritize overdue programs: they should always appear first
+          // Among overdue, most overdue (earliest date) comes first
+          // Among upcoming, closest (earliest date) comes first
+          // (now is declared at the top of the sort function)
+
+          // Determine which date to use for comparison
+          // If client has upcoming programs, use the earliest upcoming date (next program ending)
+          // If client only has overdue programs, use the earliest overdue date (most overdue)
+          // This ensures we show when the NEXT program ends, not when all programs end
+          const FAR_FUTURE_DATE = new Date("9999-12-31");
+
+          // Get the date to use for sorting - prioritize upcoming (earliest upcoming) over overdue (earliest overdue)
+          const getSortDate = (
+            dates: {
+              overdue: Date | null;
+              upcoming: Date | null;
+              latest: Date | null;
+            } | null
+          ): Date | null => {
+            if (!dates) return null;
+            // If there are upcoming programs, use the earliest upcoming (next program ending)
+            if (dates.upcoming) return dates.upcoming;
+            // Otherwise, if there are overdue programs, use the earliest overdue (most overdue)
+            if (dates.overdue) return dates.overdue;
+            // Fallback to latest overall (shouldn't happen, but just in case)
+            return dates.latest;
+          };
+
+          const aSortDate = getSortDate(aDates);
+          const bSortDate = getSortDate(bDates);
+
+          // Determine if clients have active programs (upcoming or overdue)
+          const aHasActivePrograms = aDates?.upcoming || aDates?.overdue;
+          const bHasActivePrograms = bDates?.upcoming || bDates?.overdue;
+
+          // Prioritize clients with upcoming programs over those with only overdue programs
+          if (aDates?.upcoming && !bDates?.upcoming) {
+            // Client A has upcoming programs, B doesn't - A should come first (sooner end date)
+            aValue = aSortDate || FAR_FUTURE_DATE;
+            bValue = FAR_FUTURE_DATE; // Push B to the end if no active programs
+          } else if (!aDates?.upcoming && bDates?.upcoming) {
+            // Client B has upcoming programs, A doesn't - B should come first
+            aValue = FAR_FUTURE_DATE;
+            bValue = bSortDate || FAR_FUTURE_DATE;
+          } else if (aHasActivePrograms && bHasActivePrograms) {
+            // Both have active programs - compare their sort dates
+            // For "Soonest First": earlier dates come first
+            aValue = aSortDate || FAR_FUTURE_DATE;
+            bValue = bSortDate || FAR_FUTURE_DATE;
+          } else {
+            // One or both have no active programs - use fallback
+            aValue = aSortDate || FAR_FUTURE_DATE;
+            bValue = bSortDate || FAR_FUTURE_DATE;
+          }
+          break;
+        }
         case "createdAt":
           aValue = new Date(a.createdAt);
           bValue = new Date(b.createdAt);
           break;
         case "nextLesson":
-          const now = new Date();
+          // (now is already declared at the top of the sort function)
           const today = new Date(
             now.getFullYear(),
             now.getMonth(),
@@ -917,7 +1070,22 @@ export default function MobileClientsPage() {
         } else {
           return aValue > bValue ? 1 : -1;
         }
+      } else if (sortBy === "dueDate") {
+        // For due date sorting: closest end dates first (ascending)
+        // "Soonest First" (asc) = ascending date order (closest first)
+        // "Farthest First" (desc) = descending date order (farthest first)
+        // Clients without end dates (FAR_FUTURE_DATE) will naturally sort last
+        const aTime = (aValue as Date).getTime();
+        const bTime = (bValue as Date).getTime();
+        if (sortOrder === "asc") {
+          // Ascending: smaller dates (sooner/closer) come first
+          return aTime - bTime;
+        } else {
+          // Descending: larger dates (farther) come first
+          return bTime - aTime;
+        }
       } else {
+        // For name and nextLesson, use normal logic
         if (sortOrder === "asc") {
           return aValue > bValue ? 1 : -1;
         } else {
@@ -1080,6 +1248,10 @@ export default function MobileClientsPage() {
               >
                 <option value="name">
                   Name {sortOrder === "asc" ? "(A-Z)" : "(Z-A)"}
+                </option>
+                <option value="dueDate">
+                  Program Due Date{" "}
+                  {sortOrder === "asc" ? "(Soonest First)" : "(Farthest First)"}
                 </option>
                 <option value="createdAt">
                   Recently Added{" "}
