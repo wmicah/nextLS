@@ -101,8 +101,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.notes || "",
-                  description: drill.description || "",
+                  notes: drill.notes ?? "",
+                  description: drill.description ?? "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -147,8 +147,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.notes || "",
-                  description: drill.description || "",
+                  notes: drill.notes ?? "",
+                  description: drill.description ?? "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -193,8 +193,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.notes || "",
-                  description: drill.description || "",
+                  notes: drill.notes ?? "",
+                  description: drill.description ?? "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -239,8 +239,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.notes || "",
-                  description: drill.description || "",
+                  notes: drill.notes ?? "",
+                  description: drill.description ?? "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -285,8 +285,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.notes || "",
-                  description: drill.description || "",
+                  notes: drill.notes ?? "",
+                  description: drill.description ?? "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -331,8 +331,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.notes || "",
-                  description: drill.description || "",
+                  notes: drill.notes ?? "",
+                  description: drill.description ?? "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",
@@ -377,8 +377,8 @@ function ProgramEditorPageContent() {
                   // Preserve existing type - don't infer from routineId/supersetId
                   type:
                     (drill.type as "exercise" | "drill" | "video") || undefined,
-                  notes: drill.notes || "",
-                  description: drill.description || "",
+                  notes: drill.notes ?? "",
+                  description: drill.description ?? "",
                   sets: drill.sets || undefined,
                   reps: drill.reps || undefined,
                   tempo: drill.tempo || "",

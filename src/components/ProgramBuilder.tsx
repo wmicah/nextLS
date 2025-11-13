@@ -135,7 +135,7 @@ function ExerciseEditDialog({
 }: ExerciseEditDialogProps) {
   const [formData, setFormData] = useState({
     title: exercise?.title || "",
-    description: exercise?.description || "",
+    description: exercise?.description ?? "",
     sets: exercise?.sets || undefined,
     reps: exercise?.reps || undefined,
     tempo: exercise?.tempo || "",

@@ -75,23 +75,25 @@ const DialogContent = React.forwardRef<
               : "",
             className
           )}
-          style={{
-            // Apply custom styles first (if any)
-            ...style,
-            // Then force positioning with inline styles (these will override any conflicting values)
-            position: "fixed",
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            margin: 0,
-            maxWidth: style?.maxWidth || undefined,
-            width: style?.width || undefined,
-            // Disable animations/transitions
-            animation: "none",
-            transition: "none",
-            animationDuration: "0s",
-            transitionDuration: "0s",
-          } as React.CSSProperties}
+          style={
+            {
+              // Apply custom styles first (if any)
+              ...style,
+              // Then force positioning with inline styles (these will override any conflicting values)
+              position: "fixed",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              margin: 0,
+              maxWidth: style?.maxWidth || undefined,
+              width: style?.width || undefined,
+              // Disable animations/transitions
+              animation: "none",
+              transition: "none",
+              animationDuration: "0s",
+              transitionDuration: "0s",
+            } as React.CSSProperties
+          }
           {...props}
         >
           {children}

@@ -92,7 +92,7 @@ interface ExerciseEditDialogProps {
   onClose: () => void;
   onSubmit: (details: {
     title: string;
-    description?: string;
+    description: string; // CHANGED: Make description required, always present (even if empty string)
     sets?: number;
     reps?: number;
     tempo?: string;
@@ -115,35 +115,95 @@ function ExerciseEditDialog({
   onSubmit,
   exercise,
 }: ExerciseEditDialogProps) {
+  // Initialize form data with empty defaults
   const [formData, setFormData] = useState({
-    title: exercise?.title || "",
-    description: exercise?.description || "",
-    sets: exercise?.sets || undefined,
-    reps: exercise?.reps || undefined,
-    tempo: exercise?.tempo || "",
-    duration: exercise?.duration || "",
-    coachInstructions: exercise?.coachInstructions || {
+    title: "",
+    description: "",
+    sets: undefined as number | undefined,
+    reps: undefined as number | undefined,
+    tempo: "",
+    duration: "",
+    coachInstructions: {
       whatToDo: "",
       howToDoIt: "",
-      keyPoints: [],
-      commonMistakes: [],
+      keyPoints: [] as string[],
+      commonMistakes: [] as string[],
       equipment: "",
       setup: "",
     },
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update form data when exercise changes or dialog opens
+  // CRITICAL: Update form data whenever the exercise changes or dialog opens
+  // This ensures the form always shows the current exercise data including description
   useEffect(() => {
     if (isOpen && exercise) {
+      console.log("=== ExerciseEditDialog: Loading exercise data ===");
+      console.log("exercise object:", exercise);
+      console.log("exercise.description:", exercise.description);
+      console.log("exercise.description type:", typeof exercise.description);
+      console.log(
+        "exercise.description === null?",
+        exercise.description === null
+      );
+      console.log(
+        "exercise.description === undefined?",
+        exercise.description === undefined
+      );
+      console.log("exercise.description === ''?", exercise.description === "");
+      console.log(
+        "exercise.description length:",
+        exercise.description?.length || 0
+      );
+
+      // CRITICAL: Always ensure description is a string, never undefined or null
+      const formDescription = exercise.description ?? "";
+      console.log("Setting form description to:", formDescription);
+      console.log("Form description type:", typeof formDescription);
+      console.log("Form description length:", formDescription.length);
+
+      // Update all form fields with the exercise data
       setFormData({
         title: exercise.title || "",
-        description: exercise.description || "",
+        description: formDescription, // Always use the description from exercise
         sets: exercise.sets || undefined,
         reps: exercise.reps || undefined,
         tempo: exercise.tempo || "",
         duration: exercise.duration || "",
-        coachInstructions: exercise.coachInstructions || {
+        coachInstructions: exercise.coachInstructions
+          ? {
+              whatToDo: exercise.coachInstructions.whatToDo || "",
+              howToDoIt: exercise.coachInstructions.howToDoIt || "",
+              keyPoints: exercise.coachInstructions.keyPoints || [],
+              commonMistakes: exercise.coachInstructions.commonMistakes || [],
+              equipment: exercise.coachInstructions.equipment || "",
+              setup: exercise.coachInstructions.setup || "",
+            }
+          : {
+              whatToDo: "",
+              howToDoIt: "",
+              keyPoints: [],
+              commonMistakes: [],
+              equipment: "",
+              setup: "",
+            },
+      });
+
+      console.log(
+        "✅ Form data initialized with description:",
+        formDescription
+      );
+      console.log("✅ Form data description length:", formDescription.length);
+    } else if (!isOpen) {
+      // Reset form data when dialog closes
+      setFormData({
+        title: "",
+        description: "",
+        sets: undefined,
+        reps: undefined,
+        tempo: "",
+        duration: "",
+        coachInstructions: {
           whatToDo: "",
           howToDoIt: "",
           keyPoints: [],
@@ -152,9 +212,6 @@ function ExerciseEditDialog({
           setup: "",
         },
       });
-    }
-    // Reset submitting state when dialog closes
-    if (!isOpen) {
       setIsSubmitting(false);
     }
   }, [exercise, isOpen]);
@@ -162,8 +219,25 @@ function ExerciseEditDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+
+    console.log("=== ExerciseEditDialog: Form submitted ===");
+    console.log("formData:", formData);
+    console.log("formData.description:", formData.description);
+    console.log("formData.description type:", typeof formData.description);
+    console.log("formData.description === ''?", formData.description === "");
+    console.log("formData.description length:", formData.description?.length);
+
     setIsSubmitting(true);
-    onSubmit(formData);
+    // CRITICAL: Ensure description is always included, even if empty string
+    // Explicitly pass description to guarantee it's always present
+    const submitData = {
+      ...formData,
+      description: formData.description ?? "", // Force description to always be a string
+    };
+    console.log("📤 Submitting form data:", submitData);
+    console.log("📤 Description in submit:", submitData.description);
+    console.log("📤 Description type:", typeof submitData.description);
+    onSubmit(submitData);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -193,37 +267,20 @@ function ExerciseEditDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="title" className="text-gray-400 text-sm">
-                Exercise Title
-              </Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={e =>
-                  setFormData(prev => ({ ...prev, title: e.target.value }))
-                }
-                className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="Exercise name"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="duration" className="text-gray-400 text-sm">
-                Duration (optional)
-              </Label>
-              <Input
-                id="duration"
-                value={formData.duration}
-                onChange={e =>
-                  setFormData(prev => ({ ...prev, duration: e.target.value }))
-                }
-                className="bg-[#353A3A] border-gray-600 text-white"
-                placeholder="e.g., 30 seconds"
-              />
-            </div>
+          <div>
+            <Label htmlFor="title" className="text-gray-400 text-sm">
+              Exercise Title
+            </Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={e =>
+                setFormData(prev => ({ ...prev, title: e.target.value }))
+              }
+              className="bg-[#353A3A] border-gray-600 text-white"
+              placeholder="Exercise name"
+              required
+            />
           </div>
 
           {/* Description */}
@@ -646,6 +703,13 @@ export default function SeamlessRoutineModal({
     "details" | "exercises" | "review"
   >("details");
 
+  // CRITICAL: Reset submitting state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
   // Superset/Circuit management state
   const [isSupersetModalOpen, setIsSupersetModalOpen] = useState(false);
   const [pendingSupersetExercise, setPendingSupersetExercise] =
@@ -675,10 +739,32 @@ export default function SeamlessRoutineModal({
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
+  // CRITICAL: Fetch the routine fresh from the database when editing
+  // This ensures we get the complete data including descriptions
+  // The routine prop from routines.list may not have all fields
+  const { data: fetchedRoutine, isLoading: isLoadingRoutine } =
+    trpc.routines.get.useQuery(
+      { id: routine?.id || "" },
+      {
+        enabled: isOpen && !!routine?.id, // Only fetch when modal is open and we have a routine ID
+        refetchOnWindowFocus: false,
+        refetchOnMount: true, // Always refetch when component mounts
+      }
+    );
+
+  // Use the fetched routine if available, otherwise fall back to the prop
+  // The fetched routine will have complete data including descriptions
+  // CRITICAL: Only use fetchedRoutine when it's available and we're editing
+  // If we're creating a new routine (no routine.id), don't use fetchedRoutine
+  const routineToUse =
+    routine?.id && fetchedRoutine
+      ? fetchedRoutine // Use fetched routine when editing (has complete data)
+      : routine; // Use prop routine when creating new or fetch hasn't completed yet
+
   // Handle exercise edit submit
   const handleExerciseEditSubmit = (details: {
     title: string;
-    description?: string;
+    description: string; // CHANGED: Make description required, always present
     sets?: number;
     reps?: number;
     tempo?: string;
@@ -694,34 +780,72 @@ export default function SeamlessRoutineModal({
   }) => {
     if (!editingExercise) return;
 
+    console.log("=== handleExerciseEditSubmit ===");
+    console.log("details:", details);
+    console.log("details.description:", details.description);
+    console.log("details.description type:", typeof details.description);
+    console.log("details has description property:", "description" in details);
+    console.log("editingExercise before update:", editingExercise);
+
     hasUserMadeChanges.current = true;
+
+    // CRITICAL: description is now required, but we still ensure it's always a string
+    // Use explicit check to handle any edge cases
+    const descriptionValue =
+      typeof details.description === "string"
+        ? details.description
+        : details.description ?? "";
+
+    console.log("🔍 Description value determined:", {
+      detailsDescription: details.description,
+      detailsDescriptionType: typeof details.description,
+      detailsHasDescription: "description" in details,
+      descriptionValue,
+      descriptionValueType: typeof descriptionValue,
+      descriptionIsString: typeof descriptionValue === "string",
+    });
+
     const updatedExercise: RoutineExercise = {
-      id: editingExercise.id,
+      ...editingExercise, // Spread all existing fields first (preserves superset fields, video fields, etc.)
       title: details.title,
-      type: editingExercise.type,
-      description: details.description || "",
-      notes: editingExercise.notes || "", // Keep existing notes
+      description: descriptionValue, // ALWAYS set explicitly, never rely on optional property
       sets: details.sets,
       reps: details.reps,
       tempo: details.tempo || "",
       duration: details.duration || "",
-      videoUrl: editingExercise.videoUrl,
-      videoId: editingExercise.videoId,
-      videoTitle: editingExercise.videoTitle,
-      videoThumbnail: editingExercise.videoThumbnail,
-      supersetId: editingExercise.supersetId,
-      supersetOrder: editingExercise.supersetOrder,
-      coachInstructions: details.coachInstructions,
+      coachInstructions:
+        details.coachInstructions || editingExercise.coachInstructions,
     };
+
+    console.log("updatedExercise after update:", updatedExercise);
+    console.log("updatedExercise.description:", updatedExercise.description);
 
     // Check if the exercise already exists in the array
     setExercises(prev => {
       const existingIndex = prev.findIndex(ex => ex.id === editingExercise.id);
       if (existingIndex >= 0) {
         // Exercise exists - update it
-        return prev.map(ex =>
+        const updated = prev.map(ex =>
           ex.id === editingExercise.id ? updatedExercise : ex
         );
+        console.log("✅ Exercises array updated");
+        const updatedExerciseInArray = updated.find(
+          ex => ex.id === editingExercise.id
+        );
+        console.log("Updated exercise in array:", updatedExerciseInArray);
+        console.log(
+          "Description in updated exercise:",
+          updatedExerciseInArray?.description
+        );
+        console.log(
+          "Description type:",
+          typeof updatedExerciseInArray?.description
+        );
+        console.log(
+          "Description length:",
+          updatedExerciseInArray?.description?.length || 0
+        );
+        return updated;
       } else {
         // New exercise - add it
         return [...prev, updatedExercise];
@@ -759,7 +883,7 @@ export default function SeamlessRoutineModal({
               title: updatedData.title,
               sets: updatedData.sets,
               reps: updatedData.reps,
-              description: updatedData.description,
+              description: updatedData.description || "",
               // Only set superset description on the first exercise
               supersetDescription:
                 exercise.supersetOrder === 1
@@ -841,49 +965,147 @@ export default function SeamlessRoutineModal({
   const hasUserMadeChanges = useRef(false);
   const lastRoutineIdRef = useRef<string | null>(null);
 
-  // Reset form ONLY when modal first opens (not when routine changes)
+  // Load routine data when modal opens
+  // CRITICAL: Use a separate effect that runs when fetchedRoutine becomes available
+  // This ensures we get complete data including descriptions when editing
   useEffect(() => {
-    if (isOpen && !isInitialOpen.current) {
-      // Modal just opened - reset everything
+    if (!isOpen) {
+      // Modal closed - reset flags for next open
+      isInitialOpen.current = false;
+      hasUserMadeChanges.current = false;
+      lastRoutineIdRef.current = null;
+      return;
+    }
+
+    // Modal is open - check if we need to load routine data
+    if (!isInitialOpen.current) {
+      // Modal just opened - mark as opened but wait for data if editing
       isInitialOpen.current = true;
       hasUserMadeChanges.current = false;
       lastRoutineIdRef.current = routine?.id || null;
-      if (routine) {
-        setName(routine.name);
-        setDescription(routine.description);
-        setExercises(routine.exercises);
-        setCurrentStep("details");
-      } else {
+
+      if (!routine?.id) {
+        // Creating new routine - initialize empty
         setName("");
         setDescription("");
         setExercises([]);
         setCurrentStep("details");
       }
-    } else if (!isOpen) {
-      // Modal closed - reset flags for next open
-      isInitialOpen.current = false;
-      hasUserMadeChanges.current = false;
-      lastRoutineIdRef.current = null;
-    } else if (isOpen && routine) {
-      // Modal is open - check if this is a different routine
-      const isDifferentRoutine = lastRoutineIdRef.current !== routine.id;
-      if (isDifferentRoutine) {
-        // Different routine - reset everything
-        lastRoutineIdRef.current = routine.id;
-        hasUserMadeChanges.current = false;
-        setName(routine.name);
-        setDescription(routine.description);
-        setExercises(routine.exercises);
-        setCurrentStep("details");
-      } else if (!hasUserMadeChanges.current) {
-        // Same routine, no user changes - only update name/description if they changed
-        setName(routine.name);
-        setDescription(routine.description);
-        // DON'T update exercises or reset step - preserve user's work
-      }
-      // If user has made changes, don't overwrite anything
+      // If editing, wait for fetchedRoutine in the next effect
     }
-  }, [isOpen, routine]);
+  }, [isOpen, routine?.id]);
+
+  // Load routine data when fetchedRoutine becomes available (for editing)
+  // This effect runs when fetchedRoutine loads from the database
+  useEffect(() => {
+    if (!isOpen || !routine?.id) return;
+    if (isLoadingRoutine) return; // Still loading
+    if (!fetchedRoutine) return; // Not yet available
+    if (!isInitialOpen.current) return; // Modal hasn't been marked as opened yet
+
+    // Check if this is a different routine or if we haven't loaded this one yet
+    const isDifferentRoutine = lastRoutineIdRef.current !== fetchedRoutine.id;
+    const hasNotLoadedYet = lastRoutineIdRef.current === null;
+
+    // Only load if it's a different routine, or if we haven't loaded yet and user hasn't made changes
+    if (!isDifferentRoutine && !hasNotLoadedYet) {
+      // Same routine already loaded - don't reload unless user hasn't made changes
+      if (hasUserMadeChanges.current) {
+        console.log("⚠️ Skipping reload - user has made changes");
+        return;
+      }
+    }
+
+    console.log("=== Loading routine into modal (from fetchedRoutine) ===");
+    console.log("routine from database:", fetchedRoutine);
+    console.log("routine.exercises:", fetchedRoutine.exercises);
+    console.log(
+      "routine.exercises descriptions:",
+      fetchedRoutine.exercises.map((ex: any) => ({
+        id: ex.id,
+        title: ex.title,
+        description: ex.description,
+        descriptionType: typeof ex.description,
+        descriptionIsNull: ex.description === null,
+        descriptionIsUndefined: ex.description === undefined,
+        descriptionLength: ex.description?.length || 0,
+      }))
+    );
+
+    setName(fetchedRoutine.name);
+    setDescription(fetchedRoutine.description ?? "");
+
+    // Ensure descriptions are preserved when loading from database
+    const loadedExercises: RoutineExercise[] = fetchedRoutine.exercises.map(
+      (ex: any) => {
+        // The database returns coachInstructions as flat fields, not nested
+        const exAny = ex as any;
+        const loaded: RoutineExercise = {
+          id: ex.id,
+          title: ex.title,
+          type: (ex.type || "exercise") as
+            | "exercise"
+            | "drill"
+            | "video"
+            | "routine"
+            | "superset",
+          description: ex.description ?? "", // Convert null/undefined to empty string
+          notes: ex.notes ?? "",
+          sets: ex.sets ?? undefined,
+          reps: ex.reps ?? undefined,
+          tempo: ex.tempo ?? "",
+          duration: ex.duration ?? "",
+          videoUrl: ex.videoUrl ?? "",
+          videoId: ex.videoId ?? undefined,
+          videoTitle: ex.videoTitle ?? undefined,
+          videoThumbnail: ex.videoThumbnail ?? undefined,
+          supersetId: ex.supersetId ?? undefined,
+          supersetOrder: ex.supersetOrder ?? undefined,
+          supersetDescription: ex.supersetDescription ?? undefined,
+          coachInstructions:
+            exAny.coachInstructionsWhatToDo || exAny.coachInstructionsHowToDoIt
+              ? {
+                  whatToDo: exAny.coachInstructionsWhatToDo ?? "",
+                  howToDoIt: exAny.coachInstructionsHowToDoIt ?? "",
+                  keyPoints: exAny.coachInstructionsKeyPoints || [],
+                  commonMistakes: exAny.coachInstructionsCommonMistakes || [],
+                  equipment: exAny.coachInstructionsEquipment ?? undefined,
+                  setup: exAny.coachInstructionsSetup ?? undefined,
+                }
+              : undefined,
+        };
+        console.log(`Loaded exercise ${ex.title}:`, {
+          description: loaded.description,
+          descriptionType: typeof loaded.description,
+          originalDescription: ex.description,
+          originalDescriptionType: typeof ex.description,
+          originalIsNull: ex.description === null,
+          originalIsUndefined: ex.description === undefined,
+          hasDescription:
+            loaded.description !== undefined && loaded.description !== null,
+          descriptionLength: loaded.description?.length || 0,
+        });
+        return loaded;
+      }
+    );
+
+    console.log("✅ Loaded exercises into state:", loadedExercises);
+    console.log(
+      "Loaded exercises descriptions:",
+      loadedExercises.map(ex => ({
+        id: ex.id,
+        title: ex.title,
+        description: ex.description,
+        descriptionType: typeof ex.description,
+        descriptionLength: ex.description?.length || 0,
+      }))
+    );
+
+    setExercises(loadedExercises);
+    setCurrentStep("details");
+    lastRoutineIdRef.current = fetchedRoutine.id;
+    hasUserMadeChanges.current = false; // Reset after loading
+  }, [isOpen, routine?.id, fetchedRoutine, isLoadingRoutine]);
 
   // Handle video selection from library - ensure we stay on exercises step
   useEffect(() => {
@@ -927,7 +1149,8 @@ export default function SeamlessRoutineModal({
         id: newExerciseId,
         title: video.title,
         type: "video",
-        description: video.description || "",
+        description: video.description ?? "",
+        notes: undefined, // No notes initially for videos
         duration: video.duration || "",
         videoUrl: video.url || "",
         videoId: video.id,
@@ -935,12 +1158,27 @@ export default function SeamlessRoutineModal({
         videoThumbnail: video.thumbnail || "",
       };
 
+      console.log("=== Adding video to routine ===");
+      console.log("Video object:", video);
+      console.log("Video description:", video.description);
+      console.log("Video description type:", typeof video.description);
+      console.log("New exercise:", newExercise);
+      console.log("New exercise description:", newExercise.description);
+      console.log(
+        "New exercise description type:",
+        typeof newExercise.description
+      );
+
       // Mark that user has made changes
       hasUserMadeChanges.current = true;
       const updated = [...prev, newExercise];
       console.log(
         "✅ Video added to exercises:",
         newExercise.title,
+        "Description:",
+        newExercise.description,
+        "Description length:",
+        newExercise.description?.length || 0,
         "Total exercises:",
         updated.length
       );
@@ -950,15 +1188,43 @@ export default function SeamlessRoutineModal({
 
   // Routine mutations
   const createRoutine = trpc.routines.create.useMutation({
-    onSuccess: () => {
+    onSuccess: createdRoutine => {
+      console.log(
+        "🎉 [CREATE SUCCESS] Routine created successfully:",
+        createdRoutine
+      );
+      console.log("🎉 [CREATE SUCCESS] Exercises:", createdRoutine.exercises);
+      console.log(
+        "🎉 [CREATE SUCCESS] Exercise descriptions:",
+        createdRoutine.exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+          descriptionLength: ex.description?.length || 0,
+        }))
+      );
+
       utils.routines.list.invalidate();
+
       toast({
         title: "Routine created! 🎉",
         description: "Your new routine has been saved successfully.",
       });
-      onClose();
+
+      // CRITICAL: Reset submitting state and close modal
+      // Use requestAnimationFrame to ensure state update happens before close
+      requestAnimationFrame(() => {
+        setIsSubmitting(false);
+        // Close modal after a brief delay to allow state update to propagate
+        setTimeout(() => {
+          onClose();
+        }, 50);
+      });
     },
     onError: (error: unknown) => {
+      console.error("Error creating routine:", error);
+      setIsSubmitting(false);
       toast({
         title: "Error",
         description:
@@ -970,23 +1236,51 @@ export default function SeamlessRoutineModal({
 
   const updateRoutine = trpc.routines.update.useMutation({
     onSuccess: updatedRoutine => {
+      console.log(
+        "🎉 [UPDATE SUCCESS] Routine updated successfully:",
+        updatedRoutine
+      );
+      console.log("🎉 [UPDATE SUCCESS] Exercises:", updatedRoutine.exercises);
+      console.log(
+        "🎉 [UPDATE SUCCESS] Exercise descriptions:",
+        updatedRoutine.exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+          descriptionLength: ex.description?.length || 0,
+        }))
+      );
+
       // Invalidate all routine-related queries to ensure fresh data everywhere
       utils.routines.list.invalidate();
       // Invalidate the specific routine query if we have an ID
-      if (routine?.id) {
-        utils.routines.get.invalidate({ id: routine.id });
+      if (routineToUse?.id) {
+        utils.routines.get.invalidate({ id: routineToUse.id });
       }
       // Also invalidate all routine-related queries that might be cached
       utils.routines.getRoutineAssignments.invalidate();
       utils.routines.getClientRoutineAssignments.invalidate();
       utils.routines.getRoutineAssignmentsForCalendar.invalidate();
+
       toast({
         title: "Routine updated! ✨",
         description: "Your routine has been updated successfully.",
       });
-      onClose();
+
+      // CRITICAL: Reset submitting state and close modal
+      // Use requestAnimationFrame to ensure state update happens before close
+      requestAnimationFrame(() => {
+        setIsSubmitting(false);
+        // Close modal after a brief delay to allow state update to propagate
+        setTimeout(() => {
+          onClose();
+        }, 50);
+      });
     },
     onError: (error: unknown) => {
+      console.error("Error updating routine:", error);
+      setIsSubmitting(false);
       toast({
         title: "Error",
         description:
@@ -1008,33 +1302,135 @@ export default function SeamlessRoutineModal({
 
     setIsSubmitting(true);
 
+    // Add a timeout fallback to prevent infinite loading state
+    const timeoutId = setTimeout(() => {
+      console.error("⏱️ Mutation timeout - resetting submitting state");
+      setIsSubmitting(false);
+      toast({
+        title: "Timeout",
+        description:
+          "The request is taking longer than expected. Please try again.",
+        variant: "destructive",
+      });
+    }, 30000); // 30 second timeout
+
     try {
-      if (routine?.id) {
+      console.log("=== Saving routine ===");
+      console.log("exercises before mapping:", exercises);
+      console.log(
+        "exercises descriptions:",
+        exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+        }))
+      );
+
+      const mappedExercises = exercises.map((exercise, index) => {
+        // CRITICAL: Always explicitly include description, even if empty string
+        // Don't rely on spread operator - explicitly set every field we need
+        const mapped: any = {
+          title: exercise.title,
+          type: exercise.type,
+          description: exercise.description ?? "", // Always set to string, never undefined
+          notes: exercise.notes ?? "",
+          sets: exercise.sets,
+          reps: exercise.reps,
+          tempo: exercise.tempo,
+          duration: exercise.duration,
+          videoId: exercise.videoId,
+          videoTitle: exercise.videoTitle,
+          videoThumbnail: exercise.videoThumbnail,
+          videoUrl: exercise.videoUrl,
+          supersetId: exercise.supersetId,
+          supersetOrder: exercise.supersetOrder,
+          supersetDescription: exercise.supersetDescription,
+          supersetInstructions: (exercise as any).supersetInstructions,
+          supersetNotes: (exercise as any).supersetNotes,
+          order: index + 1,
+        };
+        console.log(`Exercise ${index} (${exercise.title}):`, {
+          description: mapped.description,
+          descriptionType: typeof mapped.description,
+          hasDescription:
+            mapped.description !== undefined && mapped.description !== null,
+          descriptionLength: mapped.description?.length || 0,
+          originalExercise: exercise,
+        });
+        return mapped;
+      });
+
+      console.log("✅ Mapped exercises for save:", mappedExercises);
+      console.log(
+        "Mapped exercises descriptions:",
+        mappedExercises.map((ex, idx) => ({
+          index: idx,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+        }))
+      );
+
+      if (routineToUse?.id) {
         // Update existing routine
-        await updateRoutine.mutateAsync({
-          id: routine.id,
+        console.log("🔄 Updating existing routine:", routineToUse.id);
+        console.log("🔄 Payload being sent:", {
+          id: routineToUse.id,
           name: name.trim(),
           description: description.trim(),
-          exercises: exercises.map((exercise, index) => ({
-            ...exercise,
-            order: index + 1,
+          exercises: mappedExercises.map(ex => ({
+            title: ex.title,
+            description: ex.description,
+            descriptionType: typeof ex.description,
+            descriptionLength: ex.description?.length || 0,
           })),
         });
+        await updateRoutine.mutateAsync({
+          id: routineToUse.id,
+          name: name.trim(),
+          description: description.trim(),
+          exercises: mappedExercises,
+        });
+        // Clear timeout on success
+        clearTimeout(timeoutId);
+        // Note: setIsSubmitting(false) is handled in onSuccess/onError callbacks
       } else {
         // Create new routine
+        console.log("✨ Creating new routine");
+        console.log("✨ Payload being sent:", {
+          name: name.trim(),
+          description: description.trim(),
+          exercises: mappedExercises.map(ex => ({
+            title: ex.title,
+            description: ex.description,
+            descriptionType: typeof ex.description,
+            descriptionLength: ex.description?.length || 0,
+          })),
+        });
         await createRoutine.mutateAsync({
           name: name.trim(),
           description: description.trim(),
-          exercises: exercises.map((exercise, index) => ({
-            ...exercise,
-            order: index + 1,
-          })),
+          exercises: mappedExercises,
         });
+        // Clear timeout on success
+        clearTimeout(timeoutId);
+        // Note: setIsSubmitting(false) is handled in onSuccess/onError callbacks
       }
     } catch (error) {
+      // Clear timeout on error
+      clearTimeout(timeoutId);
+      // This catch block handles any unexpected errors outside the mutation
       console.error("Error saving routine:", error);
-    } finally {
       setIsSubmitting(false);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save routine. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1533,6 +1929,24 @@ export default function SeamlessRoutineModal({
                                     setIsSupersetDescriptionModalOpen(true);
                                   } else {
                                     // Regular exercise - open individual edit dialog
+                                    // CRITICAL: Log the exercise to verify it has description
+                                    console.log(
+                                      "🔍 [EDIT CLICK] Exercise being edited:",
+                                      {
+                                        id: exercise.id,
+                                        title: exercise.title,
+                                        description: exercise.description,
+                                        descriptionType:
+                                          typeof exercise.description,
+                                        descriptionIsUndefined:
+                                          exercise.description === undefined,
+                                        descriptionIsNull:
+                                          exercise.description === null,
+                                        descriptionLength:
+                                          exercise.description?.length || 0,
+                                        fullExercise: exercise,
+                                      }
+                                    );
                                     setEditingExercise(exercise);
                                     setIsExerciseEditDialogOpen(true);
                                   }
@@ -1831,7 +2245,7 @@ export default function SeamlessRoutineModal({
                   title: ex.title,
                   sets: ex.sets,
                   reps: ex.reps,
-                  description: ex.description,
+                  description: ex.description || "",
                 })),
                 supersetDescription: (editingSuperset.exercises[0] as any)
                   ?.supersetDescription,
