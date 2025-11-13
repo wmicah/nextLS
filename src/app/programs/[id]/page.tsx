@@ -13,6 +13,16 @@ import type {
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroupItem } from "@/components/ui/radio-group";
 
 // Types for ProgramBuilder integration
 type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
@@ -30,6 +40,9 @@ function ProgramEditorPageContent() {
   const [programBuilderWeeks, setProgramBuilderWeeks] = useState<
     ProgramBuilderWeek[]
   >([]);
+  const [updateScope, setUpdateScope] = useState<"all" | "future">("all");
+  const [showUpdateScopeDialog, setShowUpdateScopeDialog] = useState(false);
+  const [pendingSave, setPendingSave] = useState<(() => void) | null>(null);
 
   // Video Library Dialog state
   const [isVideoLibraryOpen, setIsVideoLibraryOpen] = useState(false);
@@ -51,16 +64,41 @@ function ProgramEditorPageContent() {
       }
     );
 
+  // Check if program has active assignments
+  const { data: programAssignments = [] } =
+    trpc.programs.getProgramAssignments.useQuery(
+      { programId: programId },
+      { enabled: !!programId }
+    );
+
+  const hasActiveAssignments = programAssignments.some(
+    (assignment: any) => !assignment.completedAt
+  );
+
   // Get utils for cache invalidation
   const utils = trpc.useUtils();
 
   // Mutations
   const updateProgramMutation = trpc.programs.update.useMutation({
-    onSuccess: () => {
+    onSuccess: data => {
       console.log("=== SAVE SUCCESS - REFETCHING PROGRAM ===");
       setLocalIsSaving(false);
       setLocalLastSaved(new Date());
       isRefetchingAfterSaveRef.current = true;
+
+      // Check if a new program was created (when updateScope is "future" with existing assignments)
+      if (data && data.id !== programId) {
+        toast({
+          title: "New program version created",
+          description:
+            "A new program version was created to preserve existing assignments. You are now editing the new version.",
+        });
+
+        // Redirect to the new program
+        router.push(`/programs/${data.id}`);
+        return;
+      }
+
       toast({
         title: "Program saved",
         description: "Your program has been saved successfully.",
@@ -447,7 +485,20 @@ function ProgramEditorPageContent() {
       return;
     }
 
+    // If program has active assignments, show update scope dialog
+    if (hasActiveAssignments) {
+      setPendingSave(() => () => performSave(weeks));
+      setShowUpdateScopeDialog(true);
+      return;
+    }
+
+    // No active assignments, proceed with save
+    await performSave(weeks);
+  };
+
+  const performSave = async (weeks: ProgramBuilderWeek[]) => {
     setLocalIsSaving(true);
+    setShowUpdateScopeDialog(false);
 
     try {
       // Convert ProgramBuilder weeks back to database format
@@ -564,6 +615,7 @@ function ProgramEditorPageContent() {
         title: program.title || "",
         description: program.description || "",
         weeks: convertedWeeks,
+        updateScope: updateScope,
       });
 
       console.log("updateProgramMutation completed successfully");
@@ -581,6 +633,13 @@ function ProgramEditorPageContent() {
       });
     } finally {
       setLocalIsSaving(false);
+    }
+  };
+
+  const handleConfirmSave = () => {
+    if (pendingSave) {
+      pendingSave();
+      setPendingSave(null);
     }
   };
 
@@ -634,6 +693,95 @@ function ProgramEditorPageContent() {
         }}
         editingItem={null}
       />
+
+      {/* Update Scope Dialog */}
+      <Dialog
+        open={showUpdateScopeDialog}
+        onOpenChange={setShowUpdateScopeDialog}
+      >
+        <DialogContent className="bg-[#2A3133] border-gray-600">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Update Program Scope
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              This program has active client assignments. Choose how to apply
+              your changes:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-3">
+              <div
+                className="flex items-start space-x-3 p-4 rounded-lg border border-gray-600 hover:bg-gray-700/50 cursor-pointer"
+                onClick={() => setUpdateScope("all")}
+              >
+                <RadioGroupItem
+                  value="all"
+                  id="all"
+                  className="mt-1"
+                  checked={updateScope === "all"}
+                  onChange={() => setUpdateScope("all")}
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor="all"
+                    className="text-white font-medium cursor-pointer"
+                  >
+                    Update All Assignments
+                  </Label>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Apply changes to ALL assigned clients. This updates the
+                    program for all existing assignments.
+                  </p>
+                </div>
+              </div>
+              <div
+                className="flex items-start space-x-3 p-4 rounded-lg border border-gray-600 hover:bg-gray-700/50 cursor-pointer"
+                onClick={() => setUpdateScope("future")}
+              >
+                <RadioGroupItem
+                  value="future"
+                  id="future"
+                  className="mt-1"
+                  checked={updateScope === "future"}
+                  onChange={() => setUpdateScope("future")}
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor="future"
+                    className="text-white font-medium cursor-pointer"
+                  >
+                    Don't Change Existing Assignments
+                  </Label>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Create a new program version. All existing assignments keep
+                    the original program unchanged. New assignments will use the
+                    updated version.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowUpdateScopeDialog(false);
+                setPendingSave(null);
+              }}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmSave}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Save Program
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
