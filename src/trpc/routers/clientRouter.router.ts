@@ -5133,27 +5133,251 @@ export const clientRouterRouter = router({
         // No video submission found, create one with just the comment
         // Check if drillId is a valid ProgramDrill ID or a composite key
         let validDrillId: string | null = null;
+        let drillTitle = "Unknown Exercise";
+        let programName = "";
+        let exerciseName = "";
+
+        console.log(
+          `🔍 Looking up drill details for drillId: ${input.drillId}`
+        );
 
         // First, try to find if it's a real ProgramDrill ID
         const existingDrill = await db.programDrill.findUnique({
           where: { id: input.drillId },
+          include: {
+            day: {
+              include: {
+                week: {
+                  include: {
+                    program: {
+                      select: {
+                        title: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         });
 
         if (existingDrill) {
+          console.log(`✅ Found ProgramDrill: ${existingDrill.title}`);
           validDrillId = input.drillId;
+          drillTitle = existingDrill.title;
+          programName = existingDrill.day?.week?.program?.title || "";
         } else {
+          console.log(
+            `❌ Not a direct ProgramDrill ID, checking composite formats...`
+          );
+          // If it's a composite key, check if it's a routine exercise
+          // Format could be: "drillId-routine-exerciseId" or "routineAssignmentId-exerciseId"
+          if (input.drillId.includes("-routine-")) {
+            // Format: "drillId-routine-exerciseId" (routine exercise within a program)
+            const parts = input.drillId.split("-routine-");
+            const programDrillId = parts[0];
+            const exerciseId = parts[1];
+
+            console.log(
+              `🔍 Parsed routine exercise format: programDrillId=${programDrillId}, exerciseId=${exerciseId}`
+            );
+
+            // Try to find the program drill and exercise
+            const programDrill = await db.programDrill.findUnique({
+              where: { id: programDrillId },
+              include: {
+                day: {
+                  include: {
+                    week: {
+                      include: {
+                        program: {
+                          select: {
+                            title: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                routine: {
+                  include: {
+                    exercises: {
+                      select: {
+                        id: true,
+                        title: true,
+                      },
+                    },
+                  },
+                },
+              },
+            });
+
+            if (programDrill) {
+              console.log(
+                `✅ Found program drill: ${
+                  programDrill.title
+                }, routine exercises: ${
+                  programDrill.routine?.exercises?.length || 0
+                }`
+              );
+              if (programDrill.routine?.exercises) {
+                const exercise = programDrill.routine.exercises.find(
+                  ex => ex.id === exerciseId
+                );
+                if (exercise) {
+                  programName = programDrill.day?.week?.program?.title || "";
+                  exerciseName = exercise.title;
+                  drillTitle = exerciseName;
+                  console.log(
+                    `✅ Found exercise: ${exerciseName} in program: ${programName}`
+                  );
+                } else {
+                  console.log(`❌ Exercise ${exerciseId} not found in routine`);
+                }
+              } else {
+                console.log(`❌ Program drill has no routine or exercises`);
+              }
+            } else {
+              console.log(`❌ Program drill ${programDrillId} not found`);
+            }
+          } else if (
+            input.drillId.includes("-") &&
+            !input.drillId.includes("-routine-")
+          ) {
+            // Format: "routineAssignmentId-exerciseId" (standalone routine exercise)
+            // Split on first dash only, in case exerciseId has dashes (unlikely but safe)
+            const firstDashIndex = input.drillId.indexOf("-");
+            const routineAssignmentId = input.drillId.substring(
+              0,
+              firstDashIndex
+            );
+            const exerciseId = input.drillId.substring(firstDashIndex + 1);
+
+            console.log(
+              `🔍 Parsed standalone routine format: routineAssignmentId=${routineAssignmentId}, exerciseId=${exerciseId}`
+            );
+
+            const routineAssignment = await db.routineAssignment.findUnique({
+              where: { id: routineAssignmentId },
+              include: {
+                routine: {
+                  select: {
+                    name: true,
+                    exercises: {
+                      select: {
+                        id: true,
+                        title: true,
+                      },
+                    },
+                  },
+                },
+              },
+            });
+
+            if (routineAssignment) {
+              console.log(
+                `✅ Found routine assignment: ${
+                  routineAssignment.routine?.name
+                }, exercises: ${
+                  routineAssignment.routine?.exercises?.length || 0
+                }`
+              );
+              if (routineAssignment.routine?.exercises) {
+                const exercise = routineAssignment.routine.exercises.find(
+                  ex => ex.id === exerciseId
+                );
+                if (exercise) {
+                  programName = routineAssignment.routine.name;
+                  exerciseName = exercise.title;
+                  drillTitle = exerciseName;
+                  console.log(
+                    `✅ Found exercise: ${exerciseName} in routine: ${programName}`
+                  );
+                } else {
+                  console.log(`❌ Exercise ${exerciseId} not found in routine`);
+                }
+              } else {
+                console.log(`❌ Routine assignment has no exercises`);
+              }
+            } else {
+              console.log(
+                `❌ Routine assignment ${routineAssignmentId} not found`
+              );
+            }
+          } else {
+            console.log(`❌ Drill ID format not recognized: ${input.drillId}`);
+
+            // Fallback: Try to find the drill in the client's assigned programs
+            console.log(
+              `🔍 Attempting fallback lookup in client's program assignments...`
+            );
+            const programAssignments = await db.programAssignment.findMany({
+              where: {
+                clientId: client.id,
+                completedAt: null, // Only active assignments
+              },
+              include: {
+                program: {
+                  include: {
+                    weeks: {
+                      include: {
+                        days: {
+                          include: {
+                            drills: {
+                              select: {
+                                id: true,
+                                title: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            });
+
+            // Search through all program assignments for the drill
+            for (const assignment of programAssignments) {
+              for (const week of assignment.program.weeks) {
+                for (const day of week.days) {
+                  const foundDrill = day.drills.find(
+                    d => d.id === input.drillId
+                  );
+                  if (foundDrill) {
+                    drillTitle = foundDrill.title;
+                    programName = assignment.program.title;
+                    validDrillId = input.drillId; // Mark as valid since we found it
+                    console.log(
+                      `✅ Found drill via fallback: ${drillTitle} in ${programName}`
+                    );
+                    break;
+                  }
+                }
+                if (drillTitle !== "Unknown Exercise") break;
+              }
+              if (drillTitle !== "Unknown Exercise") break;
+            }
+          }
+
           // If it's a composite key (routineAssignmentId-exerciseId),
           // we'll set drillId to null since it's not a real ProgramDrill
           console.log(
-            `Drill ID ${input.drillId} is not a valid ProgramDrill ID, treating as routine exercise`
+            `Final result - drillTitle: ${drillTitle}, programName: ${programName}`
           );
         }
+
+        // Create human-readable title for the video submission
+        const submissionTitle = programName
+          ? `Comment for "${drillTitle}" in ${programName}`
+          : `Comment for "${drillTitle}"`;
 
         const newVideoSubmission = await db.clientVideoSubmission.create({
           data: {
             clientId: client.id,
             coachId: client.coachId!,
-            title: `Comment for Exercise ${input.drillId}`,
+            title: submissionTitle,
             description: "Client feedback and comments",
             comment: input.comment,
             videoUrl: "", // Empty since no video was uploaded
@@ -5162,10 +5386,10 @@ export const clientRouterRouter = router({
           },
         });
 
-        // Create message in conversation
-        const messageContent = validDrillId
-          ? `💬 **Exercise Feedback for Drill ${input.drillId}**\n\n${input.comment}`
-          : `💬 **Exercise Feedback for Routine Exercise ${input.drillId}**\n\n${input.comment}`;
+        // Create message in conversation with human-readable names
+        const messageContent = programName
+          ? `💬 **Exercise Feedback: "${drillTitle}"**\n📋 Program: ${programName}\n\n${input.comment}`
+          : `💬 **Exercise Feedback: "${drillTitle}"**\n\n${input.comment}`;
 
         await db.message.create({
           data: {
@@ -5181,18 +5405,24 @@ export const clientRouterRouter = router({
           data: { updatedAt: new Date() },
         });
 
-        // Create notification for coach (only if coach exists)
+        // Create notification for coach (only if coach exists) with human-readable names
         if (client.coachId) {
+          const notificationMessage = programName
+            ? `Client commented on "${drillTitle}" in ${programName}: "${input.comment.substring(
+                0,
+                100
+              )}${input.comment.length > 100 ? "..." : ""}"`
+            : `Client commented on "${drillTitle}": "${input.comment.substring(
+                0,
+                100
+              )}${input.comment.length > 100 ? "..." : ""}"`;
+
           await db.notification.create({
             data: {
               userId: client.coachId,
               type: "MESSAGE",
               title: `New client comment from ${client.name}`,
-              message: `Client added a comment for drill ${
-                input.drillId
-              }: "${input.comment.substring(0, 100)}${
-                input.comment.length > 100 ? "..." : ""
-              }"`,
+              message: notificationMessage,
               data: {
                 videoSubmissionId: newVideoSubmission.id,
                 clientId: client.id,
