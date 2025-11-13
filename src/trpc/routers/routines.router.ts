@@ -75,7 +75,18 @@ export const routinesRouter = router({
       },
     });
 
-    return routines;
+    // CRITICAL: Ensure description is always a string, never null/undefined
+    // Convert null descriptions to empty strings for consistency
+    const routinesWithDescriptions = routines.map(routine => ({
+      ...routine,
+      exercises: routine.exercises.map(ex => ({
+        ...ex,
+        description: ex.description ?? "", // Convert null/undefined to empty string
+        notes: ex.notes ?? "",
+      })),
+    }));
+
+    return routinesWithDescriptions;
   }),
 
   // Get a specific routine by ID
@@ -106,7 +117,46 @@ export const routinesRouter = router({
         });
       }
 
-      return routine;
+      // CRITICAL: Ensure description is always a string, never null/undefined
+      // Convert null descriptions to empty strings for consistency
+      const routineWithDescriptions = {
+        ...routine,
+        exercises: routine.exercises.map(ex => ({
+          ...ex,
+          description: ex.description ?? "", // Convert null/undefined to empty string
+          notes: ex.notes ?? "",
+        })),
+      };
+
+      console.log("[GET] Routine loaded from database:", {
+        id: routine.id,
+        name: routine.name,
+        exercises: routine.exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+          descriptionIsNull: ex.description === null,
+          descriptionIsUndefined: ex.description === undefined,
+          descriptionLength: ex.description?.length || 0,
+        })),
+      });
+
+      console.log("[GET] Routine with converted descriptions:", {
+        id: routineWithDescriptions.id,
+        name: routineWithDescriptions.name,
+        exercises: routineWithDescriptions.exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+          descriptionIsNull: ex.description === null,
+          descriptionIsUndefined: ex.description === undefined,
+          descriptionLength: ex.description?.length || 0,
+        })),
+      });
+
+      return routineWithDescriptions;
     }),
 
   // Create a new routine
@@ -163,26 +213,37 @@ export const routinesRouter = router({
           description: input.description,
           coachId: ensureUserId(user.id),
           exercises: {
-            create: input.exercises.map((exercise, index) => ({
-              order: index + 1,
-              title: exercise.title,
-              description: exercise.description,
-              type: exercise.type,
-              notes: exercise.notes,
-              sets: exercise.sets,
-              reps: exercise.reps,
-              tempo: exercise.tempo,
-              duration: exercise.duration,
-              videoId: exercise.videoId,
-              videoTitle: exercise.videoTitle,
-              videoThumbnail: exercise.videoThumbnail,
-              videoUrl: exercise.videoUrl,
-              supersetId: exercise.supersetId,
-              supersetOrder: exercise.supersetOrder,
-              supersetDescription: exercise.supersetDescription,
-              supersetInstructions: exercise.supersetInstructions,
-              supersetNotes: exercise.supersetNotes,
-            })),
+            create: input.exercises.map((exercise, index) => {
+              // Always explicitly set description - convert undefined/null to empty string
+              const description = exercise.description ?? "";
+              console.log(`[CREATE] Exercise ${index} (${exercise.title}):`, {
+                description,
+                descriptionType: typeof description,
+                originalDescription: exercise.description,
+                originalDescriptionType: typeof exercise.description,
+              });
+
+              return {
+                order: index + 1,
+                title: exercise.title,
+                description: description, // Explicitly set, never undefined
+                type: exercise.type ?? null,
+                notes: exercise.notes ?? "",
+                sets: exercise.sets ?? null,
+                reps: exercise.reps ?? null,
+                tempo: exercise.tempo ?? null,
+                duration: exercise.duration ?? null,
+                videoId: exercise.videoId ?? null,
+                videoTitle: exercise.videoTitle ?? null,
+                videoThumbnail: exercise.videoThumbnail ?? null,
+                videoUrl: exercise.videoUrl ?? null,
+                supersetId: exercise.supersetId ?? null,
+                supersetOrder: exercise.supersetOrder ?? null,
+                supersetDescription: exercise.supersetDescription ?? null,
+                supersetInstructions: exercise.supersetInstructions ?? null,
+                supersetNotes: exercise.supersetNotes ?? null,
+              };
+            }),
           },
         },
         include: {
@@ -192,7 +253,29 @@ export const routinesRouter = router({
         },
       });
 
-      return routine;
+      // CRITICAL: Ensure description is always a string, never null/undefined
+      // Convert null descriptions to empty strings for consistency
+      const routineWithDescriptions = {
+        ...routine,
+        exercises: routine.exercises.map(ex => ({
+          ...ex,
+          description: ex.description ?? "", // Convert null/undefined to empty string
+          notes: ex.notes ?? "",
+        })),
+      };
+
+      console.log("[CREATE] Routine created:", {
+        id: routineWithDescriptions.id,
+        name: routineWithDescriptions.name,
+        exercises: routineWithDescriptions.exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+        })),
+      });
+
+      return routineWithDescriptions;
     }),
 
   // Update a routine
@@ -255,26 +338,37 @@ export const routinesRouter = router({
           description: input.description,
           exercises: {
             deleteMany: {}, // Delete all existing exercises
-            create: input.exercises.map((exercise, index) => ({
-              order: index + 1,
-              title: exercise.title,
-              description: exercise.description,
-              type: exercise.type,
-              notes: exercise.notes,
-              sets: exercise.sets,
-              reps: exercise.reps,
-              tempo: exercise.tempo,
-              duration: exercise.duration,
-              videoId: exercise.videoId,
-              videoTitle: exercise.videoTitle,
-              videoThumbnail: exercise.videoThumbnail,
-              videoUrl: exercise.videoUrl,
-              supersetId: exercise.supersetId,
-              supersetOrder: exercise.supersetOrder,
-              supersetDescription: exercise.supersetDescription,
-              supersetInstructions: exercise.supersetInstructions,
-              supersetNotes: exercise.supersetNotes,
-            })),
+            create: input.exercises.map((exercise, index) => {
+              // Always explicitly set description - convert undefined/null to empty string
+              const description = exercise.description ?? "";
+              console.log(`[UPDATE] Exercise ${index} (${exercise.title}):`, {
+                description,
+                descriptionType: typeof description,
+                originalDescription: exercise.description,
+                originalDescriptionType: typeof exercise.description,
+              });
+
+              return {
+                order: index + 1,
+                title: exercise.title,
+                description: description, // Explicitly set, never undefined
+                type: exercise.type ?? null,
+                notes: exercise.notes ?? "",
+                sets: exercise.sets ?? null,
+                reps: exercise.reps ?? null,
+                tempo: exercise.tempo ?? null,
+                duration: exercise.duration ?? null,
+                videoId: exercise.videoId ?? null,
+                videoTitle: exercise.videoTitle ?? null,
+                videoThumbnail: exercise.videoThumbnail ?? null,
+                videoUrl: exercise.videoUrl ?? null,
+                supersetId: exercise.supersetId ?? null,
+                supersetOrder: exercise.supersetOrder ?? null,
+                supersetDescription: exercise.supersetDescription ?? null,
+                supersetInstructions: exercise.supersetInstructions ?? null,
+                supersetNotes: exercise.supersetNotes ?? null,
+              };
+            }),
           },
         },
         include: {
@@ -284,7 +378,75 @@ export const routinesRouter = router({
         },
       });
 
-      return routine;
+      // CRITICAL: Verify what Prisma actually returned from the database
+      console.log("[UPDATE] Raw Prisma result from database:", {
+        id: routine.id,
+        name: routine.name,
+        exercises: routine.exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+          descriptionIsNull: ex.description === null,
+          descriptionIsUndefined: ex.description === undefined,
+          descriptionLength: ex.description?.length || 0,
+          rawDescription: JSON.stringify(ex.description),
+        })),
+      });
+
+      // CRITICAL: Ensure description is always a string, never null/undefined
+      // Convert null descriptions to empty strings for consistency
+      const routineWithDescriptions = {
+        ...routine,
+        exercises: routine.exercises.map(ex => ({
+          ...ex,
+          description: ex.description ?? "", // Convert null/undefined to empty string
+          notes: ex.notes ?? "",
+        })),
+      };
+
+      console.log("[UPDATE] Routine with converted descriptions:", {
+        id: routineWithDescriptions.id,
+        name: routineWithDescriptions.name,
+        exercises: routineWithDescriptions.exercises.map(ex => ({
+          id: ex.id,
+          title: ex.title,
+          description: ex.description,
+          descriptionType: typeof ex.description,
+          descriptionLength: ex.description?.length || 0,
+        })),
+      });
+
+      // CRITICAL: Double-check by querying the database again to verify it was actually saved
+      const verifyRoutine = await db.routine.findFirst({
+        where: { id: input.id },
+        include: {
+          exercises: {
+            orderBy: { order: "asc" },
+          },
+        },
+      });
+
+      if (verifyRoutine) {
+        console.log(
+          "[UPDATE] VERIFICATION: Re-queried routine from database:",
+          {
+            id: verifyRoutine.id,
+            exercises: verifyRoutine.exercises.map(ex => ({
+              id: ex.id,
+              title: ex.title,
+              description: ex.description,
+              descriptionType: typeof ex.description,
+              descriptionIsNull: ex.description === null,
+              descriptionIsUndefined: ex.description === undefined,
+              descriptionLength: ex.description?.length || 0,
+              rawDescription: JSON.stringify(ex.description),
+            })),
+          }
+        );
+      }
+
+      return routineWithDescriptions;
     }),
 
   // Delete a routine

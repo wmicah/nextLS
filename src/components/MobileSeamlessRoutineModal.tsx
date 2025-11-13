@@ -128,7 +128,7 @@ function ExerciseEditDialog({
 }: ExerciseEditDialogProps) {
   const [formData, setFormData] = useState({
     title: exercise?.title || "",
-    description: exercise?.description || "",
+    description: exercise?.description ?? "",
     sets: exercise?.sets || undefined,
     reps: exercise?.reps || undefined,
     tempo: exercise?.tempo || "",
@@ -149,7 +149,7 @@ function ExerciseEditDialog({
     if (isOpen && exercise) {
       setFormData({
         title: exercise.title || "",
-        description: exercise.description || "",
+        description: exercise.description ?? "",
         sets: exercise.sets || undefined,
         reps: exercise.reps || undefined,
         tempo: exercise.tempo || "",
@@ -204,37 +204,20 @@ function ExerciseEditDialog({
           className="space-y-4 flex-1 overflow-y-auto"
         >
           {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="title" className="text-gray-400 text-sm">
-                Exercise Title
-              </Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={e =>
-                  setFormData(prev => ({ ...prev, title: e.target.value }))
-                }
-                className="bg-[#353A3A] border-[#606364] text-white h-10"
-                placeholder="Exercise name"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="duration" className="text-gray-400 text-sm">
-                Duration (optional)
-              </Label>
-              <Input
-                id="duration"
-                value={formData.duration}
-                onChange={e =>
-                  setFormData(prev => ({ ...prev, duration: e.target.value }))
-                }
-                className="bg-[#353A3A] border-[#606364] text-white h-10"
-                placeholder="e.g., 30 seconds"
-              />
-            </div>
+          <div>
+            <Label htmlFor="title" className="text-gray-400 text-sm">
+              Exercise Title
+            </Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={e =>
+                setFormData(prev => ({ ...prev, title: e.target.value }))
+              }
+              className="bg-[#353A3A] border-[#606364] text-white h-10"
+              placeholder="Exercise name"
+              required
+            />
           </div>
 
           {/* Description */}
@@ -263,7 +246,7 @@ function ExerciseEditDialog({
             />
           </div>
 
-          {/* Sets, Reps, Tempo */}
+          {/* Sets, Reps, Duration */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="sets" className="text-gray-400 text-sm">
@@ -305,7 +288,7 @@ function ExerciseEditDialog({
 
             <div>
               <Label htmlFor="tempo" className="text-gray-400 text-sm">
-                Tempo
+                Duration
               </Label>
               <Input
                 id="tempo"
@@ -314,7 +297,7 @@ function ExerciseEditDialog({
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
                 className="bg-[#353A3A] border-[#606364] text-white h-10"
-                placeholder="e.g., 2-0-2"
+                placeholder="e.g., 30 seconds"
               />
             </div>
           </div>
@@ -680,8 +663,8 @@ export default function MobileSeamlessRoutineModal({
       id: editingExercise.id,
       title: details.title,
       type: editingExercise.type,
-      description: details.description || "",
-      notes: editingExercise.notes || "",
+      description: details.description ?? "",
+      notes: editingExercise.notes ?? "",
       sets: details.sets,
       reps: details.reps,
       tempo: details.tempo || "",
@@ -740,7 +723,7 @@ export default function MobileSeamlessRoutineModal({
               title: updatedData.title,
               sets: updatedData.sets,
               reps: updatedData.reps,
-              description: updatedData.description,
+              description: updatedData.description || "",
               // Only set superset description on the first exercise
               supersetDescription:
                 exercise.supersetOrder === 1
@@ -812,7 +795,14 @@ export default function MobileSeamlessRoutineModal({
       if (routine) {
         setName(routine.name);
         setDescription(routine.description);
-        setExercises(routine.exercises);
+        // Ensure descriptions are preserved when loading from database
+        setExercises(
+          routine.exercises.map(ex => ({
+            ...ex,
+            description: ex.description ?? "",
+            notes: ex.notes ?? "",
+          }))
+        );
         setCurrentStep("details");
       } else {
         setName("");
@@ -831,7 +821,14 @@ export default function MobileSeamlessRoutineModal({
         hasUserMadeChanges.current = false;
         setName(routine.name);
         setDescription(routine.description);
-        setExercises(routine.exercises);
+        // Ensure descriptions are preserved when loading from database
+        setExercises(
+          routine.exercises.map(ex => ({
+            ...ex,
+            description: ex.description ?? "",
+            notes: ex.notes ?? "",
+          }))
+        );
         setCurrentStep("details");
       } else if (!hasUserMadeChanges.current) {
         setName(routine.name);
@@ -870,19 +867,57 @@ export default function MobileSeamlessRoutineModal({
           id: routine.id,
           name: name.trim(),
           description: description.trim(),
-          exercises: exercises.map((exercise, index) => ({
-            ...exercise,
-            order: index + 1,
-          })),
+          exercises: exercises.map((exercise, index) => {
+            // CRITICAL: Always explicitly include description, even if empty string
+            // Don't rely on spread operator - explicitly set every field we need
+            return {
+              title: exercise.title,
+              type: exercise.type,
+              description: exercise.description ?? "", // Always set to string, never undefined
+              notes: exercise.notes ?? "",
+              sets: exercise.sets,
+              reps: exercise.reps,
+              tempo: exercise.tempo,
+              duration: exercise.duration,
+              videoId: exercise.videoId,
+              videoTitle: exercise.videoTitle,
+              videoThumbnail: exercise.videoThumbnail,
+              videoUrl: exercise.videoUrl,
+              supersetId: exercise.supersetId,
+              supersetOrder: exercise.supersetOrder,
+              supersetDescription: exercise.supersetDescription,
+              supersetInstructions: exercise.supersetInstructions,
+              supersetNotes: exercise.supersetNotes,
+            };
+          }),
         });
       } else {
         await createRoutine.mutateAsync({
           name: name.trim(),
           description: description.trim(),
-          exercises: exercises.map((exercise, index) => ({
-            ...exercise,
-            order: index + 1,
-          })),
+          exercises: exercises.map((exercise, index) => {
+            // CRITICAL: Always explicitly include description, even if empty string
+            // Don't rely on spread operator - explicitly set every field we need
+            return {
+              title: exercise.title,
+              type: exercise.type,
+              description: exercise.description ?? "", // Always set to string, never undefined
+              notes: exercise.notes ?? "",
+              sets: exercise.sets,
+              reps: exercise.reps,
+              tempo: exercise.tempo,
+              duration: exercise.duration,
+              videoId: exercise.videoId,
+              videoTitle: exercise.videoTitle,
+              videoThumbnail: exercise.videoThumbnail,
+              videoUrl: exercise.videoUrl,
+              supersetId: exercise.supersetId,
+              supersetOrder: exercise.supersetOrder,
+              supersetDescription: exercise.supersetDescription,
+              supersetInstructions: exercise.supersetInstructions,
+              supersetNotes: exercise.supersetNotes,
+            };
+          }),
         });
       }
     } catch (error) {
@@ -1692,7 +1727,7 @@ export default function MobileSeamlessRoutineModal({
                   title: ex.title,
                   sets: ex.sets,
                   reps: ex.reps,
-                  description: ex.description,
+                  description: ex.description || "",
                 })),
                 supersetDescription: (editingSuperset.exercises[0] as any)
                   ?.supersetDescription,
