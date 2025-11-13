@@ -61,6 +61,7 @@ const programSchema = z.object({
           drills: z.array(
             z.object({
               order: z.number(),
+              id: z.string().optional(),
               title: z.string().min(1, "Drill title is required"),
               description: z.string().optional(),
               duration: z.string().optional(),
@@ -106,6 +107,7 @@ interface ProgramBuilderItem {
   title: string;
   type?: "exercise" | "drill" | "video" | "routine" | "superset" | "rest";
   notes?: string;
+  description?: string;
   sets?: number;
   reps?: number;
   tempo?: string;
@@ -116,6 +118,18 @@ interface ProgramBuilderItem {
   videoThumbnail?: string;
   routineId?: string;
   supersetId?: string;
+  supersetOrder?: number;
+  supersetDescription?: string;
+  supersetInstructions?: string;
+  supersetNotes?: string;
+  coachInstructionsWhatToDo?: string;
+  coachInstructionsHowToDoIt?: string;
+  coachInstructionsKeyPoints?: string[];
+  coachInstructionsCommonMistakes?: string[];
+  coachInstructionsEasier?: string;
+  coachInstructionsHarder?: string;
+  coachInstructionsEquipment?: string;
+  coachInstructionsSetup?: string;
 }
 
 interface ProgramBuilderWeek {
@@ -307,10 +321,35 @@ export default function SeamlessProgramModal({
             title: "Monday",
             description: "",
             drills: week.days.mon.map((item, index) => ({
-              ...item,
               order: index + 1,
-              routineId: item.routineId,
-              type: item.type,
+              id: item.id || `temp-${Date.now()}-${index}`,
+              title: item.title,
+              description: item.notes || item.description || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              videoId: item.videoId || "",
+              videoTitle: item.videoTitle || "",
+              videoThumbnail: item.videoThumbnail || "",
+              routineId: item.routineId || "",
+              supersetId: item.supersetId || "",
+              supersetOrder: item.supersetOrder,
+              supersetDescription: item.supersetDescription || "",
+              supersetInstructions: item.supersetInstructions || "",
+              supersetNotes: item.supersetNotes || "",
+              coachInstructionsWhatToDo: item.coachInstructionsWhatToDo || "",
+              coachInstructionsHowToDoIt: item.coachInstructionsHowToDoIt || "",
+              coachInstructionsKeyPoints: item.coachInstructionsKeyPoints || [],
+              coachInstructionsCommonMistakes:
+                item.coachInstructionsCommonMistakes || [],
+              coachInstructionsEasier: item.coachInstructionsEasier || "",
+              coachInstructionsHarder: item.coachInstructionsHarder || "",
+              coachInstructionsEquipment: item.coachInstructionsEquipment || "",
+              coachInstructionsSetup: item.coachInstructionsSetup || "",
             })),
           },
           {
@@ -318,10 +357,35 @@ export default function SeamlessProgramModal({
             title: "Tuesday",
             description: "",
             drills: week.days.tue.map((item, index) => ({
-              ...item,
               order: index + 1,
-              routineId: item.routineId,
-              type: item.type,
+              id: item.id || `temp-${Date.now()}-${index}`,
+              title: item.title,
+              description: item.notes || item.description || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              videoId: item.videoId || "",
+              videoTitle: item.videoTitle || "",
+              videoThumbnail: item.videoThumbnail || "",
+              routineId: item.routineId || "",
+              supersetId: item.supersetId || "",
+              supersetOrder: item.supersetOrder,
+              supersetDescription: item.supersetDescription || "",
+              supersetInstructions: item.supersetInstructions || "",
+              supersetNotes: item.supersetNotes || "",
+              coachInstructionsWhatToDo: item.coachInstructionsWhatToDo || "",
+              coachInstructionsHowToDoIt: item.coachInstructionsHowToDoIt || "",
+              coachInstructionsKeyPoints: item.coachInstructionsKeyPoints || [],
+              coachInstructionsCommonMistakes:
+                item.coachInstructionsCommonMistakes || [],
+              coachInstructionsEasier: item.coachInstructionsEasier || "",
+              coachInstructionsHarder: item.coachInstructionsHarder || "",
+              coachInstructionsEquipment: item.coachInstructionsEquipment || "",
+              coachInstructionsSetup: item.coachInstructionsSetup || "",
             })),
           },
           {
@@ -329,40 +393,107 @@ export default function SeamlessProgramModal({
             title: "Wednesday",
             description: "",
             drills: week.days.wed.map((item, index) => ({
-              ...item,
               order: index + 1,
-              routineId: item.routineId,
-              type: item.type,
+              id: item.id || `temp-${Date.now()}-${index}`,
+              title: item.title,
+              description: item.notes || item.description || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              videoId: item.videoId || "",
+              videoTitle: item.videoTitle || "",
+              videoThumbnail: item.videoThumbnail || "",
+              routineId: item.routineId || "",
+              supersetId: item.supersetId || "",
+              supersetOrder: item.supersetOrder,
+              supersetDescription: item.supersetDescription || "",
+              supersetInstructions: item.supersetInstructions || "",
+              supersetNotes: item.supersetNotes || "",
+              coachInstructionsWhatToDo: item.coachInstructionsWhatToDo || "",
+              coachInstructionsHowToDoIt: item.coachInstructionsHowToDoIt || "",
+              coachInstructionsKeyPoints: item.coachInstructionsKeyPoints || [],
+              coachInstructionsCommonMistakes:
+                item.coachInstructionsCommonMistakes || [],
+              coachInstructionsEasier: item.coachInstructionsEasier || "",
+              coachInstructionsHarder: item.coachInstructionsHarder || "",
+              coachInstructionsEquipment: item.coachInstructionsEquipment || "",
+              coachInstructionsSetup: item.coachInstructionsSetup || "",
             })),
           },
           {
             dayNumber: 4,
             title: "Thursday",
             description: "",
-            drills: week.days.thu.map((item, index) => {
-              console.log("Converting Thursday item:", item);
-              console.log("Thursday item routineId:", item.routineId);
-              console.log("Thursday item type:", item.type);
-              const converted = {
-                ...item,
-                order: index + 1,
-                // Explicitly preserve routineId and type fields
-                routineId: item.routineId,
-                type: item.type,
-              };
-              console.log("Converted Thursday item:", converted);
-              return converted;
-            }),
+            drills: week.days.thu.map((item, index) => ({
+              order: index + 1,
+              id: item.id || `temp-${Date.now()}-${index}`,
+              title: item.title,
+              description: item.notes || item.description || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              videoId: item.videoId || "",
+              videoTitle: item.videoTitle || "",
+              videoThumbnail: item.videoThumbnail || "",
+              routineId: item.routineId || "",
+              supersetId: item.supersetId || "",
+              supersetOrder: item.supersetOrder,
+              supersetDescription: item.supersetDescription || "",
+              supersetInstructions: item.supersetInstructions || "",
+              supersetNotes: item.supersetNotes || "",
+              coachInstructionsWhatToDo: item.coachInstructionsWhatToDo || "",
+              coachInstructionsHowToDoIt: item.coachInstructionsHowToDoIt || "",
+              coachInstructionsKeyPoints: item.coachInstructionsKeyPoints || [],
+              coachInstructionsCommonMistakes:
+                item.coachInstructionsCommonMistakes || [],
+              coachInstructionsEasier: item.coachInstructionsEasier || "",
+              coachInstructionsHarder: item.coachInstructionsHarder || "",
+              coachInstructionsEquipment: item.coachInstructionsEquipment || "",
+              coachInstructionsSetup: item.coachInstructionsSetup || "",
+            })),
           },
           {
             dayNumber: 5,
             title: "Friday",
             description: "",
             drills: week.days.fri.map((item, index) => ({
-              ...item,
               order: index + 1,
-              routineId: item.routineId,
-              type: item.type,
+              id: item.id || `temp-${Date.now()}-${index}`,
+              title: item.title,
+              description: item.notes || item.description || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              videoId: item.videoId || "",
+              videoTitle: item.videoTitle || "",
+              videoThumbnail: item.videoThumbnail || "",
+              routineId: item.routineId || "",
+              supersetId: item.supersetId || "",
+              supersetOrder: item.supersetOrder,
+              supersetDescription: item.supersetDescription || "",
+              supersetInstructions: item.supersetInstructions || "",
+              supersetNotes: item.supersetNotes || "",
+              coachInstructionsWhatToDo: item.coachInstructionsWhatToDo || "",
+              coachInstructionsHowToDoIt: item.coachInstructionsHowToDoIt || "",
+              coachInstructionsKeyPoints: item.coachInstructionsKeyPoints || [],
+              coachInstructionsCommonMistakes:
+                item.coachInstructionsCommonMistakes || [],
+              coachInstructionsEasier: item.coachInstructionsEasier || "",
+              coachInstructionsHarder: item.coachInstructionsHarder || "",
+              coachInstructionsEquipment: item.coachInstructionsEquipment || "",
+              coachInstructionsSetup: item.coachInstructionsSetup || "",
             })),
           },
           {
@@ -370,10 +501,35 @@ export default function SeamlessProgramModal({
             title: "Saturday",
             description: "",
             drills: week.days.sat.map((item, index) => ({
-              ...item,
               order: index + 1,
-              routineId: item.routineId,
-              type: item.type,
+              id: item.id || `temp-${Date.now()}-${index}`,
+              title: item.title,
+              description: item.notes || item.description || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              videoId: item.videoId || "",
+              videoTitle: item.videoTitle || "",
+              videoThumbnail: item.videoThumbnail || "",
+              routineId: item.routineId || "",
+              supersetId: item.supersetId || "",
+              supersetOrder: item.supersetOrder,
+              supersetDescription: item.supersetDescription || "",
+              supersetInstructions: item.supersetInstructions || "",
+              supersetNotes: item.supersetNotes || "",
+              coachInstructionsWhatToDo: item.coachInstructionsWhatToDo || "",
+              coachInstructionsHowToDoIt: item.coachInstructionsHowToDoIt || "",
+              coachInstructionsKeyPoints: item.coachInstructionsKeyPoints || [],
+              coachInstructionsCommonMistakes:
+                item.coachInstructionsCommonMistakes || [],
+              coachInstructionsEasier: item.coachInstructionsEasier || "",
+              coachInstructionsHarder: item.coachInstructionsHarder || "",
+              coachInstructionsEquipment: item.coachInstructionsEquipment || "",
+              coachInstructionsSetup: item.coachInstructionsSetup || "",
             })),
           },
           {
@@ -381,18 +537,86 @@ export default function SeamlessProgramModal({
             title: "Sunday",
             description: "",
             drills: week.days.sun.map((item, index) => ({
-              ...item,
               order: index + 1,
-              routineId: item.routineId,
-              type: item.type,
+              id: item.id || `temp-${Date.now()}-${index}`,
+              title: item.title,
+              description: item.notes || item.description || "",
+              notes: item.notes || "",
+              type: item.type || "exercise",
+              sets: item.sets,
+              reps: item.reps,
+              tempo: item.tempo || "",
+              duration: item.duration || "",
+              videoUrl: item.videoUrl || "",
+              videoId: item.videoId || "",
+              videoTitle: item.videoTitle || "",
+              videoThumbnail: item.videoThumbnail || "",
+              routineId: item.routineId || "",
+              supersetId: item.supersetId || "",
+              supersetOrder: item.supersetOrder,
+              supersetDescription: item.supersetDescription || "",
+              supersetInstructions: item.supersetInstructions || "",
+              supersetNotes: item.supersetNotes || "",
+              coachInstructionsWhatToDo: item.coachInstructionsWhatToDo || "",
+              coachInstructionsHowToDoIt: item.coachInstructionsHowToDoIt || "",
+              coachInstructionsKeyPoints: item.coachInstructionsKeyPoints || [],
+              coachInstructionsCommonMistakes:
+                item.coachInstructionsCommonMistakes || [],
+              coachInstructionsEasier: item.coachInstructionsEasier || "",
+              coachInstructionsHarder: item.coachInstructionsHarder || "",
+              coachInstructionsEquipment: item.coachInstructionsEquipment || "",
+              coachInstructionsSetup: item.coachInstructionsSetup || "",
             })),
           },
         ],
       }));
 
+      // Transform coach instruction fields to nested object format expected by tRPC
+      const transformedWeeks = convertedWeeks.map(week => ({
+        ...week,
+        days: week.days.map(day => ({
+          ...day,
+          drills: day.drills.map(drill => {
+            // Extract coach instruction fields and create nested object
+            const coachInstructions =
+              drill.coachInstructionsWhatToDo ||
+              drill.coachInstructionsHowToDoIt ||
+              drill.coachInstructionsKeyPoints?.length ||
+              drill.coachInstructionsCommonMistakes?.length ||
+              drill.coachInstructionsEquipment
+                ? {
+                    whatToDo: drill.coachInstructionsWhatToDo || "",
+                    howToDoIt: drill.coachInstructionsHowToDoIt || "",
+                    keyPoints: drill.coachInstructionsKeyPoints || [],
+                    commonMistakes: drill.coachInstructionsCommonMistakes || [],
+                    equipment: drill.coachInstructionsEquipment || "",
+                  }
+                : undefined;
+
+            // Remove flat coach instruction fields and add nested object
+            const {
+              coachInstructionsWhatToDo,
+              coachInstructionsHowToDoIt,
+              coachInstructionsKeyPoints,
+              coachInstructionsCommonMistakes,
+              coachInstructionsEasier,
+              coachInstructionsHarder,
+              coachInstructionsEquipment,
+              coachInstructionsSetup,
+              ...rest
+            } = drill;
+
+            return {
+              ...rest,
+              coachInstructions,
+            };
+          }),
+        })),
+      }));
+
       const programData = {
         ...data,
-        weeks: convertedWeeks,
+        weeks: transformedWeeks,
       };
 
       console.log("=== FINAL PROGRAM DATA ===");
@@ -453,11 +677,19 @@ export default function SeamlessProgramModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={() => {}}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={open => {
+          if (!open) {
+            onClose();
+          }
+        }}
+      >
         <DialogContent
-          className={`bg-[#2A3133] border-gray-600 max-h-[90vh] z-[100] overflow-hidden flex flex-col p-0 [&>button]:hidden ${
+          className={`bg-[#2A3133] border-gray-600 max-h-[90vh] overflow-hidden flex flex-col p-0 [&>button]:hidden ${
             currentStep === "structure" ? "max-w-[95vw] w-[95vw]" : "max-w-4xl"
           }`}
+          style={{ pointerEvents: "auto" }}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-600">

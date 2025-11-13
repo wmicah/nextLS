@@ -190,7 +190,7 @@ function ExerciseEditDialog({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
         nested={true}
-        className="bg-[#2A3133] border-[#606364] max-w-[95vw] sm:max-w-2xl max-h-[90vh] flex flex-col z-[10002]"
+        className="bg-[#2A3133] border-[#606364] max-w-[95vw] sm:max-w-2xl max-h-[90vh] flex flex-col"
       >
         <DialogHeader>
           <DialogTitle className="text-white">Edit Exercise</DialogTitle>
@@ -1552,7 +1552,7 @@ export default function MobileSeamlessRoutineModal({
         >
           <DialogContent
             nested={true}
-            className="bg-[#2A3133] border-[#606364] z-[10002] max-w-[95vw] sm:max-w-2xl max-h-[80vh] flex flex-col"
+            className="bg-[#2A3133] border-[#606364] max-w-[95vw] sm:max-w-2xl max-h-[80vh] flex flex-col"
           >
             <DialogHeader>
               <DialogTitle className="text-white">

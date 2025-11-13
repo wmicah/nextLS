@@ -20,7 +20,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-[9999] bg-black/80", className)}
+    className={cn("fixed inset-0 z-[60] bg-black/80", className)}
     style={{
       animation: "none !important",
       transition: "none !important",
@@ -40,11 +40,18 @@ const DialogContent = React.forwardRef<
   }
 >(
   (
-    { className, children, hideCloseButton = false, nested = false, ...props },
+    {
+      className,
+      children,
+      hideCloseButton = false,
+      nested = false,
+      style,
+      ...props
+    },
     ref
   ) => {
-    const overlayZIndex = nested ? "z-[10001]" : "z-[9999]";
-    const contentZIndex = nested ? "z-[10002]" : "z-[10000]";
+    const overlayZIndex = nested ? "z-[70]" : "z-[60]";
+    const contentZIndex = nested ? "z-[71]" : "z-[61]";
 
     return (
       <DialogPortal>
@@ -60,16 +67,31 @@ const DialogContent = React.forwardRef<
         <DialogPrimitive.Content
           ref={ref}
           className={cn(
-            "fixed left-[50%] top-[50%] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg",
+            "w-full max-w-lg gap-4 border bg-background shadow-lg sm:rounded-lg",
             contentZIndex,
+            // Only add default padding if className doesn't already specify p-0 or padding
+            !className?.includes("p-0") && !className?.includes("p-[")
+              ? "p-6"
+              : "",
             className
           )}
           style={{
-            animation: "none !important",
-            transition: "none !important",
-            animationDuration: "0s !important",
-            transitionDuration: "0s !important",
-          }}
+            // Apply custom styles first (if any)
+            ...style,
+            // Then force positioning with inline styles (these will override any conflicting values)
+            position: "fixed",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            margin: 0,
+            maxWidth: style?.maxWidth || undefined,
+            width: style?.width || undefined,
+            // Disable animations/transitions
+            animation: "none",
+            transition: "none",
+            animationDuration: "0s",
+            transitionDuration: "0s",
+          } as React.CSSProperties}
           {...props}
         >
           {children}
