@@ -389,6 +389,7 @@ model Program {
   organizationId String?              @map("organization_id")
   sharedWithOrg Boolean               @default(false) @map("shared_with_org")
   createdByCoachId String?            @map("created_by_coach_id")
+  supersededByProgramId String?       @map("superseded_by_program_id")
   createdAt    DateTime                @default(now())
   updatedAt    DateTime                @updatedAt
   assignments  ProgramAssignment[]
@@ -397,6 +398,8 @@ model Program {
   coach        User                    @relation("CoachPrograms", fields: [coachId], references: [id], onDelete: Cascade)
   organization Organization?           @relation("SharedPrograms", fields: [organizationId], references: [id])
   createdByCoach User?                 @relation("CreatedPrograms", fields: [createdByCoachId], references: [id])
+  supersededBy Program?                 @relation("ProgramVersions", fields: [supersededByProgramId], references: [id])
+  supersedes   Program[]               @relation("ProgramVersions")
 
   @@map("programs")
 }

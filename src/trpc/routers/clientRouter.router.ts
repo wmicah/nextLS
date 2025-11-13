@@ -167,6 +167,30 @@ export const clientRouterRouter = router({
 
     const assignment = client.programAssignments[0];
     const program = assignment.program;
+
+    // Debug: Log assignment and program IDs to verify correct program is being fetched
+    console.log("🔍 CLIENT ROUTER - Assignment details:", {
+      assignmentId: assignment.id,
+      assignmentProgramId: assignment.programId,
+      programId: program.id,
+      programTitle: program.title,
+      programsMatch: assignment.programId === program.id,
+      programSupersededBy: (program as any).supersededByProgramId,
+      numberOfWeeks: program.weeks?.length || 0,
+      firstWeekDrills: program.weeks?.[0]?.days?.[0]?.drills?.length || 0,
+    });
+
+    // CRITICAL: Verify the program ID matches the assignment's programId
+    if (assignment.programId !== program.id) {
+      console.error(
+        `❌ MISMATCH: Assignment programId (${assignment.programId}) does not match program.id (${program.id})`
+      );
+    } else {
+      console.log(
+        `✅ VERIFIED: Assignment and program IDs match (${assignment.programId})`
+      );
+    }
+
     const startDate = new Date(assignment.assignedAt);
     const currentDate = new Date();
     const weeksDiff = Math.floor(
