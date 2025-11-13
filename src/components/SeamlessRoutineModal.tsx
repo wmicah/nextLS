@@ -180,7 +180,10 @@ function ExerciseEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl">
+      <DialogContent
+        nested={true}
+        className="bg-[#2A3133] border-gray-600 max-w-2xl"
+      >
         <DialogHeader>
           <DialogTitle className="text-white">Edit Exercise</DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -1273,7 +1276,7 @@ export default function SeamlessRoutineModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-4xl max-h-[90vh] z-[100] overflow-hidden flex flex-col p-0 [&>button]:hidden">
+        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-600">
             <div>
@@ -1687,7 +1690,10 @@ export default function SeamlessRoutineModal({
           open={isSupersetModalOpen}
           onOpenChange={setIsSupersetModalOpen}
         >
-          <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogContent
+            nested={true}
+            className="bg-[#2A3133] border-gray-600 max-w-2xl max-h-[80vh] flex flex-col"
+          >
             <DialogHeader>
               <DialogTitle className="text-white">
                 {isAddingToExisting

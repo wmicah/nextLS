@@ -185,7 +185,7 @@ export default function MobileCreateRoutineModal({
       {isAddingFromLibrary &&
         mounted &&
         createPortal(
-          <div className="fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div className="bg-[#2A3133] w-full max-w-sm rounded-xl max-h-[90vh] overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-[#606364]">
                 <h3 className="text-lg font-bold text-white">
