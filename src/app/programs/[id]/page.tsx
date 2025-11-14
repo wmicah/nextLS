@@ -551,39 +551,53 @@ function ProgramEditorPageContent() {
             dayNumber,
             title: `Day ${dayNumber}`,
             description: "",
-            drills: items.map((item, itemIndex) => ({
-              id: item.id,
-              title: item.title,
-              description: item.description ?? "", // Use nullish coalescing to preserve empty strings
-              notes: item.notes ?? "",
-              duration: item.duration || "",
-              videoUrl: item.videoUrl || "",
-              type: item.type || "exercise",
-              sets: item.sets,
-              reps: item.reps,
-              tempo: item.tempo || "",
-              videoId: item.videoId,
-              videoTitle: item.videoTitle,
-              videoThumbnail: item.videoThumbnail,
-              routineId: item.routineId,
-              supersetId: item.supersetId,
-              supersetOrder: item.supersetOrder,
-              // Superset description fields
-              supersetDescription: item.supersetDescription || undefined,
-              supersetInstructions: item.supersetInstructions || undefined,
-              supersetNotes: item.supersetNotes || undefined,
-              // Coach Instructions - Map from ProgramBuilder format to database format
-              coachInstructionsWhatToDo:
-                item.coachInstructions?.whatToDo || undefined,
-              coachInstructionsHowToDoIt:
-                item.coachInstructions?.howToDoIt || undefined,
-              coachInstructionsKeyPoints:
-                item.coachInstructions?.keyPoints || [],
-              coachInstructionsCommonMistakes:
-                item.coachInstructions?.commonMistakes || [],
-              coachInstructionsEquipment:
-                item.coachInstructions?.equipment || undefined,
-            })),
+            drills: items.map((item, itemIndex) => {
+              // Debug: Log description for superset exercises
+              if (item.supersetId) {
+                console.log("🔍 Converting superset drill to DB format:", {
+                  id: item.id,
+                  title: item.title,
+                  supersetId: item.supersetId,
+                  supersetOrder: item.supersetOrder,
+                  description: item.description,
+                  descriptionType: typeof item.description,
+                  descriptionAfterCoalesce: item.description ?? "",
+                });
+              }
+              return {
+                id: item.id,
+                title: item.title,
+                description: item.description ?? "", // Use nullish coalescing to preserve empty strings
+                notes: item.notes ?? "",
+                duration: item.duration || "",
+                videoUrl: item.videoUrl || "",
+                type: item.type || "exercise",
+                sets: item.sets,
+                reps: item.reps,
+                tempo: item.tempo || "",
+                videoId: item.videoId,
+                videoTitle: item.videoTitle,
+                videoThumbnail: item.videoThumbnail,
+                routineId: item.routineId,
+                supersetId: item.supersetId,
+                supersetOrder: item.supersetOrder,
+                // Superset description fields
+                supersetDescription: item.supersetDescription || undefined,
+                supersetInstructions: item.supersetInstructions || undefined,
+                supersetNotes: item.supersetNotes || undefined,
+                // Coach Instructions - Map from ProgramBuilder format to database format
+                coachInstructionsWhatToDo:
+                  item.coachInstructions?.whatToDo || undefined,
+                coachInstructionsHowToDoIt:
+                  item.coachInstructions?.howToDoIt || undefined,
+                coachInstructionsKeyPoints:
+                  item.coachInstructions?.keyPoints || [],
+                coachInstructionsCommonMistakes:
+                  item.coachInstructions?.commonMistakes || [],
+                coachInstructionsEquipment:
+                  item.coachInstructions?.equipment || undefined,
+              };
+            }),
           };
         }),
       }));

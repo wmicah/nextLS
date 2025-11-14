@@ -74,6 +74,7 @@ export async function checkClientAccess(
 export async function checkWaitingPageAccess(): Promise<{
   user: any;
   dbUser: any;
+  clientRecord: any;
 }> {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
