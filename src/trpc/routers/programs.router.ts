@@ -485,7 +485,26 @@ export const programsRouter = router({
         });
       }
 
-      return program;
+      // CRITICAL: Normalize descriptions like routines do - ensure descriptions are always strings
+      // This ensures consistency with how routine exercises handle descriptions
+      const normalizedProgram = {
+        ...program,
+        weeks: program.weeks.map(week => ({
+          ...week,
+          days: week.days.map(day => ({
+            ...day,
+            drills: day.drills.map(drill => ({
+              ...drill,
+              // Convert null/undefined descriptions to empty strings for consistency
+              // This matches how routine exercises handle descriptions
+              description: drill.description ?? "",
+              notes: drill.notes ?? "",
+            })),
+          })),
+        })),
+      };
+
+      return normalizedProgram;
     }),
 
   // Update a program

@@ -16,14 +16,27 @@ import {
   LogOut,
   AlertTriangle,
   Settings,
+  UserPlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
+import SwitchCoachModal from "@/components/SwitchCoachModal";
+import { trpc } from "@/app/_trpc/client";
 
 export default function ClientWaitingPage() {
   const [refreshCount, setRefreshCount] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSwitchCoachModal, setShowSwitchCoachModal] = useState(false);
   const router = useRouter();
+
+  // Get client record to check if archived
+  const { data: userProfile } = trpc.user.getProfile.useQuery();
+  const { data: clientRecord } = trpc.clients.getMyClientRecord.useQuery(
+    undefined,
+    {
+      enabled: !!userProfile,
+    }
+  );
 
   const handleLogout = () => {
     // Redirect to Kinde logout with prompt=login to force re-authentication
@@ -128,14 +141,28 @@ export default function ClientWaitingPage() {
             Welcome to Next Level Softball!
           </h1>
           <p className="text-xl text-gray-300 mb-6 max-w-3xl mx-auto">
-            We're excited to have you on board! Your coach will be in touch soon
-            to get you started on your softball journey.
+            {clientRecord?.archived
+              ? "You're no longer with your previous coach. Request to join a new coach to continue your training journey."
+              : "We're excited to have you on board! Your coach will be in touch soon to get you started on your softball journey."}
           </p>
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-600/20 border border-blue-500/30">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-            <span className="text-blue-200 font-medium">
-              Waiting for coach assignment...
-            </span>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-600/20 border border-blue-500/30">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <span className="text-blue-200 font-medium">
+                {clientRecord?.archived
+                  ? "No active coach"
+                  : "Waiting for coach assignment..."}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowSwitchCoachModal(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#4A5A70] to-[#606364] hover:from-[#5A6A80] hover:to-[#707080] border border-[#606364] transition-all duration-200 hover:scale-105 shadow-lg"
+            >
+              <UserPlus className="h-4 w-4 text-white" />
+              <span className="text-white font-medium">
+                {clientRecord?.archived ? "Switch Coach" : "Join a Coach"}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -345,6 +372,16 @@ export default function ClientWaitingPage() {
       <DeleteAccountModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+      />
+
+      {/* Switch Coach Modal */}
+      <SwitchCoachModal
+        isOpen={showSwitchCoachModal}
+        onClose={() => setShowSwitchCoachModal(false)}
+        onSuccess={() => {
+          // Refresh the page after successful coach request
+          window.location.reload();
+        }}
       />
     </div>
   );

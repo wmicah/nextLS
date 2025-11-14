@@ -1140,6 +1140,19 @@ function ClientsPage() {
     },
   });
 
+  const deleteClient = trpc.clients.delete.useMutation({
+    onSuccess: () => {
+      utils.clients.list.invalidate();
+    },
+    onError: error => {
+      console.error("Failed to delete client:", error);
+      alert(
+        error.message ||
+          "Failed to delete client. Make sure the client is archived first."
+      );
+    },
+  });
+
   const handleArchiveClientFromDelete = (
     clientId: string,
     clientName: string
@@ -1171,6 +1184,16 @@ function ClientsPage() {
       )
     ) {
       unarchiveClient.mutate({ id: clientId });
+    }
+  };
+
+  const handleDeleteClient = (clientId: string, clientName: string) => {
+    if (
+      window.confirm(
+        `⚠️ PERMANENT DELETION\n\nAre you absolutely sure you want to permanently delete ${clientName}?\n\nThis action:\n• Cannot be undone\n• Will remove the client from your list permanently\n• The client will be able to request a new coach\n\nThis is a permanent action.`
+      )
+    ) {
+      deleteClient.mutate({ id: clientId });
     }
   };
 
@@ -2386,47 +2409,89 @@ function ClientsPage() {
                                   </button>
                                 </>
                               ) : (
-                                <button
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    handleUnarchiveClient(
-                                      client.id,
-                                      client.name
-                                    );
-                                  }}
-                                  disabled={archivingClientId === client.id}
-                                  className="p-2 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
-                                  style={{
-                                    color: "#10B981",
-                                    backgroundColor: "transparent",
-                                  }}
-                                  onMouseEnter={e => {
-                                    if (!e.currentTarget.disabled) {
-                                      e.currentTarget.style.color = "#059669";
-                                      e.currentTarget.style.backgroundColor =
-                                        "#3A4040";
-                                    }
-                                  }}
-                                  onMouseLeave={e => {
-                                    if (!e.currentTarget.disabled) {
-                                      e.currentTarget.style.color = "#10B981";
-                                      e.currentTarget.style.backgroundColor =
-                                        "transparent";
-                                    }
-                                  }}
-                                  title="Unarchive client"
-                                >
-                                  {archivingClientId === client.id ? (
-                                    <div
-                                      className="animate-spin rounded-full h-4 w-4 border-b-2"
-                                      style={{
-                                        borderColor: "#10B981",
-                                      }}
-                                    />
-                                  ) : (
-                                    <Archive className="h-4 w-4" />
-                                  )}
-                                </button>
+                                <>
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      handleUnarchiveClient(
+                                        client.id,
+                                        client.name
+                                      );
+                                    }}
+                                    disabled={archivingClientId === client.id}
+                                    className="p-2 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
+                                    style={{
+                                      color: "#10B981",
+                                      backgroundColor: "transparent",
+                                    }}
+                                    onMouseEnter={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color = "#059669";
+                                        e.currentTarget.style.backgroundColor =
+                                          "#3A4040";
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color = "#10B981";
+                                        e.currentTarget.style.backgroundColor =
+                                          "transparent";
+                                      }
+                                    }}
+                                    title="Unarchive client"
+                                  >
+                                    {archivingClientId === client.id ? (
+                                      <div
+                                        className="animate-spin rounded-full h-4 w-4 border-b-2"
+                                        style={{
+                                          borderColor: "#10B981",
+                                        }}
+                                      />
+                                    ) : (
+                                      <Archive className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                  {/* Permanent Delete Button - Only for archived clients */}
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      handleDeleteClient(
+                                        client.id,
+                                        client.name
+                                      );
+                                    }}
+                                    disabled={deleteClient.isPending}
+                                    className="p-2 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50"
+                                    style={{
+                                      color: "#EF4444",
+                                      backgroundColor: "transparent",
+                                    }}
+                                    onMouseEnter={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color = "#DC2626";
+                                        e.currentTarget.style.backgroundColor =
+                                          "#3A4040";
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color = "#EF4444";
+                                        e.currentTarget.style.backgroundColor =
+                                          "transparent";
+                                      }
+                                    }}
+                                    title="Permanently delete client"
+                                  >
+                                    {deleteClient.isPending ? (
+                                      <div
+                                        className="animate-spin rounded-full h-4 w-4 border-b-2"
+                                        style={{ borderColor: "#EF4444" }}
+                                      />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </>
                               )}
                               <button
                                 onClick={e => {
@@ -2763,6 +2828,45 @@ function ClientsPage() {
                                     <Archive className="h-4 w-4" />
                                   )}
                                 </button>
+                                {/* Permanent Delete Button - Only for archived clients */}
+                                {activeTab === "archived" && (
+                                  <button
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      handleDeleteClient(
+                                        client.id,
+                                        client.name
+                                      );
+                                    }}
+                                    disabled={deleteClient.isPending}
+                                    className="p-2 rounded-xl transition-all duration-300 transform hover:scale-110 disabled:opacity-50"
+                                    style={{ color: "#EF4444" }}
+                                    onMouseEnter={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color = "#DC2626";
+                                        e.currentTarget.style.backgroundColor =
+                                          "#3A4040";
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.color = "#EF4444";
+                                        e.currentTarget.style.backgroundColor =
+                                          "transparent";
+                                      }
+                                    }}
+                                    title="Permanently delete client"
+                                  >
+                                    {deleteClient.isPending ? (
+                                      <div
+                                        className="animate-spin rounded-full h-4 w-4 border-b-2"
+                                        style={{ borderColor: "#EF4444" }}
+                                      />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>

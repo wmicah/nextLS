@@ -139,7 +139,34 @@ export const clientRouterRouter = router({
                     days: {
                       include: {
                         drills: {
-                          include: {
+                          // CRITICAL: Explicitly include description field to ensure it's always returned
+                          // Even if it's null in the database, we need it to normalize it to empty string
+                          select: {
+                            id: true,
+                            order: true,
+                            title: true,
+                            description: true, // Explicitly include description
+                            duration: true,
+                            videoUrl: true,
+                            notes: true,
+                            sets: true,
+                            reps: true,
+                            tempo: true,
+                            type: true,
+                            routineId: true,
+                            supersetId: true,
+                            supersetOrder: true,
+                            videoId: true,
+                            videoThumbnail: true,
+                            videoTitle: true,
+                            supersetDescription: true,
+                            supersetInstructions: true,
+                            supersetNotes: true,
+                            coachInstructionsWhatToDo: true,
+                            coachInstructionsHowToDoIt: true,
+                            coachInstructionsKeyPoints: true,
+                            coachInstructionsCommonMistakes: true,
+                            coachInstructionsEquipment: true,
                             completions: {
                               where: { clientId: user.id },
                             },
@@ -208,6 +235,74 @@ export const clientRouterRouter = router({
       JSON.stringify(program.weeks, null, 2)
     );
 
+    // CRITICAL: Normalize descriptions like routines do - ensure descriptions are always strings
+    // This ensures consistency with how routine exercises handle descriptions
+    const normalizedWeeks = program.weeks.map(week => ({
+      ...week,
+      days: week.days.map(day => ({
+        ...day,
+        drills: day.drills.map(drill => {
+          // CRITICAL: Ensure description is always a string (never null/undefined)
+          // This is essential for client-side display logic
+          const normalizedDescription =
+            drill.description !== null && drill.description !== undefined
+              ? String(drill.description) // Convert to string if it exists
+              : ""; // Use empty string if null/undefined
+
+          // Debug log for superset exercises to verify normalization
+          if (drill.supersetId) {
+            console.log("🔍 Normalizing superset drill description:", {
+              drillId: drill.id,
+              title: drill.title,
+              originalDescription: drill.description,
+              originalType: typeof drill.description,
+              originalIsNull: drill.description === null,
+              originalIsUndefined: drill.description === undefined,
+              normalizedDescription,
+              normalizedType: typeof normalizedDescription,
+              normalizedLength: normalizedDescription.length,
+            });
+          }
+
+          // CRITICAL: Explicitly set description to ensure it's always included
+          // Even if the field was missing from the query, we want it to be an empty string
+          const normalizedDrill = {
+            ...drill,
+            // Convert null/undefined descriptions to empty strings for consistency
+            // This matches how routine exercises handle descriptions
+            // CRITICAL: Always ensure this is a string, never null/undefined
+            description: normalizedDescription,
+            notes: drill.notes ?? "",
+          };
+
+          // Double-check that description is set (defensive programming)
+          // Also check if description field exists in the drill object at all
+          const hasDescriptionField = "description" in drill;
+
+          if (
+            normalizedDrill.description === null ||
+            normalizedDrill.description === undefined
+          ) {
+            console.warn(
+              "⚠️ WARNING: Description is still null/undefined after normalization!",
+              {
+                drillId: drill.id,
+                title: drill.title,
+                hasDescriptionField,
+                originalDescription: drill.description,
+                originalType: typeof drill.description,
+                normalizedDescription,
+                drillKeys: Object.keys(drill),
+              }
+            );
+            normalizedDrill.description = "";
+          }
+
+          return normalizedDrill;
+        }),
+      })),
+    }));
+
     return {
       id: program.id,
       title: program.title,
@@ -221,7 +316,7 @@ export const clientRouterRouter = router({
       overallProgress,
       coachName: client.coach?.name || "Unknown Coach",
       assignmentId: assignment.id,
-      weeks: program.weeks,
+      weeks: normalizedWeeks,
     };
   }),
 

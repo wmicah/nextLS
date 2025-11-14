@@ -1155,4 +1155,155 @@ export const userRouter = router({
       kindeIntegrationEnabled: isKindeManagementApiConfigured(),
     };
   }),
+
+  // Request to switch to a new coach (for archived clients or clients without coaches)
+  requestNewCoach: publicProcedure
+    .input(
+      z.object({
+        inviteCode: z.string().optional(),
+        coachEmail: z.string().email().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can request to join a coach",
+        });
+      }
+
+      // Get current client record
+      const clientRecord = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      let coachId: string | null = null;
+      let coach: any = null;
+
+      // If invite code is provided, find the coach by invite code
+      if (input.inviteCode) {
+        coach = await db.user.findFirst({
+          where: {
+            role: "COACH",
+            inviteCode: input.inviteCode,
+          },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message:
+              "Invalid invite code. Please check with your coach and try again.",
+          });
+        }
+
+        coachId = coach.id;
+      }
+      // If coach email is provided, find the coach by email
+      else if (input.coachEmail) {
+        coach = await db.user.findFirst({
+          where: {
+            role: "COACH",
+            email: input.coachEmail,
+          },
+        });
+
+        if (!coach) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message:
+              "No coach found with that email address. Please verify the email and try again.",
+          });
+        }
+
+        coachId = coach.id;
+      } else {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Either invite code or coach email must be provided",
+        });
+      }
+
+      // Check if client is already with this coach
+      if (clientRecord?.coachId === coachId && !clientRecord.archived) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "You are already a client of this coach",
+        });
+      }
+
+      // If client was archived, remove old coach relationship and unarchive
+      if (clientRecord) {
+        await db.client.update({
+          where: { id: clientRecord.id },
+          data: {
+            coachId: coachId,
+            archived: false,
+            archivedAt: null,
+          },
+        });
+      } else {
+        // Create new client record
+        await db.client.create({
+          data: {
+            userId: user.id,
+            coachId: coachId,
+            name: dbUser.name || "New Client",
+            email: dbUser.email,
+            archived: false,
+          },
+        });
+      }
+
+      // Create notification for the coach
+      if (coachId) {
+        await db.notification.create({
+          data: {
+            userId: coachId,
+            type: "CLIENT_JOIN_REQUEST",
+            title: "New Client Request",
+            message: `${
+              dbUser.name || "A new client"
+            } wants to join your coaching program.`,
+            data: {
+              clientId: user.id,
+              clientName: dbUser.name,
+              clientEmail: dbUser.email,
+              isSwitching: clientRecord?.coachId ? true : false,
+            },
+          },
+        });
+      }
+
+      // Send email notification to coach
+      try {
+        await sendClientJoinNotification(
+          coach.email,
+          coach.name || "Coach",
+          dbUser.name || "New Client",
+          dbUser.email
+        );
+      } catch (error) {
+        console.error("Failed to send client join notification email:", error);
+      }
+
+      return {
+        success: true,
+        coach: {
+          id: coach.id,
+          name: coach.name,
+          email: coach.email,
+        },
+      };
+    }),
 });

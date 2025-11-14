@@ -870,14 +870,69 @@ export default function SeamlessRoutineModal({
     if (!editingSuperset) return;
 
     hasUserMadeChanges.current = true;
-    // Update all exercises in the superset
-    setExercises(prev =>
-      prev.map(exercise => {
+
+    console.log("=== handleSupersetDescriptionSave ===");
+    console.log("Saved exercises from modal:", data.exercises);
+    console.log(
+      "Saved exercise IDs:",
+      data.exercises.map(ex => ex.id)
+    );
+    console.log("Editing superset ID:", editingSuperset.supersetId);
+    console.log("Current exercises before update:", exercises);
+
+    // Create a map of saved exercise IDs for quick lookup
+    // The modal uses supersetOrder as the ID, so we need to match by that
+    const savedExerciseIds = new Set(data.exercises.map(ex => ex.id));
+    console.log("Saved exercise IDs set:", Array.from(savedExerciseIds));
+
+    // Update exercises: remove deleted ones, update existing ones
+    setExercises(prev => {
+      console.log("Previous exercises count:", prev.length);
+      console.log(
+        "Exercises in superset before filter:",
+        prev.filter(ex => ex.supersetId === editingSuperset.supersetId)
+      );
+
+      const filtered = prev.filter(exercise => {
+        // Keep exercises that are NOT in this superset
+        if (exercise.supersetId !== editingSuperset.supersetId) {
+          return true;
+        }
+        // For exercises in this superset, only keep if they're in the saved data
+        // Match by supersetOrder (which is what the modal uses as ID)
+        const exerciseKey = exercise.supersetOrder?.toString();
+        const shouldKeep = exerciseKey
+          ? savedExerciseIds.has(exerciseKey)
+          : false;
+        console.log(
+          `Exercise ${exercise.title} (supersetOrder: ${exercise.supersetOrder}):`,
+          {
+            exerciseKey,
+            inSavedIds: shouldKeep,
+            willKeep: shouldKeep,
+          }
+        );
+        return shouldKeep;
+      });
+
+      console.log("Exercises after filter:", filtered.length);
+      console.log(
+        "Exercises in superset after filter:",
+        filtered.filter(ex => ex.supersetId === editingSuperset.supersetId)
+      );
+
+      const updated = filtered.map(exercise => {
+        // Update exercises that are in the superset and in the saved data
         if (exercise.supersetId === editingSuperset.supersetId) {
-          const updatedData = data.exercises.find(
-            ex => ex.id === exercise.supersetOrder?.toString()
-          );
+          const exerciseKey = exercise.supersetOrder?.toString();
+          const updatedData = exerciseKey
+            ? data.exercises.find(ex => ex.id === exerciseKey)
+            : null;
           if (updatedData) {
+            console.log(
+              `Updating exercise ${exercise.title} with data:`,
+              updatedData
+            );
             return {
               ...exercise,
               title: updatedData.title,
@@ -893,8 +948,16 @@ export default function SeamlessRoutineModal({
           }
         }
         return exercise;
-      })
-    );
+      });
+
+      console.log("Final updated exercises count:", updated.length);
+      console.log(
+        "Final exercises in superset:",
+        updated.filter(ex => ex.supersetId === editingSuperset.supersetId)
+      );
+
+      return updated;
+    });
 
     setIsSupersetDescriptionModalOpen(false);
     setEditingSuperset(null);

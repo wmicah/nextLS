@@ -101,7 +101,9 @@ export default function SupersetDescriptionModal({
     onSave({
       exercises: exercises.map(ex => ({
         ...ex,
-        description: ex.description?.trim() || undefined,
+        // Always send description as a string (empty string if blank) to ensure it's saved
+        // This matches how routine exercises handle descriptions
+        description: ex.description?.trim() || "",
       })),
       supersetDescription: supersetDescription.trim() || undefined,
     });
