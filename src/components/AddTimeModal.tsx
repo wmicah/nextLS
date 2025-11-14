@@ -37,10 +37,15 @@ export default function AddTimeModal({
     duration: 60, // Default 60 minutes
   });
 
+  const utils = trpc.useUtils();
+
   // Schedule lesson with freedom mutation
   const scheduleLessonMutation =
     trpc.scheduling.scheduleLessonWithFreedom.useMutation({
       onSuccess: () => {
+        // Invalidate schedule queries to refresh the schedule page
+        utils.scheduling.getCoachSchedule.invalidate();
+        utils.scheduling.getCoachUpcomingLessons.invalidate();
         onClose();
         resetForm();
       },
