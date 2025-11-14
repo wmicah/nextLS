@@ -81,25 +81,37 @@ export default function ExerciseRow({
   });
 
   const handleSave = () => {
-    // If this exercise is part of a superset, we need to update both exercises
+    // If this exercise is part of a superset, we need to update shared fields across all exercises
     if (exercise.supersetId && supersetExercises.length > 0) {
-      // Update all exercises in the superset with the same data
-      const updatePromises = supersetExercises.map(supersetExercise =>
+      // Filter out the current exercise from supersetExercises to avoid duplicates
+      const otherSupersetExercises = supersetExercises.filter(
+        ex => ex.id !== exercise.id
+      );
+
+      // For supersets, we share sets, reps, tempo, and coach instructions
+      // But each exercise keeps its own title, description, duration, and notes
+      const sharedData = {
+        sets: editedExercise.sets,
+        reps: editedExercise.reps,
+        tempo: editedExercise.tempo,
+        coachInstructions: editedExercise.coachInstructions,
+      };
+
+      // Update other exercises in the superset with shared data only
+      const updatePromises = otherSupersetExercises.map(supersetExercise =>
         updateExerciseMutation.mutateAsync({
           exerciseId: supersetExercise.id,
-          title: editedExercise.title,
-          description: editedExercise.description,
-          duration: editedExercise.duration,
-          notes: editedExercise.notes,
-          sets: editedExercise.sets,
-          reps: editedExercise.reps,
-          tempo: editedExercise.tempo,
-          // Coach Instructions
-          coachInstructions: editedExercise.coachInstructions,
+          // Keep the exercise's own title and description
+          title: supersetExercise.title,
+          description: supersetExercise.description || "",
+          duration: supersetExercise.duration || "",
+          notes: supersetExercise.notes || "",
+          // Share sets, reps, tempo, and coach instructions
+          ...sharedData,
         })
       );
 
-      // Also update the current exercise
+      // Update the current exercise with all its data (including title/description changes)
       updatePromises.push(
         updateExerciseMutation.mutateAsync({
           exerciseId: exercise.id,
@@ -110,7 +122,6 @@ export default function ExerciseRow({
           sets: editedExercise.sets,
           reps: editedExercise.reps,
           tempo: editedExercise.tempo,
-          // Coach Instructions
           coachInstructions: editedExercise.coachInstructions,
         })
       );
@@ -120,7 +131,8 @@ export default function ExerciseRow({
           addToast({
             type: "success",
             title: "Superset updated",
-            message: "All exercises in the superset have been updated.",
+            message:
+              "Sets, reps, and instructions have been synced across the superset.",
           });
           setIsEditing(false);
         })

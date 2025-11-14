@@ -704,6 +704,19 @@ export default function MobileClientsPage() {
     },
   });
 
+  const deleteClient = trpc.clients.delete.useMutation({
+    onSuccess: () => {
+      utils.clients.list.invalidate();
+    },
+    onError: error => {
+      console.error("Failed to delete client:", error);
+      alert(
+        error.message ||
+          "Failed to delete client. Make sure the client is archived first."
+      );
+    },
+  });
+
   const handleArchiveClient = (clientId: string, clientName: string) => {
     if (
       window.confirm(
@@ -721,6 +734,16 @@ export default function MobileClientsPage() {
       )
     ) {
       unarchiveClient.mutate({ id: clientId });
+    }
+  };
+
+  const handleDeleteClient = (clientId: string, clientName: string) => {
+    if (
+      window.confirm(
+        `⚠️ PERMANENT DELETION\n\nAre you absolutely sure you want to permanently delete ${clientName}?\n\nThis action:\n• Cannot be undone\n• Will remove the client from your list permanently\n• The client will be able to request a new coach\n\nThis is a permanent action.`
+      )
+    ) {
+      deleteClient.mutate({ id: clientId });
     }
   };
 
@@ -1524,6 +1547,24 @@ export default function MobileClientsPage() {
                             <Archive className="h-4 w-4" />
                           )}
                         </button>
+                        {/* Permanent Delete Button - Only for archived clients */}
+                        {activeTab === "archived" && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleDeleteClient(client.id, client.name);
+                            }}
+                            disabled={deleteClient.isPending}
+                            className="p-2 rounded-lg text-[#EF4444] hover:text-[#DC2626] hover:bg-[#3A4040] disabled:opacity-50"
+                            title="Permanently delete client"
+                          >
+                            {deleteClient.isPending ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#EF4444]" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1659,6 +1700,24 @@ export default function MobileClientsPage() {
                             <Archive className="h-4 w-4" />
                           )}
                         </button>
+                        {/* Permanent Delete Button - Only for archived clients */}
+                        {activeTab === "archived" && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleDeleteClient(client.id, client.name);
+                            }}
+                            disabled={deleteClient.isPending}
+                            className="p-2 rounded-lg text-[#EF4444] hover:text-[#DC2626] hover:bg-[#3A4040] disabled:opacity-50"
+                            title="Permanently delete client"
+                          >
+                            {deleteClient.isPending ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#EF4444]" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

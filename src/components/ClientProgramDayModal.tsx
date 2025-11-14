@@ -831,6 +831,11 @@ function ProgramContent({
     console.log("🔍 Processing drill:", {
       id: drill.id,
       title: drill.title,
+      description: drill.description,
+      descriptionType: typeof drill.description,
+      descriptionIsNull: drill.description === null,
+      descriptionIsUndefined: drill.description === undefined,
+      descriptionIsEmptyString: drill.description === "",
       hasRoutineId: !!drill.routineId,
       hasRoutine: !!drill.routine,
       hasSupersetId: !!drill.supersetId,
@@ -845,7 +850,14 @@ function ProgramContent({
       const regularDrill: Drill = {
         id: drill.id,
         title: drill.title,
-        description: drill.description || undefined,
+        // Preserve description - use the normalized value from the backend
+        // The backend normalizes null/undefined to empty strings, so we should get a string
+        // CRITICAL: Keep the description even if it's an empty string - let DrillCard handle the display logic
+        // This ensures descriptions are preserved through the entire flow
+        description:
+          drill.description !== null && drill.description !== undefined
+            ? String(drill.description) // Convert to string if it exists
+            : undefined, // Only use undefined if it's actually null/undefined
         sets: drill.sets || undefined,
         reps: drill.reps || undefined,
         tempo: drill.tempo || undefined,
@@ -865,8 +877,13 @@ function ProgramContent({
       console.log("✅ Added regular drill to allExercises:", {
         id: regularDrill.id,
         title: regularDrill.title,
+        description: regularDrill.description,
+        descriptionType: typeof regularDrill.description,
+        descriptionLength: regularDrill.description?.length,
         supersetId: regularDrill.supersetId,
         supersetOrder: regularDrill.supersetOrder,
+        originalDrillDescription: drill.description,
+        originalDrillDescriptionType: typeof drill.description,
       });
     } else {
       console.log("⏭️ Skipping drill (shouldBeRoutine):", drill.title);
@@ -881,7 +898,8 @@ function ProgramContent({
         const drillLikeExercise: Drill = {
           id: routineExerciseKey,
           title: exercise.title,
-          description: exercise.description || undefined,
+          // Preserve description even if it's an empty string (don't convert to undefined)
+          description: exercise.description ?? undefined,
           sets: exercise.sets || undefined,
           reps: exercise.reps || undefined,
           tempo: exercise.tempo || undefined,
@@ -969,7 +987,8 @@ function ProgramContent({
         const drillLikeExercise: Drill = {
           id: routineExerciseKey,
           title: exercise.title,
-          description: exercise.description || undefined,
+          // Preserve description even if it's an empty string (don't convert to undefined)
+          description: exercise.description ?? undefined,
           sets: exercise.sets || undefined,
           reps: exercise.reps || undefined,
           tempo: exercise.tempo || undefined,
@@ -1042,6 +1061,17 @@ function ProgramContent({
             if (drill.supersetId) {
               if (!supersetGroups[drill.supersetId]) {
                 supersetGroups[drill.supersetId] = [];
+              }
+              // Debug: Log description for superset exercises
+              if (drill.supersetId) {
+                console.log("🔍 Adding superset drill to group:", {
+                  id: drill.id,
+                  title: drill.title,
+                  supersetId: drill.supersetId,
+                  description: drill.description,
+                  descriptionType: typeof drill.description,
+                  hasDescription: !!drill.description,
+                });
               }
               supersetGroups[drill.supersetId].push(drill);
             }
@@ -1545,7 +1575,8 @@ function RoutineContent({
                 return {
                   id: routineExerciseKey,
                   title: exercise.title,
-                  description: exercise.description || undefined,
+                  // Preserve description even if it's an empty string (don't convert to undefined)
+                  description: exercise.description ?? undefined,
                   sets: exercise.sets || undefined,
                   reps: exercise.reps || undefined,
                   tempo: exercise.tempo || undefined,
@@ -1837,7 +1868,7 @@ function DrillCard({
         </div>
 
         {/* Description */}
-        {drill.description && (
+        {drill.description && drill.description.trim() && (
           <div className="mb-3 p-3 bg-gray-800/50 rounded-lg">
             <p className="text-sm text-gray-300">
               {drill.description.length > 120

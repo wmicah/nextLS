@@ -59,8 +59,9 @@ export async function checkClientAccess(
     },
   });
 
-  // If client has no coach, redirect to waiting page
-  if (!clientRecord?.coachId) {
+  // If client has no coach OR is archived, redirect to waiting page
+  // Archived clients should be on waiting page so they can switch coaches
+  if (!clientRecord?.coachId || clientRecord.archived) {
     redirect("/client-waiting");
   }
 
@@ -118,11 +119,11 @@ export async function checkWaitingPageAccess(): Promise<{
     },
   });
 
-  // If client has a coach, redirect to client dashboard
-  if (clientRecord?.coachId) {
+  // If client has a coach AND is not archived, redirect to client dashboard
+  // Archived clients stay on waiting page so they can switch coaches
+  if (clientRecord?.coachId && !clientRecord.archived) {
     redirect("/client-dashboard");
   }
 
-  return { user, dbUser };
+  return { user, dbUser, clientRecord };
 }
-

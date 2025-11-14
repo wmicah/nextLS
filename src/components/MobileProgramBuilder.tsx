@@ -462,8 +462,10 @@ export default function MobileProgramBuilder({
             supersetName,
             currentData: firstExercise
               ? {
-                  exercises: supersetExercises.map(ex => ({
-                    id: ex.id || ex.supersetOrder?.toString() || "1",
+                  // Use the exercise's actual id as the identifier (not supersetOrder)
+                  // This ensures each exercise has a unique ID even if they share supersetOrder
+                  exercises: supersetExercises.map((ex, index) => ({
+                    id: ex.id || `temp-${index}`, // Use actual id, fallback to temp index
                     title: ex.title,
                     sets: ex.sets,
                     reps: ex.reps,
@@ -626,22 +628,76 @@ export default function MobileProgramBuilder({
       if (!pendingSupersetDescription || !selectedWeekId || !selectedDayKey)
         return;
 
+      console.log(
+        "=== handleSupersetDescriptionSave (MobileProgramBuilder) ==="
+      );
+      console.log("Saved exercises from modal:", data.exercises);
+      console.log(
+        "Saved exercise IDs:",
+        data.exercises.map(ex => ex.id)
+      );
+      console.log(
+        "Pending superset ID:",
+        pendingSupersetDescription.supersetId
+      );
+
+      // Create a set of saved exercise IDs for quick lookup
+      const savedExerciseIds = new Set(data.exercises.map(ex => ex.id));
+      console.log("Saved exercise IDs set:", Array.from(savedExerciseIds));
+
       const updatedWeeks = weeks.map(week => {
         if (week.id === selectedWeekId) {
           const updatedDays = { ...week.days };
-          updatedDays[selectedDayKey] = updatedDays[selectedDayKey].map(
+          // First, filter out deleted exercises, then update remaining ones
+          const filteredItems = updatedDays[selectedDayKey].filter(
+            (item: ProgramItem) => {
+              // Keep items that are NOT in this superset
+              if (item.supersetId !== pendingSupersetDescription.supersetId) {
+                return true;
+              }
+              // For items in this superset, only keep if they're in the saved data
+              // Match by the exercise's actual id (the modal uses ex.id as the identifier)
+              const shouldKeep = savedExerciseIds.has(item.id);
+              console.log(
+                `Item ${item.title} (id: ${item.id}, supersetOrder: ${item.supersetOrder}):`,
+                {
+                  inSavedIds: shouldKeep,
+                  willKeep: shouldKeep,
+                }
+              );
+              return shouldKeep;
+            }
+          );
+
+          console.log(
+            `Day ${selectedDayKey}: Filtered from ${updatedDays[selectedDayKey].length} to ${filteredItems.length} items`
+          );
+
+          // Now update the remaining exercises
+          updatedDays[selectedDayKey] = filteredItems.map(
             (item: ProgramItem) => {
               if (item.supersetId === pendingSupersetDescription.supersetId) {
-                // Match exercise by index (supersetOrder - 1) since exercises array is ordered
-                const exerciseIndex = (item.supersetOrder || 1) - 1;
-                const exerciseData = data.exercises[exerciseIndex];
+                // Match exercise by its actual id (the modal uses ex.id as the identifier)
+                const exerciseData = data.exercises.find(
+                  ex => ex.id === item.id
+                );
 
                 if (exerciseData) {
+                  console.log(
+                    `Updating item ${item.title} (id: ${item.id}) with data:`,
+                    exerciseData
+                  );
+                  console.log(
+                    `Description being saved:`,
+                    exerciseData.description,
+                    `(type: ${typeof exerciseData.description})`
+                  );
                   const updatedItem = {
                     ...item,
                     sets: exerciseData.sets,
                     reps: exerciseData.reps,
-                    description: exerciseData.description || "",
+                    // Preserve description - use empty string if undefined/null to ensure it's saved
+                    description: exerciseData.description ?? "",
                     notes: exerciseData.description || item.notes || "",
                     // Only set superset description on the first exercise (supersetOrder = 1)
                     supersetDescription:
@@ -657,6 +713,10 @@ export default function MobileProgramBuilder({
                         ? data.supersetDescription || ""
                         : item.supersetNotes,
                   };
+                  console.log(
+                    `Updated item description:`,
+                    updatedItem.description
+                  );
                   return updatedItem;
                 }
               }

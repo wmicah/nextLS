@@ -661,9 +661,28 @@ export const clientsRouter = router({
         });
       }
 
-      await db.client.delete({
+      // Only allow permanent deletion of archived clients
+      if (!client.archived) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Client must be archived before permanent deletion. Please archive the client first.",
+        });
+      }
+
+      // Permanently delete the client - remove coach relationship but keep client record
+      // so they can request a new coach from the waiting page
+      await db.client.update({
         where: { id: input.id },
+        data: {
+          coachId: null,
+          archived: true,
+          archivedAt: new Date(),
+        },
       });
+
+      // Note: We don't actually delete the client record - we just remove the coach relationship
+      // This allows the client to stay on the waiting page and request a new coach
 
       return { success: true };
     }),
@@ -2123,4 +2142,39 @@ export const clientsRouter = router({
         message: `Workout replaced with lesson successfully`,
       };
     }),
+
+  // Get current user's client record (for clients to check their status)
+  getMyClientRecord: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    // Verify user is a CLIENT
+    const dbUser = await db.user.findFirst({
+      where: { id: user.id, role: "CLIENT" },
+    });
+
+    if (!dbUser) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only clients can access this endpoint",
+      });
+    }
+
+    const clientRecord = await db.client.findFirst({
+      where: { userId: user.id },
+      include: {
+        coach: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return clientRecord;
+  }),
 });
