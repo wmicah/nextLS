@@ -261,7 +261,6 @@ IMPORTANT: Only provide information about the Next Level Softball platform. Do n
 
     return completion.choices[0]?.message?.content ?? "No response text";
   } catch (error) {
-    console.error("OpenAI API error:", error);
 
     // Check if it's a quota error
     if (
@@ -270,7 +269,7 @@ IMPORTANT: Only provide information about the Next Level Softball platform. Do n
       "code" in error &&
       error.code === "insufficient_quota"
     ) {
-      console.log("OpenAI quota exceeded - using fallback system");
+
     }
 
     // Fallback to rule-based response if OpenAI fails
@@ -847,7 +846,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Chatbot API error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

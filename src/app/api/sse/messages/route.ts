@@ -44,8 +44,6 @@ export async function GET(req: NextRequest) {
         });
         controller.enqueue(`data: ${data}\n\n`);
 
-        console.log(`SSE connected for user: ${userId}`);
-
         // Store controller reference for cleanup
         (controller as any).userId = userId;
       },
@@ -61,7 +59,7 @@ export async function GET(req: NextRequest) {
             connections.delete(userId);
           }
         }
-        console.log(`SSE disconnected for user: ${userId}`);
+
       },
     });
 
@@ -75,7 +73,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("SSE route error:", error);
+
     return new Response("Internal Server Error", { status: 500 });
   }
 }

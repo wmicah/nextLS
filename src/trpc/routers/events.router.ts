@@ -57,11 +57,9 @@ export const eventsRouter = router({
         where: { userId: user.id },
       });
 
-      console.log("events.getUpcoming - User ID:", user.id);
-      console.log("events.getUpcoming - Client ID:", client?.id);
 
       if (!client) {
-        console.log("events.getUpcoming - No client record found!");
+
         return [];
       }
 
@@ -82,14 +80,8 @@ export const eventsRouter = router({
         orderBy: { date: "asc" },
       });
 
-      console.log("events.getUpcoming - Found events:", events.length);
       if (events.length > 0) {
-        console.log("events.getUpcoming - First event:", {
-          id: events[0].id,
-          date: events[0].date,
-          status: events[0].status,
-          coach: events[0].coach?.name,
-        });
+
       }
 
       return events;

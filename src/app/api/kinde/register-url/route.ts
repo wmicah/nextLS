@@ -28,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({ registerUrl });
   } catch (error) {
-    console.error("Error getting Kinde register URL:", error);
+
     return NextResponse.json(
       { error: "Failed to get registration URL" },
       { status: 500 }

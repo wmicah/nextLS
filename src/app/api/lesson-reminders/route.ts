@@ -259,9 +259,8 @@ Looking forward to seeing you!
               `,
             });
 
-            console.log(`📧 Email sent to ${lesson.client?.user?.email}`);
           } catch (emailError) {
-            console.error("Failed to send email:", emailError);
+
           }
         }
 
@@ -288,7 +287,7 @@ Looking forward to seeing you!
           messageId: message.id,
         });
       } catch (error) {
-        console.error(`Error sending reminder for lesson ${lesson.id}:`, error);
+
         results.push({
           lessonId: lesson.id,
           clientName: lesson.client?.name || "Unknown Client",
@@ -305,7 +304,7 @@ Looking forward to seeing you!
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error in lesson reminder system:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

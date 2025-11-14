@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Detailed health check failed:", error);
 
     return NextResponse.json(
       {

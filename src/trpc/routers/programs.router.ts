@@ -227,8 +227,6 @@ export const programsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      console.log("=== PROGRAM CREATE MUTATION STARTED ===");
-
       const { getUser } = getKindeServerSession();
       const user = await getUser();
 
@@ -260,7 +258,6 @@ export const programsRouter = router({
       // Validate and clean the data
       const validation = validateAndCleanProgramData(input);
       if (!validation.success) {
-        console.error("Program validation failed:", validation.errors);
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Validation failed: ${
@@ -306,8 +303,6 @@ export const programsRouter = router({
                       isRestDay: isRestDay,
                       drills: {
                         create: day.drills.map(drill => {
-                          console.log("=== BACKEND DRILL CREATION ===");
-                          console.log("Drill data:", drill);
                           console.log(
                             "Drill routineId:",
                             (drill as any).routineId
@@ -362,12 +357,8 @@ export const programsRouter = router({
           },
         });
 
-        console.log("=== PROGRAM CREATE COMPLETED SUCCESSFULLY ===");
         return program;
       } catch (error) {
-        console.error("=== PROGRAM CREATE FAILED ===");
-        console.error("Error details:", error);
-
         // Provide more specific error messages
         if (error instanceof Error) {
           if (error.message.includes("timeout")) {
@@ -581,9 +572,6 @@ export const programsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      console.log("=== PROGRAMS.UPDATE MUTATION CALLED ===");
-      console.log("Input:", input);
-      console.log("Update Scope:", input.updateScope || "all");
       const { getUser } = getKindeServerSession();
       const user = await getUser();
 
@@ -604,216 +592,129 @@ export const programsRouter = router({
       const updateScope = input.updateScope || "all";
 
       // Start a transaction to update the program and its structure
-      const result = await db.$transaction(async tx => {
-        // Check if we need to create a new program (future scope with existing assignments)
-        // "future" scope: Create new program version, ALL existing assignments keep old program
-        // "all" scope: Update existing program, affects ALL assignments
-        let shouldCreateNewProgram = false;
-        let existingAssignments: Array<{ id: string }> = [];
-        if (input.weeks && updateScope === "future") {
-          // Check for ANY assignments (regardless of start date)
-          // If any exist, create new program version so they ALL keep the old one
-          existingAssignments = await tx.programAssignment.findMany({
-            where: {
-              programId: input.id,
-            },
-            select: {
-              id: true,
-            },
-          });
-          shouldCreateNewProgram = existingAssignments.length > 0;
-        }
-
-        if (shouldCreateNewProgram) {
-          // Program has assignments - create a NEW program with updated structure
-          // Existing assignments keep the old program, new assignments use the new program
-          console.log("=== FUTURE-ONLY UPDATE MODE ===");
-          console.log(
-            `Program ${input.id} has ${existingAssignments.length} existing assignments - creating new program version`
-          );
-          console.log(
-            `Existing assignment IDs: ${existingAssignments
-              .map((a: { id: string }) => a.id)
-              .join(", ")}`
-          );
-
-          // Get the original program to copy metadata (including any title/description updates)
-          const originalProgram = await tx.program.findUnique({
-            where: { id: input.id },
-            select: {
-              title: true,
-              description: true,
-              level: true,
-              duration: true,
-              sport: true,
-              coachId: true,
-              organizationId: true,
-              sharedWithOrg: true,
-            },
-          });
-
-          if (!originalProgram) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "Program not found",
+      // Add timeout to prevent transaction errors (default is 5 seconds, increase to 30 seconds for large programs)
+      const result = await db.$transaction(
+        async tx => {
+          // Check if we need to create a new program (future scope with existing assignments)
+          // "future" scope: Create new program version, ALL existing assignments keep old program
+          // "all" scope: Update existing program, affects ALL assignments
+          let shouldCreateNewProgram = false;
+          let existingAssignments: Array<{ id: string }> = [];
+          if (input.weeks && updateScope === "future") {
+            // Check for ANY assignments (regardless of start date)
+            // If any exist, create new program version so they ALL keep the old one
+            existingAssignments = await tx.programAssignment.findMany({
+              where: {
+                programId: input.id,
+              },
+              select: {
+                id: true,
+              },
             });
+            shouldCreateNewProgram = existingAssignments.length > 0;
           }
 
-          console.log(
-            `📋 Original program ${input.id} will remain UNCHANGED (except supersededByProgramId field)`
-          );
+          if (shouldCreateNewProgram) {
+            // Program has assignments - create a NEW program with updated structure
+            // Existing assignments keep the old program, new assignments use the new program
 
-          // Create new program with updated structure
-          const newProgram = await tx.program.create({
-            data: {
-              title: input.title || originalProgram.title,
-              description:
-                input.description !== undefined
-                  ? input.description
-                  : originalProgram.description,
-              level: originalProgram.level,
-              duration: originalProgram.duration,
-              sport: originalProgram.sport,
-              coachId: originalProgram.coachId,
-              organizationId: originalProgram.organizationId,
-              sharedWithOrg: originalProgram.sharedWithOrg,
-              weeks: {
-                create: input.weeks!.map(week => ({
-                  weekNumber: week.weekNumber,
-                  title: week.title,
-                  description: week.description || "",
-                  days: {
-                    create: week.days.map(day => {
-                      const isRestDay = day.drills.length === 0;
-                      return {
-                        dayNumber: day.dayNumber,
-                        title: day.title,
-                        description: day.description || "",
-                        isRestDay: isRestDay,
-                        drills: {
-                          create: day.drills.map((drill, drillIndex) => ({
-                            order: drillIndex + 1,
-                            title: drill.title,
-                            description: drill.description ?? "",
-                            duration: drill.duration || "",
-                            videoUrl: drill.videoUrl || "",
-                            notes: drill.notes || "",
-                            sets: drill.sets,
-                            reps: drill.reps,
-                            tempo: drill.tempo || "",
-                            type: drill.type || "exercise",
-                            videoId: drill.videoId,
-                            videoTitle: drill.videoTitle,
-                            videoThumbnail: drill.videoThumbnail,
-                            routineId: drill.routineId,
-                            supersetId: drill.supersetId,
-                            supersetOrder: drill.supersetOrder,
-                            coachInstructionsWhatToDo: (drill as any)
-                              .coachInstructions?.whatToDo,
-                            coachInstructionsHowToDoIt: (drill as any)
-                              .coachInstructions?.howToDoIt,
-                            coachInstructionsKeyPoints:
-                              (drill as any).coachInstructions?.keyPoints || [],
-                            coachInstructionsCommonMistakes:
-                              (drill as any).coachInstructions
-                                ?.commonMistakes || [],
-                            coachInstructionsEquipment: (drill as any)
-                              .coachInstructions?.equipment,
-                          })),
-                        },
-                      };
-                    }),
-                  },
-                })),
-              },
-            },
-            include: {
-              weeks: {
-                include: {
-                  days: {
-                    include: {
-                      drills: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
-
-          // Mark the old program as superseded by the new one
-          // IMPORTANT: Only update the supersededByProgramId field - do NOT update structure
-          await tx.program.update({
-            where: { id: input.id },
-            data: {
-              supersededByProgramId: newProgram.id,
-              // Explicitly do NOT update title, description, or any structure fields
-            },
-          });
-
-          // Verify assignments still point to old program (CRITICAL CHECK)
-          const assignmentsAfter = await tx.programAssignment.findMany({
-            where: {
-              programId: input.id,
-            },
-            select: {
-              id: true,
-              programId: true,
-              clientId: true,
-            },
-          });
-
-          console.log(
-            `✅ Created new program ${newProgram.id} - existing assignments keep old program ${input.id} (marked as superseded)`
-          );
-          console.log(
-            `✅ Verified ${assignmentsAfter.length} assignments still point to old program ${input.id}`
-          );
-          console.log(
-            `📋 Assignment details:`,
-            assignmentsAfter.map(a => ({
-              assignmentId: a.id,
-              programId: a.programId,
-              clientId: a.clientId,
-              pointsToOldProgram: a.programId === input.id,
-            }))
-          );
-          console.log(
-            `⚠️ OLD PROGRAM ${input.id} STRUCTURE REMAINS COMPLETELY UNCHANGED`
-          );
-          console.log(
-            `⚠️ NEW PROGRAM ${newProgram.id} - assignments should NOT point here yet`
-          );
-
-          // Return the new program (the original program remains unchanged)
-          return newProgram;
-        }
-
-        // Update the program basic info (only if not creating new program)
-        const program = await tx.program.update({
-          where: {
-            id: input.id,
-            coachId: ensureUserId(user.id), // Ensure coach owns this program
-          },
-          data: {
-            ...(input.title && { title: input.title }),
-            ...(input.description !== undefined && {
-              description: input.description,
-            }),
-          },
-        });
-
-        // If weeks data is provided, update the program structure
-        if (input.weeks) {
-          // For "future" scope without assignments, update normally
-          if (updateScope === "future") {
-            console.log("=== FUTURE-ONLY UPDATE MODE ===");
             console.log(
-              "No existing assignments - updating program structure normally"
+              `Existing assignment IDs: ${existingAssignments
+                .map((a: { id: string }) => a.id)
+                .join(", ")}`
             );
 
-            // Get all existing drills
-            const existingProgram = await tx.program.findUnique({
+            // Get the original program to copy metadata (including any title/description updates)
+            const originalProgram = await tx.program.findUnique({
               where: { id: input.id },
+              select: {
+                title: true,
+                description: true,
+                level: true,
+                duration: true,
+                sport: true,
+                coachId: true,
+                organizationId: true,
+                sharedWithOrg: true,
+              },
+            });
+
+            if (!originalProgram) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Program not found",
+              });
+            }
+
+            console.log(
+              `📋 Original program ${input.id} will remain UNCHANGED (except supersededByProgramId field)`
+            );
+
+            // Create new program with updated structure
+            const newProgram = await tx.program.create({
+              data: {
+                title: input.title || originalProgram.title,
+                description:
+                  input.description !== undefined
+                    ? input.description
+                    : originalProgram.description,
+                level: originalProgram.level,
+                duration: originalProgram.duration,
+                sport: originalProgram.sport,
+                coachId: originalProgram.coachId,
+                organizationId: originalProgram.organizationId,
+                sharedWithOrg: originalProgram.sharedWithOrg,
+                weeks: {
+                  create: input.weeks!.map(week => ({
+                    weekNumber: week.weekNumber,
+                    title: week.title,
+                    description: week.description || "",
+                    days: {
+                      create: week.days.map(day => {
+                        const isRestDay = day.drills.length === 0;
+                        return {
+                          dayNumber: day.dayNumber,
+                          title: day.title,
+                          description: day.description || "",
+                          isRestDay: isRestDay,
+                          drills: {
+                            create: day.drills.map((drill, drillIndex) => ({
+                              order: drillIndex + 1,
+                              title: drill.title,
+                              description: drill.description ?? "",
+                              duration: drill.duration || "",
+                              videoUrl: drill.videoUrl || "",
+                              notes: drill.notes || "",
+                              sets: drill.sets,
+                              reps: drill.reps,
+                              tempo: drill.tempo || "",
+                              type: drill.type || "exercise",
+                              videoId: drill.videoId,
+                              videoTitle: drill.videoTitle,
+                              videoThumbnail: drill.videoThumbnail,
+                              routineId: drill.routineId,
+                              supersetId: drill.supersetId,
+                              supersetOrder: drill.supersetOrder,
+                              coachInstructionsWhatToDo: (drill as any)
+                                .coachInstructions?.whatToDo,
+                              coachInstructionsHowToDoIt: (drill as any)
+                                .coachInstructions?.howToDoIt,
+                              coachInstructionsKeyPoints:
+                                (drill as any).coachInstructions?.keyPoints ||
+                                [],
+                              coachInstructionsCommonMistakes:
+                                (drill as any).coachInstructions
+                                  ?.commonMistakes || [],
+                              coachInstructionsEquipment: (drill as any)
+                                .coachInstructions?.equipment,
+                            })),
+                          },
+                        };
+                      }),
+                    },
+                  })),
+                },
+              },
               include: {
                 weeks: {
                   include: {
@@ -827,236 +728,306 @@ export const programsRouter = router({
               },
             });
 
-            if (!existingProgram) {
-              throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Program not found",
-              });
-            }
-
-            // Build a map of existing drills by ID
-            const existingDrillByIdMap = new Map<string, any>();
-
-            existingProgram.weeks.forEach(week => {
-              week.days.forEach(day => {
-                day.drills.forEach(drill => {
-                  existingDrillByIdMap.set(drill.id, drill);
-                });
-              });
-            });
-
-            // If program has any assignments, we preserve all existing drills
-            // Only add new drills or update drills that don't exist yet
-
-            // Update weeks, days, and drills - preserving drills with completions
-            for (const week of input.weeks) {
-              // Find or create week
-              let existingWeek = await tx.programWeek.findFirst({
-                where: {
-                  programId: input.id,
-                  weekNumber: week.weekNumber,
-                },
-              });
-
-              if (!existingWeek) {
-                existingWeek = await tx.programWeek.create({
-                  data: {
-                    programId: input.id,
-                    weekNumber: week.weekNumber,
-                    title: week.title,
-                    description: week.description || "",
-                  },
-                });
-              } else {
-                // Update week title/description
-                await tx.programWeek.update({
-                  where: { id: existingWeek.id },
-                  data: {
-                    title: week.title,
-                    description: week.description || "",
-                  },
-                });
-              }
-
-              // Process days
-              for (const day of week.days) {
-                const isRestDay = day.drills.length === 0;
-
-                // Find or create day
-                let existingDay = await tx.programDay.findFirst({
-                  where: {
-                    weekId: existingWeek.id,
-                    dayNumber: day.dayNumber,
-                  },
-                });
-
-                if (!existingDay) {
-                  existingDay = await tx.programDay.create({
-                    data: {
-                      weekId: existingWeek.id,
-                      dayNumber: day.dayNumber,
-                      title: day.title,
-                      description: day.description || "",
-                      isRestDay: isRestDay,
-                    },
-                  });
-                } else {
-                  // Update day
-                  await tx.programDay.update({
-                    where: { id: existingDay.id },
-                    data: {
-                      title: day.title,
-                      description: day.description || "",
-                      isRestDay: isRestDay,
-                    },
-                  });
-                }
-
-                // Process drills
-                for (
-                  let drillIndex = 0;
-                  drillIndex < day.drills.length;
-                  drillIndex++
-                ) {
-                  const drill = day.drills[drillIndex];
-
-                  // Check if this drill already exists
-                  const existingDrill = drill.id
-                    ? existingDrillByIdMap.get(drill.id)
-                    : null;
-
-                  if (existingDrill) {
-                    // Drill already exists - update it (no assignments, so safe to update)
-                    await tx.programDrill.update({
-                      where: { id: drill.id },
-                      data: {
-                        order: drillIndex + 1,
-                        title: drill.title,
-                        description: drill.description ?? "",
-                        duration: drill.duration || "",
-                        videoUrl: drill.videoUrl || "",
-                        notes: drill.notes || "",
-                        sets: drill.sets,
-                        reps: drill.reps,
-                        tempo: drill.tempo || "",
-                        type: drill.type || "exercise",
-                        videoId: drill.videoId,
-                        videoTitle: drill.videoTitle,
-                        videoThumbnail: drill.videoThumbnail,
-                        routineId: drill.routineId,
-                        supersetId: drill.supersetId,
-                        supersetOrder: drill.supersetOrder,
-                        coachInstructionsWhatToDo: (drill as any)
-                          .coachInstructions?.whatToDo,
-                        coachInstructionsHowToDoIt: (drill as any)
-                          .coachInstructions?.howToDoIt,
-                        coachInstructionsKeyPoints:
-                          (drill as any).coachInstructions?.keyPoints || [],
-                        coachInstructionsCommonMistakes:
-                          (drill as any).coachInstructions?.commonMistakes ||
-                          [],
-                        coachInstructionsEquipment: (drill as any)
-                          .coachInstructions?.equipment,
-                      },
-                    });
-                  } else {
-                    // New drill - always create it
-                    await tx.programDrill.create({
-                      data: {
-                        dayId: existingDay.id,
-                        order: drillIndex + 1,
-                        title: drill.title,
-                        description: drill.description ?? "",
-                        duration: drill.duration || "",
-                        videoUrl: drill.videoUrl || "",
-                        notes: drill.notes || "",
-                        sets: drill.sets,
-                        reps: drill.reps,
-                        tempo: drill.tempo || "",
-                        type: drill.type || "exercise",
-                        videoId: drill.videoId,
-                        videoTitle: drill.videoTitle,
-                        videoThumbnail: drill.videoThumbnail,
-                        routineId: drill.routineId,
-                        supersetId: drill.supersetId,
-                        supersetOrder: drill.supersetOrder,
-                        coachInstructionsWhatToDo: (drill as any)
-                          .coachInstructions?.whatToDo,
-                        coachInstructionsHowToDoIt: (drill as any)
-                          .coachInstructions?.howToDoIt,
-                        coachInstructionsKeyPoints:
-                          (drill as any).coachInstructions?.keyPoints || [],
-                        coachInstructionsCommonMistakes:
-                          (drill as any).coachInstructions?.commonMistakes ||
-                          [],
-                        coachInstructionsEquipment: (drill as any)
-                          .coachInstructions?.equipment,
-                      },
-                    });
-                  }
-                }
-
-                // Delete drills that are no longer in the structure (no assignments, so safe)
-                const existingDrills = await tx.programDrill.findMany({
-                  where: { dayId: existingDay.id },
-                });
-
-                for (const existingDrill of existingDrills) {
-                  const stillExists = day.drills.some(
-                    d => d.id === existingDrill.id
-                  );
-                  if (!stillExists) {
-                    // Safe to delete since no assignments exist
-                    await tx.programDrill.delete({
-                      where: { id: existingDrill.id },
-                    });
-                  }
-                }
-              }
-            }
-
-            // Delete weeks that are no longer in the structure (no assignments, so safe)
-            const existingWeeks = await tx.programWeek.findMany({
-              where: { programId: input.id },
-              include: {
-                days: {
-                  include: {
-                    drills: true,
-                  },
-                },
+            // Mark the old program as superseded by the new one
+            // IMPORTANT: Only update the supersededByProgramId field - do NOT update structure
+            await tx.program.update({
+              where: { id: input.id },
+              data: {
+                supersededByProgramId: newProgram.id,
+                // Explicitly do NOT update title, description, or any structure fields
               },
             });
 
-            for (const existingWeek of existingWeeks) {
-              const stillExists = input.weeks.some(
-                w => w.weekNumber === existingWeek.weekNumber
-              );
-              if (!stillExists) {
-                await tx.programWeek.delete({
-                  where: { id: existingWeek.id },
+            // Verify assignments still point to old program (CRITICAL CHECK)
+            const assignmentsAfter = await tx.programAssignment.findMany({
+              where: {
+                programId: input.id,
+              },
+              select: {
+                id: true,
+                programId: true,
+                clientId: true,
+              },
+            });
+
+            console.log(
+              `✅ Created new program ${newProgram.id} - existing assignments keep old program ${input.id} (marked as superseded)`
+            );
+
+            console.log(
+              `📋 Assignment details:`,
+              assignmentsAfter.map(a => ({
+                assignmentId: a.id,
+                programId: a.programId,
+                clientId: a.clientId,
+                pointsToOldProgram: a.programId === input.id,
+              }))
+            );
+
+            // Return the new program (the original program remains unchanged)
+            return newProgram;
+          }
+
+          // Update the program basic info (only if not creating new program)
+          const program = await tx.program.update({
+            where: {
+              id: input.id,
+              coachId: ensureUserId(user.id), // Ensure coach owns this program
+            },
+            data: {
+              ...(input.title && { title: input.title }),
+              ...(input.description !== undefined && {
+                description: input.description,
+              }),
+            },
+          });
+
+          // If weeks data is provided, update the program structure
+          if (input.weeks) {
+            // For "future" scope without assignments, update normally
+            if (updateScope === "future") {
+              // Get all existing drills
+              const existingProgram = await tx.program.findUnique({
+                where: { id: input.id },
+                include: {
+                  weeks: {
+                    include: {
+                      days: {
+                        include: {
+                          drills: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              });
+
+              if (!existingProgram) {
+                throw new TRPCError({
+                  code: "NOT_FOUND",
+                  message: "Program not found",
                 });
               }
-            }
 
-            console.log("=== FUTURE-ONLY UPDATE COMPLETED ===");
-            console.log(
-              "Existing assignments preserved - new assignments will use updated structure"
-            );
-          } else {
-            // Original "all" scope behavior - delete and recreate
-            // BEFORE deleting weeks, collect all existing drill completions for migration
-            const existingProgram = await tx.program.findUnique({
-              where: { id: input.id },
-              include: {
-                weeks: {
-                  include: {
-                    days: {
-                      include: {
-                        drills: {
-                          include: {
-                            programDrillCompletions: {
-                              include: {
-                                programAssignment: true,
+              // Build a map of existing drills by ID
+              const existingDrillByIdMap = new Map<string, any>();
+
+              existingProgram.weeks.forEach(week => {
+                week.days.forEach(day => {
+                  day.drills.forEach(drill => {
+                    existingDrillByIdMap.set(drill.id, drill);
+                  });
+                });
+              });
+
+              // If program has any assignments, we preserve all existing drills
+              // Only add new drills or update drills that don't exist yet
+
+              // Update weeks, days, and drills - preserving drills with completions
+              for (const week of input.weeks) {
+                // Find or create week
+                let existingWeek = await tx.programWeek.findFirst({
+                  where: {
+                    programId: input.id,
+                    weekNumber: week.weekNumber,
+                  },
+                });
+
+                if (!existingWeek) {
+                  existingWeek = await tx.programWeek.create({
+                    data: {
+                      programId: input.id,
+                      weekNumber: week.weekNumber,
+                      title: week.title,
+                      description: week.description || "",
+                    },
+                  });
+                } else {
+                  // Update week title/description
+                  await tx.programWeek.update({
+                    where: { id: existingWeek.id },
+                    data: {
+                      title: week.title,
+                      description: week.description || "",
+                    },
+                  });
+                }
+
+                // Process days
+                for (const day of week.days) {
+                  const isRestDay = day.drills.length === 0;
+
+                  // Find or create day
+                  let existingDay = await tx.programDay.findFirst({
+                    where: {
+                      weekId: existingWeek.id,
+                      dayNumber: day.dayNumber,
+                    },
+                  });
+
+                  if (!existingDay) {
+                    existingDay = await tx.programDay.create({
+                      data: {
+                        weekId: existingWeek.id,
+                        dayNumber: day.dayNumber,
+                        title: day.title,
+                        description: day.description || "",
+                        isRestDay: isRestDay,
+                      },
+                    });
+                  } else {
+                    // Update day
+                    await tx.programDay.update({
+                      where: { id: existingDay.id },
+                      data: {
+                        title: day.title,
+                        description: day.description || "",
+                        isRestDay: isRestDay,
+                      },
+                    });
+                  }
+
+                  // Process drills
+                  for (
+                    let drillIndex = 0;
+                    drillIndex < day.drills.length;
+                    drillIndex++
+                  ) {
+                    const drill = day.drills[drillIndex];
+
+                    // Check if this drill already exists
+                    const existingDrill = drill.id
+                      ? existingDrillByIdMap.get(drill.id)
+                      : null;
+
+                    if (existingDrill) {
+                      // Drill already exists - update it (no assignments, so safe to update)
+                      await tx.programDrill.update({
+                        where: { id: drill.id },
+                        data: {
+                          order: drillIndex + 1,
+                          title: drill.title,
+                          description: drill.description ?? "",
+                          duration: drill.duration || "",
+                          videoUrl: drill.videoUrl || "",
+                          notes: drill.notes || "",
+                          sets: drill.sets,
+                          reps: drill.reps,
+                          tempo: drill.tempo || "",
+                          type: drill.type || "exercise",
+                          videoId: drill.videoId,
+                          videoTitle: drill.videoTitle,
+                          videoThumbnail: drill.videoThumbnail,
+                          routineId: drill.routineId,
+                          supersetId: drill.supersetId,
+                          supersetOrder: drill.supersetOrder,
+                          coachInstructionsWhatToDo: (drill as any)
+                            .coachInstructions?.whatToDo,
+                          coachInstructionsHowToDoIt: (drill as any)
+                            .coachInstructions?.howToDoIt,
+                          coachInstructionsKeyPoints:
+                            (drill as any).coachInstructions?.keyPoints || [],
+                          coachInstructionsCommonMistakes:
+                            (drill as any).coachInstructions?.commonMistakes ||
+                            [],
+                          coachInstructionsEquipment: (drill as any)
+                            .coachInstructions?.equipment,
+                        },
+                      });
+                    } else {
+                      // New drill - always create it
+                      await tx.programDrill.create({
+                        data: {
+                          dayId: existingDay.id,
+                          order: drillIndex + 1,
+                          title: drill.title,
+                          description: drill.description ?? "",
+                          duration: drill.duration || "",
+                          videoUrl: drill.videoUrl || "",
+                          notes: drill.notes || "",
+                          sets: drill.sets,
+                          reps: drill.reps,
+                          tempo: drill.tempo || "",
+                          type: drill.type || "exercise",
+                          videoId: drill.videoId,
+                          videoTitle: drill.videoTitle,
+                          videoThumbnail: drill.videoThumbnail,
+                          routineId: drill.routineId,
+                          supersetId: drill.supersetId,
+                          supersetOrder: drill.supersetOrder,
+                          coachInstructionsWhatToDo: (drill as any)
+                            .coachInstructions?.whatToDo,
+                          coachInstructionsHowToDoIt: (drill as any)
+                            .coachInstructions?.howToDoIt,
+                          coachInstructionsKeyPoints:
+                            (drill as any).coachInstructions?.keyPoints || [],
+                          coachInstructionsCommonMistakes:
+                            (drill as any).coachInstructions?.commonMistakes ||
+                            [],
+                          coachInstructionsEquipment: (drill as any)
+                            .coachInstructions?.equipment,
+                        },
+                      });
+                    }
+                  }
+
+                  // Delete drills that are no longer in the structure (no assignments, so safe)
+                  const existingDrills = await tx.programDrill.findMany({
+                    where: { dayId: existingDay.id },
+                  });
+
+                  for (const existingDrill of existingDrills) {
+                    const stillExists = day.drills.some(
+                      d => d.id === existingDrill.id
+                    );
+                    if (!stillExists) {
+                      // Safe to delete since no assignments exist
+                      await tx.programDrill.delete({
+                        where: { id: existingDrill.id },
+                      });
+                    }
+                  }
+                }
+              }
+
+              // Delete weeks that are no longer in the structure (no assignments, so safe)
+              const existingWeeks = await tx.programWeek.findMany({
+                where: { programId: input.id },
+                include: {
+                  days: {
+                    include: {
+                      drills: true,
+                    },
+                  },
+                },
+              });
+
+              for (const existingWeek of existingWeeks) {
+                const stillExists = input.weeks.some(
+                  w => w.weekNumber === existingWeek.weekNumber
+                );
+                if (!stillExists) {
+                  await tx.programWeek.delete({
+                    where: { id: existingWeek.id },
+                  });
+                }
+              }
+            } else {
+              // Original "all" scope behavior - delete and recreate
+              // BEFORE deleting weeks, collect all existing drill completions for migration
+              const existingProgram = await tx.program.findUnique({
+                where: { id: input.id },
+                include: {
+                  weeks: {
+                    include: {
+                      days: {
+                        include: {
+                          drills: {
+                            include: {
+                              programDrillCompletions: {
+                                include: {
+                                  programAssignment: true,
+                                },
                               },
                             },
                           },
@@ -1065,351 +1036,349 @@ export const programsRouter = router({
                     },
                   },
                 },
-              },
-            });
+              });
 
-            // Build a mapping of old drill IDs to their completions and position info
-            const drillCompletionMap = new Map<
-              string,
-              {
-                completions: Array<{
-                  id: string;
-                  programAssignmentId: string;
-                  clientId: string;
-                  completedAt: Date;
-                  notes: string | null;
-                }>;
-                weekNumber: number;
-                dayNumber: number;
-                order: number;
-                title: string;
-                routineId: string | null;
-              }
-            >();
+              // Build a mapping of old drill IDs to their completions and position info
+              const drillCompletionMap = new Map<
+                string,
+                {
+                  completions: Array<{
+                    id: string;
+                    programAssignmentId: string;
+                    clientId: string;
+                    completedAt: Date;
+                    notes: string | null;
+                  }>;
+                  weekNumber: number;
+                  dayNumber: number;
+                  order: number;
+                  title: string;
+                  routineId: string | null;
+                }
+              >();
 
-            existingProgram?.weeks.forEach(week => {
-              week.days.forEach(day => {
-                day.drills.forEach(drill => {
-                  drillCompletionMap.set(drill.id, {
-                    completions: drill.programDrillCompletions.map(comp => ({
-                      id: comp.id,
-                      programAssignmentId: comp.programAssignmentId,
-                      clientId: comp.clientId,
-                      completedAt: comp.completedAt,
-                      notes: comp.notes,
-                    })),
-                    weekNumber: week.weekNumber,
-                    dayNumber: day.dayNumber,
-                    order: drill.order,
-                    title: drill.title,
-                    routineId: drill.routineId,
+              existingProgram?.weeks.forEach(week => {
+                week.days.forEach(day => {
+                  day.drills.forEach(drill => {
+                    drillCompletionMap.set(drill.id, {
+                      completions: drill.programDrillCompletions.map(comp => ({
+                        id: comp.id,
+                        programAssignmentId: comp.programAssignmentId,
+                        clientId: comp.clientId,
+                        completedAt: comp.completedAt,
+                        notes: comp.notes,
+                      })),
+                      weekNumber: week.weekNumber,
+                      dayNumber: day.dayNumber,
+                      order: drill.order,
+                      title: drill.title,
+                      routineId: drill.routineId,
+                    });
                   });
                 });
               });
-            });
 
-            // Also collect ExerciseCompletion records that reference old drill IDs
-            // These can be either:
-            // 1. Regular drills: exerciseId = oldDrillId, programDrillId = ""
-            // 2. Routine exercises in drills: exerciseId = exerciseId, programDrillId = oldDrillId
-            const drillIds = Array.from(drillCompletionMap.keys()).filter(
-              id => id !== ""
-            );
+              // Also collect ExerciseCompletion records that reference old drill IDs
+              // These can be either:
+              // 1. Regular drills: exerciseId = oldDrillId, programDrillId = ""
+              // 2. Routine exercises in drills: exerciseId = exerciseId, programDrillId = oldDrillId
+              const drillIds = Array.from(drillCompletionMap.keys()).filter(
+                id => id !== ""
+              );
 
-            // Find ExerciseCompletion records where the old drill ID is used as exerciseId (regular drills)
-            const exerciseCompletionsAsExerciseId =
-              drillIds.length > 0
-                ? await tx.exerciseCompletion.findMany({
-                    where: {
-                      exerciseId: {
-                        in: drillIds,
+              // Find ExerciseCompletion records where the old drill ID is used as exerciseId (regular drills)
+              const exerciseCompletionsAsExerciseId =
+                drillIds.length > 0
+                  ? await tx.exerciseCompletion.findMany({
+                      where: {
+                        exerciseId: {
+                          in: drillIds,
+                        },
+                        programDrillId: "", // Regular drills use empty string
                       },
-                      programDrillId: "", // Regular drills use empty string
-                    },
-                  })
-                : [];
+                    })
+                  : [];
 
-            // Find ExerciseCompletion records where the old drill ID is used as programDrillId (routine exercises)
-            // Filter out empty strings from drillIds first, then query
-            const nonEmptyDrillIds = drillIds.filter(id => id !== "");
-            const exerciseCompletionsAsProgramDrillId =
-              nonEmptyDrillIds.length > 0
-                ? await tx.exerciseCompletion.findMany({
-                    where: {
-                      programDrillId: {
-                        in: nonEmptyDrillIds,
+              // Find ExerciseCompletion records where the old drill ID is used as programDrillId (routine exercises)
+              // Filter out empty strings from drillIds first, then query
+              const nonEmptyDrillIds = drillIds.filter(id => id !== "");
+              const exerciseCompletionsAsProgramDrillId =
+                nonEmptyDrillIds.length > 0
+                  ? await tx.exerciseCompletion.findMany({
+                      where: {
+                        programDrillId: {
+                          in: nonEmptyDrillIds,
+                        },
                       },
-                    },
-                  })
-                : [];
+                    })
+                  : [];
 
-            // Group exercise completions by old drill ID
-            // For regular drills: key is exerciseId (the old drill ID)
-            const exerciseCompletionMapByExerciseId = new Map<
-              string,
-              typeof exerciseCompletionsAsExerciseId
-            >();
-            exerciseCompletionsAsExerciseId.forEach(comp => {
-              if (!exerciseCompletionMapByExerciseId.has(comp.exerciseId)) {
-                exerciseCompletionMapByExerciseId.set(comp.exerciseId, []);
-              }
-              exerciseCompletionMapByExerciseId
-                .get(comp.exerciseId)!
-                .push(comp);
-            });
-
-            // For routine exercises: key is programDrillId (the old drill ID)
-            // Filter out any records with empty programDrillId (those are regular drills)
-            const exerciseCompletionMapByProgramDrillId = new Map<
-              string,
-              typeof exerciseCompletionsAsProgramDrillId
-            >();
-            exerciseCompletionsAsProgramDrillId
-              .filter(comp => comp.programDrillId && comp.programDrillId !== "")
-              .forEach(comp => {
-                if (
-                  !exerciseCompletionMapByProgramDrillId.has(
-                    comp.programDrillId!
-                  )
-                ) {
-                  exerciseCompletionMapByProgramDrillId.set(
-                    comp.programDrillId!,
-                    []
-                  );
+              // Group exercise completions by old drill ID
+              // For regular drills: key is exerciseId (the old drill ID)
+              const exerciseCompletionMapByExerciseId = new Map<
+                string,
+                typeof exerciseCompletionsAsExerciseId
+              >();
+              exerciseCompletionsAsExerciseId.forEach(comp => {
+                if (!exerciseCompletionMapByExerciseId.has(comp.exerciseId)) {
+                  exerciseCompletionMapByExerciseId.set(comp.exerciseId, []);
                 }
-                exerciseCompletionMapByProgramDrillId
-                  .get(comp.programDrillId!)!
+                exerciseCompletionMapByExerciseId
+                  .get(comp.exerciseId)!
                   .push(comp);
               });
 
-            // Delete existing weeks and recreate them
-            await tx.programWeek.deleteMany({
-              where: { programId: input.id },
-            });
+              // For routine exercises: key is programDrillId (the old drill ID)
+              // Filter out any records with empty programDrillId (those are regular drills)
+              const exerciseCompletionMapByProgramDrillId = new Map<
+                string,
+                typeof exerciseCompletionsAsProgramDrillId
+              >();
+              exerciseCompletionsAsProgramDrillId
+                .filter(
+                  comp => comp.programDrillId && comp.programDrillId !== ""
+                )
+                .forEach(comp => {
+                  if (
+                    !exerciseCompletionMapByProgramDrillId.has(
+                      comp.programDrillId!
+                    )
+                  ) {
+                    exerciseCompletionMapByProgramDrillId.set(
+                      comp.programDrillId!,
+                      []
+                    );
+                  }
+                  exerciseCompletionMapByProgramDrillId
+                    .get(comp.programDrillId!)!
+                    .push(comp);
+                });
 
-            // Map to track old drill ID -> new drill ID
-            const drillIdMapping = new Map<string, string>();
-            // Track which old drills have been matched to prevent double-matching
-            const matchedOldDrillIds = new Set<string>();
-
-            // Create new weeks structure
-            for (const week of input.weeks) {
-              const newWeek = await tx.programWeek.create({
-                data: {
-                  programId: input.id,
-                  weekNumber: week.weekNumber,
-                  title: week.title,
-                  description: week.description || "",
-                },
+              // Delete existing weeks and recreate them
+              await tx.programWeek.deleteMany({
+                where: { programId: input.id },
               });
 
-              // Create days for this week
-              for (const day of week.days) {
-                // Check if this is a rest day (has no drills)
-                const isRestDay = day.drills.length === 0;
+              // Map to track old drill ID -> new drill ID
+              const drillIdMapping = new Map<string, string>();
+              // Track which old drills have been matched to prevent double-matching
+              const matchedOldDrillIds = new Set<string>();
 
-                const newDay = await tx.programDay.create({
+              // Create new weeks structure
+              for (const week of input.weeks) {
+                const newWeek = await tx.programWeek.create({
                   data: {
-                    weekId: newWeek.id,
-                    dayNumber: day.dayNumber,
-                    title: day.title,
-                    description: day.description || "",
-                    isRestDay: isRestDay,
+                    programId: input.id,
+                    weekNumber: week.weekNumber,
+                    title: week.title,
+                    description: week.description || "",
                   },
                 });
 
-                // Create drills for this day
-                for (
-                  let drillIndex = 0;
-                  drillIndex < day.drills.length;
-                  drillIndex++
-                ) {
-                  const drill = day.drills[drillIndex];
-                  console.log("=== BACKEND DRILL CREATION ===");
-                  console.log("Drill data:", drill);
-                  console.log("Drill routineId:", drill.routineId);
-                  console.log("Drill type:", drill.type);
+                // Create days for this week
+                for (const day of week.days) {
+                  // Check if this is a rest day (has no drills)
+                  const isRestDay = day.drills.length === 0;
 
-                  // Keep routines as single items on coach side
-                  // Expansion will happen only on client side in clientRouter
-                  console.log("=== CREATING DRILL (ROUTINE OR EXERCISE) ===");
-                  const newDrill = await tx.programDrill.create({
+                  const newDay = await tx.programDay.create({
                     data: {
-                      dayId: newDay.id,
-                      order: drillIndex + 1,
-                      title: drill.title,
-                      description: drill.description ?? "",
-                      duration: drill.duration || "",
-                      videoUrl: drill.videoUrl || "",
-                      notes: drill.notes || "",
-                      sets: drill.sets,
-                      reps: drill.reps,
-                      tempo: drill.tempo || "",
-                      type: drill.type || "exercise",
-                      videoId: drill.videoId,
-                      videoTitle: drill.videoTitle,
-                      videoThumbnail: drill.videoThumbnail,
-                      routineId: drill.routineId,
-                      supersetId: drill.supersetId,
-                      supersetOrder: drill.supersetOrder,
-                      // Coach Instructions
-                      coachInstructionsWhatToDo: (drill as any)
-                        .coachInstructions?.whatToDo,
-                      coachInstructionsHowToDoIt: (drill as any)
-                        .coachInstructions?.howToDoIt,
-                      coachInstructionsKeyPoints:
-                        (drill as any).coachInstructions?.keyPoints || [],
-                      coachInstructionsCommonMistakes:
-                        (drill as any).coachInstructions?.commonMistakes || [],
-                      coachInstructionsEquipment: (drill as any)
-                        .coachInstructions?.equipment,
+                      weekId: newWeek.id,
+                      dayNumber: day.dayNumber,
+                      title: day.title,
+                      description: day.description || "",
+                      isRestDay: isRestDay,
                     },
                   });
 
-                  // Try to find matching old drill based on position and content
-                  // Match by: week number, day number, order, and optionally title/routineId
-                  // Priority: exact position + content match > exact position match > same routineId match
-                  const matchingOldDrill = Array.from(
-                    drillCompletionMap.entries()
-                  )
-                    .filter(
-                      ([oldDrillId]) => !matchedOldDrillIds.has(oldDrillId)
-                    )
-                    .find(([oldDrillId, oldDrillData]) => {
-                      const positionMatch =
-                        oldDrillData.weekNumber === week.weekNumber &&
-                        oldDrillData.dayNumber === day.dayNumber &&
-                        oldDrillData.order === drillIndex + 1;
+                  // Create drills for this day
+                  for (
+                    let drillIndex = 0;
+                    drillIndex < day.drills.length;
+                    drillIndex++
+                  ) {
+                    const drill = day.drills[drillIndex];
 
-                      // Additional matching criteria for better accuracy
-                      const contentMatch =
-                        oldDrillData.title === drill.title ||
-                        (oldDrillData.routineId &&
-                          oldDrillData.routineId === drill.routineId);
-
-                      return (
-                        positionMatch && (contentMatch || drillIndex === 0)
-                      ); // For first drill, be more lenient
+                    // Keep routines as single items on coach side
+                    // Expansion will happen only on client side in clientRouter
+                    console.log("=== CREATING DRILL (ROUTINE OR EXERCISE) ===");
+                    const newDrill = await tx.programDrill.create({
+                      data: {
+                        dayId: newDay.id,
+                        order: drillIndex + 1,
+                        title: drill.title,
+                        description: drill.description ?? "",
+                        duration: drill.duration || "",
+                        videoUrl: drill.videoUrl || "",
+                        notes: drill.notes || "",
+                        sets: drill.sets,
+                        reps: drill.reps,
+                        tempo: drill.tempo || "",
+                        type: drill.type || "exercise",
+                        videoId: drill.videoId,
+                        videoTitle: drill.videoTitle,
+                        videoThumbnail: drill.videoThumbnail,
+                        routineId: drill.routineId,
+                        supersetId: drill.supersetId,
+                        supersetOrder: drill.supersetOrder,
+                        // Coach Instructions
+                        coachInstructionsWhatToDo: (drill as any)
+                          .coachInstructions?.whatToDo,
+                        coachInstructionsHowToDoIt: (drill as any)
+                          .coachInstructions?.howToDoIt,
+                        coachInstructionsKeyPoints:
+                          (drill as any).coachInstructions?.keyPoints || [],
+                        coachInstructionsCommonMistakes:
+                          (drill as any).coachInstructions?.commonMistakes ||
+                          [],
+                        coachInstructionsEquipment: (drill as any)
+                          .coachInstructions?.equipment,
+                      },
                     });
 
-                  if (matchingOldDrill) {
-                    const [oldDrillId] = matchingOldDrill;
-                    drillIdMapping.set(oldDrillId, newDrill.id);
-                    matchedOldDrillIds.add(oldDrillId);
-                    console.log(
-                      `🔗 Matched old drill ${oldDrillId} (${
-                        drillCompletionMap.get(oldDrillId)?.title
-                      }) to new drill ${newDrill.id} (${drill.title})`
-                    );
+                    // Try to find matching old drill based on position and content
+                    // Match by: week number, day number, order, and optionally title/routineId
+                    // Priority: exact position + content match > exact position match > same routineId match
+                    const matchingOldDrill = Array.from(
+                      drillCompletionMap.entries()
+                    )
+                      .filter(
+                        ([oldDrillId]) => !matchedOldDrillIds.has(oldDrillId)
+                      )
+                      .find(([oldDrillId, oldDrillData]) => {
+                        const positionMatch =
+                          oldDrillData.weekNumber === week.weekNumber &&
+                          oldDrillData.dayNumber === day.dayNumber &&
+                          oldDrillData.order === drillIndex + 1;
+
+                        // Additional matching criteria for better accuracy
+                        const contentMatch =
+                          oldDrillData.title === drill.title ||
+                          (oldDrillData.routineId &&
+                            oldDrillData.routineId === drill.routineId);
+
+                        return (
+                          positionMatch && (contentMatch || drillIndex === 0)
+                        ); // For first drill, be more lenient
+                      });
+
+                    if (matchingOldDrill) {
+                      const [oldDrillId] = matchingOldDrill;
+                      drillIdMapping.set(oldDrillId, newDrill.id);
+                      matchedOldDrillIds.add(oldDrillId);
+                      console.log(
+                        `🔗 Matched old drill ${oldDrillId} (${
+                          drillCompletionMap.get(oldDrillId)?.title
+                        }) to new drill ${newDrill.id} (${drill.title})`
+                      );
+                    }
                   }
                 }
               }
-            }
 
-            // Migrate ProgramDrillCompletion records
-            for (const [oldDrillId, newDrillId] of drillIdMapping.entries()) {
-              const oldDrillData = drillCompletionMap.get(oldDrillId);
-              if (oldDrillData && oldDrillData.completions.length > 0) {
-                for (const completion of oldDrillData.completions) {
-                  // Use upsert to handle potential duplicates (unique constraint: drillId + programAssignmentId)
-                  await tx.programDrillCompletion.upsert({
-                    where: {
-                      drillId_programAssignmentId: {
+              // Migrate ProgramDrillCompletion records
+              for (const [oldDrillId, newDrillId] of drillIdMapping.entries()) {
+                const oldDrillData = drillCompletionMap.get(oldDrillId);
+                if (oldDrillData && oldDrillData.completions.length > 0) {
+                  for (const completion of oldDrillData.completions) {
+                    // Use upsert to handle potential duplicates (unique constraint: drillId + programAssignmentId)
+                    await tx.programDrillCompletion.upsert({
+                      where: {
+                        drillId_programAssignmentId: {
+                          drillId: newDrillId,
+                          programAssignmentId: completion.programAssignmentId,
+                        },
+                      },
+                      update: {
+                        completedAt: completion.completedAt,
+                        notes: completion.notes,
+                      },
+                      create: {
                         drillId: newDrillId,
                         programAssignmentId: completion.programAssignmentId,
-                      },
-                    },
-                    update: {
-                      completedAt: completion.completedAt,
-                      notes: completion.notes,
-                    },
-                    create: {
-                      drillId: newDrillId,
-                      programAssignmentId: completion.programAssignmentId,
-                      clientId: completion.clientId,
-                      completedAt: completion.completedAt,
-                      notes: completion.notes,
-                    },
-                  });
-                }
-                console.log(
-                  `✅ Migrated ${oldDrillData.completions.length} ProgramDrillCompletion records from drill ${oldDrillId} to ${newDrillId}`
-                );
-              }
-            }
-
-            // Migrate ExerciseCompletion records
-            for (const [oldDrillId, newDrillId] of drillIdMapping.entries()) {
-              // 1. Migrate regular drills (where exerciseId = old drill ID)
-              const regularDrillCompletions =
-                exerciseCompletionMapByExerciseId.get(oldDrillId);
-              if (
-                regularDrillCompletions &&
-                regularDrillCompletions.length > 0
-              ) {
-                for (const completion of regularDrillCompletions) {
-                  // Use upsert to handle unique constraint (clientId, exerciseId, programDrillId, date)
-                  // Delete old record first, then upsert with new exerciseId
-                  await tx.exerciseCompletion.delete({
-                    where: { id: completion.id },
-                  });
-                  await tx.exerciseCompletion.upsert({
-                    where: {
-                      clientId_exerciseId_programDrillId_date: {
                         clientId: completion.clientId,
-                        exerciseId: newDrillId, // New drill ID
+                        completedAt: completion.completedAt,
+                        notes: completion.notes,
+                      },
+                    });
+                  }
+                }
+              }
+
+              // Migrate ExerciseCompletion records
+              for (const [oldDrillId, newDrillId] of drillIdMapping.entries()) {
+                // 1. Migrate regular drills (where exerciseId = old drill ID)
+                const regularDrillCompletions =
+                  exerciseCompletionMapByExerciseId.get(oldDrillId);
+                if (
+                  regularDrillCompletions &&
+                  regularDrillCompletions.length > 0
+                ) {
+                  for (const completion of regularDrillCompletions) {
+                    // Use upsert to handle unique constraint (clientId, exerciseId, programDrillId, date)
+                    // Delete old record first, then upsert with new exerciseId
+                    await tx.exerciseCompletion.delete({
+                      where: { id: completion.id },
+                    });
+                    await tx.exerciseCompletion.upsert({
+                      where: {
+                        clientId_exerciseId_programDrillId_date: {
+                          clientId: completion.clientId,
+                          exerciseId: newDrillId, // New drill ID
+                          programDrillId: "", // Keep empty for regular drills
+                          date: completion.date || "",
+                        },
+                      },
+                      update: {
+                        completed: completion.completed,
+                        completedAt: completion.completedAt,
+                      },
+                      create: {
+                        clientId: completion.clientId,
+                        exerciseId: newDrillId, // Update to new drill ID
                         programDrillId: "", // Keep empty for regular drills
                         date: completion.date || "",
+                        completed: completion.completed,
+                        completedAt: completion.completedAt,
                       },
-                    },
-                    update: {
-                      completed: completion.completed,
-                      completedAt: completion.completedAt,
-                    },
-                    create: {
-                      clientId: completion.clientId,
-                      exerciseId: newDrillId, // Update to new drill ID
-                      programDrillId: "", // Keep empty for regular drills
-                      date: completion.date || "",
-                      completed: completion.completed,
-                      completedAt: completion.completedAt,
-                    },
-                  });
+                    });
+                  }
+                  console.log(
+                    `✅ Migrated ${regularDrillCompletions.length} ExerciseCompletion records (regular drills) from drill ${oldDrillId} to ${newDrillId}`
+                  );
                 }
-                console.log(
-                  `✅ Migrated ${regularDrillCompletions.length} ExerciseCompletion records (regular drills) from drill ${oldDrillId} to ${newDrillId}`
-                );
-              }
 
-              // 2. Migrate routine exercises within drills (where programDrillId = old drill ID)
-              const routineExerciseCompletions =
-                exerciseCompletionMapByProgramDrillId.get(oldDrillId);
-              if (
-                routineExerciseCompletions &&
-                routineExerciseCompletions.length > 0
-              ) {
-                for (const completion of routineExerciseCompletions) {
-                  // Update the programDrillId to point to the new drill
-                  await tx.exerciseCompletion.update({
-                    where: { id: completion.id },
-                    data: {
-                      programDrillId: newDrillId,
-                    },
-                  });
+                // 2. Migrate routine exercises within drills (where programDrillId = old drill ID)
+                const routineExerciseCompletions =
+                  exerciseCompletionMapByProgramDrillId.get(oldDrillId);
+                if (
+                  routineExerciseCompletions &&
+                  routineExerciseCompletions.length > 0
+                ) {
+                  for (const completion of routineExerciseCompletions) {
+                    // Update the programDrillId to point to the new drill
+                    await tx.exerciseCompletion.update({
+                      where: { id: completion.id },
+                      data: {
+                        programDrillId: newDrillId,
+                      },
+                    });
+                  }
+                  console.log(
+                    `✅ Migrated ${routineExerciseCompletions.length} ExerciseCompletion records (routine exercises) from drill ${oldDrillId} to ${newDrillId}`
+                  );
                 }
-                console.log(
-                  `✅ Migrated ${routineExerciseCompletions.length} ExerciseCompletion records (routine exercises) from drill ${oldDrillId} to ${newDrillId}`
-                );
               }
             }
           }
+
+          return program;
+        },
+        {
+          maxWait: 30000, // Maximum time to wait for a transaction slot (30 seconds)
+          timeout: 30000, // Maximum time the transaction can run (30 seconds)
         }
+      );
 
-        return program;
-      });
-
-      console.log("=== PROGRAMS.UPDATE COMPLETED ===");
-      console.log("Returning result:", result);
       return result;
     }),
 
@@ -2454,13 +2423,7 @@ export const programsRouter = router({
               coach.name || "Coach",
               program.title
             );
-            console.log(`📧 Program assignment email sent to ${client.email}`);
-          } catch (error) {
-            console.error(
-              `Failed to send program assignment email to ${client.email}:`,
-              error
-            );
-          }
+          } catch (error) {}
         }
       }
 
@@ -2796,10 +2759,6 @@ export const programsRouter = router({
         },
       });
 
-      console.log(
-        `[TEMP CLEANUP] Found ${oldTemporaryPrograms.length} old temporary programs to clean up`
-      );
-
       // Delete old temporary programs
       for (const program of oldTemporaryPrograms) {
         console.log(
@@ -2821,9 +2780,7 @@ export const programsRouter = router({
 
       // Create a program with a special naming convention to indicate it's temporary
       // We'll filter these out from the main program list by checking the title
-      console.log(
-        `[TEMP CREATE] Creating temporary program: [TEMP] ${input.programTitle} - ${input.dayTitle}`
-      );
+
       const tempProgram = await db.program.create({
         data: {
           title: `[TEMP] ${input.programTitle} - ${input.dayTitle}`,
@@ -2943,9 +2900,7 @@ export const programsRouter = router({
       }
 
       // Get temporary program assignments for this client
-      console.log(
-        `[TEMP FETCH] Fetching temporary programs for client: ${input.clientId}`
-      );
+
       const temporaryAssignments = await db.programAssignment.findMany({
         where: {
           clientId: input.clientId,
@@ -2975,10 +2930,6 @@ export const programsRouter = router({
           startDate: "asc",
         },
       });
-
-      console.log(
-        `[TEMP FETCH] Found ${temporaryAssignments.length} temporary program assignments`
-      );
 
       // Transform the data to match the expected format
       return temporaryAssignments.map(assignment => {

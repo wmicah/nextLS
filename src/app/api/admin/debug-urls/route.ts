@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error debugging URLs:", error);
+
     return NextResponse.json(
       { error: "Failed to debug URLs" },
       { status: 500 }

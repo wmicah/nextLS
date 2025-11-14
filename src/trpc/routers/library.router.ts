@@ -33,13 +33,12 @@ export const libraryRouter = router({
     )
     .query(async ({ input }) => {
       try {
-        console.log("🔍 Library listInfinite query called with input:", input);
 
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-          console.error("❌ Library listInfinite: No user ID");
+
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
 
@@ -49,9 +48,7 @@ export const libraryRouter = router({
         });
 
         if (!dbUser) {
-          console.error(
-            "❌ Library listInfinite: User is not a coach or client"
-          );
+
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches and clients can view library",
@@ -71,7 +68,7 @@ export const libraryRouter = router({
           });
 
           if (!client) {
-            console.error("❌ Library listInfinite: Client not found");
+
             throw new TRPCError({
               code: "NOT_FOUND",
               message: "Client profile not found",
@@ -183,17 +180,14 @@ export const libraryRouter = router({
     )
     .query(async ({ input }) => {
       try {
-        console.log("🔍 Library list query called with input:", input);
 
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-          console.error("❌ Library list: No user ID");
+
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
-
-        console.log("✅ Library list: User authenticated:", user.id);
 
         // Verify user is a COACH or CLIENT
         const dbUser = await db.user.findFirst({
@@ -201,14 +195,12 @@ export const libraryRouter = router({
         });
 
         if (!dbUser) {
-          console.error("❌ Library list: User is not a coach or client");
+
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches and clients can view library",
           });
         }
-
-        console.log("✅ Library list: User verification passed");
 
         const where: any = {};
 
@@ -223,7 +215,7 @@ export const libraryRouter = router({
           });
 
           if (!client) {
-            console.error("❌ Library list: Client not found");
+
             throw new TRPCError({
               code: "NOT_FOUND",
               message: "Client profile not found",
@@ -248,9 +240,6 @@ export const libraryRouter = router({
           where.type = input.type;
         }
 
-        console.log(
-          "🔍 Library list: Query where clause:",
-          JSON.stringify(where, null, 2)
         );
 
         // Calculate pagination
@@ -634,12 +623,9 @@ export const libraryRouter = router({
             coach?.name || "Coach",
             video?.title || "New Video Assignment"
           );
-          console.log(`📧 Video assignment email sent to ${client.email}`);
+
         } catch (error) {
-          console.error(
-            `Failed to send video assignment email to ${client.email}:`,
-            error
-          );
+
         }
       }
 
@@ -990,17 +976,14 @@ export const libraryRouter = router({
     )
     .mutation(async ({ input }) => {
       try {
-        console.log("🚀 Starting upload mutation for user:", input.title);
 
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-          console.error("❌ Upload failed: No user ID");
+
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
-
-        console.log("✅ User authenticated:", user.id);
 
         // Verify user is a COACH
         const coach = await db.user.findFirst({
@@ -1008,14 +991,12 @@ export const libraryRouter = router({
         });
 
         if (!coach) {
-          console.error("❌ Upload failed: User is not a coach");
+
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches can upload resources",
           });
         }
-
-        console.log("✅ Coach verification passed");
 
         const type = input.contentType.startsWith("video/")
           ? "video"
@@ -1046,11 +1027,8 @@ export const libraryRouter = router({
             },
           });
 
-          console.log("✅ Database record created successfully:", resource.id);
           return resource;
         });
-
-        console.log("🎉 Upload completed successfully:", newResource.id);
 
         return {
           id: newResource.id,
@@ -1164,9 +1142,7 @@ export const libraryRouter = router({
       if (!resource.isYoutube && resource.url) {
         const fileDeleted = await deleteFileFromUploadThing(resource.url);
         if (!fileDeleted) {
-          console.warn(
-            `Warning: Could not delete file from UploadThing for resource ${input.id}`
-          );
+
         }
       }
 
@@ -1253,17 +1229,14 @@ export const libraryRouter = router({
     )
     .mutation(async ({ input }) => {
       try {
-        console.log("🚀 Starting YouTube import for URL:", input.url);
 
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-          console.error("❌ YouTube import failed: No user ID");
+
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
-
-        console.log("✅ User authenticated:", user.id);
 
         // Verify user is a COACH
         const coach = await db.user.findFirst({
@@ -1271,32 +1244,26 @@ export const libraryRouter = router({
         });
 
         if (!coach) {
-          console.error("❌ YouTube import failed: User is not a coach");
+
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches can import YouTube videos",
           });
         }
 
-        console.log("✅ Coach verification passed");
-
         const videoId = extractYouTubeVideoId(input.url);
         if (!videoId) {
-          console.error("❌ YouTube import failed: Invalid URL");
+
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid YouTube URL",
           });
         }
 
-        console.log("✅ YouTube video ID extracted:", videoId);
-
         const youtubeInfo = await fetchYouTubeVideoInfo(
           videoId,
           process.env.YOUTUBE_API_KEY
         );
-
-        console.log("✅ YouTube info fetched:", youtubeInfo?.title);
 
         // Use transaction to ensure data consistency
         const newResource = await db.$transaction(async tx => {
@@ -1323,14 +1290,9 @@ export const libraryRouter = router({
             },
           });
 
-          console.log("✅ YouTube video imported successfully:", resource.id);
           return resource;
         });
 
-        console.log(
-          "🎉 YouTube import completed successfully:",
-          newResource.id
-        );
         return newResource;
       } catch (error) {
         console.error("❌ YouTube import failed:", {
@@ -1445,24 +1407,15 @@ export const libraryRouter = router({
     )
     .mutation(async ({ input }) => {
       try {
-        console.log("🚀 Starting OnForm import for URL:", input.url);
 
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
-        console.log("🔍 OnForm import - User session:", {
-          hasUser: !!user,
-          userId: user?.id,
-          userEmail: user?.email,
-        });
-
         if (!user?.id) {
-          console.error("❌ OnForm import failed: No user ID");
-          console.error("❌ OnForm import - Full user object:", user);
+
+
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
-
-        console.log("✅ User authenticated:", user.id);
 
         // Verify user is a COACH
         const coach = await db.user.findFirst({
@@ -1470,21 +1423,19 @@ export const libraryRouter = router({
         });
 
         if (!coach) {
-          console.error("❌ OnForm import failed: User is not a coach");
+
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches can import OnForm videos",
           });
         }
 
-        console.log("✅ Coach verification passed");
-
         // Import OnForm utilities
         const { extractOnFormId, isOnFormUrl, convertOnFormLinkToEmbed } =
           await import("@/lib/onform-utils");
 
         if (!isOnFormUrl(input.url)) {
-          console.error("❌ OnForm import failed: Invalid URL");
+
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid OnForm URL. Please use a valid OnForm video URL.",
@@ -1498,10 +1449,6 @@ export const libraryRouter = router({
             message: "Could not extract OnForm video ID from URL",
           });
         }
-
-        console.log("✅ OnForm video ID extracted:", onformId);
-
-        console.log("✅ OnForm original URL:", input.url);
 
         // Use transaction to ensure data consistency
         const newResource = await db.$transaction(async tx => {
@@ -1520,11 +1467,9 @@ export const libraryRouter = router({
             },
           });
 
-          console.log("✅ OnForm video imported successfully:", resource.id);
           return resource;
         });
 
-        console.log("🎉 OnForm import completed successfully:", newResource.id);
         return newResource;
       } catch (error) {
         console.error("❌ OnForm import failed:", {

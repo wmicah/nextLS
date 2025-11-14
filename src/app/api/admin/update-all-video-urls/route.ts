@@ -23,8 +23,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("Starting comprehensive video URL update...");
-
     let totalUpdated = 0;
     const results = {
       libraryResources: 0,
@@ -39,10 +37,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(
-      `Found ${libraryResources.length} library resources with old URLs`
-    );
-
     for (const resource of libraryResources) {
       const oldUrl = resource.url;
       const filename = oldUrl.replace("secure://master-library/", "");
@@ -53,7 +47,6 @@ export async function POST(req: NextRequest) {
         data: { url: newUrl },
       });
 
-      console.log(`Updated library resource: ${oldUrl} -> ${newUrl}`);
       results.libraryResources++;
       totalUpdated++;
     }
@@ -65,8 +58,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`Found ${programDrills.length} program drills with old URLs`);
-
     for (const drill of programDrills) {
       const oldUrl = drill.videoUrl!;
       const filename = oldUrl.replace("secure://master-library/", "");
@@ -77,7 +68,6 @@ export async function POST(req: NextRequest) {
         data: { videoUrl: newUrl },
       });
 
-      console.log(`Updated program drill: ${oldUrl} -> ${newUrl}`);
       results.programDrills++;
       totalUpdated++;
     }
@@ -89,10 +79,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(
-      `Found ${routineExercises.length} routine exercises with old URLs`
-    );
-
     for (const exercise of routineExercises) {
       const oldUrl = exercise.videoUrl!;
       const filename = oldUrl.replace("secure://master-library/", "");
@@ -103,14 +89,9 @@ export async function POST(req: NextRequest) {
         data: { videoUrl: newUrl },
       });
 
-      console.log(`Updated routine exercise: ${oldUrl} -> ${newUrl}`);
       results.routineExercises++;
       totalUpdated++;
     }
-
-    console.log(
-      `Comprehensive video URL update completed! Updated ${totalUpdated} total items.`
-    );
 
     return NextResponse.json({
       message: "All video URLs updated successfully",
@@ -118,7 +99,7 @@ export async function POST(req: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error("Error updating all video URLs:", error);
+
     return NextResponse.json(
       { error: "Failed to update video URLs" },
       { status: 500 }

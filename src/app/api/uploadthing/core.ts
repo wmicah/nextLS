@@ -10,7 +10,7 @@ import { db } from "@/db";
 
 const f = createUploadthing({
   errorFormatter: err => {
-    console.error("UploadThing error:", err);
+
     return { message: err.message };
   },
 });
@@ -45,26 +45,20 @@ export const ourFileRouter = {
         const validation = validateFileSecurity(fileData, "profilePicture");
 
         if (!validation.isValid) {
-          console.error(
-            `Security validation failed for ${file.name}:`,
-            validation.errors
-          );
+
           throw new Error(
             `File security validation failed: ${validation.errors.join(", ")}`
           );
         }
 
         if (validation.riskLevel === "high") {
-          console.error(`High risk file detected: ${file.name}`);
+
           throw new Error("File rejected due to security risk");
         }
 
         // Log security warnings
         if (validation.warnings.length > 0) {
-          console.warn(
-            `Security warnings for ${file.name}:`,
-            validation.warnings
-          );
+
         }
       }
 
@@ -75,16 +69,9 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log(
-        "Profile picture upload complete for userId:",
-        metadata.userId
-      );
-      console.log("File URL:", file.url);
+
 
       // Enhanced security logging
-      console.log(
-        `SECURITY_AUDIT: User ${metadata.userEmail} uploaded profile picture: ${file.name} at ${metadata.timestamp}`
-      );
 
       return { uploadedBy: metadata.userId };
     }),
@@ -118,26 +105,20 @@ export const ourFileRouter = {
         const validation = validateFileSecurity(fileData, "video");
 
         if (!validation.isValid) {
-          console.error(
-            `Security validation failed for ${file.name}:`,
-            validation.errors
-          );
+
           throw new Error(
             `File security validation failed: ${validation.errors.join(", ")}`
           );
         }
 
         if (validation.riskLevel === "high") {
-          console.error(`High risk file detected: ${file.name}`);
+
           throw new Error("File rejected due to security risk");
         }
 
         // Log security warnings
         if (validation.warnings.length > 0) {
-          console.warn(
-            `Security warnings for ${file.name}:`,
-            validation.warnings
-          );
+
         }
       }
 
@@ -148,13 +129,9 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Upload complete for userId:", metadata.userId);
-      console.log("File URL:", file.url);
+
 
       // Enhanced security logging
-      console.log(
-        `SECURITY_AUDIT: User ${metadata.userEmail} uploaded video: ${file.name} at ${metadata.timestamp}`
-      );
 
       return { uploadedBy: metadata.userId };
     }),
@@ -188,26 +165,20 @@ export const ourFileRouter = {
         const validation = validateFileSecurity(fileData, "feedbackVideo");
 
         if (!validation.isValid) {
-          console.error(
-            `Security validation failed for ${file.name}:`,
-            validation.errors
-          );
+
           throw new Error(
             `File security validation failed: ${validation.errors.join(", ")}`
           );
         }
 
         if (validation.riskLevel === "high") {
-          console.error(`High risk file detected: ${file.name}`);
+
           throw new Error("File rejected due to security risk");
         }
 
         // Log security warnings
         if (validation.warnings.length > 0) {
-          console.warn(
-            `Security warnings for ${file.name}:`,
-            validation.warnings
-          );
+
         }
       }
 
@@ -218,16 +189,9 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log(
-        "Feedback video upload complete for userId:",
-        metadata.userId
-      );
-      console.log("File URL:", file.url);
+
 
       // Enhanced security logging
-      console.log(
-        `SECURITY_AUDIT: User ${metadata.userEmail} uploaded feedback video: ${file.name} at ${metadata.timestamp}`
-      );
 
       return { uploadedBy: metadata.userId };
     }),
@@ -250,11 +214,9 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Audio upload complete for userId:", metadata.userId);
-      console.log("File URL:", file.url);
+
 
       // Log the upload for security audit
-      console.log(`User ${metadata.userEmail} uploaded audio: ${file.name}`);
 
       return { uploadedBy: metadata.userId };
     }),
@@ -287,16 +249,9 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log(
-        "Message attachment upload complete for userId:",
-        metadata.userId
-      );
-      console.log("File URL:", file.url);
+
 
       // Log the upload for security audit
-      console.log(
-        `User ${metadata.userEmail} uploaded message attachment: ${file.name}`
-      );
 
       return { uploadedBy: metadata.userId };
     }),
@@ -320,16 +275,9 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log(
-        "Screen recording upload complete for userId:",
-        metadata.userId
-      );
-      console.log("File URL:", file.url);
+
 
       // Log the upload for security audit
-      console.log(
-        `User ${metadata.userEmail} uploaded screen recording: ${file.name}`
-      );
 
       return { uploadedBy: metadata.userId };
     }),
@@ -364,16 +312,9 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log(
-        "Note attachment upload complete for userId:",
-        metadata.userId
-      );
-      console.log("File URL:", file.url);
+
 
       // Log the upload for security audit
-      console.log(
-        `SECURITY_AUDIT: User ${metadata.userEmail} uploaded note attachment: ${file.name} at ${metadata.timestamp}`
-      );
 
       return { uploadedBy: metadata.userId };
     }),
@@ -421,9 +362,7 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log(
-        `SECURITY_AUDIT: User ${metadata.userEmail} uploaded bug report image: ${file.name} at ${metadata.timestamp}`
-      );
+
       return { uploadedBy: metadata.userId };
     }),
 } satisfies FileRouter;

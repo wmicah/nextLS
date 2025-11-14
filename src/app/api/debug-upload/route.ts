@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       });
       userRole = dbUser;
     } catch (error) {
-      console.error("Error fetching user role:", error);
+
     }
 
     // Get recent library resources
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
         },
       });
     } catch (error) {
-      console.error("Error fetching recent resources:", error);
+
     }
 
     // Test the library list query with different filters
@@ -183,7 +183,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Debug endpoint error:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

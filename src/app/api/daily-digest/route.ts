@@ -3,7 +3,6 @@ import dailyDigestService from "@/lib/daily-digest-service";
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("📧 Manual daily digest trigger");
 
     await dailyDigestService.manualDigest();
 
@@ -13,7 +12,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error sending daily digest:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

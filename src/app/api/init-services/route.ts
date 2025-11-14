@@ -3,7 +3,6 @@ import appStartupService from "@/lib/app-startup";
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🚀 Initializing app services...");
 
     await appStartupService.initializeServices();
 
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error initializing app services:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

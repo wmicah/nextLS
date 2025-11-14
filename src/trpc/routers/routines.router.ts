@@ -604,7 +604,6 @@ export const routinesRouter = router({
       }
 
       // Create routine assignments
-      console.log("Server: Received startDate:", input.startDate);
 
       // Parse the date string and create local date, then convert to UTC properly
       const [year, month, day] = input.startDate.split("-").map(Number);
@@ -614,8 +613,7 @@ export const routinesRouter = router({
       const timeZone = "America/New_York"; // Default timezone
       const startDate = fromZonedTime(localDate, timeZone);
 
-      console.log("Server: Local date:", localDate);
-      console.log("Server: UTC date:", startDate);
+
       console.log("Server: Local date string:", startDate.toLocaleDateString());
 
       const assignments = await Promise.all(
@@ -642,12 +640,9 @@ export const routinesRouter = router({
               coach.name || "Coach",
               routine.name
             );
-            console.log(`📧 Routine assignment email sent to ${client.email}`);
+
           } catch (error) {
-            console.error(
-              `Failed to send routine assignment email to ${client.email}:`,
-              error
-            );
+
           }
         }
       }

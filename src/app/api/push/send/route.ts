@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error sending push notification:", error);
+
     return NextResponse.json(
       { error: "Failed to send notification" },
       { status: 500 }

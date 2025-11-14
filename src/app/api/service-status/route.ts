@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error getting service status:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

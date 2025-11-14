@@ -23,8 +23,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("Starting video URL update...");
-
     // Find all library resources with secure://master-library URLs
     const resources = await db.libraryResource.findMany({
       where: {
@@ -33,8 +31,6 @@ export async function POST(req: NextRequest) {
         },
       },
     });
-
-    console.log(`Found ${resources.length} resources with old URLs`);
 
     let updatedCount = 0;
 
@@ -46,8 +42,6 @@ export async function POST(req: NextRequest) {
       // Create new URL
       const newUrl = `/api/master-video/${encodeURIComponent(filename)}`;
 
-      console.log(`Updating: ${oldUrl} -> ${newUrl}`);
-
       // Update the resource
       await db.libraryResource.update({
         where: { id: resource.id },
@@ -57,16 +51,12 @@ export async function POST(req: NextRequest) {
       updatedCount++;
     }
 
-    console.log(
-      `Video URL update completed! Updated ${updatedCount} resources.`
-    );
-
     return NextResponse.json({
       message: "Video URLs updated successfully",
       updatedCount,
     });
   } catch (error) {
-    console.error("Error updating video URLs:", error);
+
     return NextResponse.json(
       { error: "Failed to update video URLs" },
       { status: 500 }

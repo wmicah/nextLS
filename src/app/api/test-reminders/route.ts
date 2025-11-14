@@ -3,7 +3,6 @@ import lessonReminderService from "@/lib/lesson-reminder-service";
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("🧪 Manual test of lesson reminder service triggered");
 
     // Get current status
     const status = lessonReminderService.getStatus();
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error testing lesson reminder service:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

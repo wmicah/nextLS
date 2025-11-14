@@ -241,7 +241,7 @@ export default function MobileClientProgramPage() {
   const { data: pitchingData } = trpc.clientRouter.getPitchingData.useQuery();
 
   // Get library items for video lookup
-  const { data: libraryItems = [] } = trpc.library.list.useQuery({});
+  const { data: libraryItems = [] } = (trpc.library.list as any).useQuery({});
 
   // Get client's lessons
   const { data: clientLessons = [] } =
@@ -249,30 +249,6 @@ export default function MobileClientProgramPage() {
       month: currentDate.getMonth(),
       year: currentDate.getFullYear(),
     });
-
-  // Debug logging
-  console.log("MobileClientProgramPage - programInfo:", programInfo);
-  console.log("MobileClientProgramPage - programLoading:", programLoading);
-  console.log("MobileClientProgramPage - programError:", programError);
-  console.log("MobileClientProgramPage - calendarData:", calendarData);
-  console.log(
-    "MobileClientProgramPage - routineAssignments:",
-    routineAssignments
-  );
-  console.log(
-    "MobileClientProgramPage - calendarData type:",
-    typeof calendarData,
-    Array.isArray(calendarData)
-  );
-  console.log("MobileClientProgramPage - upcomingEvents:", upcomingEvents);
-  console.log(
-    "MobileClientProgramPage - upcomingEvents length:",
-    upcomingEvents.length
-  );
-  console.log("MobileClientProgramPage - eventsLoading:", eventsLoading);
-  console.log("MobileClientProgramPage - eventsError:", eventsError);
-  console.log("MobileClientProgramPage - nextLesson:", nextLesson);
-  console.log("MobileClientProgramPage - nextLessonError:", nextLessonError);
 
   // Initialize video assignments completion state
   React.useEffect(() => {
@@ -506,15 +482,6 @@ export default function MobileClientProgramPage() {
     // Use the same getDayData function as desktop
     dayData = getDayData(day) || undefined;
 
-    // Debug logging for video assignments
-    console.log("MobileClientProgramPage - handleDateClick:", {
-      dayString,
-      dayData,
-      videoAssignments: dayData?.videoAssignments,
-      hasVideoAssignments:
-        dayData?.videoAssignments && dayData.videoAssignments.length > 0,
-    });
-
     // Check for routine assignments for this day
     const dayRoutineAssignments = routineAssignments.filter(
       (assignment: any) => {
@@ -527,18 +494,8 @@ export default function MobileClientProgramPage() {
         dayDate.setHours(0, 0, 0, 0);
 
         const isMatch = assignmentDate.getTime() === dayDate.getTime();
-        if (isMatch) {
-          console.log("Found routine assignment for", dayString, assignment);
-        }
         return isMatch;
       }
-    );
-
-    console.log(
-      "Day routine assignments for",
-      dayString,
-      ":",
-      dayRoutineAssignments
     );
 
     // If we have either program data or routine assignments, open the modal
@@ -564,11 +521,6 @@ export default function MobileClientProgramPage() {
 
       // At this point, dayData should never be undefined
       if (dayData) {
-        console.log("🔄 Setting selectedDay:", dayData.date);
-        console.log(
-          "🔄 selectedDay videoAssignments:",
-          dayData.videoAssignments
-        );
         setSelectedDay(dayData);
         setSelectedDate(day);
         setSelectedDateForDetails(dayString);
@@ -584,23 +536,14 @@ export default function MobileClientProgramPage() {
     completed: boolean,
     programAssignmentId?: string
   ) => {
-    console.log("🎯 MOBILE handleMarkDrillComplete called with:", {
-      drillId,
-      completed,
-    });
-
     try {
       // Use the new completion system
       const dateKey = selectedDate
         ? selectedDate.toISOString().split("T")[0]
         : undefined;
       await markExerciseComplete(drillId, undefined, completed, dateKey);
-      console.log("✅ MOBILE Drill completion updated successfully");
     } catch (error) {
-      console.error(
-        "❌ MOBILE ERROR: Failed to update drill completion:",
-        error
-      );
+      // Error handling - silently fail or show user-friendly message
     }
   };
 
@@ -610,15 +553,6 @@ export default function MobileClientProgramPage() {
     routineAssignmentId: string,
     completed: boolean
   ) => {
-    console.log(
-      "🔍 MOBILE handleMarkRoutineExerciseComplete called - exerciseId:",
-      exerciseId,
-      "routineAssignmentId:",
-      routineAssignmentId,
-      "completed:",
-      completed
-    );
-
     try {
       // Use the new completion system for standalone routine exercises
       const dateKey = selectedDate
@@ -630,12 +564,8 @@ export default function MobileClientProgramPage() {
         completed,
         dateKey
       );
-      console.log("✅ MOBILE Routine exercise completion updated successfully");
     } catch (error) {
-      console.error(
-        "❌ MOBILE ERROR: Failed to update routine exercise completion:",
-        error
-      );
+      // Error handling - silently fail or show user-friendly message
     }
   };
 
@@ -663,7 +593,7 @@ export default function MobileClientProgramPage() {
       });
       setNoteToCoach("");
     } catch (error) {
-      console.error("Failed to send note:", error);
+      // Error handling - silently fail or show user-friendly message
     } finally {
       setIsSubmittingNote(false);
     }
@@ -677,14 +607,6 @@ export default function MobileClientProgramPage() {
   const handleOpenVideo = (videoUrl: string, drill: any) => {
     // Use centralized YouTube processing
     const { isYouTube, youtubeId } = processVideoUrl(videoUrl);
-
-    console.log("Opening video for routine exercise:", {
-      videoUrl,
-      drill,
-      isYouTube,
-      youtubeId,
-      fullDrillData: drill,
-    });
 
     setSelectedVideo({
       id: drill.id,
@@ -713,7 +635,7 @@ export default function MobileClientProgramPage() {
       setCommentText("");
       setIsCommentModalOpen(false);
     } catch (error) {
-      console.error("Failed to submit comment:", error);
+      // Error handling - silently fail or show user-friendly message
     } finally {
       setIsSubmittingComment(false);
     }
@@ -1557,16 +1479,8 @@ export default function MobileClientProgramPage() {
                   controls
                   className="w-full rounded-lg"
                   src={selectedVideo.url}
-                  onLoadStart={() =>
-                    console.log("Video load started:", selectedVideo.url)
-                  }
-                  onCanPlay={() =>
-                    console.log("Video can play:", selectedVideo.url)
-                  }
-                  onError={e => {
-                    console.error("Video load error:", e);
-                    console.error("Video URL:", selectedVideo.url);
-                    console.error("Video element:", e.target);
+                  onError={() => {
+                    // Video load error - handle silently
                   }}
                 >
                   Your browser does not support the video tag.

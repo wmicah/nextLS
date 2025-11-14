@@ -43,7 +43,6 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Logout error:", error);
 
     // Fallback response that clears everything
     // Try to preserve the redirect URL even on error

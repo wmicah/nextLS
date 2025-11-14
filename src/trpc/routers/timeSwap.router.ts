@@ -369,21 +369,9 @@ export const timeSwapRouter = router({
               client2Id: targetEvent.client.userId || "",
             },
           });
-          console.log("🔄 New conversation created:", {
-            conversationId: conversation.id,
-            client1Id: currentClient.userId,
-            client2Id: targetEvent.client.userId,
-            currentClientName: "Another Client",
-            targetClientName: "Another Client",
-          });
+
         } else {
-          console.log("🔄 Existing conversation found:", {
-            conversationId: conversation.id,
-            client1Id: currentClient.userId,
-            client2Id: targetEvent.client.userId,
-            currentClientName: "Another Client",
-            targetClientName: "Another Client",
-          });
+
         }
 
         // Send the swap request message
@@ -421,14 +409,6 @@ export const timeSwapRouter = router({
           },
         });
 
-        console.log("💬 Swap request message created:", {
-          messageId: message.id,
-          conversationId: conversation.id,
-          senderId: currentClient.userId,
-          targetUserId: targetEvent.client.userId,
-          swapRequestId: swapRequest.id,
-        });
-
         // Create notification for the target client
         await db.notification.create({
           data: {
@@ -443,8 +423,6 @@ export const timeSwapRouter = router({
             },
           },
         });
-
-        console.log("Swap request notification created for target client");
 
         // Send real-time update via SSE
         try {
@@ -491,10 +469,9 @@ export const timeSwapRouter = router({
               data: { count: unreadCount },
             });
 
-            console.log("Real-time updates sent to target client");
           }
         } catch (error) {
-          console.error("Error sending real-time updates:", error);
+
           // Don't fail the swap request if SSE fails
         }
       }

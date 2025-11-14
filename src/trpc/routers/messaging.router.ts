@@ -303,12 +303,9 @@ export const messagingRouter = router({
                   ? input.content.substring(0, 100) + "..."
                   : input.content
               );
-              console.log(`📧 New message email sent to ${recipient.email}`);
+
             } catch (error) {
-              console.error(
-                `Failed to send new message email to ${recipient.email}:`,
-                error
-              );
+
             }
           }
 
@@ -328,7 +325,7 @@ export const messagingRouter = router({
           });
         }
       } catch (error) {
-        console.error("Error sending SSE update:", error);
+
       }
 
       return message;
@@ -713,8 +710,7 @@ export const messagingRouter = router({
       }
 
       // Debug: Log the input client IDs
-      console.log("🔍 Input client IDs:", input.clientIds);
-      console.log("🔍 Coach ID:", user.id);
+
 
       // Verify all clients belong to this coach
       const ensuredUserId = ensureUserId(user.id);
@@ -788,7 +784,6 @@ export const messagingRouter = router({
       if (clients.length !== input.clientIds.length) {
         const foundIds = clients.map(c => c.id);
         const missingIds = input.clientIds.filter(id => !foundIds.includes(id));
-        console.error("❌ Missing client IDs:", missingIds);
 
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -841,12 +836,8 @@ export const messagingRouter = router({
                   type: "COACH_CLIENT",
                 },
               });
-              console.log(`✅ Conversation created: ${conversation.id}`);
+
             } catch (conversationError) {
-              console.error(
-                `❌ Failed to create conversation for client ${client.id}:`,
-                conversationError
-              );
 
               // Check if it's a foreign key constraint error
               if (
@@ -861,7 +852,7 @@ export const messagingRouter = router({
               throw conversationError;
             }
           } else {
-            console.log(`📝 Using existing conversation: ${conversation.id}`);
+
           }
 
           // Create the message
@@ -893,12 +884,9 @@ export const messagingRouter = router({
                   ? input.content.substring(0, 100) + "..."
                   : input.content
               );
-              console.log(`📧 Mass message email sent to ${client.email}`);
+
             } catch (emailError) {
-              console.error(
-                `Failed to send email to ${client.email}:`,
-                emailError
-              );
+
             }
           }
 
@@ -916,8 +904,8 @@ export const messagingRouter = router({
 
           // Log more details about the error
           if (error instanceof Error) {
-            console.error(`Error message: ${error.message}`);
-            console.error(`Error stack: ${error.stack}`);
+
+
           }
 
           results.push({
@@ -949,26 +937,16 @@ export const messagingRouter = router({
           }
         }
 
-        console.log(
-          `📡 SSE updates sent to coach and ${clients.length} clients`
-        );
       } catch (error) {
-        console.error("Failed to trigger SSE updates:", error);
+
       }
 
       // Log mass message results
       const successfulSends = results.filter(r => r.success).length;
       const failedSends = results.filter(r => !r.success).length;
 
-      console.log(
-        `📊 Mass message results: ${successfulSends} sent, ${failedSends} failed`
-      );
-
       if (failedSends > 0) {
-        console.log(
-          `❌ Failed clients:`,
-          results
-            .filter(r => !r.success)
+
             .map(r => ({
               clientId: r.clientId,
               clientName: r.clientName,

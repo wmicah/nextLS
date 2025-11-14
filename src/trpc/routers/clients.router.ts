@@ -87,9 +87,6 @@ export const clientsRouter = router({
               archivedAt: new Date(),
             },
           });
-          console.log(
-            `📦 Auto-archived ${clientsToArchive.length} inactive clients`
-          );
         }
       }
 
@@ -765,12 +762,6 @@ export const clientsRouter = router({
         });
 
         // Log the cleanup results for debugging
-        console.log(`Archive cleanup for client ${input.id}:`, {
-          lessons: deletedLessons.count,
-          programs: deletedPrograms.count,
-          routines: deletedRoutines.count,
-          videos: deletedVideos.count,
-        });
       });
 
       return { success: true };
@@ -859,10 +850,6 @@ export const clientsRouter = router({
 
       const organizationIds = memberships.map(member => member.organizationId);
 
-      console.log(`🔍 Coach organization lookup for user ${user.id}:`, {
-        organizationIds,
-      });
-
       // Build the where clause - if coach is in an organization, allow access to:
       // 1. Clients directly assigned to this coach
       // 2. Clients whose coach is in the same organization
@@ -886,8 +873,6 @@ export const clientsRouter = router({
           new Set([ensuredUserId, ...orgCoaches.map(c => c.coachId)])
         );
 
-        console.log(`🔍 Organization coaches:`, accessibleCoachIds);
-
         whereClause.OR = [
           { coachId: { in: accessibleCoachIds } },
           { primaryCoachId: { in: accessibleCoachIds } },
@@ -905,11 +890,6 @@ export const clientsRouter = router({
         // Not in an organization, only allow access to own clients
         whereClause.coachId = ensuredUserId;
       }
-
-      console.log(
-        `🔍 Where clause for client lookup:`,
-        JSON.stringify(whereClause, null, 2)
-      );
 
       const client = await db.client.findFirst({
         where: whereClause,
@@ -993,17 +973,11 @@ export const clientsRouter = router({
       });
 
       if (!client) {
-        console.log(`Client ${input.id} not found or is archived`);
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Client not found",
         });
       }
-
-      console.log(`Client ${input.id} found:`, {
-        name: client.name,
-        archived: client.archived,
-      });
 
       return client;
     }),
@@ -1122,19 +1096,8 @@ export const clientsRouter = router({
       // Validate that all weeks are included (debug check)
       assignments.forEach(assignment => {
         const program = assignment.program;
-        console.log(
-          `🔍 COACH ROUTER - Program ${program.id} (${program.title}): ${program.weeks.length} weeks, duration: ${program.duration}`
-        );
         if (program.weeks.length !== program.duration) {
-          console.warn(
-            `⚠️ Program ${program.id} (${program.title}) has ${program.weeks.length} weeks but duration is ${program.duration}. Weeks:`,
-            program.weeks.map(w => w.weekNumber)
-          );
-        } else {
-          console.log(
-            `✅ Program ${program.id} has all weeks:`,
-            program.weeks.map(w => w.weekNumber)
-          );
+          // Program weeks/duration mismatch - handle silently
         }
       });
 
@@ -1840,28 +1803,35 @@ export const clientsRouter = router({
 
       completedDrills += completedRoutineExercisesSet.size;
 
-      // Debug logging
-      console.log("🔍 Routine exercise completions debug:", {
-        clientId: client.id,
-        routineExerciseCompletionCount: allRoutineExerciseCompletions.length,
-        exerciseCompletionCount: allExerciseCompletions.length,
-        exerciseCompletionsForRoutinesCount:
-          exerciseCompletionsForRoutines.length,
-        completedRoutineExercisesCount: completedRoutineExercisesSet.size,
-        assignedRoutineExercisesCount: assignedRoutineExercises.size,
-        routineExerciseIds: Array.from(routineExerciseIds).slice(0, 5),
-        exerciseCompletionsForRoutines: exerciseCompletionsForRoutines.map(
-          c => ({
-            exerciseId: c.exerciseId,
-            programDrillId: c.programDrillId,
-            completedAt: c.completedAt?.toISOString(),
-            date: c.date,
-          })
-        ),
-      });
-
       // Count completed videos (videos that were assigned and completed)
       completedDrills += videoAssignments.filter(assignment => {
+        const dueDate = assignment.dueDate
+          ? new Date(assignment.dueDate)
+          : new Date(assignment.assignedAt);
+
+        const dueDateOnly = new Date(
+          dueDate.getFullYear(),
+          dueDate.getMonth(),
+          dueDate.getDate()
+        );
+        const todayOnly = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+
+        return (
+          assignedVideoIds.has(assignment.videoId) &&
+          assignment.completed &&
+          assignment.completedAt &&
+          new Date(assignment.completedAt) >= startDate &&
+          new Date(assignment.completedAt) <= endOfToday &&
+          dueDateOnly <= todayOnly
+        );
+      }).length;
+
+      // Count completed videos (videos that were assigned and completed)
+      const completedVideoCount = videoAssignments.filter(assignment => {
         const dueDate = assignment.dueDate
           ? new Date(assignment.dueDate)
           : new Date(assignment.assignedAt);
@@ -1890,66 +1860,6 @@ export const clientsRouter = router({
       // Calculate completion rate
       const completionRate =
         totalDrills > 0 ? Math.round((completedDrills / totalDrills) * 100) : 0;
-
-      // Debug logging
-      const completedVideoCount = videoAssignments.filter(assignment => {
-        const dueDate = assignment.dueDate
-          ? new Date(assignment.dueDate)
-          : new Date(assignment.assignedAt);
-
-        const dueDateOnly = new Date(
-          dueDate.getFullYear(),
-          dueDate.getMonth(),
-          dueDate.getDate()
-        );
-        const todayOnly = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate()
-        );
-
-        return (
-          assignedVideoIds.has(assignment.videoId) &&
-          assignment.completed &&
-          assignment.completedAt &&
-          new Date(assignment.completedAt) >= startDate &&
-          new Date(assignment.completedAt) <= endOfToday &&
-          dueDateOnly <= todayOnly
-        );
-      }).length;
-
-      console.log("Compliance calculation debug:", {
-        clientId: input.clientId,
-        period: input.period,
-        startDate: startDate.toISOString(),
-        endOfToday: endOfToday.toISOString(),
-        now: now.toISOString(),
-        totalDrills,
-        completedDrills,
-        completionRate,
-        breakdown: {
-          programDrills: {
-            total: assignedProgramDrillIds.size,
-            completed: drillCompletions.filter(completion =>
-              assignedProgramDrillIds.has(completion.drillId)
-            ).length,
-          },
-          routineExercises: {
-            total: assignedRoutineExercises.size,
-            completed: completedRoutineExercisesSet.size,
-          },
-          videos: {
-            total: assignedVideoIds.size,
-            completed: completedVideoCount,
-          },
-        },
-        programAssignmentsCount: programAssignments.length,
-        routineAssignmentsCount: routineAssignments.length,
-        videoAssignmentsCount: videoAssignments.length,
-        drillCompletionsCount: drillCompletions.length,
-        routineExerciseCompletionsCount: routineExerciseCompletions.length,
-        note: "Includes: Program drills, Standalone routines, Videos. Only counting past and current day (today), excluding future days",
-      });
 
       return {
         completionRate,
@@ -2006,14 +1916,6 @@ export const clientsRouter = router({
         });
       }
 
-      // Debug logging
-      console.log("🔍 Replace workout debug:", {
-        programId: input.programId,
-        clientId: input.clientId,
-        coachId: ensureUserId(user.id),
-        dayDate: input.dayDate,
-      });
-
       // Let's also check what assignments exist for this client
       const allClientAssignments = await db.programAssignment.findMany({
         where: {
@@ -2025,8 +1927,6 @@ export const clientsRouter = router({
           clientId: true,
         },
       });
-
-      console.log("🔍 All assignments for this client:", allClientAssignments);
 
       // Verify the program assignment exists and belongs to this coach
       const programAssignment = await db.programAssignment.findFirst({
@@ -2043,8 +1943,6 @@ export const clientsRouter = router({
         },
       });
 
-      console.log("🔍 Program assignment found:", programAssignment);
-
       if (!programAssignment) {
         // Let's also check what assignments DO exist for this client
         const allAssignments = await db.programAssignment.findMany({
@@ -2059,8 +1957,6 @@ export const clientsRouter = router({
           },
         });
 
-        console.log("🔍 All assignments for this client:", allAssignments);
-
         throw new TRPCError({
           code: "NOT_FOUND",
           message: `Program assignment not found. Looking for programId: ${input.programId}, clientId: ${input.clientId}. Found ${allAssignments.length} other assignments.`,
@@ -2071,13 +1967,6 @@ export const clientsRouter = router({
       const replacementNote = `Workout replaced with lesson: ${input.lessonData.title}`;
 
       // Create the lesson
-      console.log("🔍 Creating lesson with data:", {
-        title: input.lessonData.title,
-        description: input.lessonData.description || replacementNote,
-        dayDate: input.dayDate,
-        time: input.lessonData.time,
-        dateString: `${input.dayDate}T${input.lessonData.time}`,
-      });
 
       // Parse and format the date properly
       const [year, month, day] = input.dayDate.split("-").map(Number);
@@ -2101,8 +1990,6 @@ export const clientsRouter = router({
         0,
         0
       );
-
-      console.log("🔍 Parsed lesson date:", lessonDate);
 
       const lessonDuration = coach.timeSlotInterval || 60; // Use coach's lesson duration or default to 60 minutes
       const lessonEndTime = new Date(
@@ -2132,8 +2019,6 @@ export const clientsRouter = router({
           replacementReason: `Replaced with lesson: ${input.lessonData.title}`,
         },
       });
-
-      console.log("🔍 Created replacement record:", replacementRecord);
 
       return {
         success: true,

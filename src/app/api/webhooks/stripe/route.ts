@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const signature = headers().get("stripe-signature");
 
     if (!signature) {
-      console.error("Missing Stripe signature");
+
       return NextResponse.json(
         { error: "Missing Stripe signature" },
         { status: 400 }
@@ -36,8 +36,6 @@ export async function POST(req: NextRequest) {
 
     // Verify webhook signature
     const event = verifyStripeWebhook(body, signature);
-
-    console.log(`Received Stripe webhook: ${event.type}`);
 
     // Handle different event types
     switch (event.type) {
@@ -66,12 +64,12 @@ export async function POST(req: NextRequest) {
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Stripe webhook error:", error);
+
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 }
@@ -84,7 +82,7 @@ async function handleSubscriptionCreated(subscription: any) {
     const { userId, tier, clientLimit } = subscription.metadata;
 
     if (!userId) {
-      console.error("No userId in subscription metadata");
+
       return;
     }
 
@@ -94,9 +92,8 @@ async function handleSubscriptionCreated(subscription: any) {
       subscription.items.data[0].price.id
     );
 
-    console.log(`Subscription created for user ${userId}`);
   } catch (error) {
-    console.error("Error handling subscription created:", error);
+
   }
 }
 
@@ -110,9 +107,8 @@ async function handleSubscriptionUpdated(subscription: any) {
       canceled_at: subscription.canceled_at,
     });
 
-    console.log(`Subscription updated: ${subscription.id}`);
   } catch (error) {
-    console.error("Error handling subscription updated:", error);
+
   }
 }
 
@@ -137,9 +133,8 @@ async function handleSubscriptionDeleted(subscription: any) {
       });
     }
 
-    console.log(`Subscription deleted: ${subscription.id}`);
   } catch (error) {
-    console.error("Error handling subscription deleted:", error);
+
   }
 }
 
@@ -170,9 +165,8 @@ async function handleInvoicePaymentSucceeded(invoice: any) {
       }
     }
 
-    console.log(`Invoice payment succeeded: ${invoice.id}`);
   } catch (error) {
-    console.error("Error handling invoice payment succeeded:", error);
+
   }
 }
 
@@ -201,9 +195,8 @@ async function handleInvoicePaymentFailed(invoice: any) {
       });
     }
 
-    console.log(`Invoice payment failed: ${invoice.id}`);
   } catch (error) {
-    console.error("Error handling invoice payment failed:", error);
+
   }
 }
 
@@ -217,15 +210,13 @@ async function handleTrialWillEnd(subscription: any) {
     if (dbSubscription) {
       // Send notification to user about trial ending
       // This could trigger an email or in-app notification
-      console.log(`Trial ending soon for user: ${dbSubscription.user.email}`);
 
       // You could add notification logic here
       // await sendTrialEndingNotification(dbSubscription.user);
     }
 
-    console.log(`Trial will end: ${subscription.id}`);
   } catch (error) {
-    console.error("Error handling trial will end:", error);
+
   }
 }
 */

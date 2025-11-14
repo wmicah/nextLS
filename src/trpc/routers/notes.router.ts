@@ -107,8 +107,7 @@ export const notesRouter = router({
       orderBy: { createdAt: "desc" },
     });
 
-    console.log("getMyNotes - client.id:", client.id);
-    console.log("getMyNotes - found notes:", notes.length);
+
     // Log attachments for debugging
     notes.forEach((note, index) => {
       console.log(`Note ${index + 1} (${note.id}):`, {
@@ -163,8 +162,6 @@ export const notesRouter = router({
         });
       }
 
-      console.log("createNote - input.clientId:", input.clientId);
-      console.log("createNote - coachId:", user.id);
 
       // Create the note
       const note = await db.clientNote.create({

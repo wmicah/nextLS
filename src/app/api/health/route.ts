@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       dbResponseTime = Date.now() - dbStart;
     } catch (error) {
       dbStatus = "unhealthy";
-      console.error("Database health check failed:", error);
+
     }
 
     // Memory usage
@@ -62,7 +62,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Health check failed:", error);
 
     return NextResponse.json(
       {

@@ -3,7 +3,6 @@ import lessonReminderService from "@/lib/lesson-reminder-service";
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🚀 Manually starting lesson reminder service...");
 
     // Start the service
     lessonReminderService.start();
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error starting lesson reminder service:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

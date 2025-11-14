@@ -45,7 +45,7 @@ export const authCallbackRouter = router({
         // EXISTING USER - This is the key fix
         if (dbUser.role) {
           // User exists AND has a role - skip role selection
-          console.log("Existing user with role:", dbUser.role); // Add for debugging
+           // Add for debugging
           return {
             success: true,
             needsRoleSelection: false, // ← This should be FALSE for existing users with roles
@@ -60,7 +60,7 @@ export const authCallbackRouter = router({
           };
         } else {
           // User exists but no role - needs role selection
-          console.log("Existing user without role"); // Add for debugging
+           // Add for debugging
           return {
             success: true,
             needsRoleSelection: true,
@@ -89,9 +89,7 @@ export const authCallbackRouter = router({
       // If user previously deleted their account, they should go through role selection again
       // Don't auto-recreate their account or auto-assign them as CLIENT
       if (wasDeleted) {
-        console.log(
-          "User previously deleted account, sending to role selection"
-        );
+
         return {
           success: true,
           needsRoleSelection: true,
