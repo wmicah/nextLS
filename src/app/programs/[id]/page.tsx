@@ -500,6 +500,16 @@ function ProgramEditorPageContent() {
     setLocalIsSaving(true);
     setShowUpdateScopeDialog(false);
 
+    if (!program) {
+      toast({
+        title: "Error",
+        description: "Program not found",
+        variant: "destructive",
+      });
+      setLocalIsSaving(false);
+      return;
+    }
+
     try {
       // Convert ProgramBuilder weeks back to database format
       console.log("=== CONVERTING PROGRAMBUILDER TO DATABASE ===");
