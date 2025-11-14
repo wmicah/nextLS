@@ -23,16 +23,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("Starting master library type fix...");
-
     // Find all master library resources
     const masterResources = await db.libraryResource.findMany({
       where: {
         isMasterLibrary: true,
       },
     });
-
-    console.log(`Found ${masterResources.length} master library resources`);
 
     let updatedCount = 0;
     const results = [];
@@ -62,9 +58,6 @@ export async function POST(req: NextRequest) {
           data: { type: correctType },
         });
 
-        console.log(
-          `Updated ${resource.title}: ${resource.type} -> ${correctType}`
-        );
         results.push({
           id: resource.id,
           title: resource.title,
@@ -76,17 +69,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(
-      `Master library type fix completed! Updated ${updatedCount} resources.`
-    );
-
     return NextResponse.json({
       message: "Master library types updated successfully",
       updatedCount,
       results,
     });
   } catch (error) {
-    console.error("Error fixing master library types:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

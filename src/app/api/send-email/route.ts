@@ -30,8 +30,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Send email using Resend
-		console.log("📧 Attempting to send email to:", to)
-		console.log("📧 Subject:", subject)
+
 
 		const { data, error } = await resend.emails.send({
 			from: "Coach Platform <onboarding@resend.dev>", // For development - replace with your domain for production
@@ -107,17 +106,16 @@ export async function POST(request: NextRequest) {
 		})
 
 		if (error) {
-			console.error("❌ Resend error:", error)
+
 			return NextResponse.json(
 				{ error: "Failed to send email", details: error },
 				{ status: 500 }
 			)
 		}
 
-		console.log("✅ Email sent successfully:", data)
 		return NextResponse.json({ success: true, data })
 	} catch (error) {
-		console.error("Email API error:", error)
+
 		return NextResponse.json(
 			{ error: "Internal server error" },
 			{ status: 500 }

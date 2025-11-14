@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result, { status: 400 });
     }
   } catch (error) {
-    console.error("❌ Test reminder API failed:", error);
+
     return NextResponse.json(
       {
         success: false,

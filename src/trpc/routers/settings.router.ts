@@ -56,7 +56,7 @@ export const settingsRouter = router({
 
       return settings;
     } catch (error) {
-      console.error("Error in getSettings:", error);
+
       // Return null instead of throwing error to prevent crashes
       return null;
     }

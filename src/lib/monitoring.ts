@@ -163,12 +163,8 @@ class MonitoringService {
       url: typeof window !== "undefined" ? window.location.href : undefined,
     };
 
-    // Log to console in development
-    if (process.env.NODE_ENV === "development") {
-      console.log("Data captured:", dataInfo);
-    }
-
     // Send to monitoring service in production
+    // Note: Console logging removed for security - data is still captured internally
     if (process.env.NODE_ENV === "production") {
       this.sendToMonitoringService("data", dataInfo);
     }

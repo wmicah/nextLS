@@ -10,7 +10,6 @@ const connections = new Map<string, any>();
  * @param message - The message to broadcast
  */
 export function broadcastToUser(userId: string, message: any) {
-  console.log(`📡 Broadcasting to user ${userId}:`, message);
 
   // Find the connection for this user
   const connection = connections.get(userId);
@@ -19,14 +18,14 @@ export function broadcastToUser(userId: string, message: any) {
     try {
       // Send the message through the WebSocket connection
       connection.send(JSON.stringify(message));
-      console.log(`✅ Message sent to user ${userId}`);
+
     } catch (error) {
-      console.error(`❌ Failed to send message to user ${userId}:`, error);
+
       // Remove the connection if it's no longer valid
       connections.delete(userId);
     }
   } else {
-    console.log(`⚠️ No active connection found for user ${userId}`);
+
   }
 }
 
@@ -46,7 +45,7 @@ export function broadcastToUsers(userIds: string[], message: any) {
  */
 export function addConnection(userId: string, connection: any) {
   connections.set(userId, connection);
-  console.log(`🔗 Added connection for user ${userId}`);
+
 }
 
 /**
@@ -55,7 +54,7 @@ export function addConnection(userId: string, connection: any) {
  */
 export function removeConnection(userId: string) {
   connections.delete(userId);
-  console.log(`🔌 Removed connection for user ${userId}`);
+
 }
 
 /**
@@ -110,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Realtime API error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

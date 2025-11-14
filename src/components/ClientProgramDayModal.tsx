@@ -261,10 +261,6 @@ export default function ClientProgramDayModal({
   const generateTabs = (): Tab[] => {
     const tabs: Tab[] = [];
 
-    // Debug logging
-    console.log("ClientProgramDayModal - programs:", programs);
-    console.log("ClientProgramDayModal - programs.length:", programs?.length);
-
     // Add program tabs for each program
     if (programs && programs.length > 0) {
       // Check if there are any non-rest-day programs (workouts) OR routines
@@ -278,12 +274,6 @@ export default function ClientProgramDayModal({
         if (program.isRestDay && hasActiveContent) {
           return; // Skip rest days when active content exists
         }
-
-        console.log("ClientProgramDayModal - processing program:", {
-          programId: program.programId,
-          programTitle: program.programTitle,
-          isRestDay: program.isRestDay,
-        });
 
         tabs.push({
           id: `program-${program.programId}`,
@@ -312,7 +302,6 @@ export default function ClientProgramDayModal({
       });
     }
 
-    console.log("ClientProgramDayModal - generated tabs:", tabs);
     return tabs;
   };
 
@@ -320,15 +309,9 @@ export default function ClientProgramDayModal({
 
   // Set active tab to first unviewed tab, or first tab if all viewed
   React.useEffect(() => {
-    console.log("ClientProgramDayModal - useEffect for activeTab:", {
-      tabsLength: tabs.length,
-      activeTab,
-      firstTab: tabs[0]?.id,
-    });
     if (tabs.length > 0 && !activeTab) {
       const unviewedTab = tabs.find(tab => !viewedTabs.has(tab.id));
       const selectedTab = unviewedTab ? unviewedTab.id : tabs[0].id;
-      console.log("ClientProgramDayModal - setting activeTab to:", selectedTab);
       setActiveTab(selectedTab);
     }
   }, [tabs, activeTab, viewedTabs]);
@@ -579,21 +562,9 @@ export default function ClientProgramDayModal({
             (() => {
               // Find the specific program for this tab
               const programId = currentTab.id.replace("program-", "");
-              console.log("ClientProgramDayModal - looking for program:", {
-                currentTabId: currentTab.id,
-                extractedProgramId: programId,
-                programs: programs.map(p => ({
-                  programId: p.programId,
-                  programTitle: p.programTitle,
-                })),
-              });
               const program = programs.find(p => p.programId === programId);
 
               if (!program) {
-                console.log(
-                  "ClientProgramDayModal - program not found for programId:",
-                  programId
-                );
                 return <div>Program not found</div>;
               }
 
@@ -616,19 +587,9 @@ export default function ClientProgramDayModal({
             })()
           ) : currentTab?.type === "routine" ? (
             (() => {
-              console.log("🎯 Looking for routine assignment:", {
-                currentTabId: currentTab.id,
-                routineAssignments: routineAssignments.map(a => ({
-                  id: a.id,
-                  tabId: `routine-${a.id}`,
-                })),
-              });
-
               const foundAssignment = routineAssignments.find(
                 assignment => `routine-${assignment.id}` === currentTab.id
               );
-
-              console.log("🎯 Found routine assignment:", !!foundAssignment);
 
               return (
                 <RoutineContent
@@ -801,23 +762,6 @@ function ProgramContent({
   // Combine program drills with routine exercises
   const allExercises: Drill[] = [];
 
-  // Debug: Log what we receive from the backend
-  console.log("🔍 Program drills from backend:", {
-    totalDrills: program.drills.length,
-    drills: program.drills.map((d: any) => ({
-      id: d.id,
-      title: d.title,
-      hasSupersetId: !!d.supersetId,
-      supersetId: d.supersetId,
-      supersetOrder: d.supersetOrder,
-      hasRoutineId: !!d.routineId,
-      hasRoutine: !!d.routine,
-      routineExerciseCount: d.routine?.exercises?.length || 0,
-      routineExercisesWithSuperset:
-        d.routine?.exercises?.filter((e: any) => e.supersetId)?.length || 0,
-    })),
-  });
-
   // First, add all regular drills (non-routine drills)
   program.drills.forEach((drill: any) => {
     // Skip drills that should be routines but aren't properly linked
@@ -827,23 +771,6 @@ function ProgramContent({
       (drill.title.toLowerCase().includes("routine") ||
         drill.title.toLowerCase().includes("workout") ||
         drill.title.toLowerCase().includes("session"));
-
-    console.log("🔍 Processing drill:", {
-      id: drill.id,
-      title: drill.title,
-      description: drill.description,
-      descriptionType: typeof drill.description,
-      descriptionIsNull: drill.description === null,
-      descriptionIsUndefined: drill.description === undefined,
-      descriptionIsEmptyString: drill.description === "",
-      hasRoutineId: !!drill.routineId,
-      hasRoutine: !!drill.routine,
-      hasSupersetId: !!drill.supersetId,
-      supersetId: drill.supersetId,
-      supersetOrder: drill.supersetOrder,
-      shouldBeRoutine,
-      willBeAdded: !shouldBeRoutine,
-    });
 
     if (!shouldBeRoutine) {
       // This is a regular drill, add it as-is
@@ -874,19 +801,6 @@ function ProgramContent({
         supersetNotes: drill.supersetNotes || undefined,
       };
       allExercises.push(regularDrill);
-      console.log("✅ Added regular drill to allExercises:", {
-        id: regularDrill.id,
-        title: regularDrill.title,
-        description: regularDrill.description,
-        descriptionType: typeof regularDrill.description,
-        descriptionLength: regularDrill.description?.length,
-        supersetId: regularDrill.supersetId,
-        supersetOrder: regularDrill.supersetOrder,
-        originalDrillDescription: drill.description,
-        originalDrillDescriptionType: typeof drill.description,
-      });
-    } else {
-      console.log("⏭️ Skipping drill (shouldBeRoutine):", drill.title);
     }
   });
 
@@ -926,51 +840,10 @@ function ProgramContent({
     (drill: any) => drill.routine && drill.routine.exercises
   );
 
-  console.log("🎬 CHECKING ROUTINE VIDEO DATA:", {
-    totalDrills: program.drills.length,
-    drillsWithRoutines: drillsWithRoutines.length,
-    firstRoutineDrill: drillsWithRoutines[0]
-      ? {
-          drillId: drillsWithRoutines[0].id,
-          routineId: drillsWithRoutines[0].routineId,
-          exerciseCount: drillsWithRoutines[0].routine?.exercises?.length || 0,
-          firstExercise: drillsWithRoutines[0].routine?.exercises?.[0]
-            ? {
-                id: drillsWithRoutines[0].routine.exercises[0].id,
-                title: drillsWithRoutines[0].routine.exercises[0].title,
-                videoUrl: drillsWithRoutines[0].routine.exercises[0].videoUrl,
-                videoId: drillsWithRoutines[0].routine.exercises[0].videoId,
-              }
-            : null,
-        }
-      : null,
-  });
-
   if (drillsWithRoutines.length > 0) {
     drillsWithRoutines.forEach((drill: any) => {
-      console.log("🔍 Processing drill with routine:", {
-        drillId: drill.id,
-        drillTitle: drill.title,
-        routineId: drill.routineId,
-        exerciseCount: drill.routine?.exercises?.length || 0,
-        drillSupersetId: drill.supersetId,
-        drillSupersetOrder: drill.supersetOrder,
-      });
-
       drill.routine.exercises.forEach((exercise: any) => {
         const routineExerciseKey = `${drill.id}-routine-${exercise.id}`;
-
-        console.log("🎬 Creating routine exercise drill:", {
-          exerciseId: exercise.id,
-          title: exercise.title,
-          videoUrl: exercise.videoUrl,
-          videoId: exercise.videoId,
-          hasVideo: !!exercise.videoUrl,
-          exerciseSupersetId: exercise.supersetId,
-          exerciseSupersetOrder: exercise.supersetOrder,
-          drillSupersetId: drill.supersetId,
-          drillSupersetOrder: drill.supersetOrder,
-        });
 
         // IMPORTANT: If the drill itself has superset info but the exercise doesn't,
         // use the drill's superset info (for circuits created at the program level)
@@ -1012,12 +885,6 @@ function ProgramContent({
             exercise.supersetNotes || drill.supersetNotes || undefined,
         };
         allExercises.push(drillLikeExercise);
-        console.log("✅ Added routine exercise to allExercises:", {
-          id: drillLikeExercise.id,
-          title: drillLikeExercise.title,
-          supersetId: drillLikeExercise.supersetId,
-          supersetOrder: drillLikeExercise.supersetOrder,
-        });
       });
     });
   }
@@ -1062,50 +929,8 @@ function ProgramContent({
               if (!supersetGroups[drill.supersetId]) {
                 supersetGroups[drill.supersetId] = [];
               }
-              // Debug: Log description for superset exercises
-              if (drill.supersetId) {
-                console.log("🔍 Adding superset drill to group:", {
-                  id: drill.id,
-                  title: drill.title,
-                  supersetId: drill.supersetId,
-                  description: drill.description,
-                  descriptionType: typeof drill.description,
-                  hasDescription: !!drill.description,
-                });
-              }
               supersetGroups[drill.supersetId].push(drill);
             }
-          });
-
-          // Debug logging for circuit grouping
-          console.log("🔍 Circuit Grouping Debug:", {
-            totalExercises: allExercises.length,
-            allExerciseDetails: allExercises.map(d => ({
-              id: d.id,
-              title: d.title,
-              supersetId: d.supersetId,
-              supersetOrder: d.supersetOrder,
-            })),
-            exercisesWithSupersetId: allExercises.filter(d => d.supersetId)
-              .length,
-            exercisesWithSupersetIdDetails: allExercises
-              .filter(d => d.supersetId)
-              .map(d => ({
-                id: d.id,
-                title: d.title,
-                supersetId: d.supersetId,
-                supersetOrder: d.supersetOrder,
-              })),
-            supersetGroups: Object.keys(supersetGroups).map(supersetId => ({
-              supersetId,
-              count: supersetGroups[supersetId].length,
-              exercises: supersetGroups[supersetId].map(d => ({
-                id: d.id,
-                title: d.title,
-                supersetOrder: d.supersetOrder,
-              })),
-            })),
-            orderedExercisesCount: 0, // Will be logged after creation
           });
 
           // Sort superset groups by superset order
@@ -1122,29 +947,10 @@ function ProgramContent({
 
           // Create ordered list maintaining program order
           allExercises.forEach((drill, drillIndex) => {
-            console.log(
-              `🔍 Processing drill ${drillIndex} for orderedExercises:`,
-              {
-                id: drill.id,
-                title: drill.title,
-                hasSupersetId: !!drill.supersetId,
-                supersetId: drill.supersetId,
-                supersetOrder: drill.supersetOrder,
-              }
-            );
-
             if (drill.supersetId) {
               // Only add the superset group once (when we encounter the first exercise in program order)
               if (!addedSupersetIds.has(drill.supersetId)) {
                 const supersetDrills = supersetGroups[drill.supersetId];
-                console.log(
-                  `✅ Adding superset group for ${drill.supersetId}:`,
-                  {
-                    supersetId: drill.supersetId,
-                    drillCount: supersetDrills.length,
-                    drillTitles: supersetDrills.map(d => d.title),
-                  }
-                );
                 // Add superset group
                 orderedExercises.push({
                   type: "superset",
@@ -1154,14 +960,9 @@ function ProgramContent({
                   },
                 });
                 addedSupersetIds.add(drill.supersetId);
-              } else {
-                console.log(
-                  `⏭️ Skipping drill ${drill.title} - superset group already added`
-                );
               }
               // Don't add individual drills that are part of a superset
             } else {
-              console.log(`✅ Adding regular drill: ${drill.title}`);
               // Add regular drill
               orderedExercises.push({
                 type: "regular",
@@ -1170,39 +971,11 @@ function ProgramContent({
             }
           });
 
-          // Debug: Log ordered exercises
-          console.log("🔍 Ordered Exercises:", {
-            total: orderedExercises.length,
-            breakdown: {
-              regular: orderedExercises.filter(i => i.type === "regular")
-                .length,
-              superset: orderedExercises.filter(i => i.type === "superset")
-                .length,
-            },
-            supersetGroups: orderedExercises
-              .filter(i => i.type === "superset")
-              .map(i => {
-                const data = i.data as { supersetId: string; drills: Drill[] };
-                return {
-                  supersetId: data.supersetId,
-                  count: data.drills.length,
-                  exerciseTitles: data.drills.map(d => d.title),
-                };
-              }),
-          });
-
           let globalIndex = 0;
 
           return (
             <div className="space-y-4">
               {orderedExercises.map((item, itemIndex) => {
-                console.log("🎯 Rendering item:", {
-                  index: itemIndex,
-                  type: item.type,
-                  isRegular: item.type === "regular",
-                  isSuperset: item.type === "superset",
-                });
-
                 if (item.type === "regular") {
                   const drill = item.data as Drill;
 
@@ -1241,27 +1014,11 @@ function ProgramContent({
                       onMarkComplete={async completed => {
                         const dateKey = formatDateKey(selectedDate);
 
-                        console.log(
-                          "🎯 onMarkComplete called for regular drill:",
-                          {
-                            drillId: drill.id,
-                            completed,
-                            dateKey,
-                            isRoutineExercise: drill.id.includes("-routine-"),
-                          }
-                        );
-
                         if (drill.id.includes("-routine-")) {
                           // For routine exercises within programs, use the new completion system
                           const originalDrillId =
                             drill.id.split("-routine-")[0];
                           const exerciseId = drill.id.split("-routine-")[1];
-                          console.log("🎯 Marking routine exercise complete:", {
-                            exerciseId,
-                            originalDrillId,
-                            completed,
-                            dateKey,
-                          });
                           await markExerciseComplete(
                             exerciseId,
                             originalDrillId,
@@ -1270,11 +1027,6 @@ function ProgramContent({
                           );
                         } else {
                           // For regular drills, use the new completion system
-                          console.log("🎯 Marking regular drill complete:", {
-                            drillId: drill.id,
-                            completed,
-                            dateKey,
-                          });
                           await markExerciseComplete(
                             drill.id,
                             undefined,
@@ -1300,14 +1052,6 @@ function ProgramContent({
                     drills: Drill[];
                   };
                   const supersetDrills = supersetData.drills;
-
-                  console.log("🎨 Rendering Superset/Circuit Group:", {
-                    supersetId: supersetData.supersetId,
-                    drillCount: supersetDrills.length,
-                    isCircuit: supersetDrills.length > 2,
-                    exerciseTitles: supersetDrills.map(d => d.title),
-                  });
-
                   const isCircuit = supersetDrills.length > 2;
 
                   return (
@@ -1387,32 +1131,12 @@ function ProgramContent({
                                   onMarkComplete={async completed => {
                                     const dateKey = formatDateKey(selectedDate);
 
-                                    console.log(
-                                      "🎯 onMarkComplete called for superset drill:",
-                                      {
-                                        drillId: drill.id,
-                                        completed,
-                                        dateKey,
-                                        isRoutineExercise:
-                                          drill.id.includes("-routine-"),
-                                      }
-                                    );
-
                                     if (drill.id.includes("-routine-")) {
                                       // For routine exercises within programs, use the new completion system
                                       const originalDrillId =
                                         drill.id.split("-routine-")[0];
                                       const exerciseId =
                                         drill.id.split("-routine-")[1];
-                                      console.log(
-                                        "🎯 Marking superset routine exercise complete:",
-                                        {
-                                          exerciseId,
-                                          originalDrillId,
-                                          completed,
-                                          dateKey,
-                                        }
-                                      );
                                       await markExerciseComplete(
                                         exerciseId,
                                         originalDrillId,
@@ -1421,14 +1145,6 @@ function ProgramContent({
                                       );
                                     } else {
                                       // For regular drills, use the new completion system
-                                      console.log(
-                                        "🎯 Marking superset regular drill complete:",
-                                        {
-                                          drillId: drill.id,
-                                          completed,
-                                          dateKey,
-                                        }
-                                      );
                                       await markExerciseComplete(
                                         drill.id,
                                         undefined,
@@ -1460,7 +1176,6 @@ function ProgramContent({
                     </div>
                   );
                 } else {
-                  console.error("❌ Unknown item type:", item);
                   return null;
                 }
               })}
@@ -1511,17 +1226,7 @@ function RoutineContent({
   ) => Promise<void>;
   selectedDate?: Date | null;
 }) {
-  console.log("🎯 RoutineContent called with:", {
-    routineAssignment: routineAssignment
-      ? {
-          id: routineAssignment.id,
-          routine: routineAssignment.routine?.name,
-        }
-      : null,
-  });
-
   if (!routineAssignment) {
-    console.log("🎯 Routine assignment not found, showing fallback UI");
     return (
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1557,21 +1262,9 @@ function RoutineContent({
         <div className="space-y-6">
           {(() => {
             // Convert all exercises to drill-like format first
-            console.log("🎯 Creating drill-like exercises with:", {
-              routineAssignmentId: routineAssignment.id,
-              exerciseCount: routine.exercises.length,
-              firstExercise: routine.exercises[0]
-                ? {
-                    id: routine.exercises[0].id,
-                    title: routine.exercises[0].title,
-                  }
-                : null,
-            });
-
             const allDrillLikeExercises: Drill[] = routine.exercises.map(
               (exercise, index) => {
                 const routineExerciseKey = `${routineAssignment.id}-${exercise.id}`;
-                console.log("🎯 Creating drill with key:", routineExerciseKey);
                 return {
                   id: routineExerciseKey,
                   title: exercise.title,
@@ -1819,12 +1512,6 @@ function DrillCard({
           onClick={e => {
             e.preventDefault();
             e.stopPropagation();
-            console.log("🎯 DrillCard button clicked:", {
-              drillId: drill.id,
-              drillTitle: drill.title,
-              currentCompleted: drill.completed,
-              newCompleted: !drill.completed,
-            });
             onMarkComplete(!drill.completed);
           }}
           className={cn(

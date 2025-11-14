@@ -340,38 +340,8 @@ export const analyticsRouter = router({
           : 0;
 
       // Debug: Log what we found
-      console.log(`Analytics Debug - Coach ${user.id}:`);
-      console.log(`- Active clients: ${activeClients}`);
-      console.log(`- Total drills assigned: ${totalDrillsAssigned}`);
-      console.log(`- Drill completions: ${drillCompletions.length}`);
-      console.log(
-        `- Routine exercise completions: ${routineExerciseCompletions.length}`
-      );
-      console.log(`- Total completions: ${totalCompletions}`);
-      console.log(
-        `- Recent drill activity (30 days): ${recentDrillActivity.length}`
-      );
-      console.log(
-        `- Recent routine exercise activity (30 days): ${recentRoutineExerciseActivity.length}`
-      );
-      console.log(`- Unique active clients: ${uniqueActiveClients}`);
-      console.log(`- Workout completion rate: ${workoutCompletionRate}%`);
-      console.log(`- Retention rate: ${retentionRate}%`);
-      console.log(`- Average progress: ${averageProgress}%`);
 
-      // Additional debug info
-      console.log(
-        `- Current period start: ${currentPeriodStart.toISOString()}`
-      );
-      console.log(
-        `- Total drill completions in DB: ${await db.drillCompletion.count()}`
-      );
-      console.log(
-        `- Total program drills in DB: ${await db.programDrill.count()}`
-      );
-      console.log(
-        `- Total program assignments: ${await db.programAssignment.count()}`
-      );
+      // Additional debug info - removed for security
 
       // Check for any drill completions for this coach's clients (no date filter)
       const allDrillCompletionsForCoach = await db.drillCompletion.findMany({
@@ -381,17 +351,9 @@ export const analyticsRouter = router({
           },
         },
       });
-      console.log(
-        `- All drill completions for coach: ${allDrillCompletionsForCoach.length}`
-      );
 
       if (allDrillCompletionsForCoach.length > 0) {
-        console.log(
-          `- Sample completion dates: ${allDrillCompletionsForCoach
-            .slice(0, 3)
-            .map(c => c.completedAt.toISOString())
-            .join(", ")}`
-        );
+        // Drill completions found for coach
       }
 
       // If no real data exists, provide meaningful defaults
@@ -401,7 +363,6 @@ export const analyticsRouter = router({
         routineExerciseCompletions.length > 0;
 
       if (!hasRealData) {
-        console.log("No real analytics data found - using demo data");
         return {
           activeClients: 3,
           activeClientsTrend: 15.5,

@@ -106,19 +106,20 @@ export default function VideoViewerModal({
   });
 
   // Get client comments for this video (only for non-master library items)
-  const { data: clientComments = [] } =
-    trpc.library.getClientCommentsForVideo.useQuery(
-      { videoId: item?.id },
-      { enabled: !!item?.id && !isMasterLibraryItem }
-    );
+  const { data: clientComments = [] } = (
+    trpc.library.getClientCommentsForVideo as any
+  ).useQuery(
+    { videoId: item?.id },
+    { enabled: !!item?.id && !isMasterLibraryItem }
+  );
 
-  const deleteMutation = trpc.library.delete.useMutation({
+  const deleteMutation = (trpc.library.delete as any).useMutation({
     onSuccess: () => {
       setShowDeleteConfirm(false);
       onDelete?.(); // Call the callback to refresh the list
       onClose(); // Close the modal
     },
-    onError: error => {
+    onError: (error: { message: string }) => {
       alert(`Delete failed: ${error.message}`);
     },
   });

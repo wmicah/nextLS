@@ -353,12 +353,9 @@ export const schedulingRouter = router({
             utcLessonDate.toLocaleDateString(),
             lessonTime
           );
-          console.log(`📧 Lesson scheduled email sent to ${client.email}`);
+
         } catch (error) {
-          console.error(
-            `Failed to send lesson scheduled email to ${client.email}:`,
-            error
-          );
+
         }
       }
 
@@ -732,9 +729,7 @@ export const schedulingRouter = router({
 
       // TODO: Send email notification if requested
       if (input.sendEmail && client.email) {
-        console.log(
-          `Email notification would be sent to ${client.email} for ${validLessonDates.length} recurring lessons`
-        );
+
       }
 
       return {
@@ -1450,12 +1445,9 @@ export const schedulingRouter = router({
             utcLessonDate.toLocaleDateString(),
             lessonTime
           );
-          console.log(`📧 Lesson scheduled email sent to ${client.email}`);
+
         } catch (error) {
-          console.error(
-            `Failed to send lesson scheduled email to ${client.email}:`,
-            error
-          );
+
         }
       }
 

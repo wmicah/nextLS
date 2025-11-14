@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Email test error:", error);
+
     return NextResponse.json(
       {
         error: "Failed to test email service",

@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       newCount: newUrls.length,
     });
   } catch (error) {
-    console.error("Error checking URLs:", error);
+
     return NextResponse.json(
       { error: "Failed to check URLs" },
       { status: 500 }

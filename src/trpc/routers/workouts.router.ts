@@ -25,15 +25,13 @@ export const workoutsRouter = router({
       const user = await getUser();
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-      console.log("Getting today's program for user:", user.id);
-
       // Verify user is a CLIENT
       const dbUser = await db.user.findFirst({
         where: { id: user.id, role: "CLIENT" },
       });
 
       if (!dbUser) {
-        console.log("User is not a CLIENT");
+
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only clients can access this endpoint",
@@ -48,16 +46,8 @@ export const workoutsRouter = router({
         },
       });
 
-      console.log(
-        "Client found:",
-        client?.id,
-        client?.name,
-        "Coach:",
-        client?.coach?.name
-      );
-
       if (!client) {
-        console.log("No client record found for user:", user.id);
+
         return [];
       }
 
@@ -83,14 +73,8 @@ export const workoutsRouter = router({
         },
       });
 
-      console.log(
-        "Program assignment found:",
-        programAssignment?.id,
-        programAssignment?.program?.title
-      );
-
       if (!programAssignment) {
-        console.log("No program assigned to client");
+
         return [];
       }
 
@@ -104,18 +88,12 @@ export const workoutsRouter = router({
       const currentWeek = Math.floor(daysSinceStart / 7) + 1;
       const currentDay = (daysSinceStart % 7) + 1;
 
-      console.log("Program progress:", {
-        daysSinceStart,
-        currentWeek,
-        currentDay,
-      });
-
       // Get today's program day
       const currentWeekData = programAssignment.program.weeks.find(
         w => w.weekNumber === currentWeek
       );
       if (!currentWeekData) {
-        console.log("No week data found for week:", currentWeek);
+
         return [];
       }
 
@@ -123,16 +101,9 @@ export const workoutsRouter = router({
         d => d.dayNumber === currentDay
       );
       if (!todayProgramDay) {
-        console.log("No day data found for day:", currentDay);
+
         return [];
       }
-
-      console.log(
-        "Today's program day:",
-        todayProgramDay.title,
-        "Drills:",
-        todayProgramDay.drills.length
-      );
 
       // Return the drills for today as "workouts"
       return todayProgramDay.drills.map(drill => ({
@@ -144,7 +115,7 @@ export const workoutsRouter = router({
         template: null, // Not using workout templates for program drills
       }));
     } catch (error) {
-      console.error("Get today's program error:", error);
+
       return [];
     }
   }),
@@ -187,7 +158,7 @@ export const workoutsRouter = router({
         workouts: allWorkouts,
       };
     } catch (error) {
-      console.error("Debug endpoint error:", error);
+
       return {
         user: { id: "error", email: "error" },
         clients: [],

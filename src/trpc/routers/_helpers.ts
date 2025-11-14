@@ -28,9 +28,7 @@ export async function sendWelcomeMessage(
   coachId: string,
   clientUserId: string
 ) {
-  console.log(
-    `🎉 Sending welcome message from coach ${coachId} to client ${clientUserId}`
-  );
+
   try {
     // Check if conversation already exists
     const existingConversation = await db.conversation.findFirst({
@@ -98,10 +96,6 @@ export async function sendWelcomeMessage(
       },
     });
 
-    console.log(
-      `✅ Welcome message sent successfully! Message ID: ${welcomeMessage.id}`
-    );
-
     // Send real-time notification
     try {
       const { sendToUser } = await import("@/app/api/sse/messages/route");
@@ -113,12 +107,12 @@ export async function sendWelcomeMessage(
         },
       });
     } catch (error) {
-      console.error("Failed to send real-time notification:", error);
+
     }
 
     return welcomeMessage;
   } catch (error) {
-    console.error("Failed to send welcome message:", error);
+
     return null;
   }
 }

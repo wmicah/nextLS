@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Check role error:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
     });
     return response;
   } catch (error) {
-    console.error("Error streaming master library video:", error);
+
     return NextResponse.json(
       { error: "Failed to stream video" },
       { status: 500 }

@@ -171,10 +171,6 @@ function ClientProgramPage() {
           serverCompletedVideoAssignments.add(assignment.id);
         }
       });
-      console.log(
-        "🔄 Initializing completedVideoAssignments from server:",
-        Array.from(serverCompletedVideoAssignments)
-      );
       setCompletedVideoAssignments(serverCompletedVideoAssignments);
     } else {
       // Clear video assignment completion state if no assignments
@@ -286,63 +282,10 @@ function ClientProgramPage() {
 
   // Open modal when detailed data is loaded
   React.useEffect(() => {
-    console.log("🔍 ClientProgramPage - Modal opening check:", {
-      selectedDateForDetails,
-      hasSelectedDayDetails: !!selectedDayDetails,
-      dayDetailsLoading,
-      shouldOpen:
-        selectedDateForDetails && selectedDayDetails && !dayDetailsLoading,
-    });
     if (selectedDateForDetails && selectedDayDetails && !dayDetailsLoading) {
-      console.log("🔍 ClientProgramPage - Opening modal with detailed data");
       setIsDaySheetOpen(true);
     }
   }, [selectedDateForDetails, selectedDayDetails, dayDetailsLoading]);
-
-  // Debug logging for calendar data
-  useEffect(() => {
-    if (calendarData) {
-      console.log(
-        "🔍 CLIENT PROGRAM PAGE - Calendar data received:",
-        calendarData
-      );
-      // Look for any drills with coach instructions
-      Object.entries(calendarData).forEach(([date, dayData]) => {
-        if (dayData.drills) {
-          dayData.drills.forEach((drill: any) => {
-            if (drill.coachInstructions) {
-              console.log(
-                "🔍 CLIENT PROGRAM PAGE - Drill with coach instructions found:",
-                drill.title
-              );
-              console.log(
-                "🔍 CLIENT PROGRAM PAGE - Coach instructions:",
-                drill.coachInstructions
-              );
-            }
-          });
-        }
-        if (dayData.programs) {
-          dayData.programs.forEach((program: any) => {
-            if (program.drills) {
-              program.drills.forEach((drill: any) => {
-                if (drill.coachInstructions) {
-                  console.log(
-                    "🔍 CLIENT PROGRAM PAGE - Program drill with coach instructions found:",
-                    drill.title
-                  );
-                  console.log(
-                    "🔍 CLIENT PROGRAM PAGE - Coach instructions:",
-                    drill.coachInstructions
-                  );
-                }
-              });
-            }
-          });
-        }
-      });
-    }
-  }, [calendarData]);
 
   // Get current week's calendar data (for "This Week's Schedule" section)
   const currentWeekStart = startOfWeek(new Date());
@@ -392,16 +335,6 @@ function ClientProgramPage() {
   // Get coach notes
   const { data: coachNotes } = trpc.notes.getMyNotes.useQuery();
 
-  // Debug logging
-  console.log("ClientProgramPage - coachNotes:", coachNotes);
-  console.log("ClientProgramPage - upcomingEvents:", upcomingEvents);
-  console.log(
-    "ClientProgramPage - upcomingEvents length:",
-    upcomingEvents.length
-  );
-  console.log("ClientProgramPage - eventsError:", eventsError);
-  console.log("ClientProgramPage - nextLesson:", nextLesson);
-
   // Get routine assignments
   const { data: routineAssignments = [] } =
     trpc.clientRouter.getRoutineAssignments.useQuery();
@@ -416,7 +349,7 @@ function ClientProgramPage() {
     });
 
   // Get library items for video lookup
-  const { data: libraryItems = [] } = trpc.library.list.useQuery({});
+  const { data: libraryItems = [] } = (trpc.library.list as any).useQuery({});
 
   const utils = trpc.useUtils();
 
@@ -787,12 +720,6 @@ function ClientProgramPage() {
     programDrillId: string, // This is actually the program drill ID, not routine assignment ID
     completed: boolean
   ) => {
-    console.log("🎯 handleMarkRoutineExerciseComplete called:", {
-      exerciseId,
-      programDrillId,
-      completed,
-    });
-
     try {
       // Use the new completion system
       const dateKey = selectedDate
@@ -809,14 +736,8 @@ function ClientProgramPage() {
         completed,
         dateKey
       );
-      console.log("✅ Routine exercise completion updated successfully");
     } catch (error) {
-      console.error(
-        `❌ Failed to ${
-          completed ? "complete" : "uncomplete"
-        } routine exercise:`,
-        error
-      );
+      // Error handling - silently fail or show user-friendly message
     }
   };
 
@@ -825,28 +746,14 @@ function ClientProgramPage() {
     assignmentId: string,
     completed: boolean
   ) => {
-    console.log("🎯 handleMarkVideoAssignmentComplete called with:", {
-      assignmentId,
-      completed,
-    });
-
     // Update the completion state immediately for real-time UI updates
     setCompletedVideoAssignments(prev => {
       const newSet = new Set(prev);
       if (completed) {
         newSet.add(assignmentId);
-        console.log(
-          "🎯 Added video assignment to completedVideoAssignments:",
-          assignmentId
-        );
       } else {
         newSet.delete(assignmentId);
-        console.log(
-          "🎯 Removed video assignment from completedVideoAssignments:",
-          assignmentId
-        );
       }
-      console.log("🎯 New completedVideoAssignments:", Array.from(newSet));
       return newSet;
     });
 
@@ -856,15 +763,9 @@ function ClientProgramPage() {
         completed,
       });
 
-      console.log("🎯 Video assignment completion updated successfully");
-
       // Refetch calendar data to sync with server
       await refetchCalendar();
     } catch (error) {
-      console.error(
-        "🎯 ERROR: markVideoAssignmentCompleteMutation failed:",
-        error
-      );
       // Revert optimistic update on error
       setCompletedVideoAssignments(prev => {
         const newSet = new Set(prev);
@@ -884,12 +785,6 @@ function ClientProgramPage() {
     completed: boolean,
     programAssignmentId?: string
   ) => {
-    console.log("🎯 handleMarkDrillComplete called with:", {
-      drillId,
-      completed,
-      programAssignmentId,
-    });
-
     try {
       // Use the new completion system
       const dateKey = selectedDate
@@ -901,9 +796,7 @@ function ClientProgramPage() {
             .padStart(2, "0")}`
         : undefined;
       await markExerciseComplete(drillId, undefined, completed, dateKey);
-      console.log("✅ Drill completion updated successfully");
     } catch (error) {
-      console.error("❌ ERROR: Failed to update drill completion:", error);
       alert(
         `Failed to update drill completion: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -931,9 +824,6 @@ function ClientProgramPage() {
 
       // TODO: Update this function to work with the new multi-program structure
       // For now, just update the UI state
-      console.log(
-        "handleMarkAllComplete: UI state updated, database update needs program assignment context"
-      );
     }
   };
 
@@ -958,13 +848,6 @@ function ClientProgramPage() {
   const handleOpenVideo = (videoUrl: string, drill: any) => {
     // Use centralized YouTube processing
     const { isYouTube, youtubeId } = processVideoUrl(videoUrl);
-
-    console.log("Opening video:", {
-      videoUrl,
-      drill,
-      isYouTube,
-      youtubeId,
-    });
 
     setSelectedVideo({
       id: drill.id,
@@ -1007,7 +890,7 @@ function ClientProgramPage() {
         comment: commentText,
       });
     } catch (error) {
-      console.error("Failed to submit comment:", error);
+      // Error handling - silently fail or show user-friendly message
     } finally {
       setIsSubmittingComment(false);
       handleCloseCommentModal();
@@ -2145,13 +2028,6 @@ function ClientProgramPage() {
                   selectedDayDetails?.programs ||
                   updateDrillCompletionStatus(selectedDay)?.programs ||
                   [];
-                console.log("🔍 ClientProgramPage - Modal programs:", {
-                  hasSelectedDayDetails: !!selectedDayDetails,
-                  selectedDayDetailsPrograms:
-                    selectedDayDetails?.programs?.length || 0,
-                  selectedDayPrograms: selectedDay?.programs?.length || 0,
-                  finalPrograms: programs.length,
-                });
                 return programs;
               })()}
               routineAssignments={
@@ -2230,16 +2106,8 @@ function ClientProgramPage() {
                         className="w-full h-full object-contain"
                         style={{ backgroundColor: "#000" }}
                         src={selectedVideo.url}
-                        onError={e => {
-                          const videoElement = e.target as HTMLVideoElement;
-                          console.error("Video load error:", {
-                            error: videoElement.error,
-                            src: videoElement.src,
-                            currentSrc: videoElement.currentSrc,
-                            networkState: videoElement.networkState,
-                            readyState: videoElement.readyState,
-                            videoUrl: selectedVideo?.url,
-                          });
+                        onError={() => {
+                          // Video load error - handle silently
                         }}
                       >
                         Your browser does not support the video tag.

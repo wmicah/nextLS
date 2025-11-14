@@ -11,8 +11,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Authenticating user:", email);
-
     // Simple mock authentication - replace this with your actual user validation
     // This is just to get your custom auth working
     const mockUsers = [
@@ -52,7 +50,7 @@ export async function POST(request: NextRequest) {
       message: "Authentication successful",
     });
   } catch (error) {
-    console.error("Custom signin error:", error);
+
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }

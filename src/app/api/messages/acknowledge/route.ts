@@ -20,8 +20,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("User attempting to acknowledge:", user.id);
-
     // Find the message with conversation details
     const message = await db.message.findUnique({
       where: { id: messageId },
@@ -58,13 +56,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
-    console.log("Message found:", {
-      id: message.id,
-      conversationId: message.conversationId,
-      requiresAcknowledgment: message.requiresAcknowledgment,
-      isAcknowledged: message.isAcknowledged,
-    });
-
     // Check if the current user is part of this conversation
     const conversation = message.conversation;
     const isParticipant =
@@ -77,8 +68,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("User is participant, checking acknowledgment requirements");
-
     // Check if the message requires acknowledgment (with fallback for legacy messages)
     if (!message.requiresAcknowledgment) {
       // For lesson reminder messages, we can still allow acknowledgment
@@ -86,9 +75,7 @@ export async function POST(request: NextRequest) {
         message.content.includes("🔔 **Lesson Reminder**") ||
         message.content.includes("🔔 **Lesson Confirmation Required**")
       ) {
-        console.log(
-          "Lesson reminder/confirmation detected, allowing acknowledgment"
-        );
+
       } else {
         return NextResponse.json(
           { error: "Message does not require acknowledgment" },
@@ -105,8 +92,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Acknowledging message...");
-
     // Acknowledge the message
     const updatedMessage = await db.message.update({
       where: { id: messageId },
@@ -118,13 +103,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Message acknowledged successfully");
-
     // Check if this is a lesson confirmation message and handle it
     if (message.content.includes("🔔 **Lesson Confirmation Required**")) {
-      console.log(
-        "Lesson confirmation acknowledgment detected, processing confirmation..."
-      );
 
       try {
         // Find the lesson reminder record for this message
@@ -171,12 +151,9 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          console.log(
-            `✅ Lesson confirmation processed for lesson ${lessonReminder.eventId}`
-          );
         }
       } catch (error) {
-        console.error("Error processing lesson confirmation:", error);
+
         // Don't fail the acknowledgment if confirmation processing fails
       }
     }
@@ -185,7 +162,6 @@ export async function POST(request: NextRequest) {
     try {
       // Only send confirmation if this is a client acknowledging (not a coach)
       if (conversation.clientId === user.id && conversation.coachId) {
-        console.log("Sending confirmation message to coach");
 
         const clientName = conversation.client?.name || "Client";
         const coachName = conversation.coach?.name || "Coach";
@@ -225,8 +201,6 @@ ${clientName} has confirmed receipt of the lesson reminder and is ready for tomo
           },
         });
 
-        console.log("Confirmation message sent:", confirmationMsg.id);
-
         // Update conversation timestamp
         await db.conversation.update({
           where: { id: conversation.id },
@@ -234,7 +208,7 @@ ${clientName} has confirmed receipt of the lesson reminder and is ready for tomo
         });
       }
     } catch (confirmationError) {
-      console.error("Error sending confirmation message:", confirmationError);
+
       // Don't fail the acknowledgment if confirmation fails
     }
 
@@ -244,7 +218,7 @@ ${clientName} has confirmed receipt of the lesson reminder and is ready for tomo
       confirmationSent: true,
     });
   } catch (error) {
-    console.error("Error acknowledging message:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",

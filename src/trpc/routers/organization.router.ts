@@ -583,8 +583,6 @@ export const organizationRouter = router({
       });
     }
 
-    console.log("Getting pending invitations for user:", user.id);
-
     // Get all pending invitations for this user
     const invitations = await db.coachOrganization.findMany({
       where: {
@@ -602,8 +600,6 @@ export const organizationRouter = router({
         },
       },
     });
-
-    console.log("Found invitations:", invitations);
 
     return invitations;
   }),
@@ -1474,7 +1470,7 @@ export const organizationRouter = router({
       // Send email notification if requested
       if (input.sendEmail && client.email) {
         // TODO: Implement email notification
-        console.log(`Email notification would be sent to ${client.email}`);
+
       }
 
       return lesson;
@@ -1625,9 +1621,7 @@ export const organizationRouter = router({
       // Send email notification if requested
       if (input.sendEmail && client.email) {
         // TODO: Implement email notification
-        console.log(
-          `Email notification would be sent to ${client.email} for ${lessons.length} lessons`
-        );
+
       }
 
       return {

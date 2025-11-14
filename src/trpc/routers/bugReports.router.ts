@@ -75,7 +75,7 @@ export const bugReportsRouter = router({
           },
         });
       } catch (dbError: any) {
-        console.error("Database error creating bug report:", dbError);
+
         // Check if it's a table doesn't exist error
         if (
           dbError?.message?.includes("does not exist") ||
@@ -236,9 +236,9 @@ export const bugReportsRouter = router({
             </div>
           `
         );
-        console.log("Bug report email notification sent to wmicah56@gmail.com");
+
       } catch (error) {
-        console.error("Failed to send bug report email notification:", error);
+
         // Don't fail the mutation if email fails
       }
 

@@ -552,18 +552,6 @@ function ProgramEditorPageContent() {
             title: `Day ${dayNumber}`,
             description: "",
             drills: items.map((item, itemIndex) => {
-              // Debug: Log description for superset exercises
-              if (item.supersetId) {
-                console.log("🔍 Converting superset drill to DB format:", {
-                  id: item.id,
-                  title: item.title,
-                  supersetId: item.supersetId,
-                  supersetOrder: item.supersetOrder,
-                  description: item.description,
-                  descriptionType: typeof item.description,
-                  descriptionAfterCoalesce: item.description ?? "",
-                });
-              }
               return {
                 id: item.id,
                 title: item.title,

@@ -165,12 +165,9 @@ export const userRouter = router({
               updatedUser.name || "New Client",
               updatedUser.email
             );
-            console.log(`📧 New client request email sent to ${coach.email}`);
+
           } catch (error) {
-            console.error(
-              `Failed to send new client request email to ${coach.email}:`,
-              error
-            );
+
           }
 
           // Create client record WITHOUT coach assignment (pending approval)
@@ -247,14 +244,9 @@ export const userRouter = router({
               updatedUser.name || "New Client",
               updatedUser.email
             );
-            console.log(
-              `📧 Client join notification sent to coach: ${coach.email}`
-            );
+
           } catch (error) {
-            console.error(
-              "Failed to send client join notification email:",
-              error
-            );
+
           }
 
           // Send welcome message from coach to client
@@ -283,7 +275,7 @@ export const userRouter = router({
             updatedUser.email,
             updatedUser.name || "Coach"
           );
-          console.log(`📧 Welcome email sent to coach: ${updatedUser.email}`);
+
         } else if (input.role === "CLIENT") {
           // For clients, we need to determine if they have a coach
           let coachName: string | undefined;
@@ -302,10 +294,10 @@ export const userRouter = router({
             updatedUser.name || "Client",
             coachName
           );
-          console.log(`📧 Welcome email sent to client: ${updatedUser.email}`);
+
         }
       } catch (error) {
-        console.error("Failed to send welcome email:", error);
+
         // Don't throw error - email failure shouldn't break user creation
       }
 
@@ -505,9 +497,7 @@ export const userRouter = router({
 
         for (const [day, config] of Object.entries(input.customWorkingHours)) {
           if (!dayNames.includes(day)) {
-            console.warn(
-              `Ignoring invalid custom working hours entry for day: ${day}`
-            );
+
             continue;
           }
 
@@ -519,16 +509,12 @@ export const userRouter = router({
 
           if (enabled) {
             if (!start || !end) {
-              console.warn(
-                `Custom working hours for ${day} missing start or end time; skipping.`
-              );
+
               continue;
             }
 
             if (!isEndTimeAfterStartTime(start, end)) {
-              console.warn(
-                `Custom working hours for ${day} have end time before start time; skipping.`
-              );
+
               continue;
             }
 
@@ -734,11 +720,9 @@ export const userRouter = router({
           updatedUser.name || "New Client",
           updatedUser.email
         );
-        console.log(
-          `📧 Client join notification sent to coach: ${coach.email}`
-        );
+
       } catch (error) {
-        console.error("Failed to send client join notification email:", error);
+
       }
 
       // Send welcome message from coach to client
@@ -751,9 +735,9 @@ export const userRouter = router({
           updatedUser.name || "Client",
           coach.name || "Coach"
         );
-        console.log(`📧 Welcome email sent to client: ${updatedUser.email}`);
+
       } catch (error) {
-        console.error("Failed to send welcome email to client:", error);
+
       }
 
       return {
@@ -839,9 +823,7 @@ export const userRouter = router({
 
       if (!clientRecord) {
         // Client/user has been deleted, just mark notification as read
-        console.log(
-          `Client record for user ${clientUserId} not found - may have been deleted already`
-        );
+
         await db.notification.update({
           where: { id: input.notificationId },
           data: { isRead: true },
@@ -913,15 +895,10 @@ export const userRouter = router({
           });
         } catch (error) {
           // If deletion fails (e.g., record already deleted), log but continue
-          console.warn(
-            `Could not delete client record for user ${clientUserId}:`,
-            error
-          );
+
         }
       } else {
-        console.log(
-          `Client record for user ${clientUserId} not found - may have been deleted already`
-        );
+
       }
 
       // Mark notification as read
@@ -1035,14 +1012,10 @@ export const userRouter = router({
           kindeDeleted = kindeResult.success;
 
           if (!kindeResult.success) {
-            console.warn(
-              `⚠️ Failed to delete user from Kinde: ${kindeResult.error}. Proceeding with database deletion.`
-            );
+
           }
         } else {
-          console.warn(
-            "⚠️ Kinde Management API not configured. User will only be deleted from database."
-          );
+
         }
 
         // Step 2: Delete from database
@@ -1050,19 +1023,12 @@ export const userRouter = router({
           where: { id: user.id },
         });
 
-        console.log(
-          `✅ User account deleted from database: ${user.id} - Reason: ${
-            input.reason || "No reason provided"
-          } - Kinde deleted: ${kindeDeleted}`
-        );
-
         return {
           success: true,
           message: "Account deleted successfully",
           kindeDeleted,
         };
       } catch (error) {
-        console.error("❌ Error deleting user account:", error);
 
         // Provide more specific error messages
         let errorMessage =
@@ -1294,7 +1260,7 @@ export const userRouter = router({
           dbUser.email
         );
       } catch (error) {
-        console.error("Failed to send client join notification email:", error);
+
       }
 
       return {

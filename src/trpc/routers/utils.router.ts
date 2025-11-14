@@ -100,10 +100,6 @@ export const utilsRouter = router({
       },
     });
 
-    console.log(
-      `🧹 Cleaned up ${result.count} old messages from archived clients`
-    );
-
     return {
       success: true,
       deletedCount: result.count,

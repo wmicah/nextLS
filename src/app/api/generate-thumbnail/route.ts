@@ -16,12 +16,6 @@ export async function POST(req: NextRequest) {
   try {
     const { filename, videoType, videoUrl } = await req.json();
 
-    console.log("Thumbnail generation request:", {
-      filename,
-      videoType,
-      hasVideoUrl: !!videoUrl,
-    });
-
     if (!filename) {
       return NextResponse.json(
         { error: "Filename is required" },
@@ -35,7 +29,7 @@ export async function POST(req: NextRequest) {
       filename.includes("youtube.com") ||
       filename.includes("youtu.be")
     ) {
-      console.log("Skipping thumbnail generation for YouTube video:", filename);
+
       return NextResponse.json({
         success: false,
         error: "YouTube videos don't need thumbnail generation",
@@ -88,10 +82,7 @@ export async function POST(req: NextRequest) {
 
         await fs.writeFile(videoPath, Buffer.from(videoBuffer));
       } catch (downloadError) {
-        console.error(
-          "Error downloading video from UploadThing:",
-          downloadError
-        );
+
         return NextResponse.json(
           { error: "Failed to download video from UploadThing" },
           { status: 500 }
@@ -160,10 +151,7 @@ export async function POST(req: NextRequest) {
                 await fs.unlink(videoPath);
               } catch (cleanupError: any) {
                 if (cleanupError?.code !== "ENOENT") {
-                  console.warn(
-                    "Failed to cleanup temp video file:",
-                    cleanupError
-                  );
+
                 }
               }
             }
@@ -183,10 +171,7 @@ export async function POST(req: NextRequest) {
                 await fs.unlink(videoPath);
               } catch (cleanupError: any) {
                 if (cleanupError?.code !== "ENOENT") {
-                  console.warn(
-                    "Failed to cleanup temp video file on error:",
-                    cleanupError
-                  );
+
                 }
               }
             }
@@ -208,10 +193,7 @@ export async function POST(req: NextRequest) {
               await fs.unlink(videoPath);
             } catch (cleanupError: any) {
               if (cleanupError?.code !== "ENOENT") {
-                console.warn(
-                  "Failed to cleanup temp video file on FFmpeg error:",
-                  cleanupError
-                );
+
               }
             }
           }
@@ -235,10 +217,7 @@ export async function POST(req: NextRequest) {
             await fs.unlink(videoPath);
           } catch (cleanupError: any) {
             if (cleanupError?.code !== "ENOENT") {
-              console.warn(
-                "Failed to cleanup temp video file on FFmpeg error:",
-                cleanupError
-              );
+
             }
           }
         }
@@ -266,10 +245,7 @@ export async function POST(req: NextRequest) {
           } catch (cleanupError: any) {
             // Only log if it's not a "file not found" error
             if (cleanupError?.code !== "ENOENT") {
-              console.warn(
-                "Failed to cleanup temp video file on timeout:",
-                cleanupError
-              );
+
             }
           }
         }
@@ -285,7 +261,7 @@ export async function POST(req: NextRequest) {
       }, 30000); // 30 second timeout
     });
   } catch (error) {
-    console.error("Thumbnail generation error:", error);
+
     return NextResponse.json(
       {
         error: "Internal server error",
