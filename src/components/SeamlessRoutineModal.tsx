@@ -1131,13 +1131,6 @@ export default function SeamlessRoutineModal({
   }) => {
     // Add video directly to exercises - use functional update to ensure we get latest state
     setExercises(prev => {
-      // Check if this video is already added (by videoId to prevent duplicates)
-      const alreadyExists = prev.some(ex => ex.videoId === video.id);
-      if (alreadyExists) {
-        console.log("Video already in exercises, skipping duplicate");
-        return prev;
-      }
-
       // Generate unique ID
       let newExerciseId = generateTempId();
       // Ensure ID is unique (very unlikely but safety check)

@@ -953,12 +953,6 @@ export default function MobileSeamlessRoutineModal({
     url?: string;
     thumbnail?: string;
   }) => {
-    const alreadyExists = exercises.some(ex => ex.videoId === video.id);
-    if (alreadyExists) {
-      console.log("Video already in exercises, skipping duplicate");
-      return;
-    }
-
     let newExerciseId = generateTempId();
     while (exercises.some(ex => ex.id === newExerciseId)) {
       newExerciseId = generateTempId();
