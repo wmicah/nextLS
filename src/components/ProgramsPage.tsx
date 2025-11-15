@@ -463,7 +463,10 @@ function ProgramsPage() {
     })
     .sort((a, b) => {
       if (sortBy === "name") {
-        return a.title.localeCompare(b.title);
+        // Case-insensitive alphabetical sort
+        const titleA = (a.title || "").trim().toLowerCase();
+        const titleB = (b.title || "").trim().toLowerCase();
+        return titleA.localeCompare(titleB, undefined, { sensitivity: "base" });
       } else if (sortBy === "assigned") {
         return b.activeClientCount - a.activeClientCount;
       } else if (sortBy === "newest") {
