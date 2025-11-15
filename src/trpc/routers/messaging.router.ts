@@ -274,7 +274,7 @@ export const messagingRouter = router({
           // Get recipient information for email notification
           const recipient = await db.user.findFirst({
             where: { id: recipientId },
-            select: { name: true, email: true },
+            select: { name: true, email: true, id: true },
           });
           sendToUser(recipientId, {
             type: "new_message",
@@ -292,7 +292,7 @@ export const messagingRouter = router({
           );
 
           // Send email notification for new messages
-          if (recipient?.email) {
+          if (recipient?.email && recipient?.id) {
             try {
               const emailService = CompleteEmailService.getInstance();
               await emailService.sendNewMessage(
@@ -301,9 +301,15 @@ export const messagingRouter = router({
                 message.sender.name || message.sender.email,
                 input.content.length > 100
                   ? input.content.substring(0, 100) + "..."
-                  : input.content
+                  : input.content,
+                recipient.id // Pass userId to check preferences
               );
-            } catch (error) {}
+              console.log(`✅ Message notification email sent to ${recipient.email}`);
+            } catch (error) {
+              console.error("❌ Failed to send message notification email:", error);
+            }
+          } else {
+            console.warn(`⚠️ Cannot send message notification email - no email found for user ${recipientId}`);
           }
 
           const unreadCount = await db.message.count({
@@ -865,17 +871,32 @@ export const messagingRouter = router({
           });
 
           // Send email notification
-          if (client.email) {
+          // Get client user information for email notification
+          const clientUser = client.userId
+            ? await db.user.findFirst({
+                where: { id: client.userId },
+                select: { id: true, email: true, name: true },
+              })
+            : null;
+
+          const clientEmail = clientUser?.email || client.email;
+          if (clientEmail && clientUser?.id) {
             try {
               await emailService.sendNewMessage(
-                client.email,
-                client.name || "Client",
+                clientEmail,
+                client.name || clientUser.name || "Client",
                 "Coach",
                 input.content.length > 100
                   ? input.content.substring(0, 100) + "..."
-                  : input.content
+                  : input.content,
+                clientUser.id // Pass userId to check preferences
               );
-            } catch (emailError) {}
+              console.log(`✅ Bulk message notification email sent to ${clientEmail}`);
+            } catch (emailError) {
+              console.error("❌ Failed to send bulk message notification email:", emailError);
+            }
+          } else {
+            console.warn(`⚠️ Cannot send bulk message notification email - no email found for client ${client.id}`);
           }
 
           results.push({

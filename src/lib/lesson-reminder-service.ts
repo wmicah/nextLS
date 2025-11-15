@@ -278,26 +278,32 @@ If you can't make it, please let me know as soon as possible so I can offer the 
           );
 
           // Send email notification for 48-hour confirmation reminder
-          if (lesson.client?.user?.email) {
+          if (lesson.client?.user?.email && lesson.client?.user?.id) {
             try {
               const emailService = CompleteEmailService.getInstance();
+              // Pass userId to check email preferences
               await emailService.sendLessonConfirmationReminder(
                 lesson.client.user.email,
                 lesson.client.name || "Client",
                 lesson.coach.name || "Coach",
                 lessonDate,
                 lessonTime,
-                hoursUntilLesson
+                hoursUntilLesson,
+                lesson.client.user.id // Pass userId to check preferences
               );
               console.log(
                 `📧 Confirmation reminder email sent to ${lesson.client.user.email}`
               );
             } catch (emailError) {
               console.error(
-                "Failed to send confirmation reminder email:",
+                "❌ Failed to send confirmation reminder email:",
                 emailError
               );
             }
+          } else {
+            console.warn(
+              `⚠️ Cannot send confirmation reminder email - no email or userId found for client ${lesson.client?.id}`
+            );
           }
 
           // Send the reminder message
@@ -315,6 +321,35 @@ If you can't make it, please let me know as soon as possible so I can offer the 
             where: { id: conversation.id },
             data: { updatedAt: new Date() },
           });
+
+          // Send email notification for the reminder message (in addition to the confirmation reminder email)
+          // This ensures users get notified about the message in their inbox
+          if (lesson.client?.user?.email && lesson.client?.user?.id) {
+            try {
+              const emailService = CompleteEmailService.getInstance();
+              // Send a message notification email for the reminder message
+              // Note: This is in addition to the confirmation reminder email sent earlier
+              // The confirmation reminder email is more detailed, this one is a simple notification
+              await emailService.sendNewMessage(
+                lesson.client.user.email,
+                lesson.client.name || "Client",
+                lesson.coach.name || "Coach",
+                reminderMessage.length > 100
+                  ? reminderMessage.substring(0, 100) + "..."
+                  : reminderMessage,
+                lesson.client.user.id // Pass userId to check preferences
+              );
+              console.log(
+                `📧 Message notification email sent for reminder message to ${lesson.client.user.email}`
+              );
+            } catch (messageEmailError) {
+              console.error(
+                "❌ Failed to send message notification email for reminder:",
+                messageEmailError
+              );
+              // Don't fail the whole process if message email fails - we already sent the confirmation email
+            }
+          }
 
           // Mark this reminder as sent in memory
           sentReminders.add(reminderKey);
@@ -480,7 +515,7 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
 
 - Coach ${lesson.coach.name}`;
 
-            await db.message.create({
+            const cancellationMsg = await db.message.create({
               data: {
                 conversationId: conversation.id,
                 senderId: lesson.coachId,
@@ -489,29 +524,68 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
               },
             });
 
+            // Update conversation timestamp
+            await db.conversation.update({
+              where: { id: conversation.id },
+              data: { updatedAt: new Date() },
+            });
+
             console.log(
               `❌ Auto-cancelled lesson for ${lesson.client?.name} - no confirmation received`
             );
 
+            // Send email notification for the cancellation message (in addition to the auto-cancellation email)
+            // This ensures users get notified about the message in their inbox
+            if (lesson.client?.user?.email && lesson.client?.user?.id) {
+              try {
+                const emailService = CompleteEmailService.getInstance();
+                // Send a message notification email for the cancellation message
+                // Note: This is in addition to the auto-cancellation email sent earlier
+                await emailService.sendNewMessage(
+                  lesson.client.user.email,
+                  lesson.client.name || "Client",
+                  lesson.coach.name || "Coach",
+                  cancellationMessage.length > 100
+                    ? cancellationMessage.substring(0, 100) + "..."
+                    : cancellationMessage,
+                  lesson.client.user.id // Pass userId to check preferences
+                );
+                console.log(
+                  `📧 Message notification email sent for cancellation message to ${lesson.client.user.email}`
+                );
+              } catch (messageEmailError) {
+                console.error(
+                  "❌ Failed to send message notification email for cancellation:",
+                  messageEmailError
+                );
+                // Don't fail the whole process if message email fails - we already sent the cancellation email
+              }
+            }
+
             // Send email notification for auto-cancellation
-            if (lesson.client?.user?.email) {
+            if (lesson.client?.user?.email && lesson.client?.user?.id) {
               try {
                 const emailService = CompleteEmailService.getInstance();
                 await emailService.sendLessonAutoCancelled(
                   lesson.client.user.email,
                   lesson.client.name || "Client",
                   lesson.coach.name || "Coach",
-                  format(lesson.date, "EEEE, MMMM d 'at' h:mm a")
+                  format(lesson.date, "EEEE, MMMM d 'at' h:mm a"),
+                  lesson.client.user.id // Pass userId to check preferences
                 );
                 console.log(
                   `📧 Auto-cancellation email sent to ${lesson.client.user.email}`
                 );
               } catch (emailError) {
                 console.error(
-                  "Failed to send auto-cancellation email:",
+                  "❌ Failed to send auto-cancellation email:",
                   emailError
                 );
               }
+            } else {
+              console.warn(
+                `⚠️ Cannot send auto-cancellation email - no email or userId found for client ${lesson.client?.id}`
+              );
             }
           }
         } catch (error) {

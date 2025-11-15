@@ -98,6 +98,13 @@ export const schedulingRouter = router({
               name: true,
             },
           },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
         },
       });
 
@@ -335,8 +342,10 @@ export const schedulingRouter = router({
         });
       }
 
-      // Send email notification if requested
-      if (input.sendEmail && client.email) {
+      // Send email notification (check user preferences, send by default unless disabled)
+      // Get client email - prefer user.email over client.email
+      const clientEmail = client.user?.email || client.email;
+      if (clientEmail && client.user?.id) {
         try {
           const emailService = CompleteEmailService.getInstance();
           // Format the lesson time for the email
@@ -346,17 +355,23 @@ export const schedulingRouter = router({
             hour12: true,
           });
 
+          // Send email (will check user preferences inside)
           await emailService.sendLessonScheduled(
-            client.email,
-            client.name || "Client",
+            clientEmail,
+            client.name || client.user.name || "Client",
             coach?.name || "Coach",
             utcLessonDate.toLocaleDateString(),
-            lessonTime
+            lessonTime,
+            client.user.id // Pass userId to check preferences
           );
 
+          console.log(`✅ Lesson scheduled email sent to ${clientEmail}`);
         } catch (error) {
-
+          console.error("❌ Failed to send lesson scheduled email:", error);
+          // Don't throw error - email failure shouldn't block lesson creation
         }
+      } else {
+        console.warn(`⚠️ Cannot send lesson scheduled email - no email found for client ${client.id}`);
       }
 
       return lesson;
@@ -443,6 +458,13 @@ export const schedulingRouter = router({
         include: {
           coach: {
             select: {
+              name: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              email: true,
               name: true,
             },
           },
@@ -1427,8 +1449,10 @@ export const schedulingRouter = router({
         });
       }
 
-      // Send email notification if requested
-      if (input.sendEmail && client.email) {
+      // Send email notification (check user preferences, send by default unless disabled)
+      // Get client email - prefer user.email over client.email
+      const clientEmail = client.user?.email || client.email;
+      if (clientEmail && client.user?.id) {
         try {
           const emailService = CompleteEmailService.getInstance();
           // Format the lesson time for the email
@@ -1438,17 +1462,23 @@ export const schedulingRouter = router({
             hour12: true,
           });
 
+          // Send email (will check user preferences inside)
           await emailService.sendLessonScheduled(
-            client.email,
-            client.name || "Client",
+            clientEmail,
+            client.name || client.user.name || "Client",
             coach?.name || "Coach",
             utcLessonDate.toLocaleDateString(),
-            lessonTime
+            lessonTime,
+            client.user.id // Pass userId to check preferences
           );
 
+          console.log(`✅ Lesson scheduled email sent to ${clientEmail}`);
         } catch (error) {
-
+          console.error("❌ Failed to send lesson scheduled email:", error);
+          // Don't throw error - email failure shouldn't block lesson creation
         }
+      } else {
+        console.warn(`⚠️ Cannot send lesson scheduled email - no email found for client ${client.id}`);
       }
 
       return lesson;
