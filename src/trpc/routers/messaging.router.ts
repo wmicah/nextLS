@@ -303,10 +303,7 @@ export const messagingRouter = router({
                   ? input.content.substring(0, 100) + "..."
                   : input.content
               );
-
-            } catch (error) {
-
-            }
+            } catch (error) {}
           }
 
           const unreadCount = await db.message.count({
@@ -324,9 +321,7 @@ export const messagingRouter = router({
             data: { count: unreadCount },
           });
         }
-      } catch (error) {
-
-      }
+      } catch (error) {}
 
       return message;
     }),
@@ -711,7 +706,6 @@ export const messagingRouter = router({
 
       // Debug: Log the input client IDs
 
-
       // Verify all clients belong to this coach
       const ensuredUserId = ensureUserId(user.id);
       const activeMemberships = await db.coachOrganization.findMany({
@@ -836,9 +830,7 @@ export const messagingRouter = router({
                   type: "COACH_CLIENT",
                 },
               });
-
             } catch (conversationError) {
-
               // Check if it's a foreign key constraint error
               if (
                 conversationError instanceof Error &&
@@ -852,7 +844,6 @@ export const messagingRouter = router({
               throw conversationError;
             }
           } else {
-
           }
 
           // Create the message
@@ -884,10 +875,7 @@ export const messagingRouter = router({
                   ? input.content.substring(0, 100) + "..."
                   : input.content
               );
-
-            } catch (emailError) {
-
-            }
+            } catch (emailError) {}
           }
 
           results.push({
@@ -904,8 +892,6 @@ export const messagingRouter = router({
 
           // Log more details about the error
           if (error instanceof Error) {
-
-
           }
 
           results.push({
@@ -936,23 +922,14 @@ export const messagingRouter = router({
             });
           }
         }
-
-      } catch (error) {
-
-      }
+      } catch (error) {}
 
       // Log mass message results
       const successfulSends = results.filter(r => r.success).length;
       const failedSends = results.filter(r => !r.success).length;
 
       if (failedSends > 0) {
-
-            .map(r => ({
-              clientId: r.clientId,
-              clientName: r.clientName,
-              error: r.error,
-            }))
-        );
+        // Some sends failed - handle silently
       }
 
       return {
