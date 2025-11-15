@@ -138,6 +138,12 @@ export class CompleteEmailService {
     clientUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("❌ RESEND_API_KEY not configured - cannot send email");
+        return false;
+      }
+
       // Check if client has email notifications enabled
       if (clientUserId) {
         const emailEnabled = await this.checkEmailNotificationsEnabled(
@@ -145,7 +151,7 @@ export class CompleteEmailService {
         );
         if (!emailEnabled) {
           console.log(
-            `Email notifications disabled for user ${clientUserId}, skipping lesson reminder email`
+            `📧 Email notifications disabled for user ${clientUserId}, skipping lesson reminder email`
           );
           return false;
         }
@@ -165,10 +171,15 @@ export class CompleteEmailService {
         html: template.html,
       });
 
-      console.log("Lesson reminder sent:", result);
+      if (result.error) {
+        console.error("❌ Failed to send lesson reminder email:", result.error);
+        return false;
+      }
+
+      console.log("✅ Lesson reminder email sent successfully:", result.data?.id);
       return true;
     } catch (error) {
-      console.error("Failed to send lesson reminder:", error);
+      console.error("❌ Failed to send lesson reminder email:", error);
       return false;
     }
   }
@@ -178,9 +189,29 @@ export class CompleteEmailService {
     clientName: string,
     coachName: string,
     lessonDate: string,
-    lessonTime: string
+    lessonTime: string,
+    clientUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("❌ RESEND_API_KEY not configured - cannot send email");
+        return false;
+      }
+
+      // Check if client has email notifications enabled
+      if (clientUserId) {
+        const emailEnabled = await this.checkEmailNotificationsEnabled(
+          clientUserId
+        );
+        if (!emailEnabled) {
+          console.log(
+            `📧 Email notifications disabled for user ${clientUserId}, skipping lesson scheduled email`
+          );
+          return false;
+        }
+      }
+
       const template = completeEmailTemplates.lessonScheduled(
         clientName,
         coachName,
@@ -195,10 +226,15 @@ export class CompleteEmailService {
         html: template.html,
       });
 
-      console.log("Lesson scheduled email sent:", result);
+      if (result.error) {
+        console.error("❌ Failed to send lesson scheduled email:", result.error);
+        return false;
+      }
+
+      console.log("✅ Lesson scheduled email sent successfully:", result.data?.id);
       return true;
     } catch (error) {
-      console.error("Failed to send lesson scheduled email:", error);
+      console.error("❌ Failed to send lesson scheduled email:", error);
       return false;
     }
   }
@@ -269,6 +305,12 @@ export class CompleteEmailService {
     clientUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("❌ RESEND_API_KEY not configured - cannot send email");
+        return false;
+      }
+
       // Check if client has email notifications enabled
       if (clientUserId) {
         const emailEnabled = await this.checkEmailNotificationsEnabled(
@@ -276,7 +318,7 @@ export class CompleteEmailService {
         );
         if (!emailEnabled) {
           console.log(
-            `Email notifications disabled for user ${clientUserId}, skipping message notification email`
+            `📧 Email notifications disabled for user ${clientUserId}, skipping message notification email`
           );
           return false;
         }
@@ -288,7 +330,7 @@ export class CompleteEmailService {
 
       if (lastSent && now - lastSent < this.MESSAGE_COOLDOWN_MS) {
         console.log(
-          `Message notification skipped for ${clientEmail} - still in cooldown period`
+          `📧 Message notification skipped for ${clientEmail} - still in cooldown period`
         );
         return false; // Skip sending due to rate limiting
       }
@@ -306,13 +348,18 @@ export class CompleteEmailService {
         html: template.html,
       });
 
+      if (result.error) {
+        console.error("❌ Failed to send new message email:", result.error);
+        return false;
+      }
+
       // Update cooldown timestamp
       this.messageNotificationCooldown.set(clientEmail, now);
 
-      console.log("New message email sent:", result);
+      console.log("✅ New message email sent successfully:", result.data?.id);
       return true;
     } catch (error) {
-      console.error("Failed to send new message email:", error);
+      console.error("❌ Failed to send new message email:", error);
       return false;
     }
   }
@@ -565,9 +612,29 @@ export class CompleteEmailService {
     coachName: string,
     lessonDate: string,
     lessonTime: string,
-    hoursUntilLesson: number
+    hoursUntilLesson: number,
+    clientUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("❌ RESEND_API_KEY not configured - cannot send email");
+        return false;
+      }
+
+      // Check if client has email notifications enabled
+      if (clientUserId) {
+        const emailEnabled = await this.checkEmailNotificationsEnabled(
+          clientUserId
+        );
+        if (!emailEnabled) {
+          console.log(
+            `📧 Email notifications disabled for user ${clientUserId}, skipping lesson confirmation reminder email`
+          );
+          return false;
+        }
+      }
+
       const template = completeEmailTemplates.lessonConfirmationReminder(
         clientName,
         coachName,
@@ -583,11 +650,16 @@ export class CompleteEmailService {
         html: template.html,
       });
 
-      console.log("Lesson confirmation reminder email sent:", result);
+      if (result.error) {
+        console.error("❌ Failed to send lesson confirmation reminder email:", result.error);
+        return false;
+      }
+
+      console.log("✅ Lesson confirmation reminder email sent successfully:", result.data?.id);
       return true;
     } catch (error) {
       console.error(
-        "Failed to send lesson confirmation reminder email:",
+        "❌ Failed to send lesson confirmation reminder email:",
         error
       );
       return false;
@@ -599,9 +671,29 @@ export class CompleteEmailService {
     clientEmail: string,
     clientName: string,
     coachName: string,
-    lessonDateTime: string
+    lessonDateTime: string,
+    clientUserId?: string
   ): Promise<boolean> {
     try {
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("❌ RESEND_API_KEY not configured - cannot send email");
+        return false;
+      }
+
+      // Check if client has email notifications enabled
+      if (clientUserId) {
+        const emailEnabled = await this.checkEmailNotificationsEnabled(
+          clientUserId
+        );
+        if (!emailEnabled) {
+          console.log(
+            `📧 Email notifications disabled for user ${clientUserId}, skipping lesson auto-cancellation email`
+          );
+          return false;
+        }
+      }
+
       const template = completeEmailTemplates.lessonAutoCancelled(
         clientName,
         coachName,
@@ -615,10 +707,15 @@ export class CompleteEmailService {
         html: template.html,
       });
 
-      console.log("Lesson auto-cancellation email sent:", result);
+      if (result.error) {
+        console.error("❌ Failed to send lesson auto-cancellation email:", result.error);
+        return false;
+      }
+
+      console.log("✅ Lesson auto-cancellation email sent successfully:", result.data?.id);
       return true;
     } catch (error) {
-      console.error("Failed to send lesson auto-cancellation email:", error);
+      console.error("❌ Failed to send lesson auto-cancellation email:", error);
       return false;
     }
   }
