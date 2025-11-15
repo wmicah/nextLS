@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 interface Exercise {
   id: string;
@@ -44,7 +44,6 @@ export default function SupersetDescriptionModal({
   supersetName = "Superset",
 }: SupersetDescriptionModalProps) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [supersetDescription, setSupersetDescription] = useState("");
 
   // Initialize exercises from initialData
   useEffect(() => {
@@ -69,26 +68,12 @@ export default function SupersetDescriptionModal({
         },
       ]);
     }
-    setSupersetDescription(initialData?.supersetDescription || "");
   }, [initialData, isOpen]);
 
   const updateExercise = (index: number, field: keyof Exercise, value: any) => {
     setExercises(prev =>
       prev.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex))
     );
-  };
-
-  const addExercise = () => {
-    setExercises(prev => [
-      ...prev,
-      {
-        id: `${Date.now()}`,
-        title: `Exercise ${prev.length + 1}`,
-        sets: 3,
-        reps: 10,
-        description: "",
-      },
-    ]);
   };
 
   const removeExercise = (index: number) => {
@@ -105,7 +90,7 @@ export default function SupersetDescriptionModal({
         // This matches how routine exercises handle descriptions
         description: ex.description?.trim() || "",
       })),
-      supersetDescription: supersetDescription.trim() || undefined,
+      supersetDescription: initialData?.supersetDescription || undefined,
     });
     onClose();
   };
@@ -131,7 +116,6 @@ export default function SupersetDescriptionModal({
         },
       ]);
     }
-    setSupersetDescription(initialData?.supersetDescription || "");
     onClose();
   };
 
@@ -154,40 +138,8 @@ export default function SupersetDescriptionModal({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Group Description */}
-          <div className="space-y-2">
-            <Label className="text-sm text-[#C3BCC2]">
-              {isCircuit ? "Circuit" : "Superset"} Description
-            </Label>
-            <Textarea
-              placeholder={`Brief description of this ${
-                isCircuit ? "circuit" : "superset"
-              }...`}
-              value={supersetDescription}
-              onChange={e => setSupersetDescription(e.target.value)}
-              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] min-h-[60px]"
-              rows={2}
-            />
-          </div>
-
           {/* Exercises List */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm text-[#C3BCC2]">
-                Exercises ({exercises.length})
-              </Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addExercise}
-                className="border-[#606364] text-[#C3BCC2] hover:bg-[#353A3A] h-10 min-h-[44px]"
-              >
-                <Plus className="h-4 w-4 mr-1.5" />
-                Add Exercise
-              </Button>
-            </div>
-
             {exercises.map((exercise, index) => (
               <div
                 key={exercise.id || index}
