@@ -33,12 +33,10 @@ export const libraryRouter = router({
     )
     .query(async ({ input }) => {
       try {
-
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
 
@@ -48,7 +46,6 @@ export const libraryRouter = router({
         });
 
         if (!dbUser) {
-
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches and clients can view library",
@@ -68,7 +65,6 @@ export const libraryRouter = router({
           });
 
           if (!client) {
-
             throw new TRPCError({
               code: "NOT_FOUND",
               message: "Client profile not found",
@@ -180,12 +176,10 @@ export const libraryRouter = router({
     )
     .query(async ({ input }) => {
       try {
-
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
 
@@ -195,7 +189,6 @@ export const libraryRouter = router({
         });
 
         if (!dbUser) {
-
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches and clients can view library",
@@ -215,7 +208,6 @@ export const libraryRouter = router({
           });
 
           if (!client) {
-
             throw new TRPCError({
               code: "NOT_FOUND",
               message: "Client profile not found",
@@ -239,8 +231,6 @@ export const libraryRouter = router({
         if (input.type && input.type !== "all") {
           where.type = input.type;
         }
-
-        );
 
         // Calculate pagination
         const skip = (input.page - 1) * input.limit;
@@ -623,10 +613,7 @@ export const libraryRouter = router({
             coach?.name || "Coach",
             video?.title || "New Video Assignment"
           );
-
-        } catch (error) {
-
-        }
+        } catch (error) {}
       }
 
       return assignment;
@@ -976,12 +963,10 @@ export const libraryRouter = router({
     )
     .mutation(async ({ input }) => {
       try {
-
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
 
@@ -991,7 +976,6 @@ export const libraryRouter = router({
         });
 
         if (!coach) {
-
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches can upload resources",
@@ -1142,7 +1126,6 @@ export const libraryRouter = router({
       if (!resource.isYoutube && resource.url) {
         const fileDeleted = await deleteFileFromUploadThing(resource.url);
         if (!fileDeleted) {
-
         }
       }
 
@@ -1229,12 +1212,10 @@ export const libraryRouter = router({
     )
     .mutation(async ({ input }) => {
       try {
-
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
 
@@ -1244,7 +1225,6 @@ export const libraryRouter = router({
         });
 
         if (!coach) {
-
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches can import YouTube videos",
@@ -1253,7 +1233,6 @@ export const libraryRouter = router({
 
         const videoId = extractYouTubeVideoId(input.url);
         if (!videoId) {
-
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid YouTube URL",
@@ -1407,13 +1386,10 @@ export const libraryRouter = router({
     )
     .mutation(async ({ input }) => {
       try {
-
         const { getUser } = getKindeServerSession();
         const user = await getUser();
 
         if (!user?.id) {
-
-
           throw new TRPCError({ code: "UNAUTHORIZED" });
         }
 
@@ -1423,7 +1399,6 @@ export const libraryRouter = router({
         });
 
         if (!coach) {
-
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Only coaches can import OnForm videos",
@@ -1435,7 +1410,6 @@ export const libraryRouter = router({
           await import("@/lib/onform-utils");
 
         if (!isOnFormUrl(input.url)) {
-
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Invalid OnForm URL. Please use a valid OnForm video URL.",
