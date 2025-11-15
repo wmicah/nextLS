@@ -1280,6 +1280,13 @@ export const schedulingRouter = router({
               name: true,
             },
           },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
         },
       });
 
