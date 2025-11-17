@@ -15,6 +15,7 @@ import {
   Home,
   Users,
   Plus,
+  X,
 } from "lucide-react";
 import {
   format,
@@ -1062,12 +1063,29 @@ export default function MobileClientSchedulePage() {
                                     upcomingLessons.length > 0 &&
                                     !hasPendingRequestWithTarget(lesson) && (
                                       <button
-                                        onClick={() =>
-                                          setSelectedSwitchLesson(lesson)
+                                        onClick={() => {
+                                          // If only one lesson available, swap directly
+                                          if (upcomingLessons.length === 1) {
+                                            createSwitchRequestMutation.mutate({
+                                              targetEventId: lesson.id,
+                                              requesterEventId:
+                                                upcomingLessons[0].id,
+                                            });
+                                          } else {
+                                            // Multiple lessons - show selection modal
+                                            setSelectedSwitchLesson(lesson);
+                                          }
+                                        }}
+                                        disabled={
+                                          createSwitchRequestMutation.isPending
                                         }
-                                        className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded-lg text-xs"
+                                        className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        <ArrowRightLeft className="h-3 w-3" />
+                                        {createSwitchRequestMutation.isPending ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <ArrowRightLeft className="h-3 w-3" />
+                                        )}
                                         Switch
                                       </button>
                                     )}
@@ -1266,6 +1284,147 @@ export default function MobileClientSchedulePage() {
                     </div>
                   );
                 })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lesson Selection Modal for Swap */}
+      {selectedSwitchLesson && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div
+            className="relative w-full max-w-md bg-[#2A3133] border border-[#404545] rounded-xl shadow-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#404545] bg-[#404449]">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0 pr-2">
+                  <h2 className="text-lg sm:text-xl font-semibold text-white">
+                    Choose Your Lesson to Switch
+                  </h2>
+                  <p className="text-gray-400 text-xs sm:text-sm mt-0.5">
+                    Select which of your lessons you want to switch with this
+                    client
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedSwitchLesson(null);
+                  }}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#2A3133] transition-colors flex-shrink-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
+              <div className="mb-6">
+                <div className="p-4 rounded-lg bg-[#1F2937] border border-[#404545] mb-4">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="font-medium text-white">
+                        Target Lesson:{" "}
+                        {format(
+                          new Date(selectedSwitchLesson.date),
+                          "M/d/yyyy"
+                        )}{" "}
+                        at{" "}
+                        {format(new Date(selectedSwitchLesson.date), "h:mm a")}
+                      </p>
+                      <p className="text-sm text-gray-400 mt-0.5">
+                        {anonymizeLessonTitle(
+                          selectedSwitchLesson.title,
+                          selectedSwitchLesson.clientId
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Your Available Lessons:
+                </h3>
+
+                {isLoadingSwitchRequests ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-400">Loading lesson status...</p>
+                  </div>
+                ) : upcomingLessons.length > 0 ? (
+                  <div className="space-y-3">
+                    {upcomingLessons.map((myLesson: any, index: number) => {
+                      const hasPendingRequest = hasPendingSwitchRequest(
+                        myLesson.id
+                      );
+                      const hasPendingWithTarget =
+                        hasPendingRequestWithTarget(selectedSwitchLesson);
+                      const isDisabled =
+                        hasPendingRequest ||
+                        hasPendingWithTarget ||
+                        createSwitchRequestMutation.isPending;
+
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            if (!isDisabled) {
+                              createSwitchRequestMutation.mutate({
+                                targetEventId: selectedSwitchLesson.id,
+                                requesterEventId: myLesson.id,
+                              });
+                            }
+                          }}
+                          disabled={isDisabled}
+                          className={`w-full p-4 rounded-lg border text-left transition-colors ${
+                            isDisabled
+                              ? "opacity-50 cursor-not-allowed bg-[#1F2937] border-[#404545]"
+                              : "bg-[#2A3133] border-[#404545] hover:border-[#4A5153]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-white">
+                                {format(new Date(myLesson.date), "M/d/yyyy")} at{" "}
+                                {format(new Date(myLesson.date), "h:mm a")}
+                                {hasPendingRequest && (
+                                  <span className="ml-2 text-xs text-gray-400">
+                                    (Switch Request Pending)
+                                  </span>
+                                )}
+                                {hasPendingWithTarget && !hasPendingRequest && (
+                                  <span className="ml-2 text-xs text-gray-400">
+                                    (Request Pending with this client)
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-300 mt-1">
+                                {myLesson.title}
+                              </div>
+                            </div>
+                            {createSwitchRequestMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                            ) : isDisabled ? (
+                              <CheckCircle className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <ArrowRightLeft className="h-4 w-4 text-gray-400" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="p-4 rounded-full bg-gray-700/30 w-fit mx-auto mb-4">
+                      <Calendar className="h-8 w-8 text-gray-500" />
+                    </div>
+                    <p className="text-gray-400">
+                      You don't have any upcoming lessons to switch.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -929,9 +929,11 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                                     color: "white",
                                   }}
                                 >
-                                  {(otherUser?.name || otherUser?.email)
-                                    ?.charAt(0)
-                                    ?.toUpperCase() || "?"}
+                                  {conversation.type === "CLIENT_CLIENT"
+                                    ? "C"
+                                    : (otherUser?.name || otherUser?.email)
+                                        ?.charAt(0)
+                                        ?.toUpperCase() || "?"}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
@@ -939,9 +941,11 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                                       className="text-sm font-medium truncate"
                                       style={{ color: "#C3BCC2" }}
                                     >
-                                      {otherUser?.name ||
-                                        otherUser?.email?.split("@")[0] ||
-                                        "Unknown"}
+                                      {conversation.type === "CLIENT_CLIENT"
+                                        ? "Another Client"
+                                        : otherUser?.name ||
+                                          otherUser?.email?.split("@")[0] ||
+                                          "Unknown"}
                                     </p>
                                     {lastMessage && (
                                       <span

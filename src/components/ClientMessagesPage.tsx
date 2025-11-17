@@ -186,7 +186,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
       if (otherClient) {
         return {
           ...otherClient,
-          name: "Client", // Anonymize name
+          name: "Another Client", // Anonymize name
           email: "client@example.com", // Anonymize email
           settings: {
             ...otherClient.settings,

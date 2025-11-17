@@ -207,6 +207,112 @@ export const timeSwapRouter = router({
       return events;
     }),
 
+  // Get available lessons for swapping (anonymous, same coach)
+  getAvailableSwapLessons: publicProcedure
+    .input(
+      z.object({
+        requesterLessonId: z.string(),
+        coachId: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can access this endpoint",
+        });
+      }
+
+      // Get current client
+      const currentClient = await db.client.findFirst({
+        where: { userId: user.id },
+      });
+
+      if (!currentClient) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // Get the requester's lesson to verify it exists and get its date
+      const requesterLesson = await db.event.findFirst({
+        where: {
+          id: input.requesterLessonId,
+          clientId: currentClient.id,
+        },
+      });
+
+      if (!requesterLesson) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Your lesson not found",
+        });
+      }
+
+      // Get all pending swap requests to filter out lessons that already have requests
+      const pendingSwaps = await db.timeSwapRequest.findMany({
+        where: {
+          OR: [
+            { requesterEventId: input.requesterLessonId },
+            { targetEventId: input.requesterLessonId },
+          ],
+          status: "PENDING",
+        },
+        select: {
+          requesterEventId: true,
+          targetEventId: true,
+        },
+      });
+
+      const excludedEventIds = new Set([
+        input.requesterLessonId,
+        ...pendingSwaps.map(s => s.requesterEventId),
+        ...pendingSwaps.map(s => s.targetEventId),
+      ]);
+
+      const now = new Date();
+
+      // Get all CONFIRMED lessons from other clients with the same coach
+      const availableLessons = await db.event.findMany({
+        where: {
+          coachId: input.coachId,
+          clientId: {
+            not: currentClient.id, // Exclude current client's lessons
+          },
+          id: {
+            notIn: Array.from(excludedEventIds), // Exclude lessons with pending swaps
+          },
+          status: "CONFIRMED",
+          date: {
+            gte: now.toISOString(), // Only future lessons
+          },
+        },
+        include: {
+          coach: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          date: "asc",
+        },
+      });
+
+      return availableLessons;
+    }),
+
   // Create a swap request from calendar lesson click
   createSwapRequestFromLesson: publicProcedure
     .input(
@@ -369,17 +475,15 @@ export const timeSwapRouter = router({
               client2Id: targetEvent.client.userId || "",
             },
           });
-
         } else {
-
         }
 
-        // Send the swap request message
+        // Send the swap request message (anonymous)
         const message = await db.message.create({
           data: {
             conversationId: conversation.id,
             senderId: currentClient.userId || "",
-            content: `Hey, could we switch times this week? I'd like to swap my lesson on ${new Date(
+            content: `Another client would like to swap lesson times. They want to swap their lesson on ${new Date(
               requesterEvent.date
             ).toLocaleDateString()} at ${new Date(
               requesterEvent.date
@@ -400,8 +504,8 @@ export const timeSwapRouter = router({
               swapRequestId: swapRequest.id,
               requesterEventId: input.requesterEventId,
               targetEventId: input.targetEventId,
-              requesterName: "Another Client",
-              requesterEventTitle: requesterEvent.title,
+              requesterName: "Another Client", // Anonymous
+              requesterEventTitle: "Lesson with client", // Anonymous
               targetEventTitle: targetEvent.title,
               requesterEventDate: requesterEvent.date,
               targetEventDate: targetEvent.date,
@@ -468,10 +572,8 @@ export const timeSwapRouter = router({
               type: "unread_count",
               data: { count: unreadCount },
             });
-
           }
         } catch (error) {
-
           // Don't fail the swap request if SSE fails
         }
       }
@@ -816,19 +918,19 @@ export const timeSwapRouter = router({
           data: { clientId: swapRequest.requesterId },
         });
 
-        // Create notification for the coach
+        // Create notification for the coach (anonymous)
         await tx.notification.create({
           data: {
             userId: swapRequest.requesterEvent.coachId,
             type: "SCHEDULE_REQUEST",
-            title: "Time Swap Approved",
-            message: `Two clients have switched their lesson times.`,
+            title: "Time Swap Completed",
+            message: `Two clients have automatically switched their lesson times.`,
             data: {
               swapRequestId: input.requestId,
-              requesterName: swapRequest.requester.name,
-              targetName: currentClient.name,
               requesterEventTitle: swapRequest.requesterEvent.title,
               targetEventTitle: swapRequest.targetEvent.title,
+              requesterEventDate: swapRequest.requesterEvent.date,
+              targetEventDate: swapRequest.targetEvent.date,
             },
           },
         });
@@ -1238,6 +1340,188 @@ export const timeSwapRouter = router({
         completed: completedDrills,
         total: totalDrills,
         period: input.period,
+      };
+    }),
+
+  // Handle lesson cancellation - check for pending swaps and handle accordingly
+  handleLessonCancellation: publicProcedure
+    .input(
+      z.object({
+        eventId: z.string(),
+        cancelledByClientId: z.string(), // The client who cancelled
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Get the cancelled lesson
+      const cancelledLesson = await db.event.findFirst({
+        where: { id: input.eventId },
+        include: {
+          client: {
+            select: {
+              id: true,
+              userId: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!cancelledLesson) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lesson not found",
+        });
+      }
+
+      // Find pending swap requests involving this lesson
+      const pendingSwaps = await db.timeSwapRequest.findMany({
+        where: {
+          OR: [
+            { requesterEventId: input.eventId },
+            { targetEventId: input.eventId },
+          ],
+          status: "PENDING",
+        },
+        include: {
+          requester: {
+            select: {
+              id: true,
+              userId: true,
+              name: true,
+            },
+          },
+          target: {
+            select: {
+              id: true,
+              userId: true,
+              name: true,
+            },
+          },
+          requesterEvent: {
+            select: {
+              id: true,
+              date: true,
+              title: true,
+              coachId: true,
+            },
+          },
+          targetEvent: {
+            select: {
+              id: true,
+              date: true,
+              title: true,
+              coachId: true,
+            },
+          },
+        },
+      });
+
+      if (pendingSwaps.length === 0) {
+        return { message: "No pending swaps to handle" };
+      }
+
+      const results = [];
+
+      for (const swap of pendingSwaps) {
+        const isRequesterLesson = swap.requesterEventId === input.eventId;
+        const isTargetLesson = swap.targetEventId === input.eventId;
+
+        if (
+          isRequesterLesson &&
+          swap.requesterId === input.cancelledByClientId
+        ) {
+          // Requester cancelled their lesson - cancel the swap request
+          await db.timeSwapRequest.update({
+            where: { id: swap.id },
+            data: { status: "EXPIRED" },
+          });
+
+          // Notify the target client
+          if (swap.target.userId) {
+            const conversation = await db.conversation.findFirst({
+              where: {
+                OR: [
+                  {
+                    client1Id: swap.requester.userId || "",
+                    client2Id: swap.target.userId,
+                  },
+                  {
+                    client1Id: swap.target.userId,
+                    client2Id: swap.requester.userId || "",
+                  },
+                ],
+                type: "CLIENT_CLIENT",
+              },
+            });
+
+            if (conversation) {
+              await db.message.create({
+                data: {
+                  conversationId: conversation.id,
+                  senderId: swap.requester.userId || "",
+                  content: `The swap request has been cancelled because the other client cancelled their lesson.`,
+                  data: {
+                    type: "SWAP_CANCELLATION",
+                    swapRequestId: swap.id,
+                  },
+                },
+              });
+            }
+          }
+
+          results.push({
+            swapId: swap.id,
+            action: "cancelled",
+            reason: "Requester cancelled their lesson",
+          });
+        } else if (
+          isTargetLesson &&
+          swap.targetId === input.cancelledByClientId
+        ) {
+          // Original holder cancelled their lesson - convert to time change request
+          // Cancel the swap request
+          await db.timeSwapRequest.update({
+            where: { id: swap.id },
+            data: { status: "EXPIRED" },
+          });
+
+          // Create a schedule change request for the coach
+          // The requester's lesson should be moved to the target's original time
+          const coachId = swap.requesterEvent.coachId;
+
+          // Create a notification for the coach about the time change request
+          await db.notification.create({
+            data: {
+              userId: coachId,
+              type: "SCHEDULE_REQUEST",
+              title: "Time Change Request",
+              message: `A client's lesson was cancelled, and another client requested to move their lesson to that time slot.`,
+              data: {
+                type: "TIME_CHANGE_FROM_CANCELLATION",
+                originalEventId: swap.targetEventId,
+                requestedEventId: swap.requesterEventId,
+                requestedDate: swap.targetEvent.date,
+                reason:
+                  "Original lesson holder cancelled - converting swap request to time change",
+              },
+            },
+          });
+
+          results.push({
+            swapId: swap.id,
+            action: "converted_to_time_change",
+            reason: "Original holder cancelled their lesson",
+          });
+        }
+      }
+
+      return {
+        message: "Handled pending swaps",
+        results,
       };
     }),
 });
