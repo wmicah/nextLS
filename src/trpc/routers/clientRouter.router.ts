@@ -5668,6 +5668,9 @@ export const clientRouterRouter = router({
           endTime: true,
           title: true,
           clientId: true,
+          coachId: true,
+          status: true,
+          description: true,
         },
         orderBy: {
           date: "asc",

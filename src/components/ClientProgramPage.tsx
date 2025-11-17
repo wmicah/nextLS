@@ -154,6 +154,7 @@ function ClientProgramPage() {
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
   // Use the new completion system
   const { isExerciseCompleted, markExerciseComplete } = useExerciseCompletion();
 
@@ -970,19 +971,19 @@ function ClientProgramPage() {
           {/* Summary Box */}
           <div className="mb-6 md:mb-8 px-4">
             <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
-                {/* Upcoming Lessons - Show Next 2 */}
-                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-6 shadow-2xl border bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-emerald-700/10 border-emerald-500/20 md:col-span-2">
+              {/* Upcoming Lessons - Full Width */}
+              <div className="mb-4 md:mb-8">
+                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-6 shadow-2xl border bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-blue-700/10 border-blue-500/20">
                   {/* Background Pattern */}
                   <div className="absolute inset-0 opacity-5">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-300 rounded-full blur-2xl"></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-300 rounded-full blur-2xl"></div>
                   </div>
 
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 md:p-3 rounded-2xl shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
+                        <div className="p-2 md:p-3 rounded-2xl shadow-lg bg-gradient-to-br from-blue-500 to-blue-600">
                           <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-white" />
                         </div>
                         <h3 className="text-lg md:text-xl font-bold text-white">
@@ -992,7 +993,7 @@ function ClientProgramPage() {
                       {upcomingEvents.length > 2 && (
                         <a
                           href="/client-schedule"
-                          className="text-xs md:text-sm font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-emerald-500/20 text-emerald-300"
+                          className="text-xs md:text-sm font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-blue-500/20 text-blue-300"
                         >
                           View All ({upcomingEvents.length})
                         </a>
@@ -1028,11 +1029,7 @@ function ClientProgramPage() {
                             return (
                               <div
                                 key={event.id}
-                                className={`rounded-lg p-4 border shadow-lg ${
-                                  index === 0
-                                    ? "bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70]"
-                                    : "bg-[#2A3133] border-[#606364]"
-                                }`}
+                                className="rounded-lg p-4 border shadow-lg bg-[#4A5568] border-[#606364]"
                               >
                                 {/* Date Badge */}
                                 <div className="flex items-start justify-between mb-3">
@@ -1043,9 +1040,7 @@ function ClientProgramPage() {
                                     style={{
                                       backgroundColor: isToday
                                         ? "#10b981"
-                                        : index === 0
-                                        ? "#353A3A"
-                                        : "#4A5A70",
+                                        : "#353A3A",
                                       color: "#FFFFFF",
                                     }}
                                   >
@@ -1062,17 +1057,16 @@ function ClientProgramPage() {
                                   <div
                                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
                                     style={{
-                                      backgroundColor:
-                                        index === 0 ? "#353A3A" : "#4A5A70",
+                                      backgroundColor: "#353A3A",
                                     }}
                                   >
                                     <Clock
                                       className="h-3.5 w-3.5"
-                                      style={{ color: "#C3BCC2" }}
+                                      style={{ color: "#FFFFFF" }}
                                     />
                                     <span
                                       className="text-xs font-semibold"
-                                      style={{ color: "#C3BCC2" }}
+                                      style={{ color: "#FFFFFF" }}
                                     >
                                       {eventDate.toLocaleTimeString("en-US", {
                                         hour: "numeric",
@@ -1087,21 +1081,28 @@ function ClientProgramPage() {
                                   <h4
                                     className="text-sm font-bold"
                                     style={{
-                                      color:
-                                        index === 0 ? "#FFFFFF" : "#C3BCC2",
+                                      color: "#FFFFFF",
                                     }}
                                   >
                                     {heading}
                                   </h4>
-                                  {event.description && (
+                                  {event.description ? (
                                     <p
                                       className="text-xs line-clamp-2"
                                       style={{
-                                        color:
-                                          index === 0 ? "#D0D0D0" : "#ABA4AA",
+                                        color: "#ABA4AA",
                                       }}
                                     >
                                       {event.description}
+                                    </p>
+                                  ) : (
+                                    <p
+                                      className="text-xs"
+                                      style={{
+                                        color: "#ABA4AA",
+                                      }}
+                                    >
+                                      Scheduled lesson
                                     </p>
                                   )}
                                 </div>
@@ -1111,18 +1112,21 @@ function ClientProgramPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8">
-                        <CalendarX className="h-12 w-12 mb-3 text-emerald-400/50" />
-                        <p className="text-sm text-emerald-200/60 mb-2">
+                        <CalendarX className="h-12 w-12 mb-3 text-blue-400/50" />
+                        <p className="text-sm text-blue-200/60 mb-2">
                           No upcoming lessons
                         </p>
-                        <p className="text-xs text-emerald-300/40">
+                        <p className="text-xs text-blue-300/40">
                           Your coach will schedule lessons with you soon
                         </p>
                       </div>
                     )}
                   </div>
                 </div>
+              </div>
 
+              {/* Coach Notes and Message Coach - Side by Side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                 {/* Coach Feedback */}
                 <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border bg-gradient-to-br from-purple-500/10 via-purple-600/5 to-purple-700/10 border-purple-500/20">
                   {/* Background Pattern */}
@@ -1189,35 +1193,33 @@ function ClientProgramPage() {
                   </div>
                 </div>
 
-                {/* View Full Schedule Button */}
-                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-blue-700/10 border-blue-500/20">
+                {/* Message Coach Button */}
+                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border bg-gradient-to-br from-green-500/10 via-green-600/5 to-green-700/10 border-green-500/20">
                   {/* Background Pattern */}
                   <div className="absolute inset-0 opacity-5">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-300 rounded-full blur-2xl"></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-green-400 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-green-300 rounded-full blur-2xl"></div>
                   </div>
 
                   <div className="relative z-10 flex flex-col items-center justify-center h-full min-h-[120px] text-center">
                     <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
-                      <div className="p-2 md:p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-                        <Calendar className="h-4 w-4 md:h-6 md:w-6 text-white" />
+                      <div className="p-2 md:p-3 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                        <MessageSquare className="h-4 w-4 md:h-6 md:w-6 text-white" />
                       </div>
                       <h3 className="text-lg md:text-xl font-bold text-white">
-                        Schedule
+                        Message Coach
                       </h3>
                     </div>
 
-                    <p className="text-xs md:text-sm text-blue-200/80 mb-4 leading-relaxed">
-                      View your coach's schedule and request lessons
+                    <p className="text-xs md:text-sm text-green-200/80 mb-4 leading-relaxed">
+                      Send a quick message to your coach
                     </p>
 
                     <button
-                      onClick={() =>
-                        (window.location.href = "/client-schedule")
-                      }
-                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 shadow-lg"
+                      onClick={() => setShowMessageModal(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold rounded-xl hover:from-green-600 hover:to-green-700 shadow-lg"
                     >
-                      View Full Schedule
+                      Send Message
                     </button>
                   </div>
                 </div>
@@ -2355,7 +2357,162 @@ function ClientProgramPage() {
           )}
         </div>
       </div>
+
+      {/* Quick Message Modal */}
+      {showMessageModal && (
+        <QuickMessageModal
+          isOpen={showMessageModal}
+          onClose={() => setShowMessageModal(false)}
+        />
+      )}
     </ClientTopNav>
+  );
+}
+
+// Quick Message Modal Component
+function QuickMessageModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [messageText, setMessageText] = useState("");
+
+  // Get conversations to find coach conversation
+  const { data: conversationsData, refetch: refetchConversations } =
+    trpc.messaging.getConversations.useQuery(
+      { limit: 100, offset: 0 },
+      { enabled: isOpen }
+    );
+
+  const conversations: any[] = conversationsData?.conversations || [];
+
+  // Find the conversation with the coach (COACH_CLIENT type)
+  const coachConversation = conversations.find(
+    (conv: any) => conv.type === "COACH_CLIENT"
+  );
+
+  // Send message mutation
+  const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
+
+  // Handle mutation callbacks separately
+  React.useEffect(() => {
+    if (sendMessageMutation.isSuccess) {
+      setMessageText("");
+      refetchConversations();
+      onClose();
+    }
+  }, [sendMessageMutation.isSuccess, onClose, refetchConversations]);
+
+  React.useEffect(() => {
+    if (sendMessageMutation.isError) {
+      console.error("Failed to send message:", sendMessageMutation.error);
+      alert("Failed to send message. Please try again.");
+    }
+  }, [sendMessageMutation.isError, sendMessageMutation.error]);
+
+  const handleSendMessage = () => {
+    if (
+      !messageText.trim() ||
+      !coachConversation ||
+      sendMessageMutation.isPending
+    )
+      return;
+
+    sendMessageMutation.mutate({
+      conversationId: coachConversation.id,
+      content: messageText.trim(),
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div
+        className="relative w-full max-w-md rounded-3xl p-6 shadow-2xl border bg-gradient-to-br from-green-500/10 via-green-600/5 to-green-700/10 border-green-500/20"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5 rounded-3xl overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-green-400 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-green-300 rounded-full blur-2xl"></div>
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                <MessageSquare className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                Message Your Coach
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {!coachConversation ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-400">
+                Unable to find conversation with your coach.
+              </p>
+            </div>
+          ) : (
+            <>
+              <Textarea
+                value={messageText}
+                onChange={e => setMessageText(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && e.shiftKey === false) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder="Type your message here..."
+                className="w-full min-h-[120px] mb-4 bg-[#2A3133] border border-green-500/20 text-[#C3BCC2] resize-none rounded-xl focus:border-green-500/40 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                disabled={sendMessageMutation.isPending}
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={onClose}
+                  disabled={sendMessageMutation.isPending}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-[#353A3A] text-[#C3BCC2] hover:bg-[#404545] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={
+                    !messageText.trim() || sendMessageMutation.isPending
+                  }
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {sendMessageMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Send
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

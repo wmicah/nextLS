@@ -49,6 +49,7 @@ export default function MessagePopup({
   // Get current user
   const { data: authData } = trpc.authCallback.useQuery();
   const currentUserId = authData?.user?.id;
+  const isClient = authData?.user?.role === "CLIENT";
 
   // Calculate button position for popup positioning
   useEffect(() => {
@@ -232,6 +233,20 @@ export default function MessagePopup({
                 const lastMessage = conversation.messages[0];
                 const unreadCount = unreadCountsObj[conversation.id] || 0;
 
+                // Anonymize client names for CLIENT_CLIENT conversations when viewed by clients
+                const shouldAnonymize =
+                  isClient && conversation.type === "CLIENT_CLIENT";
+                const displayName = shouldAnonymize
+                  ? "Another Client"
+                  : otherUser?.name ||
+                    otherUser?.email?.split("@")[0] ||
+                    "Unknown";
+                const displayInitial = shouldAnonymize
+                  ? "C"
+                  : (otherUser?.name || otherUser?.email)
+                      ?.charAt(0)
+                      ?.toUpperCase() || "?";
+
                 return (
                   <Link
                     key={conversation.id}
@@ -264,9 +279,7 @@ export default function MessagePopup({
                         color: "white",
                       }}
                     >
-                      {(otherUser?.name || otherUser?.email)
-                        ?.charAt(0)
-                        ?.toUpperCase() || "?"}
+                      {displayInitial}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -274,9 +287,7 @@ export default function MessagePopup({
                           className="text-sm font-medium truncate"
                           style={{ color: "#C3BCC2" }}
                         >
-                          {otherUser?.name ||
-                            otherUser?.email?.split("@")[0] ||
-                            "Unknown"}
+                          {displayName}
                         </p>
                         {lastMessage && (
                           <span

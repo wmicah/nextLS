@@ -116,7 +116,7 @@ export default function SwapRequests() {
                               className="font-medium"
                               style={{ color: "#C3BCC2" }}
                             >
-                              {request.requesterEvent.title}
+                              Lesson with client
                             </p>
                             <p className="text-sm" style={{ color: "#ABA4AA" }}>
                               {new Date(
@@ -343,7 +343,7 @@ export default function SwapRequests() {
                               className="font-medium"
                               style={{ color: "#C3BCC2" }}
                             >
-                              {request.targetEvent.title}
+                              Lesson with client
                             </p>
                             <p className="text-sm" style={{ color: "#ABA4AA" }}>
                               {new Date(
