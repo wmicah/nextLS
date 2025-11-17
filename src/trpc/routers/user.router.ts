@@ -165,10 +165,7 @@ export const userRouter = router({
               updatedUser.name || "New Client",
               updatedUser.email
             );
-
-          } catch (error) {
-
-          }
+          } catch (error) {}
 
           // Create client record WITHOUT coach assignment (pending approval)
           await db.client.upsert({
@@ -189,7 +186,7 @@ export const userRouter = router({
           return updatedUser;
         }
 
-        // If we have a coachId (from invite code), set up the relationship
+        // If we have a coachId (from invite code), create approval request
         if (coachId) {
           // Verify the coach exists
           const coach = await db.user.findFirst({
@@ -203,54 +200,53 @@ export const userRouter = router({
             });
           }
 
-          // Create or update client record with coach
-          await db.client.upsert({
-            where: { userId: user.id },
-            update: {
-              coachId: coachId,
-              name: updatedUser.name || "New Client",
-              email: updatedUser.email,
-            },
-            create: {
-              userId: user.id,
-              coachId: coachId,
-              name: updatedUser.name || "New Client",
-              email: updatedUser.email,
-            },
-          });
-
-          // Create notification for the coach
+          // Create notification for coach to approve (requires approval)
           await db.notification.create({
             data: {
               userId: coachId,
               type: "CLIENT_JOIN_REQUEST",
-              title: "New Athlete Joined",
-              message: `${
-                updatedUser.name || "A new athlete"
-              } has joined your coaching program using your invite code!`,
+              title: "New Athlete Join Request",
+              message: `${updatedUser.name || "A new athlete"} (${
+                updatedUser.email
+              }) has requested to join your coaching program using your invite code.`,
               data: {
-                clientId: ensureUserId(user.id),
+                clientUserId: ensureUserId(user.id),
                 clientName: updatedUser.name,
                 clientEmail: updatedUser.email,
+                requiresApproval: true,
+                viaInviteCode: true, // Flag to indicate this came from invite code
               },
             },
           });
 
-          // Send email notification to coach about new client
+          // Send email notification to coach about new client request
           try {
-            await sendClientJoinNotification(
+            const emailService = CompleteEmailService.getInstance();
+            await emailService.sendNewClientRequest(
               coach.email,
               coach.name || "Coach",
               updatedUser.name || "New Client",
               updatedUser.email
             );
-
           } catch (error) {
-
+            // Don't throw error - email failure shouldn't break user creation
           }
 
-          // Send welcome message from coach to client
-          await sendWelcomeMessage(coachId, user.id);
+          // Create client record WITHOUT coach assignment (pending approval)
+          await db.client.upsert({
+            where: { userId: user.id },
+            update: {
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+              coachId: null, // No coach until approved
+            },
+            create: {
+              userId: user.id,
+              name: updatedUser.name || "New Client",
+              email: updatedUser.email,
+              coachId: null, // No coach until approved
+            },
+          });
         } else {
           // Client without coach - create a placeholder client record
           await db.client.upsert({
@@ -275,7 +271,6 @@ export const userRouter = router({
             updatedUser.email,
             updatedUser.name || "Coach"
           );
-
         } else if (input.role === "CLIENT") {
           // For clients, we need to determine if they have a coach
           let coachName: string | undefined;
@@ -294,10 +289,8 @@ export const userRouter = router({
             updatedUser.name || "Client",
             coachName
           );
-
         }
       } catch (error) {
-
         // Don't throw error - email failure shouldn't break user creation
       }
 
@@ -497,7 +490,6 @@ export const userRouter = router({
 
         for (const [day, config] of Object.entries(input.customWorkingHours)) {
           if (!dayNames.includes(day)) {
-
             continue;
           }
 
@@ -509,12 +501,10 @@ export const userRouter = router({
 
           if (enabled) {
             if (!start || !end) {
-
               continue;
             }
 
             if (!isEndTimeAfterStartTime(start, end)) {
-
               continue;
             }
 
@@ -676,74 +666,58 @@ export const userRouter = router({
             },
           });
 
-      // Create or update client record with coach
-      await db.client.upsert({
-        where: { userId: user.id },
-        update: {
-          coachId: coach.id,
-          name: updatedUser.name || "New Client",
-          email: updatedUser.email,
-          archived: false,
-          archivedAt: null,
-          updatedAt: new Date(),
-        },
-        create: {
-          userId: user.id,
-          coachId: coach.id,
-          name: updatedUser.name || "New Client",
-          email: updatedUser.email,
-        },
-      });
-
-      // Create notification for the coach
+      // Create notification for coach to approve (requires approval)
       await db.notification.create({
         data: {
           userId: coach.id,
           type: "CLIENT_JOIN_REQUEST",
-          title: "New Athlete Joined",
-          message: `${
-            updatedUser.name || "A new athlete"
-          } has joined your coaching program using your invite link!`,
+          title: "New Athlete Join Request",
+          message: `${updatedUser.name || "A new athlete"} (${
+            updatedUser.email
+          }) has requested to join your coaching program using your invite code.`,
           data: {
-            clientId: ensureUserId(user.id),
+            clientUserId: ensureUserId(user.id),
             clientName: updatedUser.name,
             clientEmail: updatedUser.email,
+            requiresApproval: true,
+            viaInviteCode: true, // Flag to indicate this came from invite code
           },
         },
       });
 
-      // Send email notification to coach
+      // Send email notification to coach about new client request
       try {
-        await sendClientJoinNotification(
+        const emailService = CompleteEmailService.getInstance();
+        await emailService.sendNewClientRequest(
           coach.email,
           coach.name || "Coach",
           updatedUser.name || "New Client",
           updatedUser.email
         );
-
       } catch (error) {
-
+        // Don't throw error - email failure shouldn't break user creation
       }
 
-      // Send welcome message from coach to client
-      await sendWelcomeMessage(coach.id, user.id);
-
-      // Send welcome email to client
-      try {
-        await sendWelcomeEmailForClient(
-          updatedUser.email,
-          updatedUser.name || "Client",
-          coach.name || "Coach"
-        );
-
-      } catch (error) {
-
-      }
+      // Create client record WITHOUT coach assignment (pending approval)
+      await db.client.upsert({
+        where: { userId: user.id },
+        update: {
+          name: updatedUser.name || "New Client",
+          email: updatedUser.email,
+          coachId: null, // No coach until approved
+        },
+        create: {
+          userId: user.id,
+          name: updatedUser.name || "New Client",
+          email: updatedUser.email,
+          coachId: null, // No coach until approved
+        },
+      });
 
       return {
         success: true,
         user: updatedUser,
-        coachId: coach.id,
+        requiresApproval: true, // Indicate that approval is needed
       };
     }),
 
@@ -895,10 +869,8 @@ export const userRouter = router({
           });
         } catch (error) {
           // If deletion fails (e.g., record already deleted), log but continue
-
         }
       } else {
-
       }
 
       // Mark notification as read
@@ -1012,10 +984,8 @@ export const userRouter = router({
           kindeDeleted = kindeResult.success;
 
           if (!kindeResult.success) {
-
           }
         } else {
-
         }
 
         // Step 2: Delete from database
@@ -1029,7 +999,6 @@ export const userRouter = router({
           kindeDeleted,
         };
       } catch (error) {
-
         // Provide more specific error messages
         let errorMessage =
           "Failed to delete account. Please try again or contact support.";
@@ -1259,9 +1228,7 @@ export const userRouter = router({
           dbUser.name || "New Client",
           dbUser.email
         );
-      } catch (error) {
-
-      }
+      } catch (error) {}
 
       return {
         success: true,

@@ -59,31 +59,41 @@ function AuthCallbackContent() {
           : null;
 
       if (pendingInviteCode && data.needsRoleSelection) {
-        // User needs role selection and has an invite code - auto-assign them
+        // User needs role selection and has an invite code - create join request
         setHasCheckedInviteCode(true);
         console.log(
-          "🔗 Invite code found in localStorage, auto-assigning client...",
+          "🔗 Invite code found in localStorage, creating join request...",
           pendingInviteCode
         );
 
         autoAssignViaInviteCode.mutate(
           { inviteCode: pendingInviteCode },
           {
-            onSuccess: () => {
+            onSuccess: data => {
               // Clear the invite code from localStorage
               if (typeof window !== "undefined") {
                 localStorage.removeItem("pendingInviteCode");
               }
-              // Refetch auth callback to get updated user data
-              refetch();
+              // If approval is required, redirect to client dashboard with pending status
+              if (data?.requiresApproval) {
+                console.log(
+                  "⏳ Client request created, waiting for coach approval..."
+                );
+                // Refetch to get updated user data, then redirect
+                refetch();
+                // The client will see a message on their dashboard that they're pending approval
+              } else {
+                // Refetch auth callback to get updated user data
+                refetch();
+              }
             },
             onError: error => {
-              console.error("Failed to auto-assign via invite code:", error);
+              console.error("Failed to request via invite code:", error);
               // Clear invalid invite code
               if (typeof window !== "undefined") {
                 localStorage.removeItem("pendingInviteCode");
               }
-              // Proceed to role selection if auto-assignment fails
+              // Proceed to role selection if request fails
               router.push("/role-selection");
             },
           }

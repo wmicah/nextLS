@@ -763,7 +763,9 @@ export default function MobileClientsPage() {
   };
 
   const selectAllClients = () => {
-    const clientIds: string[] = filteredAndSortedClients.map(client => client.id);
+    const clientIds: string[] = filteredAndSortedClients.map(
+      client => client.id
+    );
     setSelectedClients(new Set<string>(clientIds));
   };
 
