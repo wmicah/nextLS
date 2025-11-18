@@ -875,7 +875,7 @@ export const timeSwapRouter = router({
         });
       }
 
-      // Get the swap request
+      // Get the swap request - only the recipient should see this, so they should be the target
       const swapRequest = await db.timeSwapRequest.findFirst({
         where: {
           id: input.requestId,
@@ -890,6 +890,25 @@ export const timeSwapRouter = router({
       });
 
       if (!swapRequest) {
+        // Debug: Check if request exists with different targetId
+        const anyRequest = await db.timeSwapRequest.findFirst({
+          where: { id: input.requestId },
+        });
+
+        if (anyRequest) {
+          console.error("Swap request approval permission issue:", {
+            requestId: input.requestId,
+            requestTargetId: anyRequest.targetId,
+            currentClientId: currentClient.id,
+            requestStatus: anyRequest.status,
+            match: anyRequest.targetId === currentClient.id,
+          });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You do not have permission to accept this swap request",
+          });
+        }
+
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Swap request not found or already processed",
@@ -1032,7 +1051,7 @@ export const timeSwapRouter = router({
         });
       }
 
-      // Get the swap request
+      // Get the swap request - only the recipient should see this, so they should be the target
       const swapRequest = await db.timeSwapRequest.findFirst({
         where: {
           id: input.swapRequestId,
@@ -1047,6 +1066,26 @@ export const timeSwapRouter = router({
       });
 
       if (!swapRequest) {
+        // Debug: Check if request exists with different targetId
+        const anyRequest = await db.timeSwapRequest.findFirst({
+          where: { id: input.swapRequestId },
+        });
+
+        if (anyRequest) {
+          console.error("Swap request response permission issue:", {
+            requestId: input.swapRequestId,
+            requestTargetId: anyRequest.targetId,
+            currentClientId: currentClient.id,
+            requestStatus: anyRequest.status,
+            match: anyRequest.targetId === currentClient.id,
+          });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "You do not have permission to respond to this swap request",
+          });
+        }
+
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Swap request not found or already processed",
