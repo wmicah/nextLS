@@ -112,14 +112,6 @@ function LibraryPage() {
 
   // Load more function
   const loadMore = () => {
-    console.log("🔍 Load More Called:", {
-      activeTab,
-      hasMore,
-      isLoadingMore,
-      masterCurrentPage,
-      localCurrentPage,
-    });
-
     if (hasMore && !isLoadingMore) {
       setIsLoadingMore(true);
       if (activeTab === "master") {
@@ -199,13 +191,6 @@ function LibraryPage() {
           });
         }
         const hasNextPage = masterLibraryItems.pagination?.hasNextPage || false;
-        console.log("🔍 Master Library Pagination:", {
-          currentPage: masterCurrentPage,
-          totalPages: masterLibraryItems.pagination?.totalPages,
-          totalCount: masterLibraryItems.pagination?.totalCount,
-          hasNextPage,
-          itemsInThisPage: masterLibraryItems.items.length,
-        });
         setMasterHasMore(hasNextPage);
       } else if (masterCurrentPage === 1) {
         // Empty result on first page
@@ -215,30 +200,6 @@ function LibraryPage() {
     }
   }, [masterLibraryItems, masterCurrentPage, masterFetching]);
 
-  // Debug logging for search issues
-  useEffect(() => {
-    console.log("🔍 Search Debug:", {
-      searchTerm,
-      debouncedSearchTerm,
-      selectedCategory,
-      masterItems: masterItems.length,
-      localItems: localItems.length,
-      masterCurrentPage,
-      localCurrentPage,
-      masterLibraryItems: masterLibraryItems?.items?.length,
-      localLibraryItems: localLibraryItems?.items?.length,
-    });
-  }, [
-    searchTerm,
-    debouncedSearchTerm,
-    selectedCategory,
-    masterItems.length,
-    localItems.length,
-    masterCurrentPage,
-    localCurrentPage,
-    masterLibraryItems,
-    localLibraryItems,
-  ]);
 
   // Handle local library data - ensure it always updates when data arrives
   useEffect(() => {
@@ -258,13 +219,6 @@ function LibraryPage() {
           });
         }
         const hasNextPage = localLibraryItems.pagination?.hasNextPage || false;
-        console.log("🔍 Local Library Pagination:", {
-          currentPage: localCurrentPage,
-          totalPages: localLibraryItems.pagination?.totalPages,
-          totalCount: localLibraryItems.pagination?.totalCount,
-          hasNextPage,
-          itemsInThisPage: localLibraryItems.items.length,
-        });
         setLocalHasMore(hasNextPage);
       } else if (localCurrentPage === 1) {
         // Empty result on first page
@@ -369,55 +323,7 @@ function LibraryPage() {
 
   // Debug logging with useEffect to monitor changes
   useEffect(() => {
-    console.log("🔍 LibraryPage Debug:", {
-      activeTab,
-      masterCurrentPage,
-      localCurrentPage,
-      localLibraryItems: localLibraryItems?.items?.length,
-      masterLibraryItems: masterLibraryItems?.items?.length,
-      libraryItems: libraryItems?.length,
-      hasMore,
-      pagination:
-        activeTab === "master"
-          ? masterLibraryItems?.pagination
-          : localLibraryItems?.pagination,
-      localLoading,
-      localError: localError?.message,
-      searchTerm,
-      debouncedSearchTerm,
-      selectedCategory,
-      timestamp: new Date().toISOString(),
-    });
 
-    if (localLibraryItems?.items && localLibraryItems.items.length > 0) {
-      console.log(
-        "🎉 Local library items found:",
-        localLibraryItems.items.map(item => ({
-          id: item.id,
-          title: item.title,
-          type: item.type,
-          category: item.category,
-          createdAt: item.createdAt,
-        }))
-      );
-    } else if (
-      localLibraryItems?.items &&
-      localLibraryItems.items.length === 0
-    ) {
-      console.log("⚠️ Local library items array is empty");
-    }
-
-    if (masterLibraryItems?.items && masterLibraryItems.items.length > 0) {
-      console.log(
-        "🎉 Master library items found:",
-        masterLibraryItems.items.map(item => ({
-          id: item.id,
-          title: item.title,
-          type: item.type,
-          category: item.category,
-        }))
-      );
-    }
 
     if (localError) {
       console.error("❌ Local library error:", localError);
