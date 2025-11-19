@@ -304,7 +304,6 @@ export const messagingRouter = router({
                   : input.content,
                 recipient.id // Pass userId to check preferences
               );
-              console.log(`✅ Message notification email sent to ${recipient.email}`);
             } catch (error) {
               console.error("❌ Failed to send message notification email:", error);
             }
@@ -776,10 +775,6 @@ export const messagingRouter = router({
         },
       });
 
-      console.log(
-        "🔍 Found clients:",
-        clients.map(c => ({ id: c.id, name: c.name, coachId: c.coachId }))
-      );
 
       if (clients.length !== input.clientIds.length) {
         const foundIds = clients.map(c => c.id);
@@ -811,9 +806,6 @@ export const messagingRouter = router({
             );
           }
 
-          console.log(
-            `✅ Client ${client.id} (${client.name}) verified for coach ${user.id} - userId: ${client.userId}`
-          );
 
           // Find or create conversation with this client
           let conversation = await db.conversation.findFirst({
@@ -891,7 +883,6 @@ export const messagingRouter = router({
                   : input.content,
                 clientUser.id // Pass userId to check preferences
               );
-              console.log(`✅ Bulk message notification email sent to ${clientEmail}`);
             } catch (emailError) {
               console.error("❌ Failed to send bulk message notification email:", emailError);
             }

@@ -126,9 +126,6 @@ export const libraryRouter = router({
         const currentPage = input.cursor || 1;
         const hasNextPage = currentPage < totalPages;
 
-        console.log(
-          `✅ Library listInfinite: Found ${resources.length} resources (page ${currentPage}/${totalPages})`
-        );
 
         return {
           items: resources,
@@ -267,9 +264,6 @@ export const libraryRouter = router({
 
         const totalPages = Math.ceil(totalCount / input.limit);
 
-        console.log(
-          `✅ Library list: Found ${resources.length} resources (page ${input.page}/${totalPages})`
-        );
 
         return {
           items: resources,

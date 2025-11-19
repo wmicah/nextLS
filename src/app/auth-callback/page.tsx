@@ -27,7 +27,6 @@ function AuthCallbackContent() {
   const handleRetry = async () => {
     if (retryCount >= 2) {
       // Too many retries, handle session conflict
-      console.log("🔄 Too many retries, handling session conflict");
       await handleSessionConflict();
       return;
     }
@@ -61,10 +60,6 @@ function AuthCallbackContent() {
       if (pendingInviteCode && data.needsRoleSelection) {
         // User needs role selection and has an invite code - create join request
         setHasCheckedInviteCode(true);
-        console.log(
-          "🔗 Invite code found in localStorage, creating join request...",
-          pendingInviteCode
-        );
 
         autoAssignViaInviteCode.mutate(
           { inviteCode: pendingInviteCode },
@@ -197,7 +192,6 @@ function AuthCallbackContent() {
       if ("role" in (data.user || {})) {
         console.log("🔍 User role:", data.user.role);
       } else {
-        console.log("🔍 User role is not defined");
       }
 
       if (data.needsRoleSelection) {
@@ -213,12 +207,8 @@ function AuthCallbackContent() {
           console.log("➡️ Going to COACH destination:", destination);
           router.push(destination);
         } else if (userRole === "CLIENT") {
-          console.log(
-            "➡️ CLIENT role detected, redirecting to client dashboard"
-          );
           router.push("/client-dashboard");
         } else {
-          console.log("➡️ Unknown role, going to role selection");
           router.push("/role-selection");
         }
       }
@@ -232,7 +222,6 @@ function AuthCallbackContent() {
         error.message?.includes("UNAUTHORIZED") ||
         error.message?.includes("session")
       ) {
-        console.log("🔄 Potential session conflict detected");
         handleRetry();
       } else {
         router.push("/auth-error");

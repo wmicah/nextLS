@@ -26,10 +26,6 @@ export default function MassMessageModal({
   });
 
   // Debug: Log client data
-  console.log(
-    "📋 Loaded clients:",
-    clients.map((c: any) => ({ id: c.id, name: c.name, email: c.email }))
-  );
 
   // Mass message mutation
   const sendMassMessageMutation = trpc.messaging.sendMassMessage.useMutation({

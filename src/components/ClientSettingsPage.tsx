@@ -160,7 +160,6 @@ function ClientSettingsPage() {
           break;
         case "training":
           // Training preferences are not supported in the current API
-          console.log("Training preferences not supported");
           break;
         case "appearance":
           await updateSettingsMutation.mutateAsync({

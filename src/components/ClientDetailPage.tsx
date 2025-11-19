@@ -1434,7 +1434,6 @@ function ClientDetailPage({
       console.log("🔍 Rendering without Sidebar wrapper");
       return <>{children}</>;
     }
-    console.log("🔍 Rendering with Sidebar wrapper");
     return <Sidebar>{children}</Sidebar>;
   };
 

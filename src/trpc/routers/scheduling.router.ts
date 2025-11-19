@@ -365,7 +365,6 @@ export const schedulingRouter = router({
             client.user.id // Pass userId to check preferences
           );
 
-          console.log(`✅ Lesson scheduled email sent to ${clientEmail}`);
         } catch (error) {
           console.error("❌ Failed to send lesson scheduled email:", error);
           // Don't throw error - email failure shouldn't block lesson creation
@@ -682,15 +681,6 @@ export const schedulingRouter = router({
             );
             if (dstResult.adjustedDate) {
               finalLessonDate = dstResult.adjustedDate;
-              console.log(
-                "DST automatic handling applied to recurring lesson:",
-                {
-                  originalDate: dstResult.originalDate.toISOString(),
-                  adjustedDate: dstResult.adjustedDate.toISOString(),
-                  changes: dstResult.changes,
-                  notifications: dstResult.notifications,
-                }
-              );
             }
           }
           validLessonDates.push(finalLessonDate);
@@ -1479,7 +1469,6 @@ export const schedulingRouter = router({
             client.user.id // Pass userId to check preferences
           );
 
-          console.log(`✅ Lesson scheduled email sent to ${clientEmail}`);
         } catch (error) {
           console.error("❌ Failed to send lesson scheduled email:", error);
           // Don't throw error - email failure shouldn't block lesson creation

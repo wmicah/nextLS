@@ -957,10 +957,6 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                 key={conversation.id}
                                 href={`/messages/${conversation.id}`}
                                 onClick={() => {
-                                  console.log(
-                                    "🔍 Navigating to conversation:",
-                                    conversation.id
-                                  );
                                   setIsAnimating(true);
                                   setTimeout(() => {
                                     setShowRecentMessages(false);

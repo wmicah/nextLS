@@ -211,15 +211,12 @@ export default function DayColumn({
       });
     },
     onSettled: async () => {
-      console.log("Mutation settled, invalidating cache");
 
       // Force a complete cache invalidation
       await utils.programs.getById.invalidate({ id: programId });
-      console.log("Cache invalidated");
 
       // Force a refetch to ensure all components get updated data
       await utils.programs.getById.refetch({ id: programId });
-      console.log("Cache refetched");
     },
   });
 

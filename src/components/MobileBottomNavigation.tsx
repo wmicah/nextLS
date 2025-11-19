@@ -28,10 +28,6 @@ export default function MobileBottomNavigation() {
 
   // Debug logging
   console.log("MobileBottomNavigation - Unread Messages:", unreadMessages);
-  console.log(
-    "MobileBottomNavigation - Unread Notifications:",
-    unreadNotifications
-  );
 
   const handleNavigation = (href: string) => {
     router.push(href);

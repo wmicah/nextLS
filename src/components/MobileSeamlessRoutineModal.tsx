@@ -711,12 +711,7 @@ export default function MobileSeamlessRoutineModal({
 
     hasUserMadeChanges.current = true;
 
-    console.log("=== handleSupersetDescriptionSave (Mobile) ===");
     console.log("Saved exercises from modal:", data.exercises);
-    console.log(
-      "Saved exercise IDs:",
-      data.exercises.map(ex => ex.id)
-    );
     console.log("Editing superset ID:", editingSuperset.supersetId);
 
     // Create a map of saved exercise IDs for quick lookup
@@ -727,10 +722,6 @@ export default function MobileSeamlessRoutineModal({
     // Update exercises: remove deleted ones, update existing ones
     setExercises(prev => {
       console.log("Previous exercises count:", prev.length);
-      console.log(
-        "Exercises in superset before filter:",
-        prev.filter(ex => ex.supersetId === editingSuperset.supersetId)
-      );
 
       const filtered = prev.filter(exercise => {
         // Keep exercises that are NOT in this superset
@@ -743,22 +734,10 @@ export default function MobileSeamlessRoutineModal({
         const shouldKeep = exerciseKey
           ? savedExerciseIds.has(exerciseKey)
           : false;
-        console.log(
-          `Exercise ${exercise.title} (supersetOrder: ${exercise.supersetOrder}):`,
-          {
-            exerciseKey,
-            inSavedIds: shouldKeep,
-            willKeep: shouldKeep,
-          }
-        );
         return shouldKeep;
       });
 
       console.log("Exercises after filter:", filtered.length);
-      console.log(
-        "Exercises in superset after filter:",
-        filtered.filter(ex => ex.supersetId === editingSuperset.supersetId)
-      );
 
       const updated = filtered.map(exercise => {
         // Update exercises that are in the superset and in the saved data
@@ -790,10 +769,6 @@ export default function MobileSeamlessRoutineModal({
       });
 
       console.log("Final updated exercises count:", updated.length);
-      console.log(
-        "Final exercises in superset:",
-        updated.filter(ex => ex.supersetId === editingSuperset.supersetId)
-      );
 
       return updated;
     });

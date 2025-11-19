@@ -343,7 +343,6 @@ export default function StreamlinedScheduleLessonModal({
   // Delete program day mutation (for replacing program days with lessons)
   const deleteProgramDayMutation = trpc.programs.deleteProgramDay.useMutation({
     onSuccess: () => {
-      console.log("Program day deleted successfully");
     },
     onError: error => {
       console.error("Error deleting program day:", error);

@@ -753,7 +753,6 @@ export class CompleteEmailService {
     failed: number;
   }> {
     try {
-      console.log(" Starting bug report announcement email process...");
 
       // Get all users with email addresses
       const allUsers = await db.user.findMany({
@@ -767,7 +766,6 @@ export class CompleteEmailService {
         },
       });
 
-      console.log(`📊 Found ${allUsers.length} users to notify`);
 
       let success = 0;
       let failed = 0;
@@ -790,7 +788,6 @@ export class CompleteEmailService {
             console.error(`❌ Failed to send to ${user.email}:`, result.error);
           } else {
             success++;
-            console.log(`✅ Bug report announcement sent to ${user.email}`);
           }
 
           // Add a small delay to avoid rate limiting
@@ -801,9 +798,6 @@ export class CompleteEmailService {
         }
       }
 
-      console.log(
-        `✅ Bug report announcement process completed: ${success} sent, ${failed} failed`
-      );
 
       return { success, failed };
     } catch (error) {

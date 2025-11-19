@@ -81,7 +81,6 @@ function ProgramEditorPageContent() {
   // Mutations
   const updateProgramMutation = trpc.programs.update.useMutation({
     onSuccess: data => {
-      console.log("=== SAVE SUCCESS - REFETCHING PROGRAM ===");
       setLocalIsSaving(false);
       setLocalLastSaved(new Date());
       isRefetchingAfterSaveRef.current = true;
@@ -462,19 +461,13 @@ function ProgramEditorPageContent() {
 
   // Handle ProgramBuilder save
   const handleProgramBuilderSave = (weeks: ProgramBuilderWeek[]) => {
-    console.log("=== HANDLEPROGRAMBUILDERSAVE CALLED ===");
     console.log("New weeks:", weeks);
-    console.log(
-      "Current programBuilderWeeks before update:",
-      programBuilderWeeks
-    );
     setProgramBuilderWeeks(weeks);
     console.log("ProgramBuilder weeks updated:", weeks);
   };
 
   // Convert ProgramBuilder data back to database format and save
   const handleSave = async (weeksToSave?: ProgramBuilderWeek[]) => {
-    console.log("=== SAVE FUNCTION CALLED ===");
     console.log("program:", program);
     console.log("weeksToSave:", weeksToSave);
     console.log("programBuilderWeeks:", programBuilderWeeks);
@@ -512,7 +505,6 @@ function ProgramEditorPageContent() {
 
     try {
       // Convert ProgramBuilder weeks back to database format
-      console.log("=== CONVERTING PROGRAMBUILDER TO DATABASE ===");
       console.log("weeks to convert:", weeks);
       const convertedWeeks = weeks.map((builderWeek, weekIndex) => ({
         weekNumber: weekIndex + 1,
@@ -603,10 +595,6 @@ function ProgramEditorPageContent() {
           )
         )
       );
-      console.log(
-        "🔍 Drills with coach instructions being saved:",
-        drillsWithCoachInstructions.length
-      );
       if (drillsWithCoachInstructions.length > 0) {
         console.log(
           "🔍 First drill with coach instructions:",
@@ -630,7 +618,6 @@ function ProgramEditorPageContent() {
         updateScope: updateScope,
       });
 
-      console.log("updateProgramMutation completed successfully");
 
       toast({
         title: "Program saved",

@@ -138,7 +138,6 @@ export default function ScreenRecording({
         onRecordingStateChange(true);
       }
 
-      console.log("Recording started successfully");
     } catch (err) {
       console.error("Failed to start recording:", err);
       setError("Failed to start recording. Please check your permissions.");
@@ -147,7 +146,6 @@ export default function ScreenRecording({
 
   // Stop recording
   const stopRecording = useCallback(() => {
-    console.log("Stopping recording...");
 
     if (videoRecorder && videoRecorder.state !== "inactive") {
       videoRecorder.stop();
@@ -183,7 +181,6 @@ export default function ScreenRecording({
       onRecordingStateChange(false);
     }
 
-    console.log("Recording stopped, showing save modal");
   }, [videoRecorder, audioRecorder, audioStream, videoStream]);
 
   // Pause/Resume recording
@@ -196,15 +193,10 @@ export default function ScreenRecording({
         setIsPaused(true);
         // Timer is now handled by useEffect
       } else if (videoRecorder.state === "paused") {
-        console.log("Resuming recording");
         videoRecorder.resume();
         audioRecorder.resume();
         setIsPaused(false);
         startTimeRef.current = Date.now() - recordingTimeRef.current * 1000; // Adjust for paused time
-        console.log(
-          "Resuming timer, adjusted startTime:",
-          startTimeRef.current
-        );
       }
     }
   }, [videoRecorder, audioRecorder, stopRecording]);
@@ -218,7 +210,6 @@ export default function ScreenRecording({
 
   // Save recording
   const handleSaveRecording = async () => {
-    console.log("Starting save process...");
     console.log("Title:", title);
     console.log("Recorded chunks:", recordedChunks.length);
     console.log("Audio chunks:", audioChunks.length);
@@ -242,12 +233,6 @@ export default function ScreenRecording({
       const videoBlob = new Blob(recordedChunks, { type: "video/webm" });
       const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
 
-      console.log(
-        "Created blobs - Video size:",
-        videoBlob.size,
-        "Audio size:",
-        audioBlob.size
-      );
 
       // Upload video and audio files
       // Note: In a real implementation, you'd upload these to your storage service
@@ -338,14 +323,6 @@ export default function ScreenRecording({
 
   // Debug effect to monitor recording state
   useEffect(() => {
-    console.log(
-      "Recording state changed - isRecording:",
-      isRecording,
-      "isPaused:",
-      isPaused,
-      "recordingTime:",
-      recordingTime
-    );
   }, [isRecording, isPaused, recordingTime]);
 
   return (
@@ -385,10 +362,6 @@ export default function ScreenRecording({
               {/* Debug button */}
               <button
                 onClick={() => {
-                  console.log(
-                    "Manual timer test - current time:",
-                    recordingTime
-                  );
                   setRecordingTime(prev => prev + 1);
                 }}
                 className="flex items-center gap-2 px-2 py-1 bg-blue-600 text-white rounded text-xs"

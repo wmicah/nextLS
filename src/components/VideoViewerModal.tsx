@@ -244,7 +244,6 @@ export default function VideoViewerModal({
               opacity: isVideoLoading ? 0.5 : 1,
             }}
             onLoad={() => {
-              console.log("YouTube iframe loaded successfully");
               setIsVideoLoading(false);
             }}
             onError={() => {
@@ -314,11 +313,9 @@ export default function VideoViewerModal({
                 setIsVideoLoading(false);
               }}
               onLoadStart={() => {
-                console.log("Video loading started");
                 setVideoError(null);
               }}
               onLoadedData={() => {
-                console.log("Video data loaded successfully");
                 setVideoError(null);
                 setIsVideoLoading(false);
               }}
@@ -405,10 +402,6 @@ export default function VideoViewerModal({
                 setVideoError(null);
               }}
               onLoadedData={() => {
-                console.log(
-                  "Video data loaded successfully for URL:",
-                  item.url
-                );
                 setVideoError(null);
                 setIsVideoLoading(false);
               }}

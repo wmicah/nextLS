@@ -181,7 +181,6 @@ export default function SignInPage() {
                   className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10"
                   onClick={() => {
                     // Handle Google login if needed
-                    console.log("Google login clicked");
                   }}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">

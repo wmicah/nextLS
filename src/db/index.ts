@@ -45,7 +45,6 @@ if (process.env.NODE_ENV === "production") {
 // In development, Next.js handles this and we don't want to disconnect prematurely
 if (process.env.NODE_ENV === "production") {
   const gracefulShutdown = async () => {
-    console.log("Shutting down database connections...");
     await prisma.$disconnect();
     process.exit(0);
   };

@@ -91,15 +91,12 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
   };
 
   const handleVideoLoadStart = () => {
-    console.log("Video load started");
   };
 
   const handleVideoMetadataLoaded = () => {
-    console.log("Video metadata loaded");
   };
 
   const handleVideoCanPlay = () => {
-    console.log("Video can play");
     setVideoError(null);
   };
 
@@ -160,11 +157,9 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
     };
 
     const handlePlay = () => {
-      console.log("Video started playing");
       setIsPlaying(true);
     };
     const handlePause = () => {
-      console.log("Video paused");
       setIsPlaying(false);
     };
 
@@ -173,11 +168,9 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
     };
 
     const handleLoadStart = () => {
-      console.log("Video load started");
     };
 
     const handleCanPlay = () => {
-      console.log("Video can play");
     };
 
     const handleSeeked = () => {
@@ -228,11 +221,9 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
         console.log("Pausing video");
         videoRef.current.pause();
       } else {
-        console.log("Playing video");
         videoRef.current.play();
       }
     } else {
-      console.log("Video ref is null");
     }
   };
 

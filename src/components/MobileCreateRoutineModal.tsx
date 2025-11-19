@@ -122,7 +122,6 @@ export default function MobileCreateRoutineModal({
       return updated;
     });
     setIsAddingFromLibrary(false);
-    console.log("Video added successfully");
   };
 
   const removeExercise = (id: string) => {
@@ -204,7 +203,6 @@ export default function MobileCreateRoutineModal({
                 <div className="flex bg-[#2A3133] rounded-lg p-1">
                   <button
                     onClick={() => {
-                      console.log("Master Library tab clicked!");
                       setLibraryTab("master");
                     }}
                     className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
@@ -217,7 +215,6 @@ export default function MobileCreateRoutineModal({
                   </button>
                   <button
                     onClick={() => {
-                      console.log("My Library tab clicked!");
                       setLibraryTab("local");
                     }}
                     className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
@@ -452,7 +449,6 @@ export default function MobileCreateRoutineModal({
                 <Button
                   type="button"
                   onClick={() => {
-                    console.log("Opening library dialog");
                     console.log("isAddingFromLibrary will be set to:", true);
                     console.log("mounted state:", mounted);
                     setIsAddingFromLibrary(true);
