@@ -870,6 +870,7 @@ function MessagesPage({}: MessagesPageProps) {
                                 isOwnMessage={
                                   message.sender.id === currentUser?.id
                                 }
+                                messageData={message.data as { type?: string; swapRequestId?: string } | undefined}
                               />
 
                               {/* File Attachment */}

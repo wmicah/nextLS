@@ -795,6 +795,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                                   : null
                               }
                               isOwnMessage={isCurrentUser}
+                              messageData={message.data as { type?: string; swapRequestId?: string } | undefined}
                             />
                           )}
 

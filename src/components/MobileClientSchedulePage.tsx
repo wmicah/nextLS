@@ -1064,17 +1064,8 @@ export default function MobileClientSchedulePage() {
                                     !hasPendingRequestWithTarget(lesson) && (
                                       <button
                                         onClick={() => {
-                                          // If only one lesson available, swap directly
-                                          if (upcomingLessons.length === 1) {
-                                            createSwitchRequestMutation.mutate({
-                                              targetEventId: lesson.id,
-                                              requesterEventId:
-                                                upcomingLessons[0].id,
-                                            });
-                                          } else {
-                                            // Multiple lessons - show selection modal
-                                            setSelectedSwitchLesson(lesson);
-                                          }
+                                          // Always show selection modal to choose which lesson to switch
+                                          setSelectedSwitchLesson(lesson);
                                         }}
                                         disabled={
                                           createSwitchRequestMutation.isPending
