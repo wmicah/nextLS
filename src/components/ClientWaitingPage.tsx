@@ -138,7 +138,7 @@ export default function ClientWaitingPage() {
             <Clock className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Welcome to Next Level Softball!
+            Welcome to Next Level Coaching!
           </h1>
           <p className="text-xl text-gray-300 mb-6 max-w-3xl mx-auto">
             {clientRecord?.archived

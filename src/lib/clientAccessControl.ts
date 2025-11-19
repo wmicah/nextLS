@@ -126,5 +126,53 @@ export async function checkWaitingPageAccess(): Promise<{
     redirect("/client-dashboard");
   }
 
+  // CRITICAL: Verify that the client has a pending coach request notification
+  // Clients can only be on the waiting page if they have actually requested to join a coach
+  if (!clientRecord?.coachId) {
+    // Fetch all unread CLIENT_JOIN_REQUEST notifications and check if any are for this client
+    // We need to check the JSON data field which Prisma doesn't support filtering directly
+    const allPendingRequests = await db.notification.findMany({
+      where: {
+        type: "CLIENT_JOIN_REQUEST",
+        isRead: false,
+      },
+      take: 1000, // Reasonable limit to check
+    });
+
+    // Filter in JavaScript to check if any notification is for this client
+    const hasPendingRequest = allPendingRequests.some((notification: any) => {
+      if (!notification.data) return false;
+      
+      // Parse notification data (could be stored as JSON string or object)
+      let notificationData;
+      try {
+        notificationData =
+          typeof notification.data === "string"
+            ? JSON.parse(notification.data)
+            : notification.data;
+      } catch (error) {
+        return false;
+      }
+
+      // Check if this notification is for the current client
+      const clientUserId =
+        notificationData?.clientUserId || notificationData?.clientId;
+      
+      return clientUserId === user.id;
+    });
+
+    // If no pending request exists, redirect to role-selection to connect with a coach
+    if (!hasPendingRequest) {
+      console.warn(
+        "⚠️ Client on waiting page without pending request - redirecting to role-selection",
+        {
+          userId: user.id,
+          email: dbUser.email,
+        }
+      );
+      redirect("/role-selection");
+    }
+  }
+
   return { user, dbUser, clientRecord };
 }

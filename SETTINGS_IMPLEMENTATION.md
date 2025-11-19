@@ -32,7 +32,7 @@ All client management settings in the Coach Settings page are now fully function
 **Default message:**
 
 ```
-Welcome to Next Level Softball! Hi there, I'm [Coach Name], your softball coach.
+Welcome to Next Level Coaching! Hi there, I'm [Coach Name], your softball coach.
 I'm excited to work with you and help you reach your goals. Feel free to message me
 anytime with questions, concerns, or just to chat about your progress.
 ```
@@ -255,4 +255,3 @@ ORDER BY "updatedAt" DESC;
 ## ✅ Conclusion
 
 All client management settings are now **fully functional** and ready for production use!
-
