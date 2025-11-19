@@ -1601,31 +1601,18 @@ function ClientSchedulePageClient() {
                                             onClick={e => {
                                               e.stopPropagation();
                                               e.preventDefault();
-                                              // If only one lesson available, swap directly
-                                              if (
-                                                upcomingLessons.length === 1
-                                              ) {
-                                                createSwapRequestMutation.mutate(
-                                                  {
-                                                    targetEventId: lesson.id,
-                                                    requesterEventId:
-                                                      upcomingLessons[0].id,
-                                                  }
+                                              // Always show selection modal to choose which lesson to switch
+                                              selectedSwitchLessonRef.current =
+                                                lesson;
+                                              setShowDayOverviewModal(false);
+                                              setSelectedDate(null);
+                                              setSelectedTimeSlot("");
+                                              // Use setTimeout to ensure Day Overview Modal closes first
+                                              setTimeout(() => {
+                                                setSelectedSwitchLesson(
+                                                  lesson
                                                 );
-                                              } else {
-                                                // Multiple lessons - show selection modal
-                                                selectedSwitchLessonRef.current =
-                                                  lesson;
-                                                setShowDayOverviewModal(false);
-                                                setSelectedDate(null);
-                                                setSelectedTimeSlot("");
-                                                // Use setTimeout to ensure Day Overview Modal closes first
-                                                setTimeout(() => {
-                                                  setSelectedSwitchLesson(
-                                                    lesson
-                                                  );
-                                                }, 100);
-                                              }
+                                              }, 100);
                                             }}
                                             disabled={
                                               createSwapRequestMutation.isPending

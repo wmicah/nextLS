@@ -516,6 +516,7 @@ export default function MobileClientMessagesPage() {
                               : null
                           }
                           isOwnMessage={isCurrentUser}
+                          messageData={message.data as { type?: string; swapRequestId?: string } | undefined}
                         />
 
                         {message.attachmentUrl && (

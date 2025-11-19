@@ -397,6 +397,7 @@ export default function MobileMessagePopup({
                               : null
                           }
                           isOwnMessage={isCurrentUser}
+                          messageData={message.data as { type?: string; swapRequestId?: string } | undefined}
                         />
 
                         <div className="flex items-center justify-end gap-1 mt-2">
