@@ -66,10 +66,8 @@ export function useSmartPolling({
 
       if (timeSinceActivity > inactiveThreshold && isActive) {
         setIsActive(false);
-        console.log("User inactive, pausing polling");
       } else if (timeSinceActivity <= inactiveThreshold && !isActive) {
         setIsActive(true);
-        console.log("User active, resuming polling");
       }
     };
 
@@ -81,9 +79,6 @@ export function useSmartPolling({
   const handleError = () => {
     setInterval(prev => {
       const newInterval = Math.min(prev * backoffMultiplier, maxInterval);
-      console.log(
-        `Polling interval increased to ${newInterval}ms due to error`
-      );
       return newInterval;
     });
   };
@@ -92,7 +87,6 @@ export function useSmartPolling({
   const handleSuccess = () => {
     if (interval !== baseInterval) {
       setInterval(baseInterval);
-      console.log(`Polling interval reset to ${baseInterval}ms`);
     }
   };
 

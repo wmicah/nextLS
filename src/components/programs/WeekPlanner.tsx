@@ -198,7 +198,6 @@ export default function WeekPlanner({
   }, [refreshTrigger, utils.programs.getById, program.id]);
 
   const handleExerciseAdded = () => {
-    console.log("Exercise added, triggering refresh");
     setRefreshTrigger(prev => prev + 1);
   };
 

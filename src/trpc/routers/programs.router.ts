@@ -303,10 +303,6 @@ export const programsRouter = router({
                       isRestDay: isRestDay,
                       drills: {
                         create: day.drills.map(drill => {
-                          console.log(
-                            "Drill routineId:",
-                            (drill as any).routineId
-                          );
                           console.log("Drill type:", (drill as any).type);
 
                           return {
@@ -618,11 +614,6 @@ export const programsRouter = router({
             // Program has assignments - create a NEW program with updated structure
             // Existing assignments keep the old program, new assignments use the new program
 
-            console.log(
-              `Existing assignment IDs: ${existingAssignments
-                .map((a: { id: string }) => a.id)
-                .join(", ")}`
-            );
 
             // Get the original program to copy metadata (including any title/description updates)
             const originalProgram = await tx.program.findUnique({
@@ -646,9 +637,6 @@ export const programsRouter = router({
               });
             }
 
-            console.log(
-              `📋 Original program ${input.id} will remain UNCHANGED (except supersededByProgramId field)`
-            );
 
             // Create new program with updated structure
             const newProgram = await tx.program.create({
@@ -750,19 +738,7 @@ export const programsRouter = router({
               },
             });
 
-            console.log(
-              `✅ Created new program ${newProgram.id} - existing assignments keep old program ${input.id} (marked as superseded)`
-            );
 
-            console.log(
-              `📋 Assignment details:`,
-              assignmentsAfter.map(a => ({
-                assignmentId: a.id,
-                programId: a.programId,
-                clientId: a.clientId,
-                pointsToOldProgram: a.programId === input.id,
-              }))
-            );
 
             // Return the new program (the original program remains unchanged)
             return newProgram;
@@ -1200,7 +1176,6 @@ export const programsRouter = router({
 
                     // Keep routines as single items on coach side
                     // Expansion will happen only on client side in clientRouter
-                    console.log("=== CREATING DRILL (ROUTINE OR EXERCISE) ===");
                     const newDrill = await tx.programDrill.create({
                       data: {
                         dayId: newDay.id,
@@ -1265,11 +1240,6 @@ export const programsRouter = router({
                       const [oldDrillId] = matchingOldDrill;
                       drillIdMapping.set(oldDrillId, newDrill.id);
                       matchedOldDrillIds.add(oldDrillId);
-                      console.log(
-                        `🔗 Matched old drill ${oldDrillId} (${
-                          drillCompletionMap.get(oldDrillId)?.title
-                        }) to new drill ${newDrill.id} (${drill.title})`
-                      );
                     }
                   }
                 }
@@ -1342,9 +1312,6 @@ export const programsRouter = router({
                       },
                     });
                   }
-                  console.log(
-                    `✅ Migrated ${regularDrillCompletions.length} ExerciseCompletion records (regular drills) from drill ${oldDrillId} to ${newDrillId}`
-                  );
                 }
 
                 // 2. Migrate routine exercises within drills (where programDrillId = old drill ID)
@@ -1363,9 +1330,6 @@ export const programsRouter = router({
                       },
                     });
                   }
-                  console.log(
-                    `✅ Migrated ${routineExerciseCompletions.length} ExerciseCompletion records (routine exercises) from drill ${oldDrillId} to ${newDrillId}`
-                  );
                 }
               }
             }
@@ -2740,9 +2704,6 @@ export const programsRouter = router({
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      console.log(
-        `[TEMP CLEANUP] Looking for temporary programs older than: ${thirtyDaysAgo.toISOString()}`
-      );
 
       const oldTemporaryPrograms = await db.program.findMany({
         where: {

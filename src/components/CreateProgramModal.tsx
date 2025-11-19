@@ -530,22 +530,9 @@ function CreateProgramModalContent({
     // Update duration based on ProgramBuilder weeks
     setValue("duration", builderWeeks.length);
 
-    console.log(
-      "ProgramBuilder weeks state updated, duration set to:",
-      builderWeeks.length
-    );
   };
 
   const handleFormSubmit = (data: ProgramFormData) => {
-    console.log("=== FORM SUBMISSION DEBUG ===");
-    console.log(
-      "Form submitted with programBuilderWeeks:",
-      programBuilderWeeks
-    );
-    console.log(
-      "First week first day items:",
-      programBuilderWeeks[0]?.days?.mon
-    );
     // Convert ProgramBuilder weeks to the old format for backward compatibility
     const convertedWeeks = programBuilderWeeks.map(
       (builderWeek, weekIndex) => ({
@@ -596,14 +583,6 @@ function CreateProgramModalContent({
     );
 
     console.log("Converted weeks:", convertedWeeks);
-    console.log(
-      "First week first day drills:",
-      convertedWeeks[0]?.days?.[0]?.drills
-    );
-    console.log(
-      "First drill details:",
-      convertedWeeks[0]?.days?.[0]?.drills?.[0]
-    );
 
     // Ensure weeks are properly initialized and fill empty days with rest days
     const validWeeks = convertedWeeks.map((week, weekIndex) => ({
@@ -662,7 +641,6 @@ function CreateProgramModalContent({
   };
 
   const handleClose = () => {
-    console.log("CreateProgramModal handleClose called");
     console.log("CreateProgramModal handleClose - isOpen was:", isOpen);
     reset();
     setWeeks([]);
@@ -996,16 +974,8 @@ function CreateProgramModalContent({
         onClose={() => setIsVideoLibraryOpen(false)}
         onSelectVideo={video => {
           console.log("Video selected in CreateProgramModal:", video);
-          console.log(
-            "CreateProgramModal isOpen before video selection:",
-            isOpen
-          );
           setSelectedVideoFromLibrary(video);
           setIsVideoLibraryOpen(false);
-          console.log(
-            "CreateProgramModal isOpen after video selection:",
-            isOpen
-          );
         }}
         editingItem={null}
       />

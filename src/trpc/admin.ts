@@ -54,12 +54,6 @@ export const adminRouter = {
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
 
-      console.log(
-        "getMasterLibrary called by user:",
-        user.id,
-        "email:",
-        user.email
-      );
 
       // Get user from database to check role and admin status
       const dbUser = await db.user.findUnique({
@@ -123,9 +117,6 @@ export const adminRouter = {
 
       const totalPages = Math.ceil(totalCount / input.limit);
 
-      console.log(
-        `Found ${resources.length} master library resources (page ${input.page}/${totalPages})`
-      );
 
       return {
         items: resources,

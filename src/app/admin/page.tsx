@@ -1117,20 +1117,12 @@ export default function AdminDashboard() {
                     }
                     // Check if OnForm URL is provided
                     else if (newResource.onformUrl) {
-                      console.log(
-                        "Processing OnForm URL:",
-                        newResource.onformUrl
-                      );
 
                       // Import OnForm utilities
                       const { extractOnFormId, isOnFormUrl } = await import(
                         "@/lib/onform-utils"
                       );
 
-                      console.log(
-                        "OnForm URL validation:",
-                        isOnFormUrl(newResource.onformUrl)
-                      );
 
                       if (isOnFormUrl(newResource.onformUrl)) {
                         onformId = extractOnFormId(newResource.onformUrl) || "";

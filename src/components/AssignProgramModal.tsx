@@ -238,7 +238,6 @@ AssignProgramModalProps) {
   };
 
   const handleUnassign = (assignmentIds: string[]) => {
-    console.log("=== UNASSIGN FRONTEND DEBUG ===");
     console.log("assignmentIds:", assignmentIds);
 
     if (

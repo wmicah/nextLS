@@ -46,7 +46,6 @@ export function getMemoryUsage(): MemoryInfo {
 export function forceGarbageCollection(): void {
   if (global.gc) {
     global.gc();
-    console.log("🗑️ Garbage collection triggered");
   } else {
     console.warn("⚠️ Garbage collection not available (run with --expose-gc)");
   }

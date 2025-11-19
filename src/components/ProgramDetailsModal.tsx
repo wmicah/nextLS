@@ -570,21 +570,12 @@ export default function ProgramDetailsModal({
                                                           }
                                                           onDelete={() => {
                                                             // TODO: Implement delete functionality
-                                                            console.log(
-                                                              "Delete exercise:",
-                                                              drill.id
-                                                            );
                                                           }}
                                                           onReorder={(
                                                             fromIndex,
                                                             toIndex
                                                           ) => {
                                                             // TODO: Implement reorder functionality
-                                                            console.log(
-                                                              "Reorder exercises:",
-                                                              fromIndex,
-                                                              toIndex
-                                                            );
                                                           }}
                                                         />
                                                       );

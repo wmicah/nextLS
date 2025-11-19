@@ -879,16 +879,7 @@ function ProgramsPage() {
                         }
                         onDuplicate={async () => {
                           // Create a duplicate program with a new name
-                          console.log("=== DUPLICATING PROGRAM ===");
                           console.log("Original program:", program);
-                          console.log(
-                            "Original program drills:",
-                            program.weeks[0]?.days[0]?.drills
-                          );
-                          console.log(
-                            "First drill details:",
-                            program.weeks[0]?.days[0]?.drills[0]
-                          );
                           const duplicatedProgram = {
                             title: `${program.title} (Copy)`,
                             description: program.description || undefined,
@@ -972,24 +963,10 @@ function ProgramsPage() {
                             })),
                           };
 
-                          console.log(
-                            "Duplicated program data:",
-                            duplicatedProgram
-                          );
-                          console.log(
-                            "Duplicated program drills:",
-                            duplicatedProgram.weeks[0]?.days[0]?.drills
-                          );
 
                           try {
-                            console.log(
-                              "About to call createProgram.mutateAsync"
-                            );
                             // Create the program directly without opening modal
                             await createProgram.mutateAsync(duplicatedProgram);
-                            console.log(
-                              "createProgram.mutateAsync completed successfully"
-                            );
                             toast({
                               title: "Program Duplicated",
                               description: `"${duplicatedProgram.title}" has been created successfully.`,
@@ -1055,9 +1032,6 @@ function ProgramsPage() {
           <SeamlessProgramModal
             isOpen={isCreateModalOpen}
             onClose={() => {
-              console.log(
-                "SeamlessProgramModal onClose called - closing modal"
-              );
               setIsCreateModalOpen(false);
             }}
             onSubmit={handleCreateProgram}

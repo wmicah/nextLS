@@ -32,7 +32,6 @@ const isDevelopment = process.env.NODE_ENV === "development";
 export function debugLog(message: string, data?: any) {
   if (isDevelopment) {
     // Only log in development - users won't see this
-    console.log(`[DEBUG] ${message}`, data || "");
   } else {
     // In production, silently capture via monitoring (no console output)
     captureData(`debug:${message}`, data);

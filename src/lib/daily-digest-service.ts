@@ -25,7 +25,6 @@ class DailyDigestService {
    */
   async sendDailyDigests(): Promise<void> {
     try {
-      console.log("📧 Starting daily digest email process...");
 
       // Get all users
       const allUsers = await db.user.findMany({
@@ -49,9 +48,6 @@ class DailyDigestService {
         }
       }
 
-      console.log(
-        `📊 Found ${usersWithUnreadMessages.length} users with unread messages`
-      );
 
       let emailsSent = 0;
       let emailsFailed = 0;
@@ -70,9 +66,6 @@ class DailyDigestService {
             );
 
             emailsSent++;
-            console.log(
-              `📧 Daily digest sent to ${user.email} (${unreadCount} unread messages)`
-            );
           }
         } catch (error) {
           emailsFailed++;
@@ -83,9 +76,6 @@ class DailyDigestService {
         }
       }
 
-      console.log(
-        `✅ Daily digest process completed: ${emailsSent} sent, ${emailsFailed} failed`
-      );
     } catch (error) {
       console.error("❌ Error in daily digest service:", error);
     }
@@ -112,7 +102,6 @@ class DailyDigestService {
    * Manual trigger for testing
    */
   async manualDigest(): Promise<void> {
-    console.log("🧪 Manual daily digest trigger");
     await this.sendDailyDigests();
   }
 }

@@ -27,14 +27,11 @@ class AppStartupService {
     }
 
     try {
-      console.log("🚀 Initializing app services...");
 
       // Start lesson reminder service
       lessonReminderService.start();
-      console.log("✅ Lesson reminder service started");
 
       this.isInitialized = true;
-      console.log("🎉 All services initialized successfully");
     } catch (error) {
       console.error("❌ Failed to initialize services:", error);
       throw error;

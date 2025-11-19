@@ -60,11 +60,6 @@ export function LibraryPerformanceMonitor({
     if (!enabled) return;
 
     const renderTime = performance.now() - renderStartRef.current;
-    console.log(
-      `📊 Library Render Time: ${renderTime.toFixed(
-        2
-      )}ms for ${itemCount} items`
-    );
 
     if (onMetricsUpdate) {
       onMetricsUpdate({

@@ -92,7 +92,6 @@ export default function UploadResourceModal({
 
   const uploadMutation = trpc.library.upload.useMutation({
     onSuccess: data => {
-      console.log("🎉 Upload successful, invalidating cache...");
 
       // Invalidate and refetch library queries to show new data
       utils.library.list.invalidate();
@@ -239,10 +238,6 @@ export default function UploadResourceModal({
                     // Validate URL format
                     try {
                       new URL(file.url);
-                      console.log(
-                        "✅ UploadResourceModal - UploadThing URL is valid:",
-                        file.url
-                      );
                     } catch (error) {
                       console.error(
                         "❌ UploadResourceModal - Invalid UploadThing URL:",

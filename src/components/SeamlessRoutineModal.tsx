@@ -142,19 +142,7 @@ function ExerciseEditDialog({
       console.log("exercise object:", exercise);
       console.log("exercise.description:", exercise.description);
       console.log("exercise.description type:", typeof exercise.description);
-      console.log(
-        "exercise.description === null?",
-        exercise.description === null
-      );
-      console.log(
-        "exercise.description === undefined?",
-        exercise.description === undefined
-      );
       console.log("exercise.description === ''?", exercise.description === "");
-      console.log(
-        "exercise.description length:",
-        exercise.description?.length || 0
-      );
 
       // CRITICAL: Always ensure description is a string, never undefined or null
       const formDescription = exercise.description ?? "";
@@ -189,10 +177,6 @@ function ExerciseEditDialog({
             },
       });
 
-      console.log(
-        "✅ Form data initialized with description:",
-        formDescription
-      );
       console.log("✅ Form data description length:", formDescription.length);
     } else if (!isOpen) {
       // Reset form data when dialog closes
@@ -780,7 +764,6 @@ export default function SeamlessRoutineModal({
   }) => {
     if (!editingExercise) return;
 
-    console.log("=== handleExerciseEditSubmit ===");
     console.log("details:", details);
     console.log("details.description:", details.description);
     console.log("details.description type:", typeof details.description);
@@ -828,23 +811,10 @@ export default function SeamlessRoutineModal({
         const updated = prev.map(ex =>
           ex.id === editingExercise.id ? updatedExercise : ex
         );
-        console.log("✅ Exercises array updated");
         const updatedExerciseInArray = updated.find(
           ex => ex.id === editingExercise.id
         );
         console.log("Updated exercise in array:", updatedExerciseInArray);
-        console.log(
-          "Description in updated exercise:",
-          updatedExerciseInArray?.description
-        );
-        console.log(
-          "Description type:",
-          typeof updatedExerciseInArray?.description
-        );
-        console.log(
-          "Description length:",
-          updatedExerciseInArray?.description?.length || 0
-        );
         return updated;
       } else {
         // New exercise - add it
@@ -871,12 +841,7 @@ export default function SeamlessRoutineModal({
 
     hasUserMadeChanges.current = true;
 
-    console.log("=== handleSupersetDescriptionSave ===");
     console.log("Saved exercises from modal:", data.exercises);
-    console.log(
-      "Saved exercise IDs:",
-      data.exercises.map(ex => ex.id)
-    );
     console.log("Editing superset ID:", editingSuperset.supersetId);
     console.log("Current exercises before update:", exercises);
 
@@ -888,10 +853,6 @@ export default function SeamlessRoutineModal({
     // Update exercises: remove deleted ones, update existing ones
     setExercises(prev => {
       console.log("Previous exercises count:", prev.length);
-      console.log(
-        "Exercises in superset before filter:",
-        prev.filter(ex => ex.supersetId === editingSuperset.supersetId)
-      );
 
       const filtered = prev.filter(exercise => {
         // Keep exercises that are NOT in this superset
@@ -904,22 +865,10 @@ export default function SeamlessRoutineModal({
         const shouldKeep = exerciseKey
           ? savedExerciseIds.has(exerciseKey)
           : false;
-        console.log(
-          `Exercise ${exercise.title} (supersetOrder: ${exercise.supersetOrder}):`,
-          {
-            exerciseKey,
-            inSavedIds: shouldKeep,
-            willKeep: shouldKeep,
-          }
-        );
         return shouldKeep;
       });
 
       console.log("Exercises after filter:", filtered.length);
-      console.log(
-        "Exercises in superset after filter:",
-        filtered.filter(ex => ex.supersetId === editingSuperset.supersetId)
-      );
 
       const updated = filtered.map(exercise => {
         // Update exercises that are in the superset and in the saved data
@@ -951,10 +900,6 @@ export default function SeamlessRoutineModal({
       });
 
       console.log("Final updated exercises count:", updated.length);
-      console.log(
-        "Final exercises in superset:",
-        updated.filter(ex => ex.supersetId === editingSuperset.supersetId)
-      );
 
       return updated;
     });
@@ -1079,21 +1024,8 @@ export default function SeamlessRoutineModal({
       }
     }
 
-    console.log("=== Loading routine into modal (from fetchedRoutine) ===");
     console.log("routine from database:", fetchedRoutine);
     console.log("routine.exercises:", fetchedRoutine.exercises);
-    console.log(
-      "routine.exercises descriptions:",
-      fetchedRoutine.exercises.map((ex: any) => ({
-        id: ex.id,
-        title: ex.title,
-        description: ex.description,
-        descriptionType: typeof ex.description,
-        descriptionIsNull: ex.description === null,
-        descriptionIsUndefined: ex.description === undefined,
-        descriptionLength: ex.description?.length || 0,
-      }))
-    );
 
     setName(fetchedRoutine.name);
     setDescription(fetchedRoutine.description ?? "");
@@ -1153,16 +1085,6 @@ export default function SeamlessRoutineModal({
     );
 
     console.log("✅ Loaded exercises into state:", loadedExercises);
-    console.log(
-      "Loaded exercises descriptions:",
-      loadedExercises.map(ex => ({
-        id: ex.id,
-        title: ex.title,
-        description: ex.description,
-        descriptionType: typeof ex.description,
-        descriptionLength: ex.description?.length || 0,
-      }))
-    );
 
     setExercises(loadedExercises);
     setCurrentStep("details");
@@ -1214,30 +1136,15 @@ export default function SeamlessRoutineModal({
         videoThumbnail: video.thumbnail || "",
       };
 
-      console.log("=== Adding video to routine ===");
       console.log("Video object:", video);
       console.log("Video description:", video.description);
       console.log("Video description type:", typeof video.description);
       console.log("New exercise:", newExercise);
       console.log("New exercise description:", newExercise.description);
-      console.log(
-        "New exercise description type:",
-        typeof newExercise.description
-      );
 
       // Mark that user has made changes
       hasUserMadeChanges.current = true;
       const updated = [...prev, newExercise];
-      console.log(
-        "✅ Video added to exercises:",
-        newExercise.title,
-        "Description:",
-        newExercise.description,
-        "Description length:",
-        newExercise.description?.length || 0,
-        "Total exercises:",
-        updated.length
-      );
       return updated;
     });
   };
@@ -1245,21 +1152,7 @@ export default function SeamlessRoutineModal({
   // Routine mutations
   const createRoutine = trpc.routines.create.useMutation({
     onSuccess: createdRoutine => {
-      console.log(
-        "🎉 [CREATE SUCCESS] Routine created successfully:",
-        createdRoutine
-      );
       console.log("🎉 [CREATE SUCCESS] Exercises:", createdRoutine.exercises);
-      console.log(
-        "🎉 [CREATE SUCCESS] Exercise descriptions:",
-        createdRoutine.exercises.map(ex => ({
-          id: ex.id,
-          title: ex.title,
-          description: ex.description,
-          descriptionType: typeof ex.description,
-          descriptionLength: ex.description?.length || 0,
-        }))
-      );
 
       utils.routines.list.invalidate();
 
@@ -1292,21 +1185,7 @@ export default function SeamlessRoutineModal({
 
   const updateRoutine = trpc.routines.update.useMutation({
     onSuccess: updatedRoutine => {
-      console.log(
-        "🎉 [UPDATE SUCCESS] Routine updated successfully:",
-        updatedRoutine
-      );
       console.log("🎉 [UPDATE SUCCESS] Exercises:", updatedRoutine.exercises);
-      console.log(
-        "🎉 [UPDATE SUCCESS] Exercise descriptions:",
-        updatedRoutine.exercises.map(ex => ({
-          id: ex.id,
-          title: ex.title,
-          description: ex.description,
-          descriptionType: typeof ex.description,
-          descriptionLength: ex.description?.length || 0,
-        }))
-      );
 
       // Invalidate all routine-related queries to ensure fresh data everywhere
       utils.routines.list.invalidate();
@@ -1371,17 +1250,7 @@ export default function SeamlessRoutineModal({
     }, 30000); // 30 second timeout
 
     try {
-      console.log("=== Saving routine ===");
       console.log("exercises before mapping:", exercises);
-      console.log(
-        "exercises descriptions:",
-        exercises.map(ex => ({
-          id: ex.id,
-          title: ex.title,
-          description: ex.description,
-          descriptionType: typeof ex.description,
-        }))
-      );
 
       const mappedExercises = exercises.map((exercise, index) => {
         // CRITICAL: Always explicitly include description, even if empty string
@@ -1418,15 +1287,6 @@ export default function SeamlessRoutineModal({
       });
 
       console.log("✅ Mapped exercises for save:", mappedExercises);
-      console.log(
-        "Mapped exercises descriptions:",
-        mappedExercises.map((ex, idx) => ({
-          index: idx,
-          title: ex.title,
-          description: ex.description,
-          descriptionType: typeof ex.description,
-        }))
-      );
 
       if (routineToUse?.id) {
         // Update existing routine
@@ -1453,7 +1313,6 @@ export default function SeamlessRoutineModal({
         // Note: setIsSubmitting(false) is handled in onSuccess/onError callbacks
       } else {
         // Create new routine
-        console.log("✨ Creating new routine");
         console.log("✨ Payload being sent:", {
           name: name.trim(),
           description: description.trim(),
@@ -1986,23 +1845,6 @@ export default function SeamlessRoutineModal({
                                   } else {
                                     // Regular exercise - open individual edit dialog
                                     // CRITICAL: Log the exercise to verify it has description
-                                    console.log(
-                                      "🔍 [EDIT CLICK] Exercise being edited:",
-                                      {
-                                        id: exercise.id,
-                                        title: exercise.title,
-                                        description: exercise.description,
-                                        descriptionType:
-                                          typeof exercise.description,
-                                        descriptionIsUndefined:
-                                          exercise.description === undefined,
-                                        descriptionIsNull:
-                                          exercise.description === null,
-                                        descriptionLength:
-                                          exercise.description?.length || 0,
-                                        fullExercise: exercise,
-                                      }
-                                    );
                                     setEditingExercise(exercise);
                                     setIsExerciseEditDialogOpen(true);
                                   }

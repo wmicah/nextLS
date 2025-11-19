@@ -79,7 +79,6 @@ export default function ProfilePictureUploader({
             endpoint="profilePictureUploader"
             onUploadBegin={() => {
               setIsUploading(true);
-              console.log("Upload started");
             }}
             onClientUploadComplete={(res: any) => {
               setIsUploading(false);

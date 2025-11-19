@@ -249,7 +249,6 @@ ClientProfileModalProps) {
     return null;
   }
 
-  console.log("Modal is open, rendering content");
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">

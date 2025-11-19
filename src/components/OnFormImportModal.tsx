@@ -61,7 +61,6 @@ export default function OnFormImportModal({
   const importOnFormVideo = trpc.library.importOnFormVideo.useMutation({
     onSuccess: data => {
       console.log("🎉 OnForm import successful:", data);
-      console.log("🎉 OnForm import successful, invalidating cache...");
       utils.library.list.invalidate();
       utils.library.getStats.invalidate();
       onSuccess();
@@ -147,7 +146,6 @@ export default function OnFormImportModal({
       });
     } else {
       // Batch import
-      console.log("🚀 Starting batch OnForm import");
       await handleBatchImport(finalCategory);
     }
   };

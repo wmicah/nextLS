@@ -34,12 +34,6 @@ export default function ExerciseRow({
   const [isEditing, setIsEditing] = useState(false);
 
   // Debug logging
-  console.log(
-    "ExerciseRow rendering:",
-    exercise.title,
-    "isEditing:",
-    isEditing
-  );
   const { addToast } = useUIStore();
   const utils = trpc.useUtils();
   const [editedExercise, setEditedExercise] = useState({
@@ -487,10 +481,6 @@ export default function ExerciseRow({
                     {
                       ...menuItems.edit,
                       onClick: () => {
-                        console.log(
-                          "Edit button clicked for exercise:",
-                          exercise.title
-                        );
                         setIsEditing(true);
                       },
                     },

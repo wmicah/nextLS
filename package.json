@@ -32,6 +32,9 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:health": "tsx scripts/db-health-check.ts",
     "build:analyze": "ANALYZE=true npm run build",
+    "cleanup:logs": "node scripts/safe-remove-console-logs.js",
+    "cleanup:logs:execute": "node scripts/safe-remove-console-logs.js --execute",
+    "cleanup:logs:verbose": "node scripts/safe-remove-console-logs.js --verbose",
     "start:prod": "NODE_ENV=production npm run start",
     "health-check": "tsx scripts/health-check.ts"
   },

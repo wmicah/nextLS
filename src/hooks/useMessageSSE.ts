@@ -72,7 +72,6 @@ export function useMessageSSE(options: UseMessageSSEOptions = {}) {
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
-        console.log("SSE connected");
         setIsConnected(true);
         reconnectAttempts.current = 0;
       };
@@ -83,7 +82,6 @@ export function useMessageSSE(options: UseMessageSSEOptions = {}) {
 
           switch (message.type) {
             case "connection_established":
-              console.log("SSE connection established");
               break;
             case "unread_count":
               setUnreadCount(message.data.count);
@@ -102,7 +100,6 @@ export function useMessageSSE(options: UseMessageSSEOptions = {}) {
       };
 
       eventSource.onerror = error => {
-        console.log("SSE connection failed, will use polling fallback");
         setIsConnected(false);
         // Don't log the error object as it's often empty and causes console errors
       };

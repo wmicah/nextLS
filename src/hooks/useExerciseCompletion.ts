@@ -145,7 +145,6 @@ export function useExerciseCompletion() {
         completed,
         date,
       });
-      console.log("✅ Exercise completion updated successfully");
     } catch (error) {
       console.error("❌ Failed to update exercise completion:", error);
       // Revert optimistic update on error

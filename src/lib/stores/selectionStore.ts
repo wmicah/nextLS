@@ -39,6 +39,5 @@ export const useSelectionStore = create<SelectionStore>((set, get) => ({
 	selectWeek: (weekNumber) => {
 		// This will be implemented when we have the program data structure
 		// For now, it's a placeholder
-		console.log(`Select week ${weekNumber} functionality to be implemented`)
 	},
 }))

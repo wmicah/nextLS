@@ -282,13 +282,8 @@ export default function SeamlessProgramModal({
 
   const handleProgramBuilderSave = useCallback(
     (weeks: ProgramBuilderWeek[]) => {
-      console.log("=== PROGRAM BUILDER SAVE CALLED ===");
       console.log("Weeks received:", weeks);
       console.log("First week Thursday items:", weeks[0]?.days?.thu);
-      console.log(
-        "Thursday item routineId:",
-        weeks[0]?.days?.thu?.[0]?.routineId
-      );
       console.log("Thursday item type:", weeks[0]?.days?.thu?.[0]?.type);
       setProgramBuilderWeeks(weeks);
       // Auto-update duration based on number of weeks
@@ -304,7 +299,6 @@ export default function SeamlessProgramModal({
   const canProceedToReview = programBuilderWeeks.length > 0;
 
   const handleSubmitForm = async (data: ProgramFormData) => {
-    console.log("=== FORM SUBMISSION STARTED ===");
     console.log("Form data:", data);
     console.log("ProgramBuilder weeks:", programBuilderWeeks);
     setIsSubmitting(true);
@@ -619,28 +613,9 @@ export default function SeamlessProgramModal({
         weeks: transformedWeeks,
       };
 
-      console.log("=== FINAL PROGRAM DATA ===");
       console.log("Program data being submitted:", programData);
-      console.log(
-        "First week first day drills:",
-        programData.weeks?.[0]?.days?.[0]?.drills
-      );
-      console.log(
-        "First week Thursday drills:",
-        programData.weeks?.[0]?.days?.[3]?.drills
-      );
-      console.log(
-        "Thursday drill routineId:",
-        programData.weeks?.[0]?.days?.[3]?.drills?.[0]?.routineId
-      );
-      console.log(
-        "Thursday drill type:",
-        programData.weeks?.[0]?.days?.[3]?.drills?.[0]?.type
-      );
 
-      console.log("=== CALLING ONSUBMIT ===");
       await onSubmit(programData);
-      console.log("=== ONSUBMIT COMPLETED ===");
       toast({
         title: "Program created! 🎉",
         description: "Your new program has been saved successfully.",

@@ -53,7 +53,6 @@ export default function BillingDashboard() {
   // Subscription mutations temporarily disabled
   const createBillingPortalSession = {
     mutate: (data?: any) => {
-      console.log("Billing portal not available", data);
     },
     isLoading: false,
     isPending: false,
@@ -61,7 +60,6 @@ export default function BillingDashboard() {
   
   const cancelSubscription = {
     mutate: (data?: any) => {
-      console.log("Cancel subscription not available", data);
     },
     isLoading: false,
     isPending: false,

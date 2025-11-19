@@ -628,18 +628,7 @@ export default function MobileProgramBuilder({
       if (!pendingSupersetDescription || !selectedWeekId || !selectedDayKey)
         return;
 
-      console.log(
-        "=== handleSupersetDescriptionSave (MobileProgramBuilder) ==="
-      );
       console.log("Saved exercises from modal:", data.exercises);
-      console.log(
-        "Saved exercise IDs:",
-        data.exercises.map(ex => ex.id)
-      );
-      console.log(
-        "Pending superset ID:",
-        pendingSupersetDescription.supersetId
-      );
 
       // Create a set of saved exercise IDs for quick lookup
       const savedExerciseIds = new Set(data.exercises.map(ex => ex.id));
@@ -658,20 +647,10 @@ export default function MobileProgramBuilder({
               // For items in this superset, only keep if they're in the saved data
               // Match by the exercise's actual id (the modal uses ex.id as the identifier)
               const shouldKeep = savedExerciseIds.has(item.id);
-              console.log(
-                `Item ${item.title} (id: ${item.id}, supersetOrder: ${item.supersetOrder}):`,
-                {
-                  inSavedIds: shouldKeep,
-                  willKeep: shouldKeep,
-                }
-              );
               return shouldKeep;
             }
           );
 
-          console.log(
-            `Day ${selectedDayKey}: Filtered from ${updatedDays[selectedDayKey].length} to ${filteredItems.length} items`
-          );
 
           // Now update the remaining exercises
           updatedDays[selectedDayKey] = filteredItems.map(
@@ -686,11 +665,6 @@ export default function MobileProgramBuilder({
                   console.log(
                     `Updating item ${item.title} (id: ${item.id}) with data:`,
                     exerciseData
-                  );
-                  console.log(
-                    `Description being saved:`,
-                    exerciseData.description,
-                    `(type: ${typeof exerciseData.description})`
                   );
                   const updatedItem = {
                     ...item,
@@ -713,10 +687,6 @@ export default function MobileProgramBuilder({
                         ? data.supersetDescription || ""
                         : item.supersetNotes,
                   };
-                  console.log(
-                    `Updated item description:`,
-                    updatedItem.description
-                  );
                   return updatedItem;
                 }
               }

@@ -10,7 +10,6 @@ import lessonReminderService from "./lesson-reminder-service";
 
 export async function sendTestReminder(clientEmail: string) {
   try {
-    console.log(`🧪 Sending test reminder to ${clientEmail}...`);
 
     // Find the client by email
     const client = await db.client.findFirst({
@@ -57,7 +56,6 @@ export async function sendTestReminder(clientEmail: string) {
     console.log("✅ Test lesson created:", testLesson.id);
 
     // Trigger the lesson reminder service to process this lesson
-    console.log("🔄 Triggering lesson reminder service...");
     await lessonReminderService.manualCheck();
 
     // Get the reminder that was created

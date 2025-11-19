@@ -26,7 +26,6 @@ class LessonReminderService {
       return;
     }
 
-    console.log("🚀 Starting automatic lesson reminder service...");
     this.isRunning = true;
 
     // Run immediately on start
@@ -44,9 +43,6 @@ class LessonReminderService {
       }
     }, 15 * 60 * 1000); // Every 15 minutes
 
-    console.log(
-      "✅ Lesson reminder service started - checking every hour + backup every 15 minutes"
-    );
   }
 
   /**
@@ -58,7 +54,6 @@ class LessonReminderService {
       this.intervalId = null;
     }
     this.isRunning = false;
-    console.log("🛑 Lesson reminder service stopped");
   }
 
   /**
@@ -70,20 +65,12 @@ class LessonReminderService {
       this.lastCheckTime = now;
       this.checkCount++;
 
-      console.log(
-        `🔔 Checking for lessons that need reminders at ${now.toISOString()} (check #${
-          this.checkCount
-        })`
-      );
 
       // Find lessons for day after tomorrow (48-hour confirmations only)
       const dayAfterTomorrow = addDays(now, 2);
       const dayAfterTomorrowStart = startOfDay(dayAfterTomorrow);
       const dayAfterTomorrowEnd = endOfDay(dayAfterTomorrow);
 
-      console.log(
-        `Looking for 48-hour confirmations between ${dayAfterTomorrowStart.toISOString()} and ${dayAfterTomorrowEnd.toISOString()}`
-      );
 
       // Get lessons for 48-hour confirmations only
       const lessonsToRemind = await db.event.findMany({
@@ -127,9 +114,6 @@ class LessonReminderService {
         },
       });
 
-      console.log(
-        `Found ${lessonsToRemind.length} lessons that need reminders now`
-      );
 
       let sentCount = 0;
       let skippedCount = 0;
@@ -273,9 +257,6 @@ If you can't make it, please let me know as soon as possible so I can offer the 
             },
           });
 
-          console.log(
-            `📧 48-hour confirmation reminder created for ${lesson.client?.name}`
-          );
 
           // Send email notification for 48-hour confirmation reminder
           if (lesson.client?.user?.email && lesson.client?.user?.id) {
@@ -290,9 +271,6 @@ If you can't make it, please let me know as soon as possible so I can offer the 
                 lessonTime,
                 hoursUntilLesson,
                 lesson.client.user.id // Pass userId to check preferences
-              );
-              console.log(
-                `📧 Confirmation reminder email sent to ${lesson.client.user.email}`
               );
             } catch (emailError) {
               console.error(
@@ -339,9 +317,6 @@ If you can't make it, please let me know as soon as possible so I can offer the 
                   : reminderMessage,
                 lesson.client.user.id // Pass userId to check preferences
               );
-              console.log(
-                `📧 Message notification email sent for reminder message to ${lesson.client.user.email}`
-              );
             } catch (messageEmailError) {
               console.error(
                 "❌ Failed to send message notification email for reminder:",
@@ -356,11 +331,6 @@ If you can't make it, please let me know as soon as possible so I can offer the 
 
           sentCount++;
 
-          console.log(
-            `✅ Sent 48-hour confirmation reminder to ${
-              lesson.client?.name || "Unknown Client"
-            } for lesson in ${hoursUntilLesson} hours (${lessonTime})`
-          );
         } catch (error) {
           console.error(
             `❌ Error sending reminder for lesson ${lesson.id}:`,
@@ -370,9 +340,6 @@ If you can't make it, please let me know as soon as possible so I can offer the 
         }
       }
 
-      console.log(
-        `📊 Reminder check completed: ${sentCount} sent, ${skippedCount} skipped, ${errorCount} errors`
-      );
 
       // Also process expired confirmations
       await this.processExpiredConfirmations();
@@ -389,11 +356,6 @@ If you can't make it, please let me know as soon as possible so I can offer the 
       // Log service health for production monitoring
       if (this.checkCount % 4 === 0) {
         // Every 4 checks (roughly every hour)
-        console.log(
-          `🏥 Service Health: Running for ${
-            this.checkCount
-          } checks, last check: ${this.lastCheckTime?.toISOString()}`
-        );
       }
     } catch (error) {
       console.error("❌ Error in lesson reminder service:", error);
@@ -454,9 +416,6 @@ If you can't make it, please let me know as soon as possible so I can offer the 
         },
       });
 
-      console.log(
-        `🕐 Found ${expiredLessons.length} lessons with expired confirmations`
-      );
 
       for (const lesson of expiredLessons) {
         try {
@@ -530,9 +489,6 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
               data: { updatedAt: new Date() },
             });
 
-            console.log(
-              `❌ Auto-cancelled lesson for ${lesson.client?.name} - no confirmation received`
-            );
 
             // Send email notification for the cancellation message (in addition to the auto-cancellation email)
             // This ensures users get notified about the message in their inbox
@@ -549,9 +505,6 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
                     ? cancellationMessage.substring(0, 100) + "..."
                     : cancellationMessage,
                   lesson.client.user.id // Pass userId to check preferences
-                );
-                console.log(
-                  `📧 Message notification email sent for cancellation message to ${lesson.client.user.email}`
                 );
               } catch (messageEmailError) {
                 console.error(
@@ -572,9 +525,6 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
                   lesson.coach.name || "Coach",
                   format(lesson.date, "EEEE, MMMM d 'at' h:mm a"),
                   lesson.client.user.id // Pass userId to check preferences
-                );
-                console.log(
-                  `📧 Auto-cancellation email sent to ${lesson.client.user.email}`
                 );
               } catch (emailError) {
                 console.error(
@@ -610,7 +560,6 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
    * Manually trigger a reminder check (useful for testing)
    */
   async manualCheck() {
-    console.log("🔍 Manual reminder check triggered");
     await this.checkAndSendReminders();
     await this.processExpiredConfirmations();
   }

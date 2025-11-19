@@ -42,7 +42,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 	const setTheme = async (newTheme: Theme) => {
 		// No-op since we only support dark theme
-		console.log("Theme switching disabled - dark mode only")
 	}
 
 	return (

@@ -742,7 +742,6 @@ function ProgramBuilder({
 
   const openEditItemDialog = useCallback(
     (weekId: string, dayKey: DayKey, item: ProgramItem) => {
-      console.log("=== openEditItemDialog ===");
       console.log("item:", item);
       console.log("item.description:", item.description);
       setSelectedWeekId(weekId);
@@ -1178,7 +1177,6 @@ function ProgramBuilder({
               item.type = "superset";
             });
 
-            console.log("=== CREATING SUPERSET/CIRCUIT ===");
             console.log(`Created ${allSelectedItems.length} exercise group:`, {
               groupId,
               exercises: allSelectedItems.map(item => ({
@@ -1220,7 +1218,6 @@ function ProgramBuilder({
             itemToAdd.supersetOrder = maxOrder + 1;
             itemToAdd.type = "superset";
 
-            console.log("=== ADDING TO SUPERSET/CIRCUIT ===");
             console.log(`Added exercise to group ${supersetId}:`, {
               exercise: {
                 id: itemToAdd.id,
@@ -1349,21 +1346,11 @@ function ProgramBuilder({
     (supersetId: string, supersetName: string) => {
       // Find all exercises in the superset
       const allItems = weeks.flatMap(week => Object.values(week.days).flat());
-      console.log(
-        "All items before filtering:",
-        allItems.map(item => ({
-          id: item.id,
-          title: item.title,
-          supersetId: item.supersetId,
-          supersetOrder: item.supersetOrder,
-        }))
-      );
 
       const supersetExercises = allItems
         .filter(item => item.supersetId === supersetId)
         .sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0));
 
-      console.log("=== LOADING SUPERSET DATA ===");
       console.log("supersetId:", supersetId);
       console.log("supersetExercises:", supersetExercises);
       console.log("All weeks data:", weeks);
@@ -1418,16 +1405,7 @@ function ProgramBuilder({
     }) => {
       if (!pendingSupersetDescription) return;
 
-      console.log("=== handleSupersetDescriptionSave (ProgramBuilder) ===");
       console.log("Saved exercises from modal:", data.exercises);
-      console.log(
-        "Saved exercise IDs:",
-        data.exercises.map(ex => ex.id)
-      );
-      console.log(
-        "Pending superset ID:",
-        pendingSupersetDescription.supersetId
-      );
 
       // Create a set of saved exercise IDs for quick lookup
       // The modal uses supersetOrder as the ID (or the item's id)
@@ -1447,22 +1425,10 @@ function ProgramBuilder({
               // For items in this superset, only keep if they're in the saved data
               // Match by the exercise's actual id (the modal uses ex.id as the identifier)
               const shouldKeep = savedExerciseIds.has(item.id);
-              console.log(
-                `Item ${item.title} (id: ${item.id}, supersetOrder: ${item.supersetOrder}):`,
-                {
-                  inSavedIds: shouldKeep,
-                  willKeep: shouldKeep,
-                }
-              );
               return shouldKeep;
             }
           );
 
-          console.log(
-            `Day ${dayKey}: Filtered from ${
-              updatedDays[dayKey as DayKey].length
-            } to ${filteredItems.length} items`
-          );
 
           // Now update the remaining exercises
           updatedDays[dayKey as DayKey] = filteredItems.map(
@@ -1478,11 +1444,6 @@ function ProgramBuilder({
                     `Updating item ${item.title} (id: ${item.id}) with data:`,
                     exerciseData
                   );
-                  console.log(
-                    `Description being saved:`,
-                    exerciseData.description,
-                    `(type: ${typeof exerciseData.description})`
-                  );
                   const updatedItem = {
                     ...item,
                     sets: exerciseData.sets,
@@ -1495,10 +1456,6 @@ function ProgramBuilder({
                         ? data.supersetDescription
                         : item.supersetDescription,
                   };
-                  console.log(
-                    `Updated item description:`,
-                    updatedItem.description
-                  );
                   return updatedItem;
                 }
               }
