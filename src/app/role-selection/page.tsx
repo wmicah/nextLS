@@ -88,11 +88,12 @@ export default function RoleSelectionPage() {
     }
   }, [inviteCode, isValidatingInviteCode, inviteCodeValidation]);
 
-  const updateRole = trpc.user?.updateRole?.useMutation({
-    onSuccess: data => {
-      if (data.role === "COACH") {
+  const updateRole = (trpc.user.updateRole as any).useMutation({
+    onSuccess: (data: any) => {
+      const role = data?.role;
+      if (role === "COACH") {
         router.push("/dashboard");
-      } else if (data.role === "CLIENT") {
+      } else if (role === "CLIENT") {
         // Check if client joined via invite code or email request
         if (inviteCode) {
           // Invite code = direct access to client dashboard
@@ -167,6 +168,18 @@ export default function RoleSelectionPage() {
       // Show pricing modal for coaches
       setShowPricingModal(true);
     } else {
+      // For clients, validate that they have a coach connection
+      const hasInviteCode = useInviteCode && inviteCode.trim();
+      const hasCoachEmail = !useInviteCode && coachEmail.trim();
+
+      if (!hasInviteCode && !hasCoachEmail) {
+        setError(
+          "Please provide either an invite code or your coach's email address"
+        );
+        setCurrentStep(2); // Go back to coach selection step
+        return;
+      }
+
       // For clients, proceed directly
       setIsLoading(true);
       setError("");
@@ -270,7 +283,7 @@ export default function RoleSelectionPage() {
               <div className="p-8">
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-white mb-2">
-                    Welcome to Next Level Softball!
+                    Welcome to Next Level Coaching!
                   </h2>
                   <p style={{ color: "#ABA4AA" }}>
                     Let's get started by choosing your role

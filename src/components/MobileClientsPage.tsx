@@ -288,8 +288,7 @@ function MobileRequestsButton({ onOpenModal }: { onOpenModal: () => void }) {
 
   const clientRequests = pendingRequests.filter(
     (req: any) =>
-      req.type === "CLIENT_JOIN_REQUEST" &&
-      req.title === "New Athlete Join Request" // Only show email-based requests that need approval
+      req.type === "CLIENT_JOIN_REQUEST" // Show all client join requests (from invite codes and coach links)
   );
 
   return (
@@ -420,7 +419,7 @@ function MobileClientRequestsModal({
 
       // Filter out if:
       // - Client doesn't exist (user was deleted) - BUT allow if notification has name/email
-      // - Client already has a coach assigned
+      // - Client has a coach assigned to a DIFFERENT coach (not this one)
       if (!client) {
         console.log(`⚠️ Client/user ${clientUserId} not found in clients list`);
         // If we have client name/email in notification, still show it
@@ -437,11 +436,22 @@ function MobileClientRequestsModal({
         return null;
       }
 
-      if (client.coachId) {
+      // Show notification if:
+      // 1. Client doesn't have a coach yet (pending approval), OR
+      // 2. Client's coachId matches the notification's userId (this coach - client just joined through link)
+      if (client.coachId && client.coachId !== req.userId) {
         console.log(
-          `⚠️ Filtering out request - client ${clientUserId} already has coach ${client.coachId}`
+          `⚠️ Filtering out request - client ${clientUserId} has a different coach ${client.coachId} (notification is for coach ${req.userId})`
         );
         return null;
+      }
+
+      // If client has this coach assigned, it means they joined through the link
+      // We should still show the notification so the coach knows about the new client
+      if (client.coachId === req.userId) {
+        console.log(
+          `✅ Showing notification - client ${clientUserId} just joined through link (coach ${req.userId})`
+        );
       }
 
       // Request is still pending - return request with parsed data attached

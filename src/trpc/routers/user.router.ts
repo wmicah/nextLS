@@ -248,18 +248,12 @@ export const userRouter = router({
             },
           });
         } else {
-          // Client without coach - create a placeholder client record
-          await db.client.upsert({
-            where: { userId: user.id },
-            update: {
-              name: updatedUser.name || "New Client",
-              email: updatedUser.email,
-            },
-            create: {
-              userId: user.id,
-              name: updatedUser.name || "New Client",
-              email: updatedUser.email,
-            },
+          // Client without coach - REJECT this request
+          // Clients MUST have a coach connection (invite code or email) to be created
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "A coach connection is required. Please provide either an invite code or your coach's email address.",
           });
         }
       }
@@ -1202,7 +1196,16 @@ export const userRouter = router({
 
       // Create notification for the coach
       if (coachId) {
-        await db.notification.create({
+        console.log("📧 Creating notification for coach:", {
+          coachId,
+          clientId: user.id,
+          clientName: dbUser.name,
+          clientEmail: dbUser.email,
+          viaLink: !!input.coachEmail,
+          viaInviteCode: !!input.inviteCode,
+        });
+        
+        const notification = await db.notification.create({
           data: {
             userId: coachId,
             type: "CLIENT_JOIN_REQUEST",
@@ -1217,6 +1220,13 @@ export const userRouter = router({
               isSwitching: clientRecord?.coachId ? true : false,
             },
           },
+        });
+        
+        console.log("✅ Notification created successfully:", {
+          notificationId: notification.id,
+          userId: notification.userId,
+          type: notification.type,
+          title: notification.title,
         });
       }
 

@@ -44,6 +44,15 @@ export const notificationsRouter = router({
           take: input.limit,
         });
 
+        console.log("🔔 getNotifications query:", {
+          userId: user.id,
+          unreadOnly: input.unreadOnly,
+          limit: input.limit,
+          found: notifications.length,
+          types: notifications.map((n: any) => n.type),
+          titles: notifications.map((n: any) => n.title),
+        });
+
         return notifications;
       }),
 
