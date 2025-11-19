@@ -173,29 +173,24 @@ export function checkPayloadSize(data: any): {
 }
 
 // Function to log program creation details for debugging
+import { captureData, captureWarning } from "./monitoring";
+
 export function logProgramCreation(
   data: any,
   context: string = "program-creation"
 ) {
   const payloadCheck = checkPayloadSize(data);
 
-  console.log(`=== ${context.toUpperCase()} DEBUG ===`);
-  console.log(
-    "Payload size:",
-    `${(payloadCheck.size / 1024 / 1024).toFixed(2)}MB`
-  );
-  console.log("Is too large:", payloadCheck.isTooLarge);
-  console.log("Weeks count:", data.weeks?.length || 0);
-  console.log(
-    "Total days:",
-    data.weeks?.reduce(
+  // Use monitoring service instead of console.log
+  captureData(`program-creation:${context}`, {
+    payloadSizeMB: (payloadCheck.size / 1024 / 1024).toFixed(2),
+    isTooLarge: payloadCheck.isTooLarge,
+    weeksCount: data.weeks?.length || 0,
+    totalDays: data.weeks?.reduce(
       (acc: number, week: any) => acc + (week.days?.length || 0),
       0
-    ) || 0
-  );
-  console.log(
-    "Total drills:",
-    data.weeks?.reduce(
+    ) || 0,
+    totalDrills: data.weeks?.reduce(
       (acc: number, week: any) =>
         acc +
         (week.days?.reduce(
@@ -203,12 +198,13 @@ export function logProgramCreation(
           0
         ) || 0),
       0
-    ) || 0
-  );
+    ) || 0,
+  });
 
   if (payloadCheck.isTooLarge) {
-    console.warn(
-      "⚠️ Payload is too large for Vercel! Consider reducing program complexity."
+    captureWarning(
+      "Payload is too large for Vercel! Consider reducing program complexity.",
+      { context, payloadSizeMB: (payloadCheck.size / 1024 / 1024).toFixed(2) }
     );
   }
 

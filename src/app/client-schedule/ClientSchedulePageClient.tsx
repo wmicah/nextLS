@@ -73,19 +73,6 @@ function ClientSchedulePageClient() {
       year: currentMonth.getFullYear(),
     });
 
-  // Debug logging
-  console.log("📅 CLIENT SCHEDULE FRONTEND:", {
-    hasOrgData: !!orgScheduleData,
-    coachCount: orgScheduleData?.coaches.length || 0,
-    coaches: orgScheduleData?.coaches.map(c => ({
-      id: c.id,
-      name: c.name,
-      workingDays: c.workingDays,
-      workingHoursStart: c.workingHoursStart,
-      workingHoursEnd: c.workingHoursEnd,
-    })),
-    eventCount: orgScheduleData?.events.length || 0,
-  });
 
   // Determine if client is in an organization
   const isInOrganization =
@@ -2054,15 +2041,6 @@ function ClientSchedulePageClient() {
                       Your Available Lessons:
                     </h3>
 
-                    {(() => {
-                      console.log("Lesson Selection Modal Debug:", {
-                        isLoadingSwapRequests,
-                        upcomingLessonsCount: upcomingLessons.length,
-                        upcomingLessons: upcomingLessons,
-                        selectedSwitchLesson: selectedSwitchLesson?.id,
-                      });
-                      return null;
-                    })()}
 
                     {isLoadingSwapRequests ? (
                       <div className="text-center py-8">
@@ -2498,17 +2476,6 @@ function SwapWithClientModal({
       return true;
     });
 
-    // Debug logging
-    if (selectedDate && isSameDay(date, selectedDate)) {
-      console.log("🔍 Swap Modal Debug:", {
-        selectedDate: format(date, "yyyy-MM-dd"),
-        totalScheduleLessons: coachSchedule.length,
-        filteredLessons: filtered.length,
-        currentClientId,
-        requesterLessonClientId: requesterLesson.clientId,
-        sampleLesson: filtered[0],
-      });
-    }
 
     return filtered;
   };
@@ -2594,18 +2561,7 @@ function SwapWithClientModal({
 
     const workingHours = getWorkingHoursForDate(date, coachId);
 
-    // Debug logging
-    console.log("🔍 Time Slot Generation Debug:", {
-      date: format(date, "yyyy-MM-dd"),
-      isWorkingDay: workingHours.isWorkingDay,
-      startTime: workingHours.startTime,
-      endTime: workingHours.endTime,
-      timeSlotInterval: workingHours.timeSlotInterval,
-      coachProfile: coachProfile ? "exists" : "missing",
-    });
-
     if (!workingHours.isWorkingDay) {
-      console.log("❌ Not a working day");
       return [];
     }
 
@@ -2616,12 +2572,6 @@ function SwapWithClientModal({
     const slots: string[] = [];
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
-
-    console.log("⏰ Generating slots:", {
-      startMinutes,
-      endMinutes,
-      interval: timeSlotInterval,
-    });
 
     for (
       let minutes = startMinutes;
@@ -2636,7 +2586,6 @@ function SwapWithClientModal({
       slots.push(timeString);
     }
 
-    console.log("✅ Generated slots:", slots.length, slots.slice(0, 5));
     return slots;
   };
 

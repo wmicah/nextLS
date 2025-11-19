@@ -211,12 +211,6 @@ export const clientRouterRouter = router({
       100
     );
 
-    // Debug: Check if superset fields are present in the database data
-    console.log(
-      "🔍 CLIENT ROUTER - program.weeks:",
-      JSON.stringify(program.weeks, null, 2)
-    );
-
     // CRITICAL: Normalize descriptions like routines do - ensure descriptions are always strings
     // This ensures consistency with how routine exercises handle descriptions
     const normalizedWeeks = program.weeks.map(week => ({
@@ -231,20 +225,7 @@ export const clientRouterRouter = router({
               ? String(drill.description) // Convert to string if it exists
               : ""; // Use empty string if null/undefined
 
-          // Debug log for superset exercises to verify normalization
-          if (drill.supersetId) {
-            console.log("🔍 Normalizing superset drill description:", {
-              drillId: drill.id,
-              title: drill.title,
-              originalDescription: drill.description,
-              originalType: typeof drill.description,
-              originalIsNull: drill.description === null,
-              originalIsUndefined: drill.description === undefined,
-              normalizedDescription,
-              normalizedType: typeof normalizedDescription,
-              normalizedLength: normalizedDescription.length,
-            });
-          }
+          // Normalize superset drill descriptions
 
           // CRITICAL: Explicitly set description to ensure it's always included
           // Even if the field was missing from the query, we want it to be an empty string
@@ -411,12 +392,6 @@ export const clientRouterRouter = router({
       orderBy: { date: "asc" },
     });
 
-    console.log("getNextLesson - Client ID:", client.id);
-    console.log(
-      "getNextLesson - Found lesson:",
-      nextLesson
-        ? {
-            id: nextLesson.id,
             date: nextLesson.date,
             status: nextLesson.status,
             coachName: nextLesson.coach?.name,
@@ -779,26 +754,6 @@ export const clientRouterRouter = router({
           });
         }
 
-        // Debug: Log program assignments
-        console.log("🔍 CLIENT DEBUG - Program Assignments:", {
-          clientId: client.id,
-          clientName: client.name,
-          totalAssignments: client.programAssignments.length,
-          assignments: client.programAssignments.map(a => ({
-            id: a.id,
-            programId: a.programId,
-            programTitle: a.program?.title,
-            assignedAt: a.assignedAt,
-            startDate: a.startDate,
-            completedAt: a.completedAt,
-            hasWeeks: a.program?.weeks?.length || 0,
-            weekDetails: a.program?.weeks?.map(w => ({
-              weekNumber: w.weekNumber,
-              daysCount: w.days?.length || 0,
-            })),
-          })),
-        });
-
         // Get exercise completions for the client
         // This is used for both program drills and standalone items
         const completions = await db.exerciseCompletion.findMany({
@@ -811,27 +766,12 @@ export const clientRouterRouter = router({
           },
         });
 
-        console.log("🔍 LOADED COMPLETIONS:", {
-          totalCompletions: completions.length,
-          sampleCompletions: completions.slice(0, 5).map(c => ({
-            exerciseId: c.exerciseId,
-            programDrillId: c.programDrillId,
-            completed: c.completed,
-            date: c.date,
-          })),
-        });
-
         // Build completion map
         // Keys must match what's being saved by the modal/hook
         const completionMap = new Map<string, boolean>();
         completions.forEach(c => {
           // Skip completions without dates - they're invalid
           if (!c.date) {
-            console.log("🔍 Skipping completion without date:", {
-              exerciseId: c.exerciseId,
-              programDrillId: c.programDrillId,
-              completed: c.completed,
-            });
             return;
           }
 
@@ -842,34 +782,15 @@ export const clientRouterRouter = router({
             // Standalone item
             const key = `standalone-${c.exerciseId}-${c.date}`;
             completionMap.set(key, !!c.completed);
-            console.log("🔍 Mapped standalone:", {
-              key,
-              completed: c.completed,
-            });
           } else if (c.programDrillId && c.programDrillId !== "") {
             // Routine exercise within a program: programDrillId is the parent drill ID
             const key = `${c.programDrillId}-${c.exerciseId}-${c.date}`;
             completionMap.set(key, !!c.completed);
-            console.log("🔍 Mapped routine exercise:", {
-              key,
-              programDrillId: c.programDrillId,
-              exerciseId: c.exerciseId,
-              completed: c.completed,
-            });
           } else {
             // Regular program drill: exerciseId is the drill ID
             const key = `${c.exerciseId}-${c.date}`;
             completionMap.set(key, !!c.completed);
-            console.log("🔍 Mapped regular drill:", {
-              key,
-              completed: c.completed,
-            });
           }
-        });
-
-        console.log("🔍 COMPLETION MAP KEYS:", {
-          totalKeys: completionMap.size,
-          sampleKeys: Array.from(completionMap.keys()).slice(0, 10),
         });
 
         // Generate calendar data with minimal information
@@ -973,29 +894,11 @@ export const clientRouterRouter = router({
               const weekNumber = Math.floor(daysSinceStart / 7) + 1;
               const dayNumberInWeek = (daysSinceStart % 7) + 1;
 
-              console.log("🔍 DATE CALCULATION:", {
-                dateString,
-                programStartDate,
-                daysSinceStart,
-                weekNumber,
-                dayNumberInWeek,
-              });
-
               const week = program.weeks.find(
                 (w: any) => w.weekNumber === weekNumber
               );
 
               if (week) {
-                console.log("🔍 MATCHING DAY:", {
-                  dateString,
-                  dayNumberInWeek,
-                  availableDays: week.days.map((d: any) => ({
-                    dayNumber: d.dayNumber,
-                    title: d.title,
-                    drillCount: d.drills?.length || 0,
-                  })),
-                });
-
                 const day = week.days.find(
                   (day: any) => day.dayNumber === dayNumberInWeek
                 );
@@ -1009,16 +912,6 @@ export const clientRouterRouter = router({
                   let completedDrills = 0;
 
                   for (const drill of day.drills) {
-                    console.log("🔍 COUNTING DRILL:", {
-                      drillId: drill.id,
-                      drillTitle: drill.title,
-                      drillType: drill.type,
-                      hasRoutineId: !!drill.routineId,
-                      hasRoutineData: !!(drill as any).routine,
-                      routineExerciseCount:
-                        (drill as any).routine?.exercises?.length || 0,
-                    });
-
                     if (
                       drill.type === "routine" &&
                       drill.routineId &&
@@ -1032,11 +925,6 @@ export const clientRouterRouter = router({
                         routine.exercises.forEach((exercise: any) => {
                           const key = `${drill.id}-${exercise.id}-${dateString}`;
                           const isCompleted = completionMap.get(key);
-                          console.log("🔍 Checking routine exercise:", {
-                            key,
-                            isCompleted,
-                            exerciseTitle: exercise.title,
-                          });
                           if (isCompleted) {
                             completedDrills++;
                           }
@@ -1047,11 +935,6 @@ export const clientRouterRouter = router({
                       totalDrills++;
                       const key = `${drill.id}-${dateString}`;
                       const isCompleted = completionMap.get(key);
-                      console.log("🔍 Checking regular drill:", {
-                        key,
-                        isCompleted,
-                        drillTitle: drill.title,
-                      });
                       if (isCompleted) {
                         completedDrills++;
                       }
@@ -1118,18 +1001,6 @@ export const clientRouterRouter = router({
 
           calendarData[dateString] = dayData;
         }
-
-        // Debug: Log final calendar data summary
-        const datesWithPrograms = Object.keys(calendarData).filter(
-          date =>
-            calendarData[date].programs &&
-            calendarData[date].programs.length > 0
-        );
-        console.log("🔍 CLIENT DEBUG - Calendar Data Summary:", {
-          totalDates: Object.keys(calendarData).length,
-          datesWithPrograms: datesWithPrograms.length,
-          programDates: datesWithPrograms.slice(0, 10), // Show first 10 dates
-        });
 
         return calendarData;
       } catch (error) {

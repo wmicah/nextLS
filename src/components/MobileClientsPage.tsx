@@ -328,17 +328,6 @@ function MobileClientRequestsModal({
     limit: 100,
   });
 
-  console.log("🔍 Notifications query result:", {
-    total: allNotifications.length,
-    loading: notificationsLoading,
-    notifications: allNotifications.map((n: any) => ({
-      id: n.id,
-      type: n.type,
-      title: n.title,
-      isRead: n.isRead,
-    })),
-  });
-
   // Filter for CLIENT_JOIN_REQUEST
   const clientRequests = allNotifications.filter((req: any) => {
     if (req.type !== "CLIENT_JOIN_REQUEST") return false;
@@ -346,39 +335,16 @@ function MobileClientRequestsModal({
     // Filter out rejected requests (marked as read)
     // Rejected requests are marked as isRead: true
     if (req.isRead) {
-      console.log("Filtering out read/rejected notification:", req.id);
       return false;
     }
 
     // Show ALL CLIENT_JOIN_REQUEST notifications, not just "New Athlete Join Request"
     // This includes: "New Athlete Join Request", "New Athlete Joined", "New Client Request", etc.
-
-    // Debug logging
-    console.log("Found CLIENT_JOIN_REQUEST notification:", {
-      id: req.id,
-      title: req.title,
-      type: req.type,
-      isRead: req.isRead,
-      data: req.data,
-      createdAt: req.createdAt,
-    });
-
     return true;
   });
 
-  console.log(
-    "Total CLIENT_JOIN_REQUEST notifications found:",
-    clientRequests.length
-  );
-  console.log(
-    "Notification titles found:",
-    clientRequests.map((r: any) => r.title)
-  );
-
   // Fetch client data to verify which requests are still pending
   const { data: allClients = [] } = trpc.clients.list.useQuery();
-
-  console.log("All clients fetched:", allClients.length);
 
   // Filter out requests where:
   // 1. Client already has a coach assigned
@@ -399,34 +365,18 @@ function MobileClientRequestsModal({
         notificationData?.clientUserId || notificationData?.clientId;
 
       if (!clientUserId) {
-        console.log(
-          "No clientUserId found in notification data:",
-          notificationData
-        );
         return null;
       }
 
       // Check if this client still exists in the database
       const client = allClients.find((c: any) => c.userId === clientUserId);
 
-      console.log("Client lookup result:", {
-        clientUserId,
-        found: !!client,
-        clientName: client?.name,
-        hasCoach: !!client?.coachId,
-        coachId: client?.coachId,
-      });
-
       // Filter out if:
       // - Client doesn't exist (user was deleted) - BUT allow if notification has name/email
       // - Client has a coach assigned to a DIFFERENT coach (not this one)
       if (!client) {
-        console.log(`⚠️ Client/user ${clientUserId} not found in clients list`);
         // If we have client name/email in notification, still show it
         if (notificationData?.clientName || notificationData?.clientEmail) {
-          console.log(
-            "✅ Showing request even though client not found (has name/email in notification)"
-          );
           return {
             ...req,
             parsedData: notificationData,
@@ -440,27 +390,8 @@ function MobileClientRequestsModal({
       // 1. Client doesn't have a coach yet (pending approval), OR
       // 2. Client's coachId matches the notification's userId (this coach - client just joined through link)
       if (client.coachId && client.coachId !== req.userId) {
-        console.log(
-          `⚠️ Filtering out request - client ${clientUserId} has a different coach ${client.coachId} (notification is for coach ${req.userId})`
-        );
         return null;
       }
-
-      // If client has this coach assigned, it means they joined through the link
-      // We should still show the notification so the coach knows about the new client
-      if (client.coachId === req.userId) {
-        console.log(
-          `✅ Showing notification - client ${clientUserId} just joined through link (coach ${req.userId})`
-        );
-      }
-
-      // Request is still pending - return request with parsed data attached
-      console.log(
-        "✅ Keeping pending request for client:",
-        clientUserId,
-        "Client:",
-        client.name
-      );
       return {
         ...req,
         parsedData: notificationData,
@@ -468,14 +399,8 @@ function MobileClientRequestsModal({
     })
     .filter((req: any) => req !== null);
 
-  console.log(
-    "Final pending client requests count:",
-    pendingClientRequests.length
-  );
-
   const acceptRequest = trpc.user.acceptClientRequest.useMutation({
     onSuccess: async data => {
-      console.log("✅ Client request accepted successfully:", data);
 
       // Show success toast
       addToast({
@@ -495,27 +420,10 @@ function MobileClientRequestsModal({
       utils.clients.list.invalidate(undefined); // No params
 
       // Force a refetch of all client queries and wait for them to complete
-      console.log("🔄 Refetching client lists...");
       await Promise.all([
         utils.clients.list.refetch({ archived: false }),
         utils.clients.list.refetch({ archived: true }),
       ]);
-
-      // Get the updated client list to verify
-      const updatedClients = await utils.clients.list.fetch({
-        archived: false,
-      });
-      console.log("📊 Refetched clients after acceptance:", {
-        activeCount: updatedClients?.length || 0,
-        clients: updatedClients?.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          email: c.email,
-          coachId: c.coachId,
-          userId: c.userId,
-          archived: c.archived,
-        })),
-      });
 
       // Close the modal immediately - don't wait
       onClose();
