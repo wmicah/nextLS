@@ -2486,8 +2486,13 @@ function DayCard({
   const isRestDay = filteredItems.length === 0;
 
   // Create sensors outside of conditional rendering
+  // Configure pointer sensor to require a small drag distance to prevent conflicts with clicks
   const daySensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before drag starts
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -2571,23 +2576,88 @@ function DayCard({
               onDragEnd={event => {
                 const { active, over } = event;
                 if (over && active.id !== over.id) {
-                  const oldIndex = filteredItems.findIndex(
+                  // Find the dragged item and target item in filteredItems (visible items)
+                  const draggedItem = filteredItems.find(
                     item => item.id === active.id
                   );
-                  const newIndex = filteredItems.findIndex(
+                  const targetItem = filteredItems.find(
                     item => item.id === over.id
                   );
-                  if (oldIndex !== -1 && newIndex !== -1) {
-                    // For reordering, we need to work with the original items array
-                    // but maintain the superset grouping
-                    const newItems = arrayMove(
-                      nonRestItems,
-                      oldIndex,
-                      newIndex
+                  
+                  if (!draggedItem || !targetItem) return;
+                  
+                  // For supersets/routines, we need to find all related items and move them together
+                  const draggedSupersetId = draggedItem.supersetId;
+                  const targetSupersetId = targetItem.supersetId;
+                  
+                  // Find items to move: for supersets, get the entire group
+                  let itemsToMove: ProgramItem[] = [];
+                  if (draggedSupersetId) {
+                    const supersetGroup = getLocalSupersetGroups().find(
+                      group => group.items.some(item => item.id === draggedItem.id)
                     );
-                    // Update the items in the parent component
-                    onReorderItems(newItems);
+                    if (supersetGroup) {
+                      itemsToMove = supersetGroup.items.sort(
+                        (a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)
+                      );
+                    } else {
+                      itemsToMove = [draggedItem];
+                    }
+                  } else {
+                    itemsToMove = [draggedItem];
                   }
+                  
+                  // Find the position range in nonRestItems for the dragged items
+                  const draggedIds = new Set(itemsToMove.map(item => item.id));
+                  const draggedIndices = nonRestItems
+                    .map((item, index) => draggedIds.has(item.id) ? index : -1)
+                    .filter(idx => idx !== -1);
+                  
+                  if (draggedIndices.length === 0) return;
+                  
+                  const draggedStartIndex = Math.min(...draggedIndices);
+                  const draggedEndIndex = Math.max(...draggedIndices);
+                  
+                  // Find target position in nonRestItems
+                  let targetIndex = nonRestItems.findIndex(
+                    item => item.id === targetItem.id
+                  );
+                  
+                  if (targetSupersetId) {
+                    const targetSupersetGroup = getLocalSupersetGroups().find(
+                      group => group.items.some(item => item.id === targetItem.id)
+                    );
+                    if (targetSupersetGroup) {
+                      const firstTargetItem = targetSupersetGroup.items.sort(
+                        (a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)
+                      )[0];
+                      targetIndex = nonRestItems.findIndex(
+                        item => item.id === firstTargetItem.id
+                      );
+                    }
+                  }
+                  
+                  if (targetIndex === -1) return;
+                  
+                  // Adjust target index if moving down (items shift after removal)
+                  if (draggedStartIndex < targetIndex) {
+                    targetIndex = targetIndex - (draggedEndIndex - draggedStartIndex + 1);
+                  }
+                  
+                  // Build the new array
+                  const beforeDragged = nonRestItems.slice(0, draggedStartIndex);
+                  const afterDragged = nonRestItems.slice(draggedEndIndex + 1);
+                  const beforeTarget = afterDragged.slice(0, targetIndex - draggedStartIndex);
+                  const afterTarget = afterDragged.slice(targetIndex - draggedStartIndex);
+                  
+                  const newItems = [
+                    ...beforeDragged,
+                    ...beforeTarget,
+                    ...itemsToMove,
+                    ...afterTarget,
+                  ];
+                  
+                  onReorderItems(newItems);
                 }
               }}
             >
