@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { addDays, startOfDay, endOfDay } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import { format } from "date-fns";
 
 export async function POST(request: NextRequest) {
@@ -205,11 +205,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Format the lesson time using default timezone
-        const timezone = "America/New_York"; // Default timezone
-        const localDate = toZonedTime(lesson.date, timezone);
-
-        const lessonTime = format(localDate, "h:mm a");
-        const lessonDate = format(localDate, "EEEE, MMMM d");
+        // lesson.date is stored in UTC, so we format it in the target timezone
+        const timezone = "America/New_York"; // Default timezone (could be improved to use user's timezone)
+        
+        const lessonTime = formatInTimeZone(lesson.date, timezone, "h:mm a");
+        const lessonDate = formatInTimeZone(lesson.date, timezone, "EEEE, MMMM d");
 
         // Create the reminder message with improved formatting
         const reminderMessage = `🔔 **Lesson Reminder**

@@ -598,10 +598,19 @@ function ProgramBuilder({
   const deleteWeek = useCallback(
     (weekId: string) => {
       if (weeks.length === 1) return; // Don't delete the last week
-      const updatedWeeks = weeks.filter(week => week.id !== weekId);
+      // Filter out the deleted week, then renumber remaining weeks sequentially
+      const updatedWeeks = weeks
+        .filter(week => week.id !== weekId)
+        .map((week, index) => ({
+          ...week,
+          id: `week-${index + 1}`,
+          name: `Week ${index + 1}`,
+        }));
       setWeeks(updatedWeeks);
+      // Call onSave to keep parent state in sync
+      onSave?.(updatedWeeks);
     },
-    [weeks]
+    [weeks, onSave]
   );
 
   const duplicateWeek = useCallback(

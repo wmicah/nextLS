@@ -151,7 +151,14 @@ export default function MobileProgramBuilderNew({
   const deleteWeek = useCallback(
     (weekId: string) => {
       if (weeks.length === 1) return;
-      const updatedWeeks = weeks.filter(week => week.id !== weekId);
+      // Filter out the deleted week, then renumber remaining weeks sequentially
+      const updatedWeeks = weeks
+        .filter(week => week.id !== weekId)
+        .map((week, index) => ({
+          ...week,
+          id: `week-${index + 1}`,
+          name: `Week ${index + 1}`,
+        }));
       setWeeks(updatedWeeks);
       onSave?.(updatedWeeks);
     },

@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { addHours, subHours, addDays, startOfDay, endOfDay } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import { format } from "date-fns";
 import { randomBytes } from "crypto";
 import { CompleteEmailService } from "./complete-email-service";
@@ -208,11 +208,11 @@ class LessonReminderService {
           }
 
           // Format the lesson time using default timezone
-          const timezone = "America/New_York"; // Default timezone
-          const localDate = toZonedTime(lesson.date, timezone);
-
-          const lessonTime = format(localDate, "h:mm a");
-          const lessonDate = format(localDate, "EEEE, MMMM d");
+          // lesson.date is stored in UTC, so we format it in the target timezone
+          const timezone = "America/New_York"; // Default timezone (could be improved to use user's timezone)
+          
+          const lessonTime = formatInTimeZone(lesson.date, timezone, "h:mm a");
+          const lessonDate = formatInTimeZone(lesson.date, timezone, "EEEE, MMMM d");
 
           // 48-hour confirmation reminder
           const confirmationToken = randomBytes(32).toString("hex");
@@ -458,15 +458,25 @@ If you can't make it, please let me know as soon as possible so I can offer the 
               });
             }
 
+            // Format the lesson date/time in the target timezone
+            const timezone = "America/New_York"; // Default timezone (could be improved to use user's timezone)
+            const cancelledLessonDate = formatInTimeZone(
+              lesson.date,
+              timezone,
+              "EEEE, MMMM d"
+            );
+            const cancelledLessonTime = formatInTimeZone(
+              lesson.date,
+              timezone,
+              "h:mm a"
+            );
+
             // Send cancellation notification
             const cancellationMessage = `❌ **Lesson Cancelled**
 
 Hi ${lesson.client?.name || "there"},
 
-Your lesson scheduled for **${format(
-              lesson.date,
-              "EEEE, MMMM d 'at' h:mm a"
-            )}** has been automatically cancelled because we didn't receive confirmation within the required timeframe.
+Your lesson scheduled for **${cancelledLessonDate} at ${cancelledLessonTime}** has been automatically cancelled because we didn't receive confirmation within the required timeframe.
 
 The time slot is now available for other bookings.
 
@@ -519,11 +529,18 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
             if (lesson.client?.user?.email && lesson.client?.user?.id) {
               try {
                 const emailService = CompleteEmailService.getInstance();
+                // Format the lesson date/time in the target timezone for email
+                const cancelledEmailDate = formatInTimeZone(
+                  lesson.date,
+                  timezone,
+                  "EEEE, MMMM d 'at' h:mm a"
+                );
+                
                 await emailService.sendLessonAutoCancelled(
                   lesson.client.user.email,
                   lesson.client.name || "Client",
                   lesson.coach.name || "Coach",
-                  format(lesson.date, "EEEE, MMMM d 'at' h:mm a"),
+                  cancelledEmailDate,
                   lesson.client.user.id // Pass userId to check preferences
                 );
               } catch (emailError) {
