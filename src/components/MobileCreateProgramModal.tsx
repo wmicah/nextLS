@@ -145,9 +145,16 @@ export default function MobileCreateProgramModal({
   const deleteWeek = useCallback(
     (weekId: string) => {
       if (formData.weeks.length === 1) return;
+      // Filter out the deleted week, then renumber remaining weeks sequentially
       setFormData(prev => ({
         ...prev,
-        weeks: prev.weeks.filter(week => week.id !== weekId),
+        weeks: prev.weeks
+          .filter(week => week.id !== weekId)
+          .map((week, index) => ({
+            ...week,
+            id: `week-${index + 1}`,
+            name: `Week ${index + 1}`,
+          })),
       }));
     },
     [formData.weeks.length]

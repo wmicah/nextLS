@@ -282,12 +282,25 @@ function CreateProgramModalContent({
   };
 
   const removeWeek = (weekIndex: number) => {
-    const newWeeks = weeks.filter((_, index) => index !== weekIndex);
+    // Filter out the deleted week, then renumber remaining weeks sequentially
+    const newWeeks = weeks
+      .filter((_, index) => index !== weekIndex)
+      .map((week, index) => ({
+        ...week,
+        weekNumber: index + 1,
+        title: `Week ${index + 1}`,
+      }));
     setWeeks(newWeeks);
 
-    // Remove from ProgramBuilder weeks
+    // Remove from ProgramBuilder weeks and renumber
     setProgramBuilderWeeks(prev =>
-      prev.filter((_, index) => index !== weekIndex)
+      prev
+        .filter((_, index) => index !== weekIndex)
+        .map((week, index) => ({
+          ...week,
+          id: `week-${index + 1}`,
+          name: `Week ${index + 1}`,
+        }))
     );
   };
 
