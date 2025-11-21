@@ -90,6 +90,7 @@ import DayDetailsModal from "@/components/DayDetailsModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientDetailPage from "@/components/MobileClientDetailPage";
 import ConflictResolutionModal from "@/components/ConflictResolutionModal";
+import ConvertWeekToProgramModal from "@/components/ConvertWeekToProgramModal";
 import {
   ClipboardData,
   ConflictResolution,
@@ -151,6 +152,9 @@ function ClientDetailPage({
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set());
   const [isDeletingMultipleDays, setIsDeletingMultipleDays] = useState(false);
+  const [weekSelectMode, setWeekSelectMode] = useState(false);
+  const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
+  const [showConvertWeekModal, setShowConvertWeekModal] = useState(false);
 
   // Fetch client data
   const {
@@ -788,6 +792,12 @@ function ClientDetailPage({
       }
       return newSet;
     });
+  };
+
+  // Week selection handler
+  const handleWeekSelection = (day: Date) => {
+    const weekStart = startOfWeek(day, { weekStartsOn: 0 });
+    setSelectedWeekStart(weekStart);
   };
 
   const handleDeleteMultipleDays = async () => {
@@ -1762,6 +1772,7 @@ function ClientDetailPage({
                 <button
                   onClick={() => {
                     setMultiSelectMode(!multiSelectMode);
+                    setWeekSelectMode(false); // Disable week select when enabling day select
                     if (multiSelectMode) {
                       setSelectedDays(new Set());
                     }
@@ -1773,6 +1784,24 @@ function ClientDetailPage({
                   }`}
                 >
                   {multiSelectMode ? "Cancel Selection" : "Select Days"}
+                </button>
+
+                {/* Week Select Mode Toggle */}
+                <button
+                  onClick={() => {
+                    setWeekSelectMode(!weekSelectMode);
+                    setMultiSelectMode(false); // Disable day select when enabling week select
+                    if (weekSelectMode) {
+                      setSelectedWeekStart(null);
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    weekSelectMode
+                      ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                      : "bg-gray-700/50 text-gray-300 hover:bg-gray-700/70"
+                  }`}
+                >
+                  {weekSelectMode ? "Cancel Week Select" : "Select Week"}
                 </button>
 
                 {/* Delete Selected Button */}
@@ -1793,6 +1822,18 @@ function ClientDetailPage({
                         selectedDays.size !== 1 ? "s" : ""
                       }`
                     )}
+                  </button>
+                )}
+
+                {/* Convert Week Button */}
+                {weekSelectMode && selectedWeekStart && (
+                  <button
+                    onClick={() => setShowConvertWeekModal(true)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 hover:border-blue-500/50 flex items-center gap-2"
+                    style={{ color: "#3B82F6" }}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Convert Week to Program
                   </button>
                 )}
 
@@ -1902,6 +1943,13 @@ function ClientDetailPage({
                   videosForDay.length > 0 ||
                   routineAssignmentsForDay.length > 0;
 
+                // Check if this day is part of the selected week
+                const dayWeekStart = startOfWeek(day, { weekStartsOn: 0 });
+                const isInSelectedWeek =
+                  weekSelectMode &&
+                  selectedWeekStart &&
+                  dayWeekStart.getTime() === selectedWeekStart.getTime();
+
                 return (
                   <div
                     key={day.toISOString()}
@@ -1912,6 +1960,8 @@ function ClientDetailPage({
                       ${
                         isSelected
                           ? "bg-red-500/30 text-white border-red-400 ring-2 ring-red-400"
+                          : isInSelectedWeek
+                          ? "bg-blue-500/30 text-white border-blue-400 ring-2 ring-blue-400"
                           : isToday
                           ? "bg-blue-500/20 text-blue-300 border-blue-400"
                           : isPastDay
@@ -1920,11 +1970,19 @@ function ClientDetailPage({
                           ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
                           : "text-gray-600 bg-gray-900/30 border-gray-700"
                       }
-                      ${multiSelectMode ? "cursor-pointer" : ""}
+                      cursor-pointer
                     `}
                     onClick={
-                      multiSelectMode && hasAssignments
-                        ? () => toggleDaySelection(day)
+                      weekSelectMode
+                        ? (e) => {
+                            e.stopPropagation();
+                            handleWeekSelection(day);
+                          }
+                        : multiSelectMode && hasAssignments
+                        ? (e) => {
+                            e.stopPropagation();
+                            toggleDaySelection(day);
+                          }
                         : undefined
                     }
                   >
@@ -1976,12 +2034,24 @@ function ClientDetailPage({
                     {/* Day Content - clickable area */}
                     <div
                       onClick={
-                        !multiSelectMode
-                          ? () => handleDateClick(day)
+                        !multiSelectMode && !weekSelectMode
+                          ? (e) => {
+                              e.stopPropagation();
+                              handleDateClick(day);
+                            }
+                          : weekSelectMode
+                          ? undefined // Let parent handle the click in week select mode
+                          : multiSelectMode
+                          ? (e) => {
+                              // Stop propagation in multi-select mode to prevent modal
+                              e.stopPropagation();
+                            }
                           : undefined
                       }
                       className={
-                        !multiSelectMode ? "cursor-pointer h-full" : "h-full"
+                        !multiSelectMode && !weekSelectMode
+                          ? "cursor-pointer h-full"
+                          : "h-full"
                       }
                       style={
                         multiSelectMode
@@ -2233,6 +2303,27 @@ function ClientDetailPage({
             onResolve={handleConflictResolution}
             conflictData={conflictData}
           />
+
+          {/* Convert Week to Program Modal */}
+          {selectedWeekStart && (
+            <ConvertWeekToProgramModal
+              isOpen={showConvertWeekModal}
+              onClose={() => {
+                setShowConvertWeekModal(false);
+                setSelectedWeekStart(null);
+                setWeekSelectMode(false);
+              }}
+              weekStart={selectedWeekStart}
+              clientId={clientId}
+              onSuccess={() => {
+                refreshAllData();
+              }}
+              getLessonsForDate={getLessonsForDate}
+              getProgramsForDate={getProgramsForDate}
+              getRoutineAssignmentsForDate={getRoutineAssignmentsForDate}
+              getVideosForDate={getVideosForDate}
+            />
+          )}
         </div>
       </div>
     </SidebarWrapper>
