@@ -573,12 +573,16 @@ export const timeSwapRouter = router({
               },
             });
 
-            // Send push notification
-            await sendMessageNotification(
+            // Send push notification for swap request
+            const { sendSwapRequestNotification } = await import(
+              "@/lib/pushNotificationService"
+            );
+            await sendSwapRequestNotification(
               targetEvent.client.userId,
               "Another Client",
-              message.content,
-              conversation.id
+              new Date(requesterEvent.date),
+              new Date(targetEvent.date),
+              swapRequest.id
             );
 
             // Update unread count for target client
@@ -981,6 +985,22 @@ export const timeSwapRouter = router({
             },
           },
         });
+
+        // Send push notification to requester about approval
+        if (swapRequest.requester.userId) {
+          try {
+            const { sendSwapApprovalNotification } = await import(
+              "@/lib/pushNotificationService"
+            );
+            await sendSwapApprovalNotification(
+              swapRequest.requester.userId,
+              currentClient.name || "Another Client",
+              input.requestId
+            );
+          } catch (error) {
+            console.error("Failed to send push notification:", error);
+          }
+        }
 
         return updatedRequest;
       });

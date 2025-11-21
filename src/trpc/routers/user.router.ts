@@ -139,7 +139,7 @@ export const userRouter = router({
           }
 
           // Create notification for coach to approve
-          await db.notification.create({
+          const notification = await db.notification.create({
             data: {
               userId: coach.id,
               type: "CLIENT_JOIN_REQUEST",
@@ -155,6 +155,25 @@ export const userRouter = router({
               },
             },
           });
+
+          // Send push notification
+          try {
+            const { sendClientJoinNotification } = await import(
+              "@/lib/pushNotificationService"
+            );
+            const client = await db.client.findFirst({
+              where: { userId: ensureUserId(user.id) },
+            });
+            if (client) {
+              await sendClientJoinNotification(
+                coach.id,
+                updatedUser.name || "New Client",
+                client.id
+              );
+            }
+          } catch (error) {
+            console.error("Failed to send push notification:", error);
+          }
 
           // Send email notification to coach about new client request
           try {
@@ -201,7 +220,7 @@ export const userRouter = router({
           }
 
           // Create notification for coach to approve (requires approval)
-          await db.notification.create({
+          const notification = await db.notification.create({
             data: {
               userId: coachId,
               type: "CLIENT_JOIN_REQUEST",
@@ -218,6 +237,25 @@ export const userRouter = router({
               },
             },
           });
+
+          // Send push notification
+          try {
+            const { sendClientJoinNotification } = await import(
+              "@/lib/pushNotificationService"
+            );
+            const client = await db.client.findFirst({
+              where: { userId: ensureUserId(user.id) },
+            });
+            if (client) {
+              await sendClientJoinNotification(
+                coachId,
+                updatedUser.name || "New Client",
+                client.id
+              );
+            }
+          } catch (error) {
+            console.error("Failed to send push notification:", error);
+          }
 
           // Send email notification to coach about new client request
           try {
@@ -1204,7 +1242,7 @@ export const userRouter = router({
           viaLink: !!input.coachEmail,
           viaInviteCode: !!input.inviteCode,
         });
-        
+
         const notification = await db.notification.create({
           data: {
             userId: coachId,
@@ -1221,7 +1259,7 @@ export const userRouter = router({
             },
           },
         });
-        
+
         console.log("✅ Notification created successfully:", {
           notificationId: notification.id,
           userId: notification.userId,

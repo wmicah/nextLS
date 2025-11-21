@@ -2376,8 +2376,12 @@ export const programsRouter = router({
         }
       }
 
-      // Send email notifications to clients about program assignment
+      // Send email and push notifications to clients about program assignment
       const emailService = CompleteEmailService.getInstance();
+      const { sendProgramAssignmentNotification } = await import(
+        "@/lib/pushNotificationService"
+      );
+
       for (const client of clients) {
         if (client.email) {
           try {
@@ -2388,6 +2392,20 @@ export const programsRouter = router({
               program.title
             );
           } catch (error) {}
+        }
+
+        // Send push notification if client has a user account
+        if (client.userId) {
+          try {
+            await sendProgramAssignmentNotification(
+              client.userId,
+              program.title,
+              coach.name || "Coach",
+              program.id
+            );
+          } catch (error) {
+            console.error("Failed to send push notification:", error);
+          }
         }
       }
 

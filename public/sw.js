@@ -36,10 +36,9 @@ self.addEventListener("fetch", event => {
 self.addEventListener("push", event => {
   console.log("Push received:", event);
 
-  const options = {
-    body: event.data
-      ? event.data.text()
-      : "New notification from Next Level Softball",
+  let notificationData = {
+    title: "Next Level Coaching",
+    body: "You have a new notification",
     icon: "/icon-192x192.png",
     badge: "/icon-32x32.png",
     vibrate: [200, 100, 200],
@@ -47,22 +46,35 @@ self.addEventListener("push", event => {
       dateOfArrival: Date.now(),
       primaryKey: 1,
     },
-    actions: [
-      {
-        action: "explore",
-        title: "View Details",
-        icon: "/icon-32x32.png",
-      },
-      {
-        action: "close",
-        title: "Close",
-        icon: "/icon-32x32.png",
-      },
-    ],
+    tag: "default",
+    requireInteraction: false,
   };
 
+  // Parse notification payload if available
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      notificationData = {
+        ...notificationData,
+        title: payload.title || notificationData.title,
+        body: payload.body || notificationData.body,
+        icon: payload.icon || notificationData.icon,
+        badge: payload.badge || notificationData.badge,
+        data: {
+          ...notificationData.data,
+          ...payload.data,
+        },
+        tag: payload.tag || notificationData.tag,
+        requireInteraction: payload.requireInteraction || false,
+      };
+    } catch (e) {
+      // If JSON parsing fails, try as text
+      notificationData.body = event.data.text() || notificationData.body;
+    }
+  }
+
   event.waitUntil(
-    self.registration.showNotification("Next Level Softball", options)
+    self.registration.showNotification(notificationData.title, notificationData)
   );
 });
 
@@ -72,16 +84,46 @@ self.addEventListener("notificationclick", event => {
 
   event.notification.close();
 
-  if (event.action === "explore") {
-    // Open the app to the relevant page
-    event.waitUntil(clients.openWindow("/dashboard"));
-  } else if (event.action === "close") {
-    // Just close the notification
-    return;
+  // Get notification data to determine where to navigate
+  const data = event.notification.data || {};
+  let url = "/";
+
+  // Determine navigation based on notification type
+  if (data.type === "message" && data.conversationId) {
+    url = `/messages?conversationId=${data.conversationId}`;
+  } else if (data.type === "lesson" && data.lessonId) {
+    url = `/schedule`;
+  } else if (data.type === "client" && data.clientId) {
+    url = `/clients/${data.clientId}`;
+  } else if (data.type === "program" && data.programId) {
+    url = `/programs/${data.programId}`;
+  } else if (data.url) {
+    url = data.url;
   } else {
-    // Default action - open the app
-    event.waitUntil(clients.openWindow("/"));
+    // Default to dashboard
+    url = "/dashboard";
   }
+
+  event.waitUntil(
+    clients
+      .matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      })
+      .then(clientList => {
+        // Check if there's already a window/tab open with the target URL
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          if (client.url === url && "focus" in client) {
+            return client.focus();
+          }
+        }
+        // If no existing window, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+      })
+  );
 });
 
 // Background sync for offline actions

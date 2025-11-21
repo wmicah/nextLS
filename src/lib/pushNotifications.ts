@@ -4,10 +4,10 @@ export class PushNotificationService {
   private vapidPublicKey: string;
 
   constructor() {
-    // You'll need to generate VAPID keys for production
+    // VAPID public key - should be set in environment variables
     this.vapidPublicKey =
       process.env.NEXT_PUBLIC_VAPID_KEY ||
-      "BASGj2aqEyH7dB9Y0HgHv0QqioUI2g2slsIevET97GCTYa0R5FZTLZyPJ42n1CctIE5Gwvwev7UYciJ6yqXAS_E";
+      "BJmY1hCwoFMlFc67g3k8ehL0RAyf72sPxkVjNzMn8OPk-nv9BwR1xF8hLQwWvkj-mPFtNCPoySRFRitF80l3j44";
   }
 
   async requestPermission(): Promise<boolean> {
@@ -70,10 +70,17 @@ export class PushNotificationService {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send subscription to server");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || "Failed to send subscription to server"
+        );
       }
+
+      const result = await response.json();
+      return result;
     } catch (error) {
       console.error("Error sending subscription to server:", error);
+      throw error;
     }
   }
 

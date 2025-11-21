@@ -391,12 +391,59 @@ export default function MobileClientSettingsPage() {
                 </div>
                 <Switch
                   checked={notificationData.pushNotifications}
-                  onCheckedChange={checked =>
+                  onCheckedChange={async checked => {
+                    if (checked) {
+                      // Request browser permission when enabling
+                      try {
+                        // Check if browser supports notifications
+                        if (
+                          "Notification" in window &&
+                          "serviceWorker" in navigator &&
+                          "PushManager" in window
+                        ) {
+                          // Request permission if not already granted
+                          if (Notification.permission === "default") {
+                            const permission = await Notification.requestPermission();
+                            if (permission !== "granted") {
+                              alert(
+                                "Push notifications require browser permission. Please enable notifications in your browser settings."
+                              );
+                              return; // Don't update state if permission denied
+                            }
+                          }
+
+                          // Subscribe to push notifications
+                          if (Notification.permission === "granted") {
+                            const subscription =
+                              await pushNotificationService.subscribeToPush();
+                            if (!subscription) {
+                              alert(
+                                "Failed to enable push notifications. Please try again."
+                              );
+                              return;
+                            }
+                          }
+                        } else {
+                          alert(
+                            "Push notifications are not supported in this browser."
+                          );
+                          return;
+                        }
+                      } catch (error: any) {
+                        console.error("Error enabling push notifications:", error);
+                        alert(
+                          "Failed to enable push notifications. Please check your browser settings."
+                        );
+                        return;
+                      }
+                    }
+
+                    // Update state
                     setNotificationData(prev => ({
                       ...prev,
                       pushNotifications: checked,
-                    }))
-                  }
+                    }));
+                  }}
                 />
               </div>
 

@@ -21,6 +21,7 @@ import Sidebar from "./Sidebar";
 import WeekAtAGlance from "@/components/WeekAtAGlance";
 import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonStats } from "@/components/SkeletonLoader";
+import PushNotificationPrompt from "./PushNotificationPrompt";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -66,6 +67,7 @@ export default function Dashboard() {
   return (
     <Sidebar>
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+        <PushNotificationPrompt />
         {/* Hero Header - improved mobile layout */}
         <div className="mb-6 md:mb-8">
           <div className="rounded-2xl border relative overflow-hidden group">

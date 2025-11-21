@@ -27,6 +27,7 @@ import MobileClientDashboard from "@/components/MobileClientDashboard";
 import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonStats, SkeletonCard } from "@/components/SkeletonLoader";
 import NotesDisplay from "@/components/NotesDisplay";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 
 function ClientDashboard() {
   const {
@@ -178,6 +179,7 @@ function ClientDashboard() {
       }}
     >
       <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+        <PushNotificationPrompt />
         {/* Mobile Header */}
         <div className="md:hidden mb-4">
           <div className="flex items-center justify-between">

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import ClientTopNav from "@/components/ClientTopNav";
 import { isSameDay } from "date-fns";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 
 export default function MobileClientDashboard() {
   const {
@@ -167,6 +168,9 @@ export default function MobileClientDashboard() {
   return (
     <ClientTopNav>
       <div className="min-h-[100dvh]" style={{ backgroundColor: "#2A3133" }}>
+        <div className="pt-4">
+          <PushNotificationPrompt />
+        </div>
         {/* Mobile Header */}
         <div className="mb-4">
           <div className="flex items-center justify-between">
@@ -200,6 +204,8 @@ export default function MobileClientDashboard() {
             </div>
           </div>
         </div>
+
+        <PushNotificationPrompt />
 
         {/* Quick Stats - Horizontal Scroll with Links */}
         <div className="mb-4">

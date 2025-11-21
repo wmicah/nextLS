@@ -221,6 +221,43 @@ export const notificationsRouter = router({
           },
         });
 
+        // Send push notification
+        try {
+          const { sendGeneralNotification } = await import(
+            "@/lib/pushNotificationService"
+          );
+          await sendGeneralNotification(
+            input.userId,
+            input.title,
+            input.message,
+            {
+              notificationId: notification.id,
+              type: input.type,
+              ...input.data,
+            }
+          );
+        } catch (error) {
+          console.error("Failed to send push notification:", error);
+        }
+
         return notification;
       }),
+});
+
+/**
+ * Push Notifications Router
+ */
+export const pushNotificationsRouter = router({
+  getSubscriptions: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    const subscriptions = await db.pushSubscription.findMany({
+      where: { userId: user.id },
+    });
+
+    return subscriptions;
+  }),
 });
