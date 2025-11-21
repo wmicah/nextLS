@@ -21,6 +21,8 @@ import WeekAtAGlance from "@/components/WeekAtAGlance";
 import MobileNavigation from "@/components/MobileNavigation";
 import MobileBottomNavigation from "@/components/MobileBottomNavigation";
 
+import PushNotificationPrompt from "./PushNotificationPrompt";
+
 export default function MobileDashboard() {
   const router = useRouter();
 
@@ -69,6 +71,9 @@ export default function MobileDashboard() {
 
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-6">
+        <div className="pt-4">
+          <PushNotificationPrompt />
+        </div>
         {/* Welcome Header */}
         <div className="bg-gradient-to-r from-[#4A5A70] to-[#606364] rounded-2xl p-4">
           <div className="text-center">

@@ -300,18 +300,32 @@ If you can't make it, please let me know as soon as possible so I can offer the 
             data: { updatedAt: new Date() },
           });
 
-          // Send email notification for the reminder message (in addition to the confirmation reminder email)
+          // Send email and push notifications for the reminder message
           // This ensures users get notified about the message in their inbox
-          if (lesson.client?.user?.email && lesson.client?.user?.id) {
+          if (lesson.client?.user?.id) {
             try {
-              const emailService = CompleteEmailService.getInstance();
-              // Send a message notification email for the reminder message
-              // Note: This is in addition to the confirmation reminder email sent earlier
-              // The confirmation reminder email is more detailed, this one is a simple notification
-              await emailService.sendNewMessage(
-                lesson.client.user.email,
-                lesson.client.name || "Client",
+              // Send push notification for lesson reminder
+              const { sendLessonReminderNotification } = await import(
+                "@/lib/pushNotificationService"
+              );
+              await sendLessonReminderNotification(
+                lesson.client.user.id,
+                lesson.date,
+                lessonTime,
                 lesson.coach.name || "Coach",
+                lesson.id
+              );
+
+              // Send email notification if email exists
+              if (lesson.client?.user?.email) {
+                const emailService = CompleteEmailService.getInstance();
+                // Send a message notification email for the reminder message
+                // Note: This is in addition to the confirmation reminder email sent earlier
+                // The confirmation reminder email is more detailed, this one is a simple notification
+                await emailService.sendNewMessage(
+                  lesson.client.user.email,
+                  lesson.client.name || "Client",
+                  lesson.coach.name || "Coach",
                 reminderMessage.length > 100
                   ? reminderMessage.substring(0, 100) + "..."
                   : reminderMessage,

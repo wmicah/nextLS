@@ -30,7 +30,7 @@ import { workoutTemplatesRouter } from "./routers/workoutTemplates.router";
 import { schedulingRouter } from "./routers/scheduling.router";
 import { programsRouter } from "./routers/programs.router";
 import { routinesRouter } from "./routers/routines.router";
-import { notificationsRouter } from "./routers/notifications.router";
+import { notificationsRouter, pushNotificationsRouter } from "./routers/notifications.router";
 import { libraryResourcesRouter } from "./routers/libraryResources.router";
 import { analyticsRouter } from "./routers/analytics.router";
 import { analyticsGoalsRouter } from "./routers/analyticsGoals.router";
@@ -73,6 +73,7 @@ export const appRouter = router({
   programs: programsRouter,
   routines: routinesRouter,
   notifications: notificationsRouter,
+  pushNotifications: pushNotificationsRouter,
   libraryResources: libraryResourcesRouter,
   analytics: analyticsRouter,
   analyticsGoals: analyticsGoalsRouter,

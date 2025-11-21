@@ -80,6 +80,7 @@ import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientProgramPage from "./MobileClientProgramPage";
 import { processVideoUrl } from "@/lib/youtube-utils";
 import { useExerciseCompletion } from "@/hooks/useExerciseCompletion";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 
 interface Drill {
   id: string;
@@ -961,6 +962,7 @@ function ClientProgramPage() {
         className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6"
         style={{ backgroundColor: "#2a3133" }}
       >
+        <PushNotificationPrompt />
         {/* Header Section with Gradient Background */}
         <div className="mb-8 md:mb-12">
           <div>

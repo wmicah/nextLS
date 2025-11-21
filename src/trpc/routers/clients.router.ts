@@ -551,9 +551,23 @@ export const clientsRouter = router({
         });
       }
 
-      // Send welcome message if client has a user account
+      // Send welcome message and push notification if client has a user account
       if (client.userId) {
         await sendWelcomeMessage(user.id, client.userId);
+
+        // Send push notification to coach about new client
+        try {
+          const { sendClientJoinNotification } = await import(
+            "@/lib/pushNotificationService"
+          );
+          await sendClientJoinNotification(
+            user.id,
+            client.name || "New Client",
+            client.id
+          );
+        } catch (error) {
+          console.error("Failed to send push notification:", error);
+        }
       }
 
       return client;

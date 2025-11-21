@@ -62,6 +62,7 @@ import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 import ClientProgramDayModal from "./ClientProgramDayModal";
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
 import { useExerciseCompletion } from "@/hooks/useExerciseCompletion";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 
 interface Drill {
   id: string;
@@ -746,6 +747,7 @@ export default function MobileClientProgramPage() {
 
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-6">
+        <PushNotificationPrompt />
         {/* Upcoming Lessons Card - PROMINENT DISPLAY */}
         <div
           className="rounded-xl p-4 shadow-lg border"

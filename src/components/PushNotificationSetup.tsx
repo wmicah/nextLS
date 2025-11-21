@@ -32,21 +32,22 @@ export default function PushNotificationSetup() {
       if (subscription) {
         setIsSubscribed(true);
         setPermission("granted");
+        // Show success message
+        alert("Push notifications enabled successfully!");
+      } else {
+        alert("Failed to enable push notifications. Please try again.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error subscribing to push notifications:", error);
+      alert(
+        error.message ||
+          "Failed to enable push notifications. Please check your browser settings."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleTestNotification = async () => {
-    await pushNotificationService.showLocalNotification("Test Notification", {
-      body: "This is a test notification from Next Level Softball",
-      icon: "/icon-192x192.png",
-      badge: "/icon-32x32.png",
-    });
-  };
 
   if (!isSupported) {
     return (
@@ -102,17 +103,6 @@ export default function PushNotificationSetup() {
         )}
       </div>
 
-      {permission === "granted" && (
-        <div className="flex gap-2">
-          <button
-            onClick={handleTestNotification}
-            className="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-          >
-            Test Notification
-          </button>
-        </div>
-      )}
     </div>
   );
 }

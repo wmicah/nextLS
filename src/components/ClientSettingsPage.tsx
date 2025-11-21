@@ -17,6 +17,7 @@ import {
   Clock,
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
+import { pushNotificationService } from "@/lib/pushNotifications";
 
 function ClientSettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -513,12 +514,66 @@ function ClientSettingsPage() {
                               notification.key as keyof typeof notificationData
                             ]
                           }
-                          onChange={e =>
+                          onChange={async e => {
+                            const checked = e.target.checked;
+                            const key = notification.key;
+
+                            // Special handling for push notifications
+                            if (key === "pushNotifications" && checked) {
+                              try {
+                                // Check if browser supports notifications
+                                if (
+                                  "Notification" in window &&
+                                  "serviceWorker" in navigator &&
+                                  "PushManager" in window
+                                ) {
+                                  // Request permission if not already granted
+                                  if (Notification.permission === "default") {
+                                    const permission =
+                                      await Notification.requestPermission();
+                                    if (permission !== "granted") {
+                                      alert(
+                                        "Push notifications require browser permission. Please enable notifications in your browser settings."
+                                      );
+                                      return; // Don't update state if permission denied
+                                    }
+                                  }
+
+                                  // Subscribe to push notifications
+                                  if (Notification.permission === "granted") {
+                                    const subscription =
+                                      await pushNotificationService.subscribeToPush();
+                                    if (!subscription) {
+                                      alert(
+                                        "Failed to enable push notifications. Please try again."
+                                      );
+                                      return;
+                                    }
+                                  }
+                                } else {
+                                  alert(
+                                    "Push notifications are not supported in this browser."
+                                  );
+                                  return;
+                                }
+                              } catch (error: any) {
+                                console.error(
+                                  "Error enabling push notifications:",
+                                  error
+                                );
+                                alert(
+                                  "Failed to enable push notifications. Please check your browser settings."
+                                );
+                                return;
+                              }
+                            }
+
+                            // Update state for all notification types
                             setNotificationData(prev => ({
                               ...prev,
-                              [notification.key]: e.target.checked,
-                            }))
-                          }
+                              [key]: checked,
+                            }));
+                          }}
                           className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                         />
                       </div>

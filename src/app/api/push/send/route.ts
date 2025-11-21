@@ -1,36 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import webpush from "web-push";
-
-// Configure web-push with VAPID keys
-webpush.setVapidDetails(
-  "mailto:your-email@example.com",
-  process.env.NEXT_PUBLIC_VAPID_KEY ||
-    "BASGj2aqEyH7dB9Y0HgHv0QqioUI2g2slsIevET97GCTYa0R5FZTLZyPJ42n1CctIE5Gwvwev7UYciJ6yqXAS_E",
-  process.env.VAPID_PRIVATE_KEY || "GbeggsV9EAnG69R5bKsViLVx5IERUpWr4h7Yjh2x4VQ"
-);
+import { sendPushNotification } from "@/lib/pushNotificationService";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { subscription, payload } = await request.json();
+    // Authenticate user (for sending notifications)
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
 
-    // In a real implementation, you would:
-    // 1. Validate the subscription
-    // 2. Get the subscription from your database
-    // 3. Send the notification
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const notificationPayload = JSON.stringify({
-      title: payload.title || "Next Level Softball",
-      body: payload.body || "You have a new notification",
-      icon: "/icon-192x192.png",
-      badge: "/icon-32x32.png",
-      data: payload.data || {},
-    });
+    const { userId, title, body, data } = await request.json();
 
-    await webpush.sendNotification(subscription, notificationPayload);
+    // For now, only allow sending to the authenticated user (or add admin check)
+    const targetUserId = userId || user.id;
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
+    const success = await sendPushNotification(
+      targetUserId,
+      title || "Next Level Coaching",
+      body || "You have a new notification",
+      data || {}
+    );
 
+    if (success) {
+      return NextResponse.json({ success: true });
+    } else {
+      return NextResponse.json(
+        { error: "Failed to send notification" },
+        { status: 400 }
+      );
+    }
+  } catch (error: any) {
     return NextResponse.json(
       { error: "Failed to send notification" },
       { status: 500 }

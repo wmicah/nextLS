@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
+import { pushNotificationService } from "@/lib/pushNotifications";
 import Sidebar from "@/components/Sidebar";
 import OrganizationUpgradeModal from "@/components/OrganizationUpgradeModal";
 import { toast } from "sonner";
@@ -1026,12 +1027,64 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <input
                           type="checkbox"
                           checked={notificationData.pushNotifications}
-                          onChange={e =>
+                          onChange={async e => {
+                            const checked = e.target.checked;
+                            if (checked) {
+                              // Request browser permission when enabling
+                              try {
+                                // Check if browser supports notifications
+                                if (
+                                  "Notification" in window &&
+                                  "serviceWorker" in navigator &&
+                                  "PushManager" in window
+                                ) {
+                                  // Request permission if not already granted
+                                  if (Notification.permission === "default") {
+                                    const permission =
+                                      await Notification.requestPermission();
+                                    if (permission !== "granted") {
+                                      alert(
+                                        "Push notifications require browser permission. Please enable notifications in your browser settings."
+                                      );
+                                      return; // Don't update state if permission denied
+                                    }
+                                  }
+
+                                  // Subscribe to push notifications
+                                  if (Notification.permission === "granted") {
+                                    const subscription =
+                                      await pushNotificationService.subscribeToPush();
+                                    if (!subscription) {
+                                      alert(
+                                        "Failed to enable push notifications. Please try again."
+                                      );
+                                      return;
+                                    }
+                                  }
+                                } else {
+                                  alert(
+                                    "Push notifications are not supported in this browser."
+                                  );
+                                  return;
+                                }
+                              } catch (error: any) {
+                                console.error(
+                                  "Error enabling push notifications:",
+                                  error
+                                );
+                                alert(
+                                  "Failed to enable push notifications. Please check your browser settings."
+                                );
+                                return;
+                              }
+                            }
+
+                            // Update state
                             setNotificationData(prev => ({
                               ...prev,
-                              pushNotifications: e.target.checked,
-                            }))
-                          }
+                              pushNotifications: checked,
+                            }));
+                          }}
                           className="sr-only peer"
                         />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>

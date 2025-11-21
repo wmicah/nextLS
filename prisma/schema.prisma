@@ -84,6 +84,7 @@ model User {
   clientNoteHistory        ClientNoteHistory[]
   bugReports               BugReport[]              @relation("UserBugReports")
   resolvedBugReports       BugReport[]              @relation("ResolvedBugReports")
+  pushSubscriptions        PushSubscription[]
 
   @@map("users")
 }
@@ -743,6 +744,22 @@ model UserSettings {
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
+}
+
+model PushSubscription {
+  id             String   @id @default(cuid())
+  userId         String
+  endpoint       String
+  p256dh         String
+  auth           String
+  userAgent      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  expiresAt      DateTime?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@map("push_subscriptions")
 }
 
 model Video {

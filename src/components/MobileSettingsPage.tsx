@@ -19,6 +19,7 @@ import {
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
 import { useMobileDetection } from "@/lib/mobile-detection";
+import { pushNotificationService } from "@/lib/pushNotifications";
 
 export default function MobileSettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -515,12 +516,67 @@ export default function MobileSettingsPage() {
                 >
                   <span className="text-white font-medium">{label}</span>
                   <button
-                    onClick={() =>
+                    onClick={async () => {
+                      const newValue = !notificationData[
+                        key as keyof typeof notificationData
+                      ];
+
+                      // Special handling for push notifications
+                      if (key === "pushNotifications" && newValue) {
+                        try {
+                          // Check if browser supports notifications
+                          if (
+                            "Notification" in window &&
+                            "serviceWorker" in navigator &&
+                            "PushManager" in window
+                          ) {
+                            // Request permission if not already granted
+                            if (Notification.permission === "default") {
+                              const permission =
+                                await Notification.requestPermission();
+                              if (permission !== "granted") {
+                                alert(
+                                  "Push notifications require browser permission. Please enable notifications in your browser settings."
+                                );
+                                return; // Don't update state if permission denied
+                              }
+                            }
+
+                            // Subscribe to push notifications
+                            if (Notification.permission === "granted") {
+                              const subscription =
+                                await pushNotificationService.subscribeToPush();
+                              if (!subscription) {
+                                alert(
+                                  "Failed to enable push notifications. Please try again."
+                                );
+                                return;
+                              }
+                            }
+                          } else {
+                            alert(
+                              "Push notifications are not supported in this browser."
+                            );
+                            return;
+                          }
+                        } catch (error: any) {
+                          console.error(
+                            "Error enabling push notifications:",
+                            error
+                          );
+                          alert(
+                            "Failed to enable push notifications. Please check your browser settings."
+                          );
+                          return;
+                        }
+                      }
+
+                      // Update state
                       setNotificationData(prev => ({
                         ...prev,
-                        [key]: !prev[key as keyof typeof notificationData],
-                      }))
-                    }
+                        [key]: newValue,
+                      }));
+                    }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       notificationData[key as keyof typeof notificationData]
                         ? "bg-blue-600"

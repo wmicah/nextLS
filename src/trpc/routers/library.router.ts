@@ -585,8 +585,12 @@ export const libraryRouter = router({
         },
       });
 
-      // Send email notification to client about video assignment
-      if (client.email) {
+      // Send email and push notifications to client about video assignment
+      const { sendVideoAssignmentNotification } = await import(
+        "@/lib/pushNotificationService"
+      );
+
+      if (client.email || client.userId) {
         try {
           // Get video details for the email
           const video = await db.libraryResource.findFirst({
@@ -600,14 +604,32 @@ export const libraryRouter = router({
             select: { name: true, email: true },
           });
 
-          const emailService = CompleteEmailService.getInstance();
-          await emailService.sendVideoAssigned(
-            client.email,
-            client.name || "Client",
-            coach?.name || "Coach",
-            video?.title || "New Video Assignment"
-          );
-        } catch (error) {}
+          if (client.email) {
+            const emailService = CompleteEmailService.getInstance();
+            await emailService.sendVideoAssigned(
+              client.email,
+              client.name || "Client",
+              coach?.name || "Coach",
+              video?.title || "New Video Assignment"
+            );
+          }
+
+          // Send push notification if client has a user account
+          if (client.userId && video) {
+            try {
+              await sendVideoAssignmentNotification(
+                client.userId,
+                video.title || "New Video Assignment",
+                coach?.name || "Coach",
+                input.videoId
+              );
+            } catch (error) {
+              console.error("Failed to send push notification:", error);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to send notifications:", error);
+        }
       }
 
       return assignment;

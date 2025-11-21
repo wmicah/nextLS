@@ -629,8 +629,12 @@ export const routinesRouter = router({
         )
       );
 
-      // Send email notifications to clients about routine assignment
+      // Send email and push notifications to clients about routine assignment
       const emailService = CompleteEmailService.getInstance();
+      const { sendRoutineAssignmentNotification } = await import(
+        "@/lib/pushNotificationService"
+      );
+
       for (const client of clients) {
         if (client.email) {
           try {
@@ -640,9 +644,22 @@ export const routinesRouter = router({
               coach.name || "Coach",
               routine.name
             );
-
           } catch (error) {
+            console.error("Failed to send email notification:", error);
+          }
+        }
 
+        // Send push notification if client has a user account
+        if (client.userId) {
+          try {
+            await sendRoutineAssignmentNotification(
+              client.userId,
+              routine.name,
+              coach.name || "Coach",
+              routine.id
+            );
+          } catch (error) {
+            console.error("Failed to send push notification:", error);
           }
         }
       }
