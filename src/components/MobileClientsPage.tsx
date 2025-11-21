@@ -1063,7 +1063,10 @@ export default function MobileClientsPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
-      <div className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+      <div 
+        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
+        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div

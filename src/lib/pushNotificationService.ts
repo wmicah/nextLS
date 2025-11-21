@@ -113,30 +113,78 @@ export async function sendMessageNotification(
   messageContent: string,
   conversationId: string
 ) {
-  // Strip markdown formatting and emojis from message content
-  let cleanContent = messageContent
-    .replace(/\*\*(.*?)\*\*/g, "$1") // Remove bold markdown
-    .replace(/\*(.*?)\*/g, "$1") // Remove italic markdown
-    .replace(/`(.*?)`/g, "$1") // Remove code markdown
-    .replace(/#{1,6}\s/g, "") // Remove headers
-    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Remove links, keep text
-    .trim();
+  try {
+    // Check if user has message notifications enabled
+    const userSettings = await db.userSettings.findUnique({
+      where: { userId: recipientId },
+      select: {
+        pushNotifications: true,
+        messageNotifications: true,
+      },
+    });
 
-  cleanContent = removeEmojis(cleanContent);
-
-  return await sendPushNotification(
-    recipientId,
-    `New message from ${senderName}`,
-    cleanContent.length > 50
-      ? `${cleanContent.substring(0, 50)}...`
-      : cleanContent,
-    {
-      type: "message",
-      conversationId,
-      senderName,
-      url: `/messages?conversation=${conversationId}`,
+    // Check both pushNotifications and messageNotifications settings
+    if (userSettings?.pushNotifications === false) {
+      console.log(
+        `📱 Push notifications disabled for user ${recipientId}, skipping message notification`
+      );
+      return false;
     }
-  );
+
+    if (userSettings?.messageNotifications === false) {
+      console.log(
+        `💬 Message notifications disabled for user ${recipientId}, skipping message notification`
+      );
+      return false;
+    }
+
+    // Strip markdown formatting and emojis from message content
+    let cleanContent = messageContent
+      .replace(/\*\*(.*?)\*\*/g, "$1") // Remove bold markdown
+      .replace(/\*(.*?)\*/g, "$1") // Remove italic markdown
+      .replace(/`(.*?)`/g, "$1") // Remove code markdown
+      .replace(/#{1,6}\s/g, "") // Remove headers
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Remove links, keep text
+      .trim();
+
+    cleanContent = removeEmojis(cleanContent);
+
+    console.log(
+      `📨 Sending message notification to user ${recipientId} from ${senderName}`
+    );
+
+    const result = await sendPushNotification(
+      recipientId,
+      `New message from ${senderName}`,
+      cleanContent.length > 50
+        ? `${cleanContent.substring(0, 50)}...`
+        : cleanContent,
+      {
+        type: "message",
+        conversationId,
+        senderName,
+        url: `/messages?conversation=${conversationId}`,
+      }
+    );
+
+    if (result) {
+      console.log(
+        `✅ Message notification sent successfully to user ${recipientId}`
+      );
+    } else {
+      console.log(
+        `⚠️ Message notification failed for user ${recipientId} (may not have push subscriptions)`
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error(
+      `❌ Error sending message notification to user ${recipientId}:`,
+      error
+    );
+    return false;
+  }
 }
 
 export async function sendProgramAssignmentNotification(

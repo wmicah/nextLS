@@ -15,13 +15,16 @@ import {
   ChevronLeft,
   Menu,
   AlertTriangle,
+  Home,
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
 import { useMobileDetection } from "@/lib/mobile-detection";
 import { pushNotificationService } from "@/lib/pushNotifications";
+import { useRouter } from "next/navigation";
 
 export default function MobileSettingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("profile");
   const [isLoading, setIsLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -280,9 +283,20 @@ export default function MobileSettingsPage() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Mobile Header */}
-      <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700">
-        <div className="flex items-center justify-between p-4">
+      <div 
+        className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 px-4 pb-4"
+        style={{ paddingTop: `calc(1rem + env(safe-area-inset-top))` }}
+      >
+        <div className="flex items-center justify-between pt-4">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="p-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+              style={{ minWidth: "44px", minHeight: "44px" }}
+              aria-label="Back to dashboard"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
             <button
               onClick={() => setShowTabMenu(true)}
               className="p-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"

@@ -14,10 +14,12 @@ import {
   Activity,
   Clock,
   Home,
+  ChevronLeft,
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +35,7 @@ import {
 } from "@/components/ui/select";
 
 export default function MobileClientSettingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("profile");
   const [isLoading, setIsLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -183,9 +186,20 @@ export default function MobileClientSettingsPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
-      <div className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+      <div 
+        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
+        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/client-dashboard")}
+              className="p-2 rounded-lg hover:bg-[#4A5A70] transition-colors"
+              style={{ minWidth: "44px", minHeight: "44px" }}
+              aria-label="Back to dashboard"
+            >
+              <ChevronLeft className="h-5 w-5 text-white" />
+            </button>
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: "#4A5A70" }}

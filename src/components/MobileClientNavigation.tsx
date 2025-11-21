@@ -127,7 +127,10 @@ export default function MobileClientNavigation({
         className={`fixed top-0 left-0 right-0 z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-y-0" : "-translate-y-full"
         }`}
-        style={{ backgroundColor: "#2A3133" }}
+        style={{ 
+          backgroundColor: "#2A3133",
+          paddingTop: "env(safe-area-inset-top)"
+        }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#606364]">

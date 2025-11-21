@@ -2,7 +2,7 @@
   "name": "NextLevel Coaching",
   "short_name": "NextLevel",
   "description": "Complete platform for coaches to manage athletes, create programs, track progress, and provide video analysis.",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
