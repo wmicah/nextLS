@@ -326,11 +326,12 @@ If you can't make it, please let me know as soon as possible so I can offer the 
                   lesson.client.user.email,
                   lesson.client.name || "Client",
                   lesson.coach.name || "Coach",
-                reminderMessage.length > 100
-                  ? reminderMessage.substring(0, 100) + "..."
-                  : reminderMessage,
-                lesson.client.user.id // Pass userId to check preferences
-              );
+                  reminderMessage.length > 100
+                    ? reminderMessage.substring(0, 100) + "..."
+                    : reminderMessage,
+                  lesson.client.user.id // Pass userId to check preferences
+                );
+              }
             } catch (messageEmailError) {
               console.error(
                 "❌ Failed to send message notification email for reminder:",
