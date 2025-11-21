@@ -90,6 +90,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
         style={{
           background: "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
           borderColor: "#606364",
+          paddingTop: "env(safe-area-inset-top)",
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

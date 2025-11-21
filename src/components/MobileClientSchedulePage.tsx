@@ -579,7 +579,10 @@ export default function MobileClientSchedulePage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
-      <div className="sticky top-0 z-50 bg-gradient-to-r from-[#2A3133] to-[#353A3A] border-b border-[#4A5A70] px-4 py-4 shadow-lg">
+      <div 
+        className="sticky top-0 z-50 bg-gradient-to-r from-[#2A3133] to-[#353A3A] border-b border-[#4A5A70] px-4 pb-4 shadow-lg"
+        style={{ paddingTop: `calc(1rem + env(safe-area-inset-top))` }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4A5A70] to-[#606364] flex items-center justify-center shadow-md">

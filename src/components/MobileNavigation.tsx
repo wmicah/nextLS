@@ -152,6 +152,7 @@ export default function MobileNavigation({
         className={`fixed top-0 left-0 right-0 bg-[#353A3A] border-b border-[#606364] shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
           isOpen ? "translate-y-0" : "-translate-y-full"
         }`}
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#606364]">

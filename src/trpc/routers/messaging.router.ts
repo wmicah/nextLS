@@ -265,68 +265,126 @@ export const messagingRouter = router({
           "@/lib/pushNotificationService"
         );
 
-        const recipientId =
-          conversation.coachId === user.id
-            ? conversation.clientId
-            : conversation.coachId;
+        // Determine recipient based on conversation type
+        let recipientId: string | null = null;
+        
+        console.log(`🔍 Determining recipient for conversation ${input.conversationId}:`, {
+          conversationType: conversation.type,
+          senderId: user.id,
+          coachId: conversation.coachId,
+          clientId: conversation.clientId,
+          client1Id: conversation.client1Id,
+          client2Id: conversation.client2Id,
+        });
+        
+        if (conversation.type === "COACH_CLIENT") {
+          // Coach-Client conversation
+          recipientId =
+            conversation.coachId === user.id
+              ? conversation.clientId || null
+              : conversation.coachId || null;
+        } else if (conversation.type === "CLIENT_CLIENT") {
+          // Client-Client conversation
+          recipientId =
+            conversation.client1Id === user.id
+              ? conversation.client2Id || null
+              : conversation.client1Id || null;
+        } else {
+          // Fallback to old logic for backwards compatibility
+          recipientId =
+            conversation.coachId === user.id
+              ? conversation.clientId || null
+              : conversation.coachId || null;
+        }
 
-        if (recipientId) {
+        console.log(`👤 Determined recipient: ${recipientId} (sender: ${user.id})`);
+
+        // Don't send notifications if messaging yourself
+        if (recipientId && recipientId !== user.id) {
+          console.log(`📬 Message sent from ${user.id} to ${recipientId} in conversation ${input.conversationId}`);
+          
           // Get recipient information for email notification
           const recipient = await db.user.findFirst({
             where: { id: recipientId },
             select: { name: true, email: true, id: true },
           });
-          sendToUser(recipientId, {
-            type: "new_message",
-            data: {
-              message,
-              conversationId: input.conversationId,
-            },
-          });
 
-          await sendMessageNotification(
-            recipientId,
-            message.sender.name || message.sender.email,
-            input.content,
-            input.conversationId
-          );
-
-          // Send email notification for new messages
-          if (recipient?.email && recipient?.id) {
-            try {
-              const emailService = CompleteEmailService.getInstance();
-              await emailService.sendNewMessage(
-                recipient.email,
-                recipient.name || "User",
-                message.sender.name || message.sender.email,
-                input.content.length > 100
-                  ? input.content.substring(0, 100) + "..."
-                  : input.content,
-                recipient.id // Pass userId to check preferences
-              );
-            } catch (error) {
-              console.error("❌ Failed to send message notification email:", error);
-            }
+          if (!recipient) {
+            console.warn(`⚠️ Recipient ${recipientId} not found, skipping notifications`);
           } else {
-            console.warn(`⚠️ Cannot send message notification email - no email found for user ${recipientId}`);
-          }
+            // Send SSE update
+            try {
+              sendToUser(recipientId, {
+                type: "new_message",
+                data: {
+                  message,
+                  conversationId: input.conversationId,
+                },
+              });
+              console.log(`✅ SSE update sent to user ${recipientId}`);
+            } catch (sseError) {
+              console.error(`❌ Failed to send SSE update to user ${recipientId}:`, sseError);
+            }
 
-          const unreadCount = await db.message.count({
-            where: {
-              conversation: {
-                OR: [{ clientId: recipientId }, { coachId: recipientId }],
+            // Send push notification
+            try {
+              await sendMessageNotification(
+                recipientId,
+                message.sender.name || message.sender.email,
+                input.content,
+                input.conversationId
+              );
+            } catch (pushError) {
+              console.error(`❌ Failed to send push notification to user ${recipientId}:`, pushError);
+            }
+
+            // Send email notification for new messages
+            if (recipient?.email && recipient?.id) {
+              try {
+                const emailService = CompleteEmailService.getInstance();
+                await emailService.sendNewMessage(
+                  recipient.email,
+                  recipient.name || "User",
+                  message.sender.name || message.sender.email,
+                  input.content.length > 100
+                    ? input.content.substring(0, 100) + "..."
+                    : input.content,
+                  recipient.id // Pass userId to check preferences
+                );
+              } catch (error) {
+                console.error("❌ Failed to send message notification email:", error);
+              }
+            } else {
+              console.warn(`⚠️ Cannot send message notification email - no email found for user ${recipientId}`);
+            }
+
+            const unreadCount = await db.message.count({
+              where: {
+                conversation: {
+                  OR: [
+                    { clientId: recipientId },
+                    { coachId: recipientId },
+                    { client1Id: recipientId },
+                    { client2Id: recipientId },
+                  ],
+                },
+                isRead: false,
+                senderId: { not: recipientId },
               },
-              isRead: false,
-              senderId: { not: recipientId },
-            },
-          });
+            });
 
-          sendToUser(recipientId, {
-            type: "unread_count",
-            data: { count: unreadCount },
-          });
+            sendToUser(recipientId, {
+              type: "unread_count",
+              data: { count: unreadCount },
+            });
+          }
+        } else if (recipientId === user.id) {
+          // Self-message: still update unread count but don't send notifications
+          console.log("⚠️ Self-message detected, skipping notifications");
         }
-      } catch (error) {}
+      } catch (error) {
+        console.error("❌ Error sending message notifications:", error);
+      }
 
       return message;
     }),

@@ -629,8 +629,12 @@ export default function MobileClientDetailPage({
     <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
       {/* Mobile Header */}
       <div
-        className="sticky top-0 z-40 px-4 py-3 border-b"
-        style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+        className="sticky top-0 z-40 px-4 pb-3 border-b"
+        style={{ 
+          backgroundColor: "#353A3A", 
+          borderColor: "#606364",
+          paddingTop: `calc(0.75rem + env(safe-area-inset-top))`
+        }}
       >
         <div className="flex items-center gap-3">
           <button
