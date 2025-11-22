@@ -1424,25 +1424,24 @@ function ClientsPage() {
             return 1;
           } else if (aDates?.overdue && !bDates?.overdue) {
             // Client A has overdue programs, B doesn't - A should come first (most urgent)
-            aValue = aDates.overdue;
-            bValue = bDates?.upcoming || FAR_FUTURE_DATE;
+            // Overdue should always come before upcoming, so return early
+            return -1;
           } else if (!aDates?.overdue && bDates?.overdue) {
             // Client B has overdue programs, A doesn't - B should come first
-            aValue = aDates?.upcoming || FAR_FUTURE_DATE;
-            bValue = bDates.overdue;
+            return 1;
           } else if (aDates?.overdue && bDates?.overdue) {
             // Both have overdue programs - compare by most overdue (earliest past date)
             // Most overdue (earliest date) should come first
-            aValue = aDates.overdue;
-            bValue = bDates.overdue;
+            aValue = aDates.overdue.getTime();
+            bValue = bDates.overdue.getTime();
           } else if (aDates?.upcoming && bDates?.upcoming) {
             // Both have upcoming programs (and no overdue) - compare by nearest upcoming date
-            aValue = aDates.upcoming;
-            bValue = bDates.upcoming;
+            aValue = aDates.upcoming.getTime();
+            bValue = bDates.upcoming.getTime();
           } else {
             // Fallback case (shouldn't happen, but just in case)
-            aValue = aSortDate || FAR_FUTURE_DATE;
-            bValue = bSortDate || FAR_FUTURE_DATE;
+            aValue = aSortDate?.getTime() || FAR_FUTURE_DATE.getTime();
+            bValue = bSortDate?.getTime() || FAR_FUTURE_DATE.getTime();
           }
           // For all other cases, continue to final comparison
           break;
@@ -1531,10 +1530,13 @@ function ClientsPage() {
       } else if (sortBy === "dueDate") {
         // At least one client has programs - use date comparison
         // (Clients with no programs are already handled in the case block)
-        const aTime = (aValue as Date).getTime();
-        const bTime = (bValue as Date).getTime();
+        // aValue and bValue are already timestamps from the case block
+        const aTime = typeof aValue === "number" ? aValue : (aValue as Date).getTime();
+        const bTime = typeof bValue === "number" ? bValue : (bValue as Date).getTime();
         if (sortOrder === "asc") {
           // Ascending: smaller dates (sooner/closer) come first
+          // For overdue, smaller timestamps (earlier dates) come first
+          // For upcoming, smaller timestamps (sooner dates) come first
           return aTime - bTime;
         } else {
           // Descending: larger dates (farther) come first
