@@ -31,11 +31,14 @@ export default function ClientVideoSubmissionModal({
   const submitVideoMutation = trpc.clientRouter.submitVideo.useMutation({
     onSuccess: () => {
       utils.clientRouter.getVideoSubmissions.invalidate();
+      utils.clientRouter.getVideoAssignments.invalidate();
       onClose();
       resetForm();
     },
     onError: error => {
-      setError(error.message);
+      console.error("Submit video error:", error);
+      const errorMessage = error.message || "Failed to submit video. Please try again.";
+      setError(errorMessage);
       setIsSubmitting(false);
     },
   });
@@ -56,22 +59,35 @@ export default function ClientVideoSubmissionModal({
     e.preventDefault();
 
     if (!videoUrl) {
-      setError("Please upload a video");
+      setError("Please upload a video before submitting");
+      return;
+    }
+
+    // Validate video URL format
+    try {
+      new URL(videoUrl);
+    } catch {
+      setError("Invalid video URL. Please upload the video again.");
       return;
     }
 
     setIsSubmitting(true);
     setError("");
 
-    await submitVideoMutation.mutateAsync({
-      title: drillTitle || "Video Submission",
-      description: undefined,
-      comment: message.trim() || undefined,
-      videoUrl,
-      thumbnail: undefined,
-      drillId,
-      isPublic: false,
-    });
+    try {
+      await submitVideoMutation.mutateAsync({
+        title: drillTitle || "Video Submission",
+        description: undefined,
+        comment: message.trim() || undefined,
+        videoUrl,
+        thumbnail: undefined,
+        drillId,
+        isPublic: false,
+      });
+    } catch (error) {
+      // Error is already handled in onError callback
+      console.error("Error submitting video:", error);
+    }
   };
 
   if (!isOpen) return null;
@@ -151,12 +167,26 @@ export default function ClientVideoSubmissionModal({
                   <UploadButton<OurFileRouter, "videoUploader">
                     endpoint="videoUploader"
                     onClientUploadComplete={res => {
-                      const file = res[0];
-                      setVideoUrl(file.url);
-                      setError("");
+                      if (res && res.length > 0) {
+                        const file = res[0];
+                        if (file?.url) {
+                          setVideoUrl(file.url);
+                          setError("");
+                        } else {
+                          setError("Upload completed but no file URL received. Please try again.");
+                        }
+                      } else {
+                        setError("Upload completed but no file received. Please try again.");
+                      }
                     }}
                     onUploadError={(error: Error) => {
-                      setError(`Upload failed: ${error.message}`);
+                      console.error("Upload error:", error);
+                      const errorMessage = error.message || "Unknown upload error";
+                      setError(`Upload failed: ${errorMessage}. Please check your file size (max 1GB) and try again.`);
+                    }}
+                    onUploadBegin={(name) => {
+                      setError("");
+                      console.log("Upload started:", name);
                     }}
                   />
                 </div>

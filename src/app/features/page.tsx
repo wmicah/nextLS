@@ -444,7 +444,6 @@ function DetailsTab() {
           <FeatureCategory
             title="Client Management"
             description="Manage your coaching roster with comprehensive client profiles and progress tracking"
-            index={0}
           >
             <div className="bg-white/5 rounded-xl p-3 sm:p-4">
               <h4 className="text-sm sm:text-base font-semibold text-white mb-1 sm:mb-2">
@@ -468,7 +467,6 @@ function DetailsTab() {
           <FeatureCategory
             title="Smart Scheduling"
             description="Automated scheduling system that eliminates back-and-forth coordination"
-            index={1}
           >
             <div className="bg-white/5 rounded-xl p-3 sm:p-4">
               <h4 className="text-sm sm:text-base font-semibold text-white mb-1 sm:mb-2">
@@ -493,7 +491,6 @@ function DetailsTab() {
           <FeatureCategory
             title="Program Builder"
             description="Create comprehensive training programs with drag-and-drop simplicity"
-            index={2}
           >
             <div className="bg-white/5 rounded-xl p-3 sm:p-4">
               <h4 className="text-sm sm:text-base font-semibold text-white mb-1 sm:mb-2">
@@ -518,7 +515,6 @@ function DetailsTab() {
           <FeatureCategory
             title="Video Analysis"
             description="Professional video coaching with built-in annotation tools"
-            index={3}
           >
             <div className="bg-white/5 rounded-xl p-3 sm:p-4">
               <h4 className="text-sm sm:text-base font-semibold text-white mb-1 sm:mb-2">
@@ -542,7 +538,6 @@ function DetailsTab() {
           <FeatureCategory
             title="Unified Messaging"
             description="All communication in one place with professional messaging features"
-            index={4}
           >
             <div className="bg-white/5 rounded-xl p-3 sm:p-4">
               <h4 className="text-sm sm:text-base font-semibold text-white mb-1 sm:mb-2">
@@ -566,7 +561,6 @@ function DetailsTab() {
           <FeatureCategory
             title="Resource Library"
             description="Comprehensive resource collection from expert coaches and your own content"
-            index={5}
           >
             <div className="bg-white/5 rounded-xl p-3 sm:p-4">
               <h4 className="text-sm sm:text-base font-semibold text-white mb-1 sm:mb-2">

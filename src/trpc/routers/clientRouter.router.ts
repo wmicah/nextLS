@@ -4627,6 +4627,16 @@ export const clientRouterRouter = router({
         });
       }
 
+      // Validate video URL
+      try {
+        new URL(input.videoUrl);
+      } catch {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid video URL. Please upload the video again.",
+        });
+      }
+
       // Create video submission with error handling
       let videoSubmission;
       try {
@@ -4644,11 +4654,26 @@ export const clientRouterRouter = router({
           },
         });
       } catch (error: any) {
-        console.error("Error creating video submission:", error);
+        console.error("Error creating video submission:", {
+          error: error.message,
+          code: error.code,
+          clientId: client.id,
+          coachId: client.coachId,
+          videoUrl: input.videoUrl,
+        });
+        
+        // Provide more specific error messages
+        if (error.code === "P2002") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "A video submission with this information already exists. Please try again.",
+          });
+        }
+        
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to create video submission: ${
-            error.message || "Unknown error"
+          message: `Failed to submit video: ${
+            error.message || "Please try again or contact support if the problem persists."
           }`,
         });
       }

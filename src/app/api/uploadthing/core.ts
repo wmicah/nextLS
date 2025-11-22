@@ -105,20 +105,32 @@ export const ourFileRouter = {
         const validation = validateFileSecurity(fileData, "video");
 
         if (!validation.isValid) {
-
+          const errorDetails = validation.errors.join(", ");
+          console.error("Video upload validation failed:", {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            errors: validation.errors,
+          });
           throw new Error(
-            `File security validation failed: ${validation.errors.join(", ")}`
+            `File validation failed: ${errorDetails}. Please check your file format and size (max 1GB).`
           );
         }
 
         if (validation.riskLevel === "high") {
-
-          throw new Error("File rejected due to security risk");
+          console.error("Video upload rejected - high risk:", {
+            fileName: file.name,
+            riskLevel: validation.riskLevel,
+          });
+          throw new Error("File rejected due to security risk. Please upload a valid video file.");
         }
 
         // Log security warnings
         if (validation.warnings.length > 0) {
-
+          console.warn("Video upload warnings:", {
+            fileName: file.name,
+            warnings: validation.warnings,
+          });
         }
       }
 
