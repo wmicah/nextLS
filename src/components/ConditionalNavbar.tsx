@@ -21,8 +21,8 @@ export default function ConditionalNavbar() {
     return null;
   }
 
-  // Always show navbar on landing page (/) and features page regardless of auth status
-  if (pathname === "/" || pathname === "/features") {
+  // Always show navbar on landing page (/), features page, and pricing page regardless of auth status
+  if (pathname === "/" || pathname === "/features" || pathname === "/pricing") {
     return <Navbar />;
   }
 

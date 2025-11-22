@@ -7,7 +7,7 @@ import {
   RegisterLink,
   useKindeAuth,
 } from "@kinde-oss/kinde-auth-nextjs";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -73,12 +73,71 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-2">
-            <Link
-              href="/features"
-              className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors duration-200 rounded-lg hover:bg-white/5"
-            >
-              Features
-            </Link>
+            {/* Features Dropdown */}
+            <div className="relative group">
+              <Link
+                href="/features"
+                className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors duration-200 rounded-lg hover:bg-white/5"
+              >
+                Features
+              </Link>
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-[600px] bg-[#353A3A] border border-white/10 rounded-xl shadow-2xl p-6 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <p className="text-sm text-zinc-300 mb-4 leading-relaxed font-medium">
+                  Everything you need to run a professional coaching business
+                </p>
+                <div className="space-y-3">
+                  {[
+                    {
+                      name: "Program Builder",
+                      description:
+                        "Create comprehensive training programs with drag-and-drop simplicity. Build weeks, days, and drills with video demonstrations.",
+                    },
+                    {
+                      name: "Video Analysis",
+                      description:
+                        "Professional video coaching with built-in annotation tools, voice feedback, and frame-by-frame analysis.",
+                    },
+                    {
+                      name: "Unified Messaging",
+                      description:
+                        "All communication in one place with real-time messaging, file sharing, and push notifications.",
+                    },
+                    {
+                      name: "Smart Scheduling",
+                      description:
+                        "Automated scheduling system that eliminates back-and-forth coordination. Clients can book and swap times themselves.",
+                    },
+                    {
+                      name: "Analytics Dashboard",
+                      description:
+                        "Track client progress, completion rates, and engagement. Show data that justifies renewals and drives growth.",
+                    },
+                    {
+                      name: "Client Management",
+                      description:
+                        "Manage your coaching roster with comprehensive client profiles, progress tracking, and milestone achievements.",
+                    },
+                  ].map((feature) => (
+                    <div key={feature.name} className="border-b border-white/5 last:border-0 pb-3 last:pb-0">
+                      <div className="flex items-start gap-2 mb-1">
+                        <CheckCircle2 className="h-4 w-4 text-zinc-400 shrink-0 mt-0.5" />
+                        <h4 className="text-sm font-semibold text-white">
+                          {feature.name}
+                        </h4>
+                      </div>
+                      <p className="text-xs text-zinc-400 ml-6 leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="pt-2 text-center">
+                    <p className="text-xs text-zinc-400 italic">
+                      + and more
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <Link
               href="/pricing"
