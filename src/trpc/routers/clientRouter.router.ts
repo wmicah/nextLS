@@ -4637,6 +4637,23 @@ export const clientRouterRouter = router({
         });
       }
 
+      // Validate drillId if provided - ensure it exists and belongs to a valid program
+      let validDrillId: string | null = null;
+      if (input.drillId && input.drillId.trim() !== "") {
+        const drill = await db.programDrill.findUnique({
+          where: { id: input.drillId },
+          select: { id: true },
+        });
+
+        if (!drill) {
+          // Drill doesn't exist - log warning but allow submission without drillId
+          console.warn(`Drill ID ${input.drillId} not found, submitting video without drill reference`);
+          validDrillId = null;
+        } else {
+          validDrillId = input.drillId;
+        }
+      }
+
       // Create video submission with error handling
       let videoSubmission;
       try {
@@ -4649,7 +4666,7 @@ export const clientRouterRouter = router({
             comment: input.comment || null,
             videoUrl: input.videoUrl,
             thumbnail: input.thumbnail || null,
-            drillId: input.drillId || null,
+            drillId: validDrillId,
             isPublic: input.isPublic ?? false,
           },
         });
@@ -4657,8 +4674,10 @@ export const clientRouterRouter = router({
         console.error("Error creating video submission:", {
           error: error.message,
           code: error.code,
+          meta: error.meta,
           clientId: client.id,
           coachId: client.coachId,
+          drillId: validDrillId,
           videoUrl: input.videoUrl,
         });
         
@@ -4667,6 +4686,21 @@ export const clientRouterRouter = router({
           throw new TRPCError({
             code: "CONFLICT",
             message: "A video submission with this information already exists. Please try again.",
+          });
+        }
+        
+        // Handle foreign key constraint violations
+        if (error.code === "P2003") {
+          const field = error.meta?.field_name || "unknown field";
+          if (field.includes("drillId") || field.includes("drill")) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "The program drill reference is invalid. The video has been submitted without the drill reference.",
+            });
+          }
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Invalid reference: ${field}. Please try again.`,
           });
         }
         
