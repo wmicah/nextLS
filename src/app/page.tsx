@@ -241,13 +241,13 @@ function HomeContent() {
       </section>
 
       {/* HOW IT WORKS - Video Format Steps */}
-      <section className="py-16 sm:py-20 md:py-24 bg-white/[.02]">
+      <section className="py-8 sm:py-12 md:py-16 lg:py-20 bg-white/[.02]">
         <MaxWidthWrapper className="px-4 sm:px-6">
-          <div className="text-center mb-16" data-reveal>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16" data-reveal>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 sm:mb-4">
               How It Works
             </h2>
-            <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto">
               Get started in three simple steps
             </p>
           </div>
@@ -372,14 +372,14 @@ function HomeContent() {
 
       {/* FOOTER */}
       <footer className="border-t border-white/10 bg-[#2A3133]">
-        <MaxWidthWrapper className="px-4 sm:px-6 py-12 md:py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-8">
+        <MaxWidthWrapper className="px-4 sm:px-6 py-6 sm:py-8 md:py-12 lg:py-16">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 lg:gap-12 mb-4 sm:mb-6 md:mb-8">
             {/* Brand Column */}
-            <div className="col-span-1 md:col-span-2">
-              <h3 className="text-xl font-bold text-white mb-4">
+            <div className="col-span-2 md:col-span-2">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-4">
                 NextLevel Coaching
               </h3>
-              <p className="text-zinc-400 mb-4 max-w-md">
+              <p className="text-xs sm:text-sm text-zinc-400 mb-2 sm:mb-4 max-w-md">
                 The professional platform trusted by elite coaches to build
                 championship programs and develop athletes.
               </p>
@@ -387,14 +387,14 @@ function HomeContent() {
 
             {/* Product Links */}
             <div>
-              <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-4 uppercase tracking-wider">
                 Product
               </h4>
-              <ul className="space-y-3">
+              <ul className="space-y-1.5 sm:space-y-2 md:space-y-3">
                 <li>
                   <Link
                     href="/features"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Features
                   </Link>
@@ -402,13 +402,13 @@ function HomeContent() {
                 <li>
                   <Link
                     href="/pricing"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Pricing
                   </Link>
                 </li>
                 <li>
-                  <RegisterLink className="text-zinc-400 hover:text-white transition-colors text-sm">
+                  <RegisterLink className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm">
                     Get Started
                   </RegisterLink>
                 </li>
@@ -417,14 +417,14 @@ function HomeContent() {
 
             {/* Company Links */}
             <div>
-              <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-4 uppercase tracking-wider">
                 Company
               </h4>
-              <ul className="space-y-3">
+              <ul className="space-y-1.5 sm:space-y-2 md:space-y-3">
                 <li>
                   <Link
                     href="/about"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     About
                   </Link>
@@ -432,7 +432,7 @@ function HomeContent() {
                 <li>
                   <Link
                     href="/contact"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Contact
                   </Link>
@@ -440,7 +440,7 @@ function HomeContent() {
                 <li>
                   <Link
                     href="/privacy"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Privacy Policy
                   </Link>
@@ -448,7 +448,7 @@ function HomeContent() {
                 <li>
                   <Link
                     href="/terms"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Terms of Service
                   </Link>
@@ -458,25 +458,25 @@ function HomeContent() {
           </div>
 
           {/* Bottom Bar */}
-          <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-zinc-500 text-sm">
+          <div className="pt-4 sm:pt-6 md:pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
+            <p className="text-zinc-500 text-xs sm:text-sm text-center sm:text-left">
               © {new Date().getFullYear()} NextLevel Coaching. All rights
               reserved.
             </p>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6">
               <Link
                 href="/privacy"
-                className="text-zinc-500 hover:text-white transition-colors text-sm"
+                className="text-zinc-500 hover:text-white transition-colors text-xs sm:text-sm"
               >
                 Privacy
               </Link>
               <Link
                 href="/terms"
-                className="text-zinc-500 hover:text-white transition-colors text-sm"
+                className="text-zinc-500 hover:text-white transition-colors text-xs sm:text-sm"
               >
                 Terms
               </Link>
-              <span className="text-zinc-500 text-sm">
+              <span className="text-zinc-500 text-xs sm:text-sm">
                 Powered by{" "}
                 <Link
                   href="https://nexishq.com"
@@ -541,9 +541,9 @@ function VideoStepPlayer() {
       {/* Large Video Container - GitHub Style */}
       <div className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-br from-white/5 to-white/10 border border-white/10 shadow-2xl">
         {/* Video/Content Area */}
-        <div className="relative aspect-[16/9] w-full bg-gradient-to-br from-[#2A3133] via-[#1a1f20] to-black">
+        <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full bg-gradient-to-br from-[#2A3133] via-[#1a1f20] to-black">
           {/* Animated Demo Content */}
-          <div className="absolute inset-0 p-6 md:p-8">
+          <div className="absolute inset-0 p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8">
             {/* Step 1: Program Builder */}
             {currentStep === 0 && <ProgramBuilderDemo />}
 
@@ -554,8 +554,8 @@ function VideoStepPlayer() {
             {currentStep === 2 && <SchedulingDemo />}
 
             {/* Overlay Badge */}
-            <div className="absolute top-4 left-4 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 z-20">
-              <span className="text-white text-sm font-medium">
+            <div className="absolute top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4 px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 z-20">
+              <span className="text-white text-[10px] sm:text-xs md:text-sm font-medium">
                 {currentStepData.overlay}
               </span>
             </div>
@@ -573,15 +573,15 @@ function VideoStepPlayer() {
         </div>
 
         {/* Content Overlay - Bottom */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-8 md:p-12">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 sm:p-6 md:p-8 lg:p-12">
           <div className="max-w-3xl">
-            <div className="text-sm font-semibold text-white/60 mb-2 uppercase tracking-wider">
+            <div className="text-xs sm:text-sm font-semibold text-white/60 mb-1 sm:mb-2 uppercase tracking-wider">
               Step {currentStepData.number}
             </div>
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-3">
+            <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">
               {currentStepData.title}
             </h3>
-            <p className="text-lg text-zinc-300 leading-relaxed">
+            <p className="text-sm sm:text-base md:text-lg text-zinc-300 leading-relaxed">
               {currentStepData.description}
             </p>
           </div>
@@ -590,24 +590,24 @@ function VideoStepPlayer() {
         {/* Play/Pause Control - Top Right */}
         <button
           onClick={() => setIsPlaying(!isPlaying)}
-          className="absolute top-4 right-4 w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-black/60 transition-all z-10"
+          className="absolute top-2 sm:top-3 md:top-4 right-2 sm:right-3 md:right-4 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 flex items-center justify-center hover:bg-black/60 transition-all z-10"
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
-            <div className="flex gap-1">
-              <div className="w-1 h-4 bg-white rounded-full"></div>
-              <div className="w-1 h-4 bg-white rounded-full"></div>
+            <div className="flex gap-0.5 sm:gap-1">
+              <div className="w-0.5 sm:w-1 h-3 sm:h-4 bg-white rounded-full"></div>
+              <div className="w-0.5 sm:w-1 h-3 sm:h-4 bg-white rounded-full"></div>
             </div>
           ) : (
-            <PlayCircle className="h-6 w-6 text-white" />
+            <PlayCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
           )}
         </button>
       </div>
 
       {/* Step Navigation - Below Video */}
-      <div className="mt-8 flex items-center justify-between">
+      <div className="mt-4 sm:mt-6 md:mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
         {/* Step Dots */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {steps.map((step, index) => (
             <button
               key={index}
@@ -616,8 +616,10 @@ function VideoStepPlayer() {
                 setIsPlaying(false);
               }}
               className={`relative transition-all ${
-                index === currentStep ? "w-12" : "w-3 hover:w-6"
-              } h-3 rounded-full ${
+                index === currentStep
+                  ? "w-8 sm:w-12"
+                  : "w-2 sm:w-3 hover:w-4 sm:hover:w-6"
+              } h-2 sm:h-3 rounded-full ${
                 index === currentStep
                   ? "bg-white"
                   : "bg-white/30 hover:bg-white/50"
@@ -625,7 +627,7 @@ function VideoStepPlayer() {
               aria-label={`Go to step ${index + 1}`}
             >
               {index === currentStep && (
-                <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-medium text-white whitespace-nowrap">
+                <span className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs font-medium text-white whitespace-nowrap hidden sm:block">
                   {step.title}
                 </span>
               )}
@@ -634,13 +636,13 @@ function VideoStepPlayer() {
         </div>
 
         {/* Navigation Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => {
               setCurrentStep(prev => (prev - 1 + steps.length) % steps.length);
               setIsPlaying(false);
             }}
-            className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-sm font-medium"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-xs sm:text-sm font-medium"
           >
             ← Previous
           </button>
@@ -649,7 +651,7 @@ function VideoStepPlayer() {
               setCurrentStep(prev => (prev + 1) % steps.length);
               setIsPlaying(false);
             }}
-            className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-sm font-medium"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-xs sm:text-sm font-medium"
           >
             Next →
           </button>
@@ -690,23 +692,25 @@ function ProgramBuilderDemo() {
   ];
 
   return (
-    <div className="h-full w-full bg-[#353A3A] rounded-xl border border-white/10 p-4 md:p-6 relative overflow-hidden">
+    <div className="h-full w-full bg-[#353A3A] rounded-xl border border-white/10 p-2 sm:p-3 md:p-4 lg:p-6 relative overflow-hidden">
       {/* Sidebar */}
-      <div className="absolute left-0 top-0 bottom-0 w-16 bg-[#2A3133] border-r border-white/10"></div>
+      <div className="absolute left-0 top-0 bottom-0 w-8 sm:w-12 md:w-16 bg-[#2A3133] border-r border-white/10"></div>
 
       {/* Main Content */}
-      <div className="ml-20 h-full flex flex-col">
+      <div className="ml-10 sm:ml-14 md:ml-20 h-full flex flex-col">
         {/* Header */}
-        <div className="h-12 bg-white/5 rounded-lg mb-4 flex items-center px-4 border border-white/10">
-          <div className="text-white font-semibold">Your Program - Week 1</div>
+        <div className="h-8 sm:h-10 md:h-12 bg-white/5 rounded-lg mb-2 sm:mb-3 md:mb-4 flex items-center px-2 sm:px-3 md:px-4 border border-white/10">
+          <div className="text-white font-semibold text-xs sm:text-sm md:text-base">
+            Your Program - Week 1
+          </div>
         </div>
 
         {/* Week/Day Structure */}
-        <div className="flex-1 grid grid-cols-7 gap-2">
+        <div className="flex-1 grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2">
           {days.map((day, idx) => (
             <div
               key={day.label}
-              className="bg-white/5 rounded-lg border border-white/10 p-3 relative overflow-hidden"
+              className="bg-white/5 rounded-lg border border-white/10 p-1 sm:p-2 md:p-3 relative overflow-hidden"
               style={{
                 animationDelay: `${idx * 100}ms`,
                 animation:
@@ -716,15 +720,15 @@ function ProgramBuilderDemo() {
                 willChange: "transform, opacity",
               }}
             >
-              <div className="text-xs text-zinc-400 mb-2 font-medium">
+              <div className="text-[10px] sm:text-xs text-zinc-400 mb-1 sm:mb-2 font-medium">
                 {day.label.substring(0, 3)}
               </div>
               {animationStep > idx && day.drills[0] !== "Rest Day" ? (
-                <div className="space-y-1.5">
-                  {day.drills.slice(0, 3).map((drill, drillIdx) => (
+                <div className="space-y-0.5 sm:space-y-1 md:space-y-1.5">
+                  {day.drills.slice(0, 2).map((drill, drillIdx) => (
                     <div
                       key={drillIdx}
-                      className="text-xs text-white/80 bg-white/5 rounded px-2 py-1 border border-white/10"
+                      className="text-[9px] sm:text-[10px] md:text-xs text-white/80 bg-white/5 rounded px-1 sm:px-1.5 md:px-2 py-0.5 sm:py-1 border border-white/10 truncate"
                       style={{
                         animationDelay: `${idx * 100 + drillIdx * 50}ms`,
                         animation:
@@ -739,18 +743,20 @@ function ProgramBuilderDemo() {
                   ))}
                 </div>
               ) : animationStep > idx ? (
-                <div className="text-xs text-zinc-500 italic">Rest Day</div>
+                <div className="text-[9px] sm:text-[10px] md:text-xs text-zinc-500 italic">
+                  Rest
+                </div>
               ) : null}
             </div>
           ))}
         </div>
 
         {/* Action Bar */}
-        <div className="mt-4 flex gap-2">
-          <div className="h-10 w-28 bg-white/10 rounded-lg flex items-center justify-center text-sm text-white border border-white/20">
-            Save Program
+        <div className="mt-2 sm:mt-3 md:mt-4 flex gap-1 sm:gap-1.5 md:gap-2">
+          <div className="h-7 sm:h-8 md:h-10 w-20 sm:w-24 md:w-28 bg-white/10 rounded-lg flex items-center justify-center text-[10px] sm:text-xs md:text-sm text-white border border-white/20">
+            Save
           </div>
-          <div className="h-10 w-28 bg-white/10 rounded-lg flex items-center justify-center text-sm text-white border border-white/20">
+          <div className="h-7 sm:h-8 md:h-10 w-20 sm:w-24 md:w-28 bg-white/10 rounded-lg flex items-center justify-center text-[10px] sm:text-xs md:text-sm text-white border border-white/20">
             Add Week
           </div>
         </div>
@@ -797,53 +803,55 @@ function ClientManagementDemo() {
   ];
 
   return (
-    <div className="h-full w-full bg-[#353A3A] rounded-xl border border-white/10 p-4 md:p-6 relative overflow-hidden">
+    <div className="h-full w-full bg-[#353A3A] rounded-xl border border-white/10 p-2 sm:p-3 md:p-4 lg:p-6 relative overflow-hidden">
       {/* Header */}
-      <div className="h-12 bg-white/5 rounded-lg mb-4 flex items-center justify-between px-4 border border-white/10">
-        <div className="text-white font-semibold text-lg">Your Athletes</div>
-        <div className="h-8 w-32 bg-white/10 rounded-lg flex items-center justify-center text-sm text-white border border-white/20">
-          + Add Client
+      <div className="h-8 sm:h-10 md:h-12 bg-white/5 rounded-lg mb-2 sm:mb-3 md:mb-4 flex items-center justify-between px-2 sm:px-3 md:px-4 border border-white/10">
+        <div className="text-white font-semibold text-xs sm:text-sm md:text-base lg:text-lg">
+          Your Athletes
+        </div>
+        <div className="h-6 sm:h-7 md:h-8 w-20 sm:w-24 md:w-32 bg-white/10 rounded-lg flex items-center justify-center text-[10px] sm:text-xs md:text-sm text-white border border-white/20">
+          + Add
         </div>
       </div>
 
       {/* Client Cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
         {clients.map((client, idx) => (
           <div
             key={client.name}
-            className="bg-white/5 rounded-lg border border-white/10 p-4"
+            className="bg-white/5 rounded-lg border border-white/10 p-2 sm:p-3 md:p-4"
             style={{
               animationDelay: `${idx * 100}ms`,
               animation: "fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-full bg-[#4A5A70] flex items-center justify-center text-white font-bold text-sm">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-[#4A5A70] flex items-center justify-center text-white font-bold text-[10px] sm:text-xs md:text-sm shrink-0">
                 {client.initials}
               </div>
-              <div className="flex-1">
-                <div className="text-white font-semibold mb-1">
+              <div className="flex-1 min-w-0">
+                <div className="text-white font-semibold mb-0.5 sm:mb-1 text-xs sm:text-sm md:text-base truncate">
                   {client.name}
                 </div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-[10px] sm:text-xs text-zinc-400 truncate">
                   Next: {client.nextLesson}
                 </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
+            <div className="space-y-1 sm:space-y-2">
+              <div className="flex items-center justify-between text-[10px] sm:text-xs">
                 <span className="text-zinc-400">Progress</span>
                 <span className="text-white font-medium">
                   {client.progress}%
                 </span>
               </div>
-              <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+              <div className="h-1.5 sm:h-2 w-full bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#09C4F2] rounded-full"
                   style={{ width: `${client.progress}%` }}
                 />
               </div>
-              <div className="flex items-center gap-2 mt-3 text-xs">
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-2 md:mt-3 text-[10px] sm:text-xs">
                 <span className="text-zinc-400">
                   {client.programs} program{client.programs > 1 ? "s" : ""}
                 </span>
@@ -907,26 +915,28 @@ function SchedulingDemo() {
   const currentDay = dayNames[today.getDay()];
 
   return (
-    <div className="h-full w-full bg-[#353A3A] rounded-xl border border-white/10 p-4 md:p-6 relative overflow-hidden">
+    <div className="h-full w-full bg-[#353A3A] rounded-xl border border-white/10 p-2 sm:p-3 md:p-4 lg:p-6 relative overflow-hidden">
       {/* Calendar Header */}
-      <div className="h-12 bg-white/5 rounded-lg mb-4 flex items-center justify-between px-4 border border-white/10">
-        <div className="text-white font-semibold">January 2025</div>
-        <div className="flex gap-2">
-          <div className="h-8 w-8 bg-white/10 rounded-lg flex items-center justify-center text-white border border-white/20 cursor-pointer">
+      <div className="h-8 sm:h-10 md:h-12 bg-white/5 rounded-lg mb-2 sm:mb-3 md:mb-4 flex items-center justify-between px-2 sm:px-3 md:px-4 border border-white/10">
+        <div className="text-white font-semibold text-xs sm:text-sm md:text-base">
+          January 2025
+        </div>
+        <div className="flex gap-1 sm:gap-1.5 md:gap-2">
+          <div className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 bg-white/10 rounded-lg flex items-center justify-center text-white text-[10px] sm:text-xs md:text-sm border border-white/20 cursor-pointer">
             ←
           </div>
-          <div className="h-8 w-8 bg-white/10 rounded-lg flex items-center justify-center text-white border border-white/20 cursor-pointer">
+          <div className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 bg-white/10 rounded-lg flex items-center justify-center text-white text-[10px] sm:text-xs md:text-sm border border-white/20 cursor-pointer">
             →
           </div>
         </div>
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2 mb-4">
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4">
         {dayNames.map((day, idx) => (
           <div
             key={day}
-            className={`text-center text-xs py-2 rounded ${
+            className={`text-center text-[9px] sm:text-[10px] md:text-xs py-1 sm:py-1.5 md:py-2 rounded ${
               day === currentDay
                 ? "bg-[#09C4F2]/20 text-[#09C4F2] font-semibold"
                 : "text-zinc-400"
@@ -938,11 +948,11 @@ function SchedulingDemo() {
       </div>
 
       {/* Time Slots */}
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-1 sm:space-y-1.5 md:space-y-2 max-h-48 sm:max-h-56 md:max-h-64 overflow-y-auto">
         {scheduleItems.map((item, idx) => (
           <div
             key={item.time}
-            className="bg-white/5 rounded-lg border border-white/10 p-3 flex items-center justify-between"
+            className="bg-white/5 rounded-lg border border-white/10 p-2 sm:p-2.5 md:p-3 flex items-center justify-between"
             style={{
               animationDelay: `${idx * 150}ms`,
               animation:
@@ -952,30 +962,32 @@ function SchedulingDemo() {
               willChange: "transform, opacity",
             }}
           >
-            <div className="flex items-center gap-3 flex-1">
-              <div className="w-20 text-sm text-zinc-300 font-medium">
+            <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 flex-1 min-w-0">
+              <div className="w-14 sm:w-16 md:w-20 text-[10px] sm:text-xs md:text-sm text-zinc-300 font-medium shrink-0">
                 {item.time}
               </div>
               {animationStep > idx && (
                 <>
-                  <div className="w-10 h-10 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-xs font-bold">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-[9px] sm:text-[10px] md:text-xs font-bold shrink-0">
                     {item.client
                       .split(" ")
                       .map(n => n[0])
                       .join("")}
                   </div>
-                  <div className="flex-1">
-                    <div className="text-white text-sm font-medium">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white text-xs sm:text-sm font-medium truncate">
                       {item.client}
                     </div>
-                    <div className="text-xs text-zinc-400">{item.type}</div>
+                    <div className="text-[10px] sm:text-xs text-zinc-400 truncate">
+                      {item.type}
+                    </div>
                   </div>
                 </>
               )}
             </div>
             {animationStep > idx && (
               <div
-                className={`px-3 py-1 rounded text-xs font-medium ${
+                className={`px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 rounded text-[9px] sm:text-[10px] md:text-xs font-medium shrink-0 ${
                   item.status === "Confirmed"
                     ? "bg-green-500/20 text-green-400 border border-green-500/30"
                     : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"

@@ -283,14 +283,14 @@ export default function PricingPage() {
 
       {/* FOOTER */}
       <footer className="border-t border-white/10 bg-[#2A3133]">
-        <MaxWidthWrapper className="px-4 sm:px-6 py-12 md:py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-8">
+        <MaxWidthWrapper className="px-4 sm:px-6 py-6 sm:py-8 md:py-12 lg:py-16">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 lg:gap-12 mb-4 sm:mb-6 md:mb-8">
             {/* Brand Column */}
-            <div className="col-span-1 md:col-span-2">
-              <h3 className="text-xl font-bold text-white mb-4">
+            <div className="col-span-2 md:col-span-2">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-4">
                 NextLevel Coaching
               </h3>
-              <p className="text-zinc-400 mb-4 max-w-md">
+              <p className="text-xs sm:text-sm text-zinc-400 mb-2 sm:mb-4 max-w-md">
                 The professional platform trusted by elite coaches to build
                 championship programs and develop athletes.
               </p>
@@ -298,14 +298,14 @@ export default function PricingPage() {
 
             {/* Product Links */}
             <div>
-              <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-4 uppercase tracking-wider">
                 Product
               </h4>
-              <ul className="space-y-3">
+              <ul className="space-y-1.5 sm:space-y-2 md:space-y-3">
                 <li>
                   <Link
                     href="/features"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Features
                   </Link>
@@ -313,13 +313,13 @@ export default function PricingPage() {
                 <li>
                   <Link
                     href="/pricing"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Pricing
                   </Link>
                 </li>
                 <li>
-                  <RegisterLink className="text-zinc-400 hover:text-white transition-colors text-sm">
+                  <RegisterLink className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm">
                     Get Started
                   </RegisterLink>
                 </li>
@@ -328,14 +328,14 @@ export default function PricingPage() {
 
             {/* Company Links */}
             <div>
-              <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-4 uppercase tracking-wider">
                 Company
               </h4>
-              <ul className="space-y-3">
+              <ul className="space-y-1.5 sm:space-y-2 md:space-y-3">
                 <li>
                   <Link
                     href="/about"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     About
                   </Link>
@@ -343,7 +343,7 @@ export default function PricingPage() {
                 <li>
                   <Link
                     href="/contact"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Contact
                   </Link>
@@ -351,7 +351,7 @@ export default function PricingPage() {
                 <li>
                   <Link
                     href="/privacy"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Privacy Policy
                   </Link>
@@ -359,7 +359,7 @@ export default function PricingPage() {
                 <li>
                   <Link
                     href="/terms"
-                    className="text-zinc-400 hover:text-white transition-colors text-sm"
+                    className="text-zinc-400 hover:text-white transition-colors text-xs sm:text-sm"
                   >
                     Terms of Service
                   </Link>
@@ -369,25 +369,25 @@ export default function PricingPage() {
           </div>
 
           {/* Bottom Bar */}
-          <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-zinc-500 text-sm">
+          <div className="pt-4 sm:pt-6 md:pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
+            <p className="text-zinc-500 text-xs sm:text-sm text-center sm:text-left">
               © {new Date().getFullYear()} NextLevel Coaching. All rights
               reserved.
             </p>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6">
               <Link
                 href="/privacy"
-                className="text-zinc-500 hover:text-white transition-colors text-sm"
+                className="text-zinc-500 hover:text-white transition-colors text-xs sm:text-sm"
               >
                 Privacy
               </Link>
               <Link
                 href="/terms"
-                className="text-zinc-500 hover:text-white transition-colors text-sm"
+                className="text-zinc-500 hover:text-white transition-colors text-xs sm:text-sm"
               >
                 Terms
               </Link>
-              <span className="text-zinc-500 text-sm">
+              <span className="text-zinc-500 text-xs sm:text-sm">
                 Powered by{" "}
                 <Link
                   href="https://nexishq.com"
