@@ -17,6 +17,22 @@ export const ALLOWED_VIDEO_EXTENSIONS = [
   ".mpeg",
   ".mpg",
   ".m4a", // Sometimes used for video on mobile
+  ".hevc", // H.265/HEVC
+  ".h265", // H.265 alternative extension
+  ".h264", // H.264
+  ".ts", // MPEG transport stream
+  ".mts", // MPEG transport stream (AVCHD)
+  ".vob", // DVD video
+  ".asf", // Advanced Systems Format
+  ".rm", // RealMedia
+  ".rmvb", // RealMedia Variable Bitrate
+  ".divx", // DivX
+  ".xvid", // Xvid
+  ".f4v", // Flash Video
+  ".m2v", // MPEG-2 Video
+  ".mxf", // Material Exchange Format
+  ".dv", // Digital Video
+  ".yuv", // Raw video format
 ] as const;
 
 // Allowed video MIME types (for mobile device compatibility)
@@ -34,6 +50,18 @@ export const ALLOWED_VIDEO_MIME_TYPES = [
   "video/ogg",
   "video/mpeg",
   "video/x-m4a", // Sometimes used for video on mobile
+  "video/hevc", // H.265/HEVC
+  "video/h265", // H.265 alternative
+  "video/h264", // H.264
+  "video/mp2t", // MPEG transport stream (.ts, .mts)
+  "video/dvd", // DVD video (.vob)
+  "video/x-ms-asf", // Advanced Systems Format (.asf)
+  "video/vnd.rn-realvideo", // RealMedia (.rm, .rmvb)
+  "video/x-divx", // DivX
+  "video/x-f4v", // Flash Video (.f4v)
+  "video/m2v", // MPEG-2 Video
+  "application/mxf", // Material Exchange Format (.mxf)
+  "video/x-dv", // Digital Video (.dv)
   "video/*", // Fallback for any video type
 ] as const;
 
@@ -59,6 +87,18 @@ export const ALLOWED_FILE_TYPES = {
   "video/ogg": [".ogv"],
   "video/mpeg": [".mpeg", ".mpg"],
   "video/x-m4a": [".m4a"],
+  "video/hevc": [".hevc", ".h265"],
+  "video/h265": [".hevc", ".h265"],
+  "video/h264": [".h264"],
+  "video/mp2t": [".ts", ".mts"],
+  "video/dvd": [".vob"],
+  "video/x-ms-asf": [".asf"],
+  "video/vnd.rn-realvideo": [".rm", ".rmvb"],
+  "video/x-divx": [".divx", ".xvid"],
+  "video/x-f4v": [".f4v"],
+  "video/m2v": [".m2v"],
+  "application/mxf": [".mxf"],
+  "video/x-dv": [".dv"],
 
   // Audio
   "audio/mpeg": [".mp3"],
