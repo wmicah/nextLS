@@ -1,7 +1,7 @@
 "use client";
 
 import MaxWidthWrapper from "@/components/MaxWidthWrapper";
-import { RegisterLink } from "@kinde-oss/kinde-auth-nextjs";
+import { RegisterLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import {
   ArrowRight,
   Zap,
@@ -77,7 +77,7 @@ export default function FeaturesPage() {
   }, []);
 
   return (
-    <main className="relative -mt-14 min-h-screen overflow-hidden bg-[#2A3133]">
+    <main className="relative -mt-14 min-h-screen overflow-hidden bg-gradient-to-br from-[#2A3133] via-[#1a1f20] to-black">
       {/* Subtle background pattern */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] opacity-50" />
 
@@ -89,7 +89,7 @@ export default function FeaturesPage() {
               The Complete Platform for
               <br className="hidden sm:block" />
               <span className="block sm:inline"> </span>
-              <span className="text-sky-400">Modern Coaching</span>
+              <span className="text-white">Modern Coaching</span>
             </h1>
 
             <p className="mx-auto mt-4 sm:mt-6 max-w-2xl text-base sm:text-lg md:text-xl text-zinc-300 px-4 sm:px-0">
@@ -99,7 +99,7 @@ export default function FeaturesPage() {
             </p>
 
             <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-center px-4 sm:px-0">
-              <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-white transition-all hover:bg-sky-600 hover:scale-[1.02] w-full sm:w-auto justify-center">
+              <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-gray-900 transition-all hover:bg-gray-100 hover:shadow-lg hover:scale-[1.02] w-full sm:w-auto justify-center">
                 Get Started
                 <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />
               </RegisterLink>
@@ -135,7 +135,7 @@ export default function FeaturesPage() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 md:px-6 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
                     activeTab === tab.id
-                      ? "bg-sky-500 text-white"
+                      ? "bg-white/10 text-white border border-white/20"
                       : "text-zinc-400 hover:text-white"
                   }`}
                 >
@@ -404,7 +404,7 @@ function SimpleFeatureCard({
   return (
     <div className="bg-white/5 rounded-2xl border border-white/10 p-4 sm:p-6">
       <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400 shrink-0">
+        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-white/10 text-white shrink-0">
           {icon}
         </div>
         <div>
@@ -430,7 +430,7 @@ function FeatureCategory({
   return (
     <div className="bg-white/5 rounded-2xl border border-white/10 p-4 sm:p-6">
       <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400 shrink-0">
+        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-white/10 text-white shrink-0">
           {icon}
         </div>
         <div>
@@ -595,14 +595,14 @@ function AnimatedFeatureShowcase() {
                     transition={{ delay: idx * 0.1 }}
                     className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-zinc-300"
                   >
-                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-sky-400 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-zinc-400 shrink-0" />
                     <span>{feature}</span>
                   </motion.li>
                 ))}
               </ul>
 
               {/* CTA */}
-              <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-semibold text-white transition-all hover:bg-sky-600 hover:scale-[1.02] w-full sm:w-auto justify-center">
+              <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-semibold text-gray-900 transition-all hover:bg-gray-100 hover:shadow-lg hover:scale-[1.02] w-full sm:w-auto justify-center">
                 Get Started
                 <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 transition-transform group-hover:translate-x-1" />
               </RegisterLink>
@@ -638,7 +638,7 @@ function AnimatedFeatureShowcase() {
         <div className="flex items-center gap-1 sm:gap-2">
           <button
             onClick={prevFeature}
-            className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white transition-all hover:bg-white/10 hover:border-sky-500/30"
+            className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white transition-all hover:bg-white/10 hover:border-white/30"
             aria-label="Previous feature"
           >
             <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -646,7 +646,7 @@ function AnimatedFeatureShowcase() {
 
           <button
             onClick={() => setIsPaused(!isPaused)}
-            className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white transition-all hover:bg-white/10 hover:border-sky-500/30"
+            className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white transition-all hover:bg-white/10 hover:border-white/30"
             aria-label={isPaused ? "Resume autoplay" : "Pause autoplay"}
           >
             {isPaused ? (
@@ -658,7 +658,7 @@ function AnimatedFeatureShowcase() {
 
           <button
             onClick={nextFeature}
-            className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white transition-all hover:bg-white/10 hover:border-sky-500/30"
+            className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white transition-all hover:bg-white/10 hover:border-white/30"
             aria-label="Next feature"
           >
             <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -708,7 +708,7 @@ function FeatureDemo({ type }: { type: string }) {
               transition={{ delay: idx * 0.1 }}
               className={`rounded-lg px-4 py-2 text-sm font-medium ${
                 idx === 0
-                  ? "bg-sky-500/20 text-sky-300 border border-sky-500/30"
+                  ? "bg-white/10 text-white border border-white/20"
                   : "bg-white/5 text-zinc-400 border border-white/10"
               }`}
             >
@@ -729,8 +729,8 @@ function FeatureDemo({ type }: { type: string }) {
             >
               <div className="text-sm font-semibold text-white mb-2">{day}</div>
               <div className="space-y-2">
-                <div className="h-2 bg-sky-500/20 rounded w-3/4" />
-                <div className="h-2 bg-sky-500/20 rounded w-1/2" />
+                <div className="h-2 bg-white/20 rounded w-3/4" />
+                <div className="h-2 bg-white/20 rounded w-1/2" />
               </div>
             </motion.div>
           ))}
@@ -989,7 +989,7 @@ function FeatureDemo({ type }: { type: string }) {
               transition={{ delay: idx * 0.02 }}
               className={`rounded-lg border flex items-center justify-center text-sm ${
                 [5, 12, 19].includes(idx)
-                  ? "bg-sky-500/20 border-sky-500/30 text-sky-300 font-semibold"
+                  ? "bg-white/20 border-sky-500/30 text-sky-300 font-semibold"
                   : "bg-white/5 border-white/10 text-zinc-400"
               }`}
             >

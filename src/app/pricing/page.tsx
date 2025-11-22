@@ -93,13 +93,13 @@ export default function PricingPage() {
               Simple, Transparent
               <br className="hidden sm:block" />
               <span className="block sm:inline"> </span>
-              <span className="text-sky-400">Pricing</span>
+              <span className="text-white">Pricing</span>
             </h1>
 
             <p className="mx-auto mt-4 sm:mt-6 max-w-2xl text-base sm:text-lg md:text-xl text-zinc-300 px-4 sm:px-0">
               Pay only for what you need. Scale up as your business grows.
               <span className="block sm:inline mt-1 sm:mt-0">
-                <span className="text-sky-400 font-semibold">
+                <span className="text-white font-semibold">
                   No hidden fees, no surprises.
                 </span>
               </span>
@@ -108,16 +108,16 @@ export default function PricingPage() {
             {/* Trust Indicators */}
             <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-zinc-400 px-4 sm:px-0">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
+                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-zinc-400" />
+                <span>Athletes train free</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-zinc-400" />
+                <span>Coaches pay monthly</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-zinc-400" />
                 <span>Cancel anytime</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
-                <span>No setup fees</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
-                <span>14-day free trial</span>
               </div>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function PricingPage() {
                     onClick={() => setSelectedTier(tier.id as any)}
                     className={`flex flex-col items-center gap-1 sm:gap-2 px-3 sm:px-4 md:px-6 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
                       selectedTier === tier.id
-                        ? "bg-sky-500 text-white"
+                        ? "bg-white/10 text-white border border-white/20"
                         : "text-zinc-400 hover:text-white"
                     }`}
                   >
@@ -228,8 +228,8 @@ export default function PricingPage() {
               Join thousands of coaches who are already using NextLevel to grow
               their business.
             </p>
-            <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-white transition-all hover:bg-sky-600 hover:scale-[1.02]">
-              Start Your Free Trial
+            <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-gray-900 transition-all hover:bg-gray-100 hover:shadow-lg hover:scale-[1.02]">
+              Get Started
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />
             </RegisterLink>
           </div>
@@ -252,11 +252,11 @@ function PricingCard({
   isPopular?: boolean;
 }) {
   return (
-    <div className="relative overflow-visible rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6 transition-all hover:bg-white/10 hover:border-sky-500/30">
+    <div className="relative overflow-visible rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6 transition-all hover:bg-white/10 hover:border-white/30">
       {/* Popular Badge */}
       {isPopular && (
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-          <div className="bg-sky-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
+          <div className="bg-white/10 text-white border border-white/20 px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
             Most Popular
           </div>
         </div>
@@ -298,7 +298,7 @@ function PricingCard({
               key={idx}
               className="flex items-center gap-2 text-xs sm:text-sm text-zinc-300"
             >
-              <Check className="h-3 w-3 sm:h-4 sm:w-4 text-sky-400 shrink-0" />
+              <Check className="h-3 w-3 sm:h-4 sm:w-4 text-zinc-400 shrink-0" />
               <span>{feature}</span>
             </div>
           ))}
@@ -310,7 +310,7 @@ function PricingCard({
         </div>
 
         {/* CTA Button */}
-        <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-semibold text-white transition-all hover:bg-sky-600 hover:scale-[1.02] w-full justify-center">
+        <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-semibold text-gray-900 transition-all hover:bg-gray-100 hover:shadow-lg hover:scale-[1.02] w-full justify-center">
           Get Started
           <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 transition-transform group-hover:translate-x-1" />
         </RegisterLink>
@@ -392,8 +392,8 @@ function FeatureComparison({
         },
         {
           name: "Template Programs",
-          standard: true,
-          masterLibrary: true,
+          standard: false,
+          masterLibrary: false,
           premadeRoutines: true,
         },
       ],
@@ -456,7 +456,7 @@ function FeatureComparison({
         {/* Feature Rows */}
         {features.map((category, categoryIdx) => (
           <div key={categoryIdx} className="mb-8">
-            <h4 className="text-sm font-semibold text-sky-400 mb-4">
+            <h4 className="text-sm font-semibold text-white mb-4">
               {category.category}
             </h4>
             <div className="space-y-3">
@@ -513,7 +513,7 @@ function FAQSection() {
     {
       question: "Is there a free trial?",
       answer:
-        "Yes! We offer a 14-day free trial with full access to all features. No credit card required to start.",
+        "Athletes can use the platform for free. Coaches pay monthly with no credit card required to sign up. You can cancel anytime.",
     },
     {
       question: "Can I cancel anytime?",
