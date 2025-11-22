@@ -58,15 +58,15 @@ const Navbar = () => {
     <nav
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
         isScrolled
-          ? "bg-black/30 backdrop-blur-xl border-b border-white/10 shadow-lg"
-          : "bg-black/10 backdrop-blur-lg"
+          ? "bg-[#2A3133]/95 backdrop-blur-xl border-b border-white/10 shadow-lg"
+          : "bg-[#2A3133]/80 backdrop-blur-lg"
       }`}
     >
       <MaxWidthWrapper>
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group">
-            <div className="font-bold text-xl tracking-tight text-white group-hover:text-sky-400 transition-colors duration-300">
+            <div className="font-bold text-xl tracking-tight text-white group-hover:text-zinc-300 transition-colors duration-300">
               NextLevel Coaching
             </div>
           </Link>
@@ -101,7 +101,7 @@ const Navbar = () => {
             )}
 
             <RegisterLink>
-              <span className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-sky-500 rounded-lg hover:bg-sky-600 transition-all duration-200">
+              <span className="inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 bg-white rounded-lg hover:bg-gray-100 transition-all duration-200">
                 Get Started
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </span>
@@ -137,7 +137,7 @@ const Navbar = () => {
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="md:hidden overflow-hidden"
             >
-              <div className="border-t border-white/10 bg-black/30 backdrop-blur-xl">
+              <div className="border-t border-white/10 bg-[#2A3133]/95 backdrop-blur-xl">
                 <div className="py-6 space-y-1">
                   <motion.div
                     initial={{ x: -20, opacity: 0 }}
@@ -197,7 +197,7 @@ const Navbar = () => {
                     className="pt-2"
                   >
                     <RegisterLink
-                      className="flex items-center justify-center px-4 py-3 text-base font-semibold text-white bg-sky-500 rounded-lg hover:bg-sky-600 transition-all duration-200 mx-4"
+                      className="flex items-center justify-center px-4 py-3 text-base font-semibold text-gray-900 bg-white rounded-lg hover:bg-gray-100 transition-all duration-200 mx-4"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Get Started

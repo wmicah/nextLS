@@ -27,19 +27,32 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "NextLevel Coaching - Professional Coaching Platform",
+    default: "NextLevel Coaching - Elevate Your Coaching Game | Sports Coaching Platform",
     template: "%s | NextLevel Coaching",
   },
   description:
-    "Professional coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
+    "The professional platform trusted by elite coaches to build championship programs, develop athletes, and grow their business. Athletes train free. Coaches pay monthly. Start your free trial today.",
   keywords: [
-    "coaching platform",
-    "athletic training",
-    "personalized programs",
-    "coaching lessons",
-    "sports coaching",
-    "athletic development",
-    "sports technology",
+    "sports coaching platform",
+    "athletic coaching software",
+    "coach management system",
+    "athlete training platform",
+    "sports coaching app",
+    "coaching business software",
+    "athlete development platform",
+    "personal training software",
+    "sports team management",
+    "coaching program builder",
+    "athlete progress tracking",
+    "coaching lesson scheduling",
+    "baseball coaching platform",
+    "softball coaching software",
+    "pitching coach software",
+    "athletic performance tracking",
+    "coach client management",
+    "sports technology platform",
+    "elite coaching platform",
+    "professional coaching tools",
   ],
   authors: [{ name: "NextLevel Coaching Team" }],
   creator: "NextLevel Coaching",
@@ -59,24 +72,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "NextLevel Coaching - Professional Coaching Platform",
+    title: "NextLevel Coaching - Elevate Your Coaching Game",
     description:
-      "Professional coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
+      "The professional platform trusted by elite coaches to build championship programs, develop athletes, and grow their business. Athletes train free. Start today.",
     siteName: "NextLevel Coaching",
     images: [
       {
         url: "/nextls-coming-soon.png",
         width: 1200,
         height: 630,
-        alt: "NextLevel Coaching Dashboard Preview",
+        alt: "NextLevel Coaching - Professional Sports Coaching Platform Dashboard",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "NextLevel Coaching - Professional Coaching Platform",
+    title: "NextLevel Coaching - Elevate Your Coaching Game",
     description:
-      "Professional coaching platform for coaches and athletes to manage clients, create programs, and track progress.",
+      "The professional platform trusted by elite coaches. Build championship programs, develop athletes, and grow your coaching business.",
     images: ["/dashboard-preview.jpg"],
     creator: "@nextlevelcoaching",
   },
@@ -97,7 +110,7 @@ export const metadata: Metadata = {
     yahoo: process.env.NEXT_PUBLIC_YAHOO_VERIFICATION,
   },
   category: "sports",
-  classification: "softball coaching platform",
+  classification: "sports coaching platform",
 };
 
 export const viewport: Viewport = {
