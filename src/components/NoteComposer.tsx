@@ -5,12 +5,6 @@ import { trpc } from "@/app/_trpc/client";
 import {
   X,
   Send,
-  Image,
-  Video,
-  FileText,
-  Tag,
-  AlertCircle,
-  CheckCircle,
   Loader2,
   Paperclip,
   Trash2,
@@ -18,6 +12,11 @@ import {
 import { format } from "date-fns";
 import { UploadButton } from "@uploadthing/react";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
+import {
+  COLORS,
+  getGoldenAccent,
+  getRedAlert,
+} from "@/lib/colors";
 
 interface NoteComposerProps {
   isOpen: boolean;
@@ -59,6 +58,7 @@ export default function NoteComposer({
   onSuccess,
   editingNote = null,
 }: NoteComposerProps) {
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [type, setType] = useState<
     | "GENERAL"
@@ -81,6 +81,7 @@ export default function NoteComposer({
   // Initialize form when editingNote changes
   React.useEffect(() => {
     if (editingNote && isOpen) {
+      setTitle(editingNote.title || "");
       setContent(editingNote.content);
       setType(editingNote.type as any);
       setPriority(editingNote.priority as any);
@@ -88,6 +89,7 @@ export default function NoteComposer({
       setAttachments([]); // Attachments are read-only for now
     } else if (!editingNote && isOpen) {
       // Reset form for new note
+      setTitle("");
       setContent("");
       setType("GENERAL");
       setPriority("NORMAL");
@@ -123,6 +125,7 @@ export default function NoteComposer({
       onSuccess?.();
       onClose();
       // Reset form
+      setTitle("");
       setContent("");
       setType("GENERAL");
       setPriority("NORMAL");
@@ -136,6 +139,7 @@ export default function NoteComposer({
       onSuccess?.();
       onClose();
       // Reset form
+      setTitle("");
       setContent("");
       setType("GENERAL");
       setPriority("NORMAL");
@@ -203,6 +207,7 @@ export default function NoteComposer({
         // Update existing note
         const updatedNote = await updateNoteMutation.mutateAsync({
           noteId: editingNote.id,
+          title: title.trim() || null,
           content: content.trim(),
           type,
           priority,
@@ -230,6 +235,7 @@ export default function NoteComposer({
         // Create new note - attachments will be handled in onSuccess
         await createNoteMutation.mutateAsync({
           clientId,
+          title: title.trim() || null,
           content: content.trim(),
           type,
           priority,
@@ -267,112 +273,249 @@ export default function NoteComposer({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "LOW":
-        return "#10B981";
-      case "NORMAL":
-        return "#3B82F6";
-      case "HIGH":
-        return "#F59E0B";
-      case "URGENT":
-        return "#EF4444";
-      default:
-        return "#3B82F6";
-    }
-  };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
-        style={{ backgroundColor: "#1E1E1E" }}
+        className="rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+        }}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between p-6 border-b flex-shrink-0"
-          style={{ borderColor: "#2a2a2a" }}
+          className="flex items-center justify-between p-4 border-b flex-shrink-0"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
         >
-          <div className="flex items-center gap-3">
-            <FileText className="w-6 h-6" style={{ color: "#4A5A70" }} />
-            <div>
-              <h2 className="text-2xl font-bold" style={{ color: "#ffffff" }}>
-                {editingNote ? "Edit Note" : `Send Note to ${clientName}`}
-              </h2>
-              <p className="text-sm" style={{ color: "#9ca3af" }}>
-                {editingNote
-                  ? `Last updated: ${format(
-                      new Date(),
-                      "MMM d, yyyy 'at' h:mm a"
-                    )}`
-                  : format(new Date(), "MMM d, yyyy 'at' h:mm a")}
-              </p>
-            </div>
+          <div>
+            <h2
+              className="text-base font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              {editingNote ? "Edit Note" : `Send Note to ${clientName}`}
+            </h2>
+            <p className="text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
+              {editingNote
+                ? `Last updated: ${format(
+                    new Date(),
+                    "MMM d, yyyy 'at' h:mm a"
+                  )}`
+                : format(new Date(), "MMM d, yyyy 'at' h:mm a")}
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
-            <X className="w-6 h-6" style={{ color: "#9ca3af" }} />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-4">
+            {/* Title */}
+            <div>
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
+                Title (Optional)
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="Note title..."
+                className="w-full px-2 py-1.5 rounded-lg border text-xs focus:outline-none"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.2)}`;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              />
+            </div>
+
             {/* Note Type and Priority */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: "#C3BCC2" }}
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
-                  Note Type
+                  Type
                 </label>
                 <select
                   value={type}
                   onChange={e => setType(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  className="w-full px-2 py-1.5 rounded-lg border text-xs focus:outline-none"
                   style={{
-                    backgroundColor: "#2A3133",
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   }}
                 >
-                  <option value="GENERAL">General</option>
-                  <option value="PROGRESS">Progress</option>
-                  <option value="FEEDBACK">Feedback</option>
-                  <option value="GOAL">Goal</option>
-                  <option value="INJURY">Injury</option>
-                  <option value="TECHNIQUE">Technique</option>
-                  <option value="MOTIVATION">Motivation</option>
-                  <option value="SCHEDULE">Schedule</option>
+                  <option 
+                    value="GENERAL"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    General
+                  </option>
+                  <option 
+                    value="PROGRESS"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Progress
+                  </option>
+                  <option 
+                    value="FEEDBACK"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Feedback
+                  </option>
+                  <option 
+                    value="GOAL"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Goal
+                  </option>
+                  <option 
+                    value="INJURY"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Injury
+                  </option>
+                  <option 
+                    value="TECHNIQUE"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Technique
+                  </option>
+                  <option 
+                    value="MOTIVATION"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Motivation
+                  </option>
+                  <option 
+                    value="SCHEDULE"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Schedule
+                  </option>
                 </select>
               </div>
 
               <div>
                 <label
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: "#C3BCC2" }}
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
                   Priority
                 </label>
                 <select
                   value={priority}
                   onChange={e => setPriority(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  className="w-full px-2 py-1.5 rounded-lg border text-xs focus:outline-none"
                   style={{
-                    backgroundColor: "#2A3133",
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   }}
                 >
-                  <option value="LOW">🟢 Low</option>
-                  <option value="NORMAL">🔵 Normal</option>
-                  <option value="HIGH">🟡 High</option>
-                  <option value="URGENT">🔴 Urgent</option>
+                  <option 
+                    value="LOW"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Low
+                  </option>
+                  <option 
+                    value="NORMAL"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Normal
+                  </option>
+                  <option 
+                    value="HIGH"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    High
+                  </option>
+                  <option 
+                    value="URGENT"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    Urgent
+                  </option>
                 </select>
               </div>
             </div>
@@ -380,21 +523,29 @@ export default function NoteComposer({
             {/* Content */}
             <div>
               <label
-                className="block text-sm font-medium mb-2"
-                style={{ color: "#C3BCC2" }}
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: COLORS.TEXT_SECONDARY }}
               >
-                Note Content *
+                Content *
               </label>
               <textarea
                 value={content}
                 onChange={e => setContent(e.target.value)}
                 placeholder="Write your note here..."
                 rows={6}
-                className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                className="w-full px-2 py-1.5 rounded-lg border text-xs focus:outline-none resize-none"
                 style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.2)}`;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               />
             </div>
@@ -402,13 +553,13 @@ export default function NoteComposer({
             {/* Attachments */}
             <div>
               <label
-                className="block text-sm font-medium mb-2"
-                style={{ color: "#C3BCC2" }}
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: COLORS.TEXT_SECONDARY }}
               >
-                Attachments (Images, Videos, PDFs)
+                Attachments
               </label>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <UploadButton<OurFileRouter, "noteAttachmentUploader">
                     endpoint="noteAttachmentUploader"
@@ -425,78 +576,81 @@ export default function NoteComposer({
                     content={{
                       button: ({ ready }) => (
                         <div
-                          className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed transition-all duration-200 hover:scale-105 ${
+                          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-dashed text-xs transition-all duration-200 ${
                             !ready || isUploading ? "opacity-50" : ""
                           }`}
                           style={{
-                            borderColor: "#606364",
-                            color: "#C3BCC2",
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            color: COLORS.TEXT_SECONDARY,
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                          }}
+                          onMouseEnter={e => {
+                            if (ready && !isUploading) {
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                            }
+                          }}
+                          onMouseLeave={e => {
+                            if (ready && !isUploading) {
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                            }
                           }}
                         >
                           {isUploading ? (
                             <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <Loader2 className="w-3 h-3 animate-spin" />
                               <span>Uploading... {uploadProgress}%</span>
                             </>
                           ) : (
                             <>
-                              <Paperclip className="w-4 h-4" />
-                              <span>Add Images, Videos or PDFs</span>
+                              <Paperclip className="w-3 h-3" />
+                              <span>Add Files</span>
                             </>
                           )}
                         </div>
                       ),
-                      allowedContent: "Images, Videos, PDFs (Max 50MB)",
+                      allowedContent: "Max 50MB",
                     }}
                   />
                 </div>
 
                 {attachments.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {attachments.map(attachment => (
                       <div
                         key={attachment.id}
-                        className="flex items-center justify-between p-3 rounded-lg"
-                        style={{ backgroundColor: "#2A3133" }}
+                        className="flex items-center justify-between p-2 rounded-lg"
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_CARD_HOVER,
+                          border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                        }}
                       >
-                        <div className="flex items-center gap-3">
-                          {attachment.fileType.startsWith("image/") ? (
-                            <Image
-                              className="w-5 h-5"
-                              style={{ color: "#4A5A70" }}
-                            />
-                          ) : attachment.fileType.startsWith("video/") ? (
-                            <Video
-                              className="w-5 h-5"
-                              style={{ color: "#4A5A70" }}
-                            />
-                          ) : (
-                            <FileText
-                              className="w-5 h-5"
-                              style={{ color: "#4A5A70" }}
-                            />
-                          )}
-                          <div>
-                            <p
-                              className="text-sm font-medium"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              {attachment.fileName}
-                            </p>
-                            <p className="text-xs" style={{ color: "#9ca3af" }}>
-                              {(attachment.fileSize / 1024 / 1024).toFixed(1)}{" "}
-                              MB
-                            </p>
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-xs font-medium truncate"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
+                            {attachment.fileName}
+                          </p>
+                          <p className="text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
+                            {(attachment.fileSize / 1024 / 1024).toFixed(1)} MB
+                          </p>
                         </div>
                         <button
                           onClick={() => removeAttachment(attachment.id)}
-                          className="p-1 rounded hover:bg-red-500/20 transition-colors"
+                          className="p-1 rounded transition-colors ml-2 flex-shrink-0"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = getRedAlert(0.1);
+                            e.currentTarget.style.color = COLORS.RED_ALERT;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                          }}
                         >
-                          <Trash2
-                            className="w-4 h-4"
-                            style={{ color: "#EF4444" }}
-                          />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
@@ -506,20 +660,23 @@ export default function NoteComposer({
             </div>
 
             {/* Privacy Setting */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="isPrivate"
                 checked={isPrivate}
                 onChange={e => setIsPrivate(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300"
+                className="w-3.5 h-3.5 rounded"
+                style={{
+                  accentColor: COLORS.GOLDEN_ACCENT,
+                }}
               />
               <label
                 htmlFor="isPrivate"
-                className="text-sm"
-                style={{ color: "#C3BCC2" }}
+                className="text-xs"
+                style={{ color: COLORS.TEXT_SECONDARY }}
               >
-                Private note (only visible to you and the client)
+                Private note
               </label>
             </div>
           </div>
@@ -527,16 +684,24 @@ export default function NoteComposer({
 
         {/* Footer - Always Visible */}
         <div
-          className="flex items-center justify-end gap-3 p-6 border-t flex-shrink-0"
-          style={{ borderColor: "#2a2a2a" }}
+          className="flex items-center justify-end gap-2 p-4 border-t flex-shrink-0"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
         >
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
             style={{
-              backgroundColor: "#353A3A",
-              color: "#C3BCC2",
-              borderColor: "#606364",
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              color: COLORS.TEXT_SECONDARY,
+              border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
             }}
           >
             Cancel
@@ -548,10 +713,20 @@ export default function NoteComposer({
                 ? updateNoteMutation.isPending
                 : createNoteMutation.isPending) || !content.trim()
             }
-            className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              backgroundColor: "#4A5A70",
-              color: "#FFFFFF",
+              backgroundColor: COLORS.GOLDEN_DARK,
+              color: COLORS.TEXT_PRIMARY,
+            }}
+            onMouseEnter={e => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }
+            }}
+            onMouseLeave={e => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }
             }}
           >
             {(
@@ -559,17 +734,17 @@ export default function NoteComposer({
                 ? updateNoteMutation.isPending
                 : createNoteMutation.isPending
             ) ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5" />
             )}
             {editingNote
               ? updateNoteMutation.isPending
                 ? "Saving..."
-                : "Save Changes"
+                : "Save"
               : createNoteMutation.isPending
               ? "Sending..."
-              : "Send Note"}
+              : "Send"}
           </button>
         </div>
       </div>

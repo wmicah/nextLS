@@ -1533,14 +1533,11 @@ export const clientsRouter = router({
           break;
       }
 
-      // Get all drill completions for this client in the time range (up to end of today)
+      // Get ALL drill completions for this client (regardless of when completed - count late completions too)
       const drillCompletions = await db.drillCompletion.findMany({
         where: {
           clientId: client.id,
-          completedAt: {
-            gte: startDate,
-            lte: endOfToday,
-          },
+          // Remove date filtering - count all completions even if late
         },
       });
 
@@ -1550,24 +1547,22 @@ export const clientsRouter = router({
         await db.routineExerciseCompletion.findMany({
           where: {
             clientId: client.id,
+            // Remove date filtering - count all completions even if late
           },
         });
 
       // 2. ExerciseCompletion (new system used by exerciseCompletion.markExerciseComplete)
+      // Get ALL completions regardless of when they were completed
       const allExerciseCompletions = await db.exerciseCompletion.findMany({
         where: {
           clientId: client.id,
           completed: true, // Only completed ones
+          // Remove date filtering - count all completions even if late
         },
       });
 
-      // Filter both by date range
-      const routineExerciseCompletions = allRoutineExerciseCompletions.filter(
-        completion => {
-          const completedAt = new Date(completion.completedAt);
-          return completedAt >= startDate && completedAt <= endOfToday;
-        }
-      );
+      // Don't filter by date range - count all completions even if late
+      const routineExerciseCompletions = allRoutineExerciseCompletions;
 
       // Get all assigned programs for this client (regardless of when assigned)
       const programAssignments = await db.programAssignment.findMany({
@@ -1582,7 +1577,15 @@ export const clientsRouter = router({
                 include: {
                   days: {
                     include: {
-                      drills: true,
+                      drills: {
+                        include: {
+                          routine: {
+                            include: {
+                              exercises: true,
+                            },
+                          },
+                        },
+                      },
                     },
                   },
                 },
@@ -1663,7 +1666,8 @@ export const clientsRouter = router({
               }
             );
 
-            // Only count drills from days that were due within the time period (past or today, not future) and haven't been replaced
+            // Count ALL drills that were due in the past or today (not future) and haven't been replaced
+            // We count all assigned drills regardless of when they were due, since we're tracking all completions (including late ones)
             // Normalize dayDate to midnight for comparison
             const dayDateOnly = new Date(
               dayDate.getFullYear(),
@@ -1676,14 +1680,24 @@ export const clientsRouter = router({
               now.getDate()
             );
 
+            // Only exclude future drills and replaced days
+            // Don't filter by startDate - we want to count all assigned drills to match with all completions
             if (
               dayDateOnly <= todayOnly &&
-              dayDate >= startDate &&
               !hasReplacement
             ) {
               day.drills.forEach(drill => {
                 assignedProgramDrillIds.add(drill.id);
-                totalDrills += 1;
+                
+                // If the drill contains a routine, count each exercise in the routine
+                // Otherwise, count the drill itself as 1
+                if (drill.routineId && drill.type === "routine" && drill.routine?.exercises) {
+                  // Count each exercise in the routine
+                  totalDrills += drill.routine.exercises.length;
+                } else {
+                  // Regular drill - count as 1
+                  totalDrills += 1;
+                }
               });
             }
           });
@@ -1718,12 +1732,13 @@ export const clientsRouter = router({
           now.getDate()
         );
 
-        // Count if the routine was assigned before or during the period and is active up to today
+        // Count ALL active routines (assigned in the past or today, and not completed before today)
+        // We count all routine assignments to match with all completions (including late ones)
         // This ensures routines assigned today are included
-        const wasActiveDuringPeriod =
-          assignmentStartDateOnly <= todayOnly && routineEndDate >= startDate;
+        const isActive =
+          assignmentStartDateOnly <= todayOnly && routineEndDate >= assignmentStartDateOnly;
 
-        if (wasActiveDuringPeriod) {
+        if (isActive) {
           assignment.routine.exercises.forEach(exercise => {
             const routineKey = `${assignment.id}-${exercise.id}`;
             assignedRoutineExercises.add(routineKey);
@@ -1751,10 +1766,10 @@ export const clientsRouter = router({
           now.getDate()
         );
 
-        // Only count videos that were due within the time period and are due today or earlier (not future)
+        // Only count videos that were due in the past or today (not future)
+        // Don't filter by startDate - we want to count all assigned videos to match with all completions
         if (
           dueDateOnly <= todayOnly &&
-          dueDate >= startDate &&
           dueDate <= endOfToday
         ) {
           assignedVideoIds.add(assignment.videoId);
@@ -1762,12 +1777,101 @@ export const clientsRouter = router({
         }
       });
 
-      // Count completed program drills
-      completedDrills += drillCompletions.filter(completion =>
-        assignedProgramDrillIds.has(completion.drillId)
-      ).length;
+      // Count completed program drills - check ALL completions regardless of date
+      // Also check ProgramDrillCompletion table
+      const programDrillCompletions = await db.programDrillCompletion.findMany({
+        where: {
+          clientId: client.id,
+          // No date filtering - count all completions even if late
+        },
+      });
+
+      // Count from both DrillCompletion and ProgramDrillCompletion tables
+      const completedProgramDrills = [
+        ...drillCompletions.filter(completion =>
+          assignedProgramDrillIds.has(completion.drillId)
+        ),
+        ...programDrillCompletions.filter(completion =>
+          assignedProgramDrillIds.has(completion.drillId)
+        ),
+      ];
+      
+      // Use a Set to avoid double-counting the same drill
+      const uniqueCompletedDrillIds = new Set(
+        completedProgramDrills.map(c => c.drillId)
+      );
+      completedDrills += uniqueCompletedDrillIds.size;
+
+      // Also check ExerciseCompletion for program drill completions
+      // When a program drill contains a routine, individual exercises are tracked in ExerciseCompletion
+      // with programDrillId set to the drill ID
+      const exerciseCompletionsForProgramDrills = allExerciseCompletions.filter(
+        completion => {
+          // Only count completed ones
+          if (!completion.completed) return false;
+          
+          // Check if this completion is for a program drill (has programDrillId and it's not "standalone-routine")
+          if (!completion.programDrillId || completion.programDrillId === "standalone-routine") {
+            return false;
+          }
+          
+          // Check if this programDrillId matches an assigned program drill
+          return assignedProgramDrillIds.has(completion.programDrillId);
+        }
+      );
+      
+      // For program drills that contain routines, count each exercise completion separately
+      // For regular program drills, count the drill once if any exercise is completed
+      const routineDrillIds = new Set<string>();
+      programAssignments.forEach(assignment => {
+        if (!assignment.startDate) return;
+        const assignmentStartDate = new Date(assignment.startDate);
+        assignment.program.weeks.forEach((week, weekIndex) => {
+          week.days.forEach((day, dayIndex) => {
+            const dayDate = new Date(assignmentStartDate);
+            dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex);
+            const dayDateOnly = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate());
+            const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            if (dayDateOnly <= todayOnly && dayDate >= startDate) {
+              day.drills.forEach(drill => {
+                if (drill.routineId && drill.type === "routine") {
+                  routineDrillIds.add(drill.id);
+                }
+              });
+            }
+          });
+        });
+      });
+      
+      // Count exercise completions for routine drills (each exercise counts as 1 completion)
+      // Supersets don't affect how completions are stored - they're still tracked by exerciseId and programDrillId
+      // So we just need to count all ExerciseCompletion records that match routine drills
+      const exerciseCompletionsForRoutineDrills = exerciseCompletionsForProgramDrills.filter(
+        completion => routineDrillIds.has(completion.programDrillId)
+      );
+      
+      // Count each exercise completion individually (whether in a superset or not)
+      // Each ExerciseCompletion record represents one completed exercise
+      completedDrills += exerciseCompletionsForRoutineDrills.length;
+      
+      // For regular program drills (not routine drills), count the drill once if completed
+      const exerciseCompletionsForRegularDrills = exerciseCompletionsForProgramDrills.filter(
+        completion => !routineDrillIds.has(completion.programDrillId)
+      );
+      const uniqueRegularDrillCompletions = new Set(
+        exerciseCompletionsForRegularDrills.map(c => c.programDrillId).filter(Boolean)
+      );
+      
+      // Only count drills that weren't already counted in ProgramDrillCompletion/DrillCompletion
+      uniqueRegularDrillCompletions.forEach(programDrillId => {
+        if (!uniqueCompletedDrillIds.has(programDrillId)) {
+          completedDrills += 1;
+        }
+      });
 
       // Count completed routine exercises from RoutineExerciseCompletion table
+      // Note: RoutineExerciseCompletion doesn't have a "completed" field - if a record exists, it's completed
       const completedRoutineExercisesSet = new Set<string>();
       routineExerciseCompletions.forEach(completion => {
         const routineKey = `${completion.routineAssignmentId}-${completion.exerciseId}`;
@@ -1784,6 +1888,8 @@ export const clientsRouter = router({
         )
       );
 
+      // Get all ExerciseCompletion records for routine exercises (including standalone routines)
+      // These can have programDrillId as "standalone-routine" or empty string
       const exerciseCompletionsForRoutines = allExerciseCompletions.filter(
         completion => {
           // Check if this completion is for a routine exercise
@@ -1792,10 +1898,11 @@ export const clientsRouter = router({
           );
           if (!isRoutineExercise) return false;
 
-          // Check date range
-          if (!completion.completedAt) return false;
-          const completedAt = new Date(completion.completedAt);
-          return completedAt >= startDate && completedAt <= endOfToday;
+          // Only count completed ones
+          if (!completion.completed) return false;
+          
+          // Don't filter by date range - count all completions even if late
+          return true; // Include all completions regardless of date
         }
       );
 
@@ -1817,57 +1924,57 @@ export const clientsRouter = router({
 
       completedDrills += completedRoutineExercisesSet.size;
 
+      // Also count standalone routine exercises from ExerciseCompletion
+      // These might have programDrillId as "standalone-routine" or empty string
+      // and might not match any specific routine assignment
+      const standaloneExerciseCompletions = allExerciseCompletions.filter(
+        completion => {
+          // Only count completed ones
+          if (!completion.completed) return false;
+          
+          // Check if this is a standalone routine exercise (not part of a program drill)
+          // If programDrillId is "standalone-routine" or empty, it's a standalone routine
+          const isStandalone = 
+            !completion.programDrillId || 
+            completion.programDrillId === "standalone-routine";
+          
+          if (!isStandalone) return false;
+          
+          // Check if this exerciseId belongs to any assigned routine
+          return routineExerciseIds.has(completion.exerciseId);
+        }
+      );
+
+      // Count unique standalone exercise completions that match assigned routines
+      const standaloneCompletedSet = new Set<string>();
+      standaloneExerciseCompletions.forEach(completion => {
+        // Find which routine assignment this exercise belongs to
+        for (const assignment of routineAssignments) {
+          const exercise = assignment.routine.exercises.find(
+            ex => ex.id === completion.exerciseId
+          );
+          if (exercise) {
+            const routineKey = `${assignment.id}-${completion.exerciseId}`;
+            if (assignedRoutineExercises.has(routineKey)) {
+              // Only add if not already counted in completedRoutineExercisesSet
+              if (!completedRoutineExercisesSet.has(routineKey)) {
+                standaloneCompletedSet.add(routineKey);
+              }
+            }
+          }
+        }
+      });
+      
+      completedDrills += standaloneCompletedSet.size;
+
       // Count completed videos (videos that were assigned and completed)
+      // Count ALL completed videos regardless of when they were completed (even if late)
       completedDrills += videoAssignments.filter(assignment => {
-        const dueDate = assignment.dueDate
-          ? new Date(assignment.dueDate)
-          : new Date(assignment.assignedAt);
-
-        const dueDateOnly = new Date(
-          dueDate.getFullYear(),
-          dueDate.getMonth(),
-          dueDate.getDate()
-        );
-        const todayOnly = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate()
-        );
-
         return (
           assignedVideoIds.has(assignment.videoId) &&
           assignment.completed &&
-          assignment.completedAt &&
-          new Date(assignment.completedAt) >= startDate &&
-          new Date(assignment.completedAt) <= endOfToday &&
-          dueDateOnly <= todayOnly
-        );
-      }).length;
-
-      // Count completed videos (videos that were assigned and completed)
-      const completedVideoCount = videoAssignments.filter(assignment => {
-        const dueDate = assignment.dueDate
-          ? new Date(assignment.dueDate)
-          : new Date(assignment.assignedAt);
-
-        const dueDateOnly = new Date(
-          dueDate.getFullYear(),
-          dueDate.getMonth(),
-          dueDate.getDate()
-        );
-        const todayOnly = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate()
-        );
-
-        return (
-          assignedVideoIds.has(assignment.videoId) &&
-          assignment.completed &&
-          assignment.completedAt &&
-          new Date(assignment.completedAt) >= startDate &&
-          new Date(assignment.completedAt) <= endOfToday &&
-          dueDateOnly <= todayOnly
+          assignment.completedAt
+          // Remove date filtering - count all completions even if late
         );
       }).length;
 

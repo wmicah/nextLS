@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { COLORS } from "@/lib/colors";
 import { useTransition } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useState, useRef, useEffect } from "react";
@@ -29,6 +30,7 @@ import {
 } from "react-icons/fi";
 import { LogOut, Settings, UserIcon, MessageCircle } from "lucide-react";
 import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs";
+import Lottie from "lottie-react";
 // Removed complex SSE hooks - using simple polling instead
 import MessagePopup from "./MessagePopup";
 import NotificationPopup from "./NotificationPopup";
@@ -36,6 +38,372 @@ import ProfilePictureUploader from "./ProfilePictureUploader";
 import ClientSearchModal from "./ClientSearchModal";
 
 // navLinks will be defined inside the component to access unreadCount
+
+// Animated Icon Components with Lottie from useanimations.com
+// Download JSON files from https://useanimations.com/#explore and place in public/animations/
+function AnimatedIcon({
+  animationPath,
+  icon,
+  isHovered,
+  shouldReverse = true,
+}: {
+  animationPath: string;
+  icon: React.ReactNode;
+  isHovered: boolean;
+  shouldReverse?: boolean;
+}) {
+  const [animationData, setAnimationData] = useState<any>(null);
+  const lottieRef = React.useRef<any>(null);
+
+  // Load animation data
+  React.useEffect(() => {
+    fetch(animationPath)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Failed to load animation: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        setAnimationData(data);
+      })
+      .catch(error => {
+        // If animation file doesn't exist, fall back to regular icon
+        console.warn(`Animation not found at ${animationPath}:`, error);
+        setAnimationData(null);
+      });
+  }, [animationPath]);
+
+  // Initialize animation at frame 0 when data loads
+  React.useEffect(() => {
+    if (lottieRef.current && animationData) {
+      lottieRef.current.goToAndStop(0, true);
+      lottieRef.current.setDirection(1);
+    }
+  }, [animationData]);
+
+  // Control animation playback based on hover
+  React.useEffect(() => {
+    if (!lottieRef.current || !animationData) {
+      return undefined;
+    }
+
+    let checkReverse: NodeJS.Timeout | null = null;
+
+    if (isHovered) {
+      // Clear any reverse check if hovering again
+      if (checkReverse) {
+        clearInterval(checkReverse);
+        checkReverse = null;
+      }
+      // Play forward from current position
+      lottieRef.current.setDirection(1);
+      lottieRef.current.play();
+    } else {
+      if (shouldReverse) {
+        // Play in reverse back to start
+        lottieRef.current.setDirection(-1);
+        lottieRef.current.play();
+
+        // Check when animation reaches frame 0 and stop
+        checkReverse = setInterval(() => {
+          if (lottieRef.current) {
+            const currentFrame = lottieRef.current.currentFrame;
+            if (currentFrame <= 0) {
+              lottieRef.current.stop();
+              lottieRef.current.goToAndStop(0, true);
+              lottieRef.current.setDirection(1); // Reset to forward for next hover
+              if (checkReverse) {
+                clearInterval(checkReverse);
+                checkReverse = null;
+              }
+            }
+          }
+        }, 16); // Check every ~16ms (60fps)
+      } else {
+        // Don't reverse - just stop at current frame
+        lottieRef.current.stop();
+      }
+    }
+
+    return () => {
+      if (checkReverse) {
+        clearInterval(checkReverse);
+      }
+    };
+  }, [isHovered, animationData, shouldReverse]);
+
+  // If animation data is not available, show regular icon
+  if (!animationData) {
+    return <span className="inline-block">{icon}</span>;
+  }
+
+  return (
+    <span className="inline-block text-lg leading-none">
+      <div
+        className="lottie-icon-wrapper"
+        style={{
+          width: "1.25em",
+          height: "1.25em",
+          lineHeight: 0,
+        }}
+      >
+        <Lottie
+          lottieRef={lottieRef}
+          animationData={animationData}
+          loop={false}
+          autoplay={false}
+          style={{
+            width: "100%",
+            height: "100%",
+          }}
+        />
+      </div>
+    </span>
+  );
+}
+
+function AnimatedHomeIcon({
+  icon,
+  isHovered,
+}: {
+  icon: React.ReactNode;
+  isHovered: boolean;
+}) {
+  return (
+    <AnimatedIcon
+      animationPath="/animations/home.json"
+      icon={icon}
+      isHovered={isHovered}
+    />
+  );
+}
+
+function AnimatedUsersIcon({
+  icon,
+  isHovered,
+}: {
+  icon: React.ReactNode;
+  isHovered: boolean;
+}) {
+  return (
+    <AnimatedIcon
+      animationPath="/animations/userPlus.json"
+      icon={icon}
+      isHovered={isHovered}
+    />
+  );
+}
+
+function AnimatedBookIcon({
+  icon,
+  isHovered,
+}: {
+  icon: React.ReactNode;
+  isHovered: boolean;
+}) {
+  return (
+    <AnimatedIcon
+      animationPath="/animations/bookmark.json"
+      icon={icon}
+      isHovered={isHovered}
+      shouldReverse={false}
+    />
+  );
+}
+
+function AnimatedClipboardIcon({
+  icon,
+  isHovered,
+}: {
+  icon: React.ReactNode;
+  isHovered: boolean;
+}) {
+  return (
+    <AnimatedIcon
+      animationPath="/animations/folder.json"
+      icon={icon}
+      isHovered={isHovered}
+      shouldReverse={false}
+    />
+  );
+}
+
+function AnimatedCalendarIcon({
+  icon,
+  isHovered,
+}: {
+  icon: React.ReactNode;
+  isHovered: boolean;
+}) {
+  return (
+    <AnimatedIcon
+      animationPath="/animations/calendar.json"
+      icon={icon}
+      isHovered={isHovered}
+      shouldReverse={false}
+    />
+  );
+}
+
+function AnimatedVideoIcon({
+  icon,
+  isHovered,
+}: {
+  icon: React.ReactNode;
+  isHovered: boolean;
+}) {
+  return (
+    <AnimatedIcon
+      animationPath="/animations/video.json"
+      icon={icon}
+      isHovered={isHovered}
+      shouldReverse={false}
+    />
+  );
+}
+
+function AnimatedBriefcaseIcon({
+  icon,
+  isHovered,
+}: {
+  icon: React.ReactNode;
+  isHovered: boolean;
+}) {
+  return (
+    <AnimatedIcon
+      animationPath="/animations/organization.json"
+      icon={icon}
+      isHovered={isHovered}
+      shouldReverse={false}
+    />
+  );
+}
+
+function AnimatedSettingsIcon({
+  icon,
+  isHovered,
+}: {
+  icon: React.ReactNode;
+  isHovered: boolean;
+}) {
+  return (
+    <AnimatedIcon
+      animationPath="/animations/settings.json"
+      icon={icon}
+      isHovered={isHovered}
+    />
+  );
+}
+
+// NavLinkItem component to manage hover state per link
+function NavLinkItem({
+  link,
+  isOpen,
+  isActiveLink,
+  setIsMobileOpen,
+  startTransition,
+}: {
+  link: {
+    name: string;
+    icon: React.ReactNode;
+    href: string;
+    badge?: string | null;
+  };
+  isOpen: boolean;
+  isActiveLink: (href: string) => boolean;
+  setIsMobileOpen: (open: boolean) => void;
+  startTransition: (callback: () => void) => void;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <Link
+      href={link.href}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => {
+        setIsMobileOpen(false);
+        startTransition(() => {
+          // This will show loading state during navigation
+        });
+      }}
+      className={`transition-colors group relative ${
+        isOpen
+          ? "flex items-center gap-2.5 px-3 py-2.5 overflow-hidden rounded-lg"
+          : "flex items-center justify-center p-2.5 rounded-lg"
+      } ${
+        isActiveLink(link.href)
+          ? "bg-white/[0.08] text-white border"
+          : "text-zinc-400 border border-transparent hover:bg-white/[0.04]"
+      }`}
+      style={
+        isActiveLink(link.href)
+          ? { borderColor: `${COLORS.GOLDEN_ACCENT}4D` }
+          : undefined
+      }
+    >
+      <span className="flex-shrink-0 text-base">
+        {link.name === "Dashboard" && (
+          <AnimatedHomeIcon icon={link.icon} isHovered={isHovered} />
+        )}
+        {link.name === "Clients" && (
+          <AnimatedUsersIcon icon={link.icon} isHovered={isHovered} />
+        )}
+        {link.name === "Library" && (
+          <AnimatedBookIcon icon={link.icon} isHovered={isHovered} />
+        )}
+        {link.name === "Programs/Routines" && (
+          <AnimatedClipboardIcon icon={link.icon} isHovered={isHovered} />
+        )}
+        {link.name === "Schedule" && (
+          <AnimatedCalendarIcon icon={link.icon} isHovered={isHovered} />
+        )}
+        {link.name === "Videos" && (
+          <AnimatedVideoIcon icon={link.icon} isHovered={isHovered} />
+        )}
+        {link.name === "Organization" && (
+          <AnimatedBriefcaseIcon icon={link.icon} isHovered={isHovered} />
+        )}
+        {link.name === "Admin" && (
+          <AnimatedSettingsIcon icon={link.icon} isHovered={isHovered} />
+        )}
+        {![
+          "Dashboard",
+          "Clients",
+          "Library",
+          "Programs/Routines",
+          "Schedule",
+          "Videos",
+          "Organization",
+          "Admin",
+        ].includes(link.name) && link.icon}
+      </span>
+      {isOpen && (
+        <div className="flex-1 flex items-center justify-between min-w-0">
+          <span className="text-sm font-medium truncate">{link.name}</span>
+          {link.badge && (
+            <span className="px-1.5 py-0.5 text-[10px] rounded-full font-medium bg-zinc-700 text-zinc-300 ml-2 flex-shrink-0">
+              {link.badge}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Tooltip for collapsed state */}
+      {!isOpen && (
+        <div className="absolute left-full ml-2 px-2 py-1.5 text-xs rounded border border-white/10 bg-white/[0.08] backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 text-white">
+          {link.name}
+          {link.badge && (
+            <span className="ml-1.5 px-1 py-0.5 text-[10px] rounded-full bg-zinc-700 text-zinc-300">
+              {link.badge}
+            </span>
+          )}
+        </div>
+      )}
+    </Link>
+  );
+}
 
 const bottomLinks = [
   { name: "Settings", icon: <FiSettings />, href: "/settings" },
@@ -427,63 +795,47 @@ export default function Sidebar({ user, children }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar - improved mobile animations */}
+      {/* Sidebar - Compact & Minimal */}
       <aside
-        className={`flex flex-col justify-between h-screen fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out backdrop-blur-sm bg-sidebar text-sidebar-foreground shadow-2xl ${
+        className={`flex flex-col justify-between h-screen fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out border-r border-white/10 bg-[#1a1f20] ${
           isOpen ? "md:w-64" : "md:w-20"
         } ${
           isMobileOpen
             ? "w-80 translate-x-0 opacity-100"
             : "w-80 -translate-x-full opacity-0 md:opacity-100"
         } md:translate-x-0 md:z-20`}
-        style={{
-          background: "linear-gradient(180deg, #1A1D1E 0%, #0F1112 100%)",
-          boxShadow: isMobileOpen
-            ? "0 0 0 1px rgba(255, 255, 255, 0.1), 0 25px 50px -12px rgba(0, 0, 0, 0.5)"
-            : "0 4px 20px rgba(0, 0, 0, 0.3)",
-        }}
       >
         <div>
           {/* Header */}
-          <div className="flex items-center justify-center h-24 px-4 font-bold text-xl transition-all duration-300 overflow-hidden relative">
-            {/* Background gradient effect */}
-            <div
-              className="absolute inset-0 opacity-10"
-              style={{
-                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-              }}
-            />
-
+          <div className="flex items-center justify-center h-16 px-4 transition-all duration-300 overflow-hidden relative">
             <span
-              className={`hover:scale-105 transition-all duration-500 cursor-default whitespace-nowrap relative z-10 text-sidebar-foreground ${
+              className={`cursor-default whitespace-nowrap relative z-10 text-white ${
                 isOpen
                   ? "opacity-100 translate-x-0 delay-150"
                   : "opacity-0 -translate-x-4"
               }`}
             >
-              <div className="flex items-center gap-2">
-                {/* Logo is a secondary toggle via double-click */}
+              <div className="flex items-center gap-2 text-sm font-semibold">
                 NextLevel Coaching
               </div>
             </span>
             <span
-              className={`hover:scale-105 transition-all duration-500 cursor-default absolute z-10 text-sidebar-foreground ${
+              className={`cursor-default absolute z-10 ${
                 isOpen
                   ? "opacity-0 translate-x-4"
                   : "opacity-100 translate-x-0 delay-150"
               }`}
             >
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer"
+                className="w-7 h-7 rounded flex items-center justify-center overflow-hidden cursor-pointer border border-white/10"
                 onDoubleClick={toggleDesktopSidebar}
                 title="Double-click to expand"
-                style={{ backgroundColor: "#4A5A70" }}
               >
                 <Image
                   src="/logo image.png"
                   alt="Next Level Softball"
-                  width={32}
-                  height={32}
+                  width={28}
+                  height={28}
                   className="w-full h-full object-cover"
                   priority
                 />
@@ -493,138 +845,21 @@ export default function Sidebar({ user, children }: SidebarProps) {
 
           {/* Navigation */}
           <nav
-            className={`mt-6 px-3 ${
+            className={`mt-4 px-2 ${
               isOpen
-                ? "flex flex-col gap-1"
-                : "grid grid-cols-1 gap-1 place-items-center"
+                ? "flex flex-col gap-0.5"
+                : "grid grid-cols-1 gap-0.5 place-items-center"
             }`}
           >
             {navLinks.map((link, index) => (
-              <Link
+              <NavLinkItem
                 key={link.name}
-                href={link.href}
-                onClick={() => {
-                  setIsMobileOpen(false);
-                  startTransition(() => {
-                    // This will show loading state during navigation
-                  });
-                }}
-                className={`transition-all duration-300 ease-in-out transform hover:scale-105 group relative ${
-                  isOpen
-                    ? "flex items-center gap-3 px-4 py-4 hover:shadow-lg overflow-hidden rounded-xl md:py-3"
-                    : "flex items-center justify-center p-4 text-xl rounded-xl md:p-3"
-                } ${
-                  isActiveLink(link.href) ? "text-white" : "hover:text-white"
-                }`}
-                style={{
-                  backgroundColor: isActiveLink(link.href)
-                    ? "#353A3A"
-                    : "transparent",
-                  color: isActiveLink(link.href) ? "#C3BCC2" : "#606364",
-                  boxShadow: isActiveLink(link.href)
-                    ? "0 4px 20px rgba(0, 0, 0, 0.3)"
-                    : "none",
-                  animationDelay: `${index * 100}ms`,
-                  border: isActiveLink(link.href)
-                    ? "1px solid #4A5A70"
-                    : "1px solid transparent",
-                }}
-                onMouseEnter={e => {
-                  setHoveredLink(link.name);
-                  if (!isActiveLink(link.href)) {
-                    e.currentTarget.style.backgroundColor = isOpen
-                      ? "#353A3A"
-                      : "rgba(74, 90, 112, 0.1)";
-                    e.currentTarget.style.color = "#C3BCC2";
-                    e.currentTarget.style.borderColor = "#4A5A70";
-                    if (isOpen) {
-                      e.currentTarget.style.boxShadow =
-                        "0 4px 20px rgba(0, 0, 0, 0.3)";
-                    }
-                  }
-                }}
-                onMouseLeave={e => {
-                  setHoveredLink(null);
-                  if (!isActiveLink(link.href)) {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                    e.currentTarget.style.color = "#606364";
-                    e.currentTarget.style.borderColor = "transparent";
-                    e.currentTarget.style.boxShadow = "none";
-                  }
-                }}
-              >
-                <span
-                  className={`transition-transform duration-300 group-hover:scale-110 flex-shrink-0 ${
-                    isOpen ? "text-xl" : "text-xl"
-                  }`}
-                >
-                  {link.icon}
-                </span>
-                {isOpen && (
-                  <div className="flex-1 flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="font-medium transition-all duration-500 whitespace-nowrap opacity-100 translate-x-0 delay-150">
-                        {link.name}
-                      </span>
-                      <span
-                        className="text-xs transition-all duration-500 opacity-60"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        {link.description}
-                      </span>
-                    </div>
-                    {link.badge && (
-                      <span
-                        className="px-2 py-1 text-xs rounded-full font-medium transition-all duration-300"
-                        style={{ backgroundColor: "#10B981", color: "#DCFCE7" }}
-                      >
-                        {link.badge}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Enhanced Tooltip for collapsed state */}
-                {!isOpen && (
-                  <div
-                    className="absolute left-full ml-4 px-4 py-3 text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-xl border"
-                    style={{
-                      backgroundColor: "#353A3A",
-                      color: "#C3BCC2",
-                      borderColor: "#606364",
-                      transform: "translateY(-50%)",
-                      top: "50%",
-                      minWidth: "200px",
-                    }}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{link.name}</span>
-                        {link.badge && (
-                          <span
-                            className="px-2 py-1 text-xs rounded-full font-medium"
-                            style={{
-                              backgroundColor: "#10B981",
-                              color: "#DCFCE7",
-                            }}
-                          >
-                            {link.badge}
-                          </span>
-                        )}
-                      </div>
-                      <span
-                        className="text-xs opacity-60"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        {link.description}
-                      </span>
-                    </div>
-                    <div className="absolute right-full top-1/2 transform -translate-y-1/2">
-                      <div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-[#353A3A]" />
-                    </div>
-                  </div>
-                )}
-              </Link>
+                link={link}
+                isOpen={isOpen}
+                isActiveLink={isActiveLink}
+                setIsMobileOpen={setIsMobileOpen}
+                startTransition={startTransition}
+              />
             ))}
           </nav>
         </div>
@@ -1295,7 +1530,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
 
       {/* Main Content Area - improved mobile responsiveness */}
       <div
-        className={`flex-1 transition-all duration-500 ease-in-out ${
+        className={`flex-1 transition-all duration-500 ease-in-out bg-[#15191a] ${
           isOpen ? "ml-0 md:ml-20 lg:ml-64" : "ml-0 md:ml-20"
         }`}
         style={{
