@@ -4,12 +4,22 @@
 
 export interface ClipboardData {
   type: "assignments";
-  sourceDate: string; // ISO date string (YYYY-MM-DD)
+  sourceDate: string; // ISO date string (YYYY-MM-DD) - first day for single day, or first day for multi-day
+  sourceDates?: string[]; // Array of source dates for multi-day copy (in order)
+  isMultiDay?: boolean; // Flag to indicate if this is a multi-day copy
   assignments: {
     routines: ClipboardRoutineAssignment[];
     programs: ClipboardProgramAssignment[];
     videos: ClipboardVideoAssignment[];
   };
+  multiDayAssignments?: Array<{ // Array of assignments for each day (in order)
+    dayOffset: number; // Days offset from first day (0, 1, 2, etc.)
+    assignments: {
+      routines: ClipboardRoutineAssignment[];
+      programs: ClipboardProgramAssignment[];
+      videos: ClipboardVideoAssignment[];
+    };
+  }>;
   copiedAt: Date;
   sourceClientId: string;
 }

@@ -353,7 +353,7 @@ function OverviewTab() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <AnimatedFeatureShowcase />
+      <AnimatedFeatureShowcase />
       </motion.div>
     </motion.div>
   );
@@ -625,7 +625,7 @@ function FeatureCategory({
     <div className="bg-white/5 rounded-2xl border border-white/10 p-4 sm:p-6">
       <div className="mb-3 sm:mb-4">
         <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">{title}</h3>
-        <p className="text-xs sm:text-sm text-zinc-400">{description}</p>
+          <p className="text-xs sm:text-sm text-zinc-400">{description}</p>
       </div>
       <div className="space-y-3 sm:space-y-4">{children}</div>
     </div>

@@ -5,6 +5,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { COLORS, getGoldenAccent } from "@/lib/colors"
 
 const DropdownMenu = DropdownMenuPrimitive.Root
 
@@ -27,10 +28,21 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent",
+      "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
       inset && "pl-8",
       className
     )}
+    style={{
+      color: COLORS.TEXT_PRIMARY,
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+      e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+    }}
     {...props}
   >
     {children}
@@ -47,9 +59,14 @@ const DropdownMenuSubContent = React.forwardRef<
   <DropdownMenuPrimitive.SubContent
     ref={ref}
     className={cn(
-      "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+      "z-50 min-w-[8rem] overflow-hidden rounded-md border p-1 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
       className
     )}
+    style={{
+      backgroundColor: COLORS.BACKGROUND_DARK,
+      borderColor: COLORS.BORDER_SUBTLE,
+      color: COLORS.TEXT_PRIMARY,
+    }}
     {...props}
   />
 ))
@@ -65,9 +82,14 @@ const DropdownMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "z-50 min-w-[8rem] overflow-hidden rounded-md border p-1 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className
       )}
+      style={{
+        backgroundColor: COLORS.BACKGROUND_DARK,
+        borderColor: COLORS.BORDER_SUBTLE,
+        color: COLORS.TEXT_PRIMARY,
+      }}
       {...props}
     />
   </DropdownMenuPrimitive.Portal>
@@ -83,10 +105,29 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       inset && "pl-8",
       className
     )}
+    style={{
+      color: COLORS.TEXT_PRIMARY,
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+      e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+    }}
+    onFocus={(e) => {
+      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+      e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+    }}
+    onBlur={(e) => {
+      e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+    }}
     {...props}
   />
 ))
@@ -99,15 +140,34 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
+    style={{
+      color: COLORS.TEXT_PRIMARY,
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+      e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+    }}
+    onFocus={(e) => {
+      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+      e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+    }}
+    onBlur={(e) => {
+      e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+    }}
     checked={checked}
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <Check className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -123,14 +183,33 @@ const DropdownMenuRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
+    style={{
+      color: COLORS.TEXT_PRIMARY,
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+      e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+    }}
+    onFocus={(e) => {
+      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+      e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+    }}
+    onBlur={(e) => {
+      e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+    }}
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Circle className="h-2 w-2 fill-current" />
+        <Circle className="h-2 w-2 fill-current" style={{ color: COLORS.GOLDEN_ACCENT }} />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -151,6 +230,9 @@ const DropdownMenuLabel = React.forwardRef<
       inset && "pl-8",
       className
     )}
+    style={{
+      color: COLORS.TEXT_PRIMARY,
+    }}
     {...props}
   />
 ))
@@ -162,7 +244,10 @@ const DropdownMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Separator
     ref={ref}
-    className={cn("-mx-1 my-1 h-px bg-muted", className)}
+    className={cn("-mx-1 my-1 h-px", className)}
+    style={{
+      backgroundColor: COLORS.BORDER_SUBTLE,
+    }}
     {...props}
   />
 ))
@@ -175,6 +260,9 @@ const DropdownMenuShortcut = ({
   return (
     <span
       className={cn("ml-auto text-xs tracking-widest opacity-60", className)}
+      style={{
+        color: COLORS.TEXT_MUTED,
+      }}
       {...props}
     />
   )

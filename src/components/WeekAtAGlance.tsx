@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import CustomSelect from "./ui/CustomSelect";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface WeekAtAGlanceProps {
   className?: string;
@@ -443,16 +444,10 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
   // Loading state
   if (eventsLoading) {
     return (
-      <div
-        className={`rounded-2xl shadow-xl border relative overflow-hidden group ${className}`}
-        style={{ backgroundColor: "#2A2F32", borderColor: "#4A5A70" }}
-      >
-        <div className="relative p-6">
-          <div className="flex items-center justify-center h-64">
-            <div
-              className="animate-spin rounded-full h-8 w-8 border-b-2"
-              style={{ borderColor: "#4A5A70" }}
-            />
+      <div className={`rounded-lg border border-white/10 bg-white/[0.02] ${className}`}>
+        <div className="p-4">
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/20 border-t-white/60" />
           </div>
         </div>
       </div>
@@ -462,14 +457,11 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
   // Error state
   if (eventsError) {
     return (
-      <div
-        className={`rounded-2xl shadow-xl border relative overflow-hidden group ${className}`}
-        style={{ backgroundColor: "#2A2F32", borderColor: "#4A5A70" }}
-      >
-        <div className="relative p-6">
+      <div className={`rounded-lg border border-white/10 bg-white/[0.02] ${className}`}>
+        <div className="p-4">
           <div className="text-center">
-            <p style={{ color: "#EF4444" }}>Error loading schedule</p>
-            <p className="text-sm mt-2" style={{ color: "#D1D5DB" }}>
+            <p className="text-xs text-red-400">Error loading schedule</p>
+            <p className="text-[10px] text-zinc-500 mt-1">
               {eventsError.message}
             </p>
           </div>
@@ -485,100 +477,108 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
           transform: rotateY(180deg);
         }
       `}</style>
-      <div
-        className={`rounded-2xl shadow-xl border relative overflow-hidden group ${className}`}
-        style={{ backgroundColor: "#2A2F32", borderColor: "#4A5A70" }}
+      <div 
+        className={`group rounded-lg border transition-colors ${className}`}
+        style={className === "compact" 
+          ? { borderColor: "#262737", backgroundColor: "transparent" }
+          : { 
+              borderColor: COLORS.GOLDEN_BORDER, 
+              backgroundColor: COLORS.BACKGROUND_CARD 
+            }
+        }
+        onMouseEnter={className !== "compact" ? (e) => {
+          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+        } : undefined}
+        onMouseLeave={className !== "compact" ? (e) => {
+          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+        } : undefined}
       >
-        <div
-          className="absolute inset-0 opacity-8 group-hover:opacity-15 transition-opacity duration-300"
-          style={{
-            background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-          }}
-        />
-
-        <div className="relative p-4">
+        <div className={className === "compact" ? "p-2" : "p-4"}>
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: "#4A5A70" }}
-              >
-                <Calendar className="h-4 w-4" style={{ color: "#E5E7EB" }} />
-              </div>
-              <h3 className="text-xl font-bold" style={{ color: "#E5E7EB" }}>
-                Week at a Glance
-              </h3>
-            </div>
+          {className !== "compact" && (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 transition-colors" style={{ color: getGoldenAccent(0.6) }} />
+                  <h3 className="text-sm font-semibold text-white">
+                    Week at a Glance
+                  </h3>
+                </div>
 
-            <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => navigateWeek("prev")}
+                    className="p-1.5 rounded border transition-colors"
+                    style={{ borderColor: COLORS.GOLDEN_BORDER, backgroundColor: COLORS.BACKGROUND_CARD }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD; }}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5 text-zinc-400" />
+                  </button>
+
+                  <button
+                    onClick={goToToday}
+                    className="px-2.5 py-1 rounded border transition-colors text-xs font-medium"
+                    style={{ borderColor: COLORS.GOLDEN_BORDER, backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.GOLDEN_ACCENT }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD; }}
+                  >
+                    Today
+                  </button>
+
+                  <button
+                    onClick={() => navigateWeek("next")}
+                    className="p-1.5 rounded border transition-colors"
+                    style={{ borderColor: COLORS.GOLDEN_BORDER, backgroundColor: COLORS.BACKGROUND_CARD }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD; }}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5 text-zinc-400" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Week Range Display */}
+              <div className="text-center mb-3">
+                <p className="text-xs text-zinc-400">
+                  {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
+                </p>
+              </div>
+            </>
+          )}
+          
+          {className === "compact" && (
+            <div className="flex items-center justify-end gap-1 mb-2">
               <button
                 onClick={() => navigateWeek("prev")}
-                className="p-3 sm:p-2 rounded-lg transition-all duration-300 hover:scale-110 touch-manipulation"
-                style={{
-                  backgroundColor: "#3A4040",
-                  color: "#E5E7EB",
-                  minWidth: "44px",
-                  minHeight: "44px",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                }}
+                className="p-0.5 rounded border transition-colors"
+                style={{ borderColor: "#262737" }}
               >
-                <ChevronLeft className="h-5 w-5 sm:h-4 sm:w-4" />
+                <ChevronLeft className="h-2.5 w-2.5" style={{ color: "#6B7280" }} />
               </button>
-
               <button
                 onClick={goToToday}
-                className="px-4 py-2 sm:px-3 sm:py-1 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 touch-manipulation"
-                style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#E5E7EB",
-                  minHeight: "44px",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#606364";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
+                className="px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors"
+                style={{ 
+                  borderColor: COLORS.GOLDEN_ACCENT,
+                  color: COLORS.GOLDEN_ACCENT,
+                  backgroundColor: "transparent"
                 }}
               >
                 Today
               </button>
-
               <button
                 onClick={() => navigateWeek("next")}
-                className="p-3 sm:p-2 rounded-lg transition-all duration-300 hover:scale-110 touch-manipulation"
-                style={{
-                  backgroundColor: "#3A4040",
-                  color: "#E5E7EB",
-                  minWidth: "44px",
-                  minHeight: "44px",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#3A4040";
-                }}
+                className="p-0.5 rounded border transition-colors"
+                style={{ borderColor: "#262737" }}
               >
-                <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4" />
+                <ChevronRight className="h-2.5 w-2.5" style={{ color: "#6B7280" }} />
               </button>
             </div>
-          </div>
-
-          {/* Week Range Display */}
-          <div className="text-center mb-6">
-            <p className="text-lg font-semibold" style={{ color: "#E5E7EB" }}>
-              {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
-            </p>
-          </div>
+          )}
 
           {/* Week Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
             {weekDays.map((day, index) => {
               const dayKey = format(day, "yyyy-MM-dd");
               const dayEvents = eventsByDay[dayKey] || [];
@@ -590,15 +590,14 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
               return (
                 <div
                   key={dayKey}
-                  className={`rounded-lg min-h-[200px] sm:min-h-[250px] md:min-h-[300px] transition-all duration-700 ease-in-out ${
-                    isCurrentDay ? "ring-2" : ""
-                  } ${isFlipped ? "rotate-y-180" : ""}`}
+                  className={`rounded border transition-all duration-700 ${isPast ? "opacity-50" : ""}`}
                   style={{
-                    backgroundColor: isCurrentDay ? "#4A5A70" : "#374151",
-                    borderColor: isCurrentDay ? "#606364" : "transparent",
-                    opacity: isPast ? 0.5 : 1,
                     transformStyle: "preserve-3d",
                     perspective: "1000px",
+                    minHeight: "200px",
+                    transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                    borderColor: isCurrentDay ? COLORS.GOLDEN_ACCENT : COLORS.GOLDEN_BORDER,
+                    backgroundColor: COLORS.BACKGROUND_CARD,
                   }}
                 >
                   <div
@@ -618,29 +617,23 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                       {/* Day Header */}
                       <div className="text-center mb-2">
                         <p
-                          className={`text-sm sm:text-xs font-medium uppercase tracking-wide ${
-                            isCurrentDay ? "font-bold" : ""
+                          className={`text-xs font-medium uppercase tracking-wide ${
+                            isCurrentDay ? "font-semibold text-white" : "text-zinc-400"
                           }`}
-                          style={{
-                            color: isCurrentDay ? "#E5E7EB" : "#9CA3AF",
-                          }}
                         >
                           {format(day, "EEE")}
                         </p>
                         <p
-                          className={`text-lg sm:text-sm font-bold ${
-                            isCurrentDay ? "text-white" : ""
+                          className={`text-base font-semibold ${
+                            isCurrentDay ? "text-white" : "text-zinc-300"
                           }`}
-                          style={{
-                            color: isCurrentDay ? "#FFFFFF" : "#E5E7EB",
-                          }}
                         >
                           {format(day, "d")}
                         </p>
                       </div>
 
                       {/* Events */}
-                      <div className="space-y-1 flex-1">
+                      <div className={`${className === "compact" ? "space-y-0.5" : "space-y-1"} flex-1`}>
                         {dayEvents.slice(0, 10).map((event: any) => {
                           // Determine if this is a reminder or lesson
                           const isReminder =
@@ -652,8 +645,11 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                           return (
                             <div
                               key={event.id}
-                              className="rounded px-2 py-1.5 text-xs sm:text-xs group"
+                              className={`rounded group border transition-colors ${
+                                className === "compact" ? "px-1.5 py-1 text-[10px]" : "px-2 py-1.5 text-xs"
+                              }`}
                               style={{
+                                borderColor: COLORS.GOLDEN_BORDER,
                                 backgroundColor: isReminder
                                   ? "#F59E0B"
                                   : "#4A5A70",
@@ -662,18 +658,18 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                               <div className="flex items-center gap-1">
                                 {isReminder ? (
                                   <Bell
-                                    className="h-2.5 w-2.5 flex-shrink-0"
+                                    className={`${className === "compact" ? "h-2 w-2" : "h-2.5 w-2.5"} flex-shrink-0`}
                                     style={{ color: "#FFFFFF" }}
                                   />
                                 ) : (
                                   <Clock
-                                    className="h-2.5 w-2.5 flex-shrink-0"
+                                    className={`${className === "compact" ? "h-2 w-2" : "h-2.5 w-2.5"} flex-shrink-0`}
                                     style={{ color: "#E5E7EB" }}
                                   />
                                 )}
                                 {isLesson && event.client && (
                                   <span
-                                    className="text-xs truncate"
+                                    className={`${className === "compact" ? "text-[10px]" : "text-xs"} truncate`}
                                     style={{ color: "#D1D5DB" }}
                                     title={event.client.name}
                                   >
@@ -693,17 +689,17 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                                 )}
                                 {isReminder && (
                                   <span
-                                    className="text-xs truncate"
+                                    className={`${className === "compact" ? "text-[10px]" : "text-xs"} truncate`}
                                     style={{ color: "#FFFFFF" }}
                                     title={event.title}
                                   >
-                                    {event.title.length > 8
-                                      ? `${event.title.substring(0, 8)}...`
+                                    {event.title.length > (className === "compact" ? 6 : 8)
+                                      ? `${event.title.substring(0, className === "compact" ? 6 : 8)}...`
                                       : event.title}
                                   </span>
                                 )}
                                 <span
-                                  className="text-xs ml-auto"
+                                  className={`${className === "compact" ? "text-[10px]" : "text-xs"} ml-auto`}
                                   style={{
                                     color: isReminder ? "#FFFFFF" : "#E5E7EB",
                                   }}
@@ -719,11 +715,10 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                                     e.stopPropagation();
                                     handleDeleteEvent(event.id, event.title);
                                   }}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-0.5 rounded hover:bg-red-500/20"
-                                  style={{ color: "#EF4444" }}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-0.5 rounded hover:bg-white/[0.08]"
                                   title="Delete event"
                                 >
-                                  <X className="h-2 w-2" />
+                                  <X className={`${className === "compact" ? "h-2 w-2" : "h-2.5 w-2.5"} text-zinc-400`} />
                                 </button>
                               </div>
                             </div>
@@ -731,13 +726,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                         })}
 
                         {dayEvents.length > 10 && (
-                          <div
-                            className="text-xs text-center py-0.5 rounded"
-                            style={{
-                              backgroundColor: "#374151",
-                              color: "#D1D5DB",
-                            }}
-                          >
+                          <div className={`${className === "compact" ? "text-[9px]" : "text-[10px]"} text-zinc-500 text-center py-0.5 rounded bg-white/[0.02]`}>
                             +{dayEvents.length - 10} more
                           </div>
                         )}
@@ -745,29 +734,15 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
 
                       {/* Add Button - Always at bottom */}
                       {!isPast && (
-                        <div className="flex justify-center mt-auto pt-2">
+                        <div className={`flex justify-center mt-auto ${className === "compact" ? "pt-1" : "pt-2"}`}>
                           <button
                             onClick={() => toggleCardFlip(dayKey)}
-                            className="p-2 sm:p-1 rounded transition-all duration-300 hover:scale-110 touch-manipulation flex items-center justify-center"
-                            style={{
-                              backgroundColor: "#1F2937",
-                              color: "#F9FAFB",
-                              border: "1px solid #374151",
-                              minWidth: "44px",
-                              minHeight: "44px",
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.backgroundColor = "#111827";
-                              e.currentTarget.style.borderColor = "#4B5563";
-                              e.currentTarget.style.color = "#FFFFFF";
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.backgroundColor = "#1F2937";
-                              e.currentTarget.style.borderColor = "#374151";
-                              e.currentTarget.style.color = "#F9FAFB";
-                            }}
+                            className={`${className === "compact" ? "p-0.5" : "p-1"} rounded border transition-colors flex items-center justify-center`}
+                            style={{ borderColor: COLORS.GOLDEN_BORDER, backgroundColor: COLORS.BACKGROUND_CARD }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD; }}
                           >
-                            <Plus className="h-4 w-4 sm:h-2.5 sm:w-2.5" />
+                            <Plus className={`${className === "compact" ? "h-2.5 w-2.5" : "h-3 w-3"}`} style={{ color: COLORS.GOLDEN_ACCENT }} />
                           </button>
                         </div>
                       )}
@@ -775,101 +750,54 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
 
                     {/* Back side - Quick actions */}
                     <div
-                      className="absolute inset-0 p-2 flex flex-col"
+                      className={`absolute inset-0 flex flex-col ${className === "compact" ? "p-1.5" : "p-2"}`}
                       style={{
                         backfaceVisibility: "hidden",
                         transform: "rotateY(180deg)",
                       }}
                     >
                       {/* Header with close button */}
-                      <div className="flex items-center justify-between mb-3">
-                        <h4
-                          className="text-base sm:text-sm font-semibold"
-                          style={{ color: "#E5E7EB" }}
-                        >
+                      <div className={`flex items-center justify-between ${className === "compact" ? "mb-2" : "mb-3"}`}>
+                        <h4 className={`${className === "compact" ? "text-xs" : "text-sm"} font-semibold text-white`}>
                           Quick Actions
                         </h4>
                         <button
                           onClick={() => toggleCardFlip(dayKey)}
-                          className="p-2 sm:p-1 rounded transition-all duration-300 hover:scale-110 touch-manipulation flex items-center justify-center"
-                          style={{
-                            backgroundColor: "#1F2937",
-                            color: "#F9FAFB",
-                            border: "1px solid #374151",
-                            minWidth: "44px",
-                            minHeight: "44px",
-                          }}
+                          className={`${className === "compact" ? "p-1" : "p-1.5"} rounded border transition-colors flex items-center justify-center`}
+                          style={{ borderColor: COLORS.GOLDEN_BORDER, backgroundColor: COLORS.BACKGROUND_CARD }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD; }}
                         >
-                          <X className="h-4 w-4 sm:h-3 sm:w-3" />
+                          <X className={`${className === "compact" ? "h-3 w-3" : "h-3.5 w-3.5"} text-zinc-400`} />
                         </button>
                       </div>
 
                       {/* Quick action buttons */}
-                      <div className="space-y-2 flex-1">
+                      <div className={`${className === "compact" ? "space-y-1.5" : "space-y-2"} flex-1`}>
                         <button
                           onClick={() => handleQuickAction("schedule", day)}
-                          className="w-full p-3 sm:p-2 rounded transition-all duration-200 hover:bg-opacity-80 flex items-center gap-3 sm:gap-2 group touch-manipulation"
-                          style={{
-                            backgroundColor: "rgba(31, 41, 55, 0.5)",
-                            color: "#E5E7EB",
-                            border: "1px solid rgba(55, 65, 81, 0.4)",
-                            minHeight: "48px",
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor =
-                              "rgba(31, 41, 55, 0.7)";
-                            e.currentTarget.style.borderColor =
-                              "rgba(55, 65, 81, 0.6)";
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor =
-                              "rgba(31, 41, 55, 0.5)";
-                            e.currentTarget.style.borderColor =
-                              "rgba(55, 65, 81, 0.4)";
-                          }}
+                          className={`w-full rounded border transition-colors flex items-center group ${
+                            className === "compact" ? "p-1.5 gap-1.5" : "p-2.5 gap-2.5"
+                          }`}
                         >
-                          <div
-                            className="p-1.5 sm:p-1 rounded"
-                            style={{
-                              backgroundColor: "rgba(55, 65, 81, 0.4)",
-                            }}
-                          >
-                            <Calendar className="h-4 w-4 sm:h-3 sm:w-3" />
+                          <div className={`${className === "compact" ? "p-1" : "p-1.5"} rounded border border-white/5 bg-white/[0.02]`}>
+                            <Calendar className={`${className === "compact" ? "h-3 w-3" : "h-4 w-4"} text-zinc-400`} />
                           </div>
-                          <span className="text-sm sm:text-xs font-medium">
+                          <span className={`${className === "compact" ? "text-xs" : "text-sm"} font-medium text-white`}>
                             Schedule Lesson
                           </span>
                         </button>
 
                         <button
                           onClick={() => handleQuickAction("reminder", day)}
-                          className="w-full p-3 sm:p-2 rounded transition-all duration-200 hover:bg-opacity-80 flex items-center gap-3 sm:gap-2 group touch-manipulation"
-                          style={{
-                            backgroundColor: "rgba(17, 24, 39, 0.6)",
-                            color: "#D1D5DB",
-                            border: "1px solid rgba(31, 41, 55, 0.4)",
-                            minHeight: "48px",
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor =
-                              "rgba(17, 24, 39, 0.8)";
-                            e.currentTarget.style.borderColor =
-                              "rgba(31, 41, 55, 0.6)";
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor =
-                              "rgba(17, 24, 39, 0.6)";
-                            e.currentTarget.style.borderColor =
-                              "rgba(31, 41, 55, 0.4)";
-                          }}
+                          className={`w-full rounded border transition-colors flex items-center group ${
+                            className === "compact" ? "p-1.5 gap-1.5" : "p-2.5 gap-2.5"
+                          }`}
                         >
-                          <div
-                            className="p-1.5 sm:p-1 rounded"
-                            style={{ backgroundColor: "rgba(31, 41, 55, 0.4)" }}
-                          >
-                            <Bell className="h-4 w-4 sm:h-3 sm:w-3" />
+                          <div className={`${className === "compact" ? "p-1" : "p-1.5"} rounded border border-white/5 bg-white/[0.02]`}>
+                            <Bell className={`${className === "compact" ? "h-3 w-3" : "h-4 w-4"} text-zinc-400`} />
                           </div>
-                          <span className="text-sm sm:text-xs font-medium">
+                          <span className={`${className === "compact" ? "text-xs" : "text-sm"} font-medium text-white`}>
                             Add Reminder
                           </span>
                         </button>
@@ -882,37 +810,27 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
           </div>
 
           {/* Footer */}
-          <div
-            className="mt-6 pt-4 border-t"
-            style={{ borderColor: "#4A5A70" }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: "#4A5A70" }}
-                />
-                <span className="text-sm" style={{ color: "#D1D5DB" }}>
-                  {weekEvents.length}{" "}
-                  {weekEvents.length === 1 ? "event" : "events"} this week
-                </span>
-              </div>
+          {className !== "compact" && (
+            <div className="mt-4 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-white/10" />
+                  <span className="text-xs text-zinc-400">
+                    {weekEvents.length}{" "}
+                    {weekEvents.length === 1 ? "event" : "events"} this week
+                  </span>
+                </div>
 
-              <Link
-                href="/schedule"
-                className="text-sm font-medium transition-colors duration-300"
-                style={{ color: "#4A5A70" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = "#E5E7EB";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = "#4A5A70";
-                }}
-              >
-                View Full Schedule →
-              </Link>
+                <Link
+                  href="/schedule"
+                  className="text-xs transition-colors"
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                >
+                  View Full Schedule →
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

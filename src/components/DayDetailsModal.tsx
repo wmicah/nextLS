@@ -2,17 +2,11 @@
 
 import { useState } from "react";
 import {
-  Calendar,
-  Clock,
-  BookOpen,
-  Target,
-  Video,
   X,
-  Zap,
-  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface DayDetailsModalProps {
   isOpen: boolean;
@@ -32,7 +26,11 @@ interface DayDetailsModalProps {
   onRemoveLesson?: (lessonData: any) => void;
   onRemoveVideo?: (videoData: any) => void;
   getStatusIcon: (status: string) => React.ReactNode;
-  getStatusColor: (status: string) => string;
+  getStatusColor: (status: string) => {
+    backgroundColor: string;
+    color: string;
+    borderColor: string;
+  };
 }
 
 export default function DayDetailsModal({
@@ -181,48 +179,62 @@ export default function DayDetailsModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className="rounded-2xl shadow-xl border w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="rounded-lg shadow-xl border w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 p-6 pb-0">
+        <div className="flex items-center justify-between mb-4 p-4 pb-0">
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">
+            <h2
+              className="text-lg font-semibold mb-1"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
               {format(selectedDate, "EEEE, MMMM d, yyyy")}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
-            <X className="h-6 w-6" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 pb-6">
-          <div className="space-y-6">
+        <div className="px-4 pb-4">
+          <div className="space-y-4">
             {/* Quick Actions */}
             <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
+              <h3
+                className="text-sm font-semibold mb-3"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Quick Actions
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 {/* Schedule Lesson */}
                 <button
                   onClick={onScheduleLesson}
-                  className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/20 hover:border-yellow-500/30"
+                  className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/20 hover:border-yellow-500/30"
                 >
-                  <Calendar className="h-6 w-6" style={{ color: "#F59E0B" }} />
-                  <div className="text-left">
-                    <div className="font-medium" style={{ color: "#F59E0B" }}>
+                  <div className="text-center">
+                    <div className="text-xs font-medium" style={{ color: "#F59E0B" }}>
                       Schedule Lesson
                     </div>
-                    <div className="text-sm text-yellow-600/80">
-                      Book a lesson for this day
+                    <div className="text-[10px] text-yellow-600/80">
+                      Book a lesson
                     </div>
                   </div>
                 </button>
@@ -230,15 +242,14 @@ export default function DayDetailsModal({
                 {/* Assign Program */}
                 <button
                   onClick={onAssignProgram}
-                  className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 hover:border-blue-500/30"
+                  className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 hover:border-blue-500/30"
                 >
-                  <BookOpen className="h-6 w-6" style={{ color: "#3B82F6" }} />
-                  <div className="text-left">
-                    <div className="font-medium" style={{ color: "#3B82F6" }}>
+                  <div className="text-center">
+                    <div className="text-xs font-medium" style={{ color: "#3B82F6" }}>
                       Assign Program
                     </div>
-                    <div className="text-sm text-blue-600/80">
-                      Start a program on this day
+                    <div className="text-[10px] text-blue-600/80">
+                      Start a program
                     </div>
                   </div>
                 </button>
@@ -246,15 +257,14 @@ export default function DayDetailsModal({
                 {/* Assign Routine */}
                 <button
                   onClick={onAssignRoutine}
-                  className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-green-500/10 hover:bg-green-500/20 border-green-500/20 hover:border-green-500/30"
+                  className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer bg-green-500/10 hover:bg-green-500/20 border-green-500/20 hover:border-green-500/30"
                 >
-                  <Target className="h-6 w-6" style={{ color: "#10B981" }} />
-                  <div className="text-left">
-                    <div className="font-medium" style={{ color: "#10B981" }}>
+                  <div className="text-center">
+                    <div className="text-xs font-medium" style={{ color: "#10B981" }}>
                       Assign Routine
                     </div>
-                    <div className="text-sm text-green-600/80">
-                      Assign a routine for this day
+                    <div className="text-[10px] text-green-600/80">
+                      Assign a routine
                     </div>
                   </div>
                 </button>
@@ -262,15 +272,14 @@ export default function DayDetailsModal({
                 {/* Assign Video */}
                 <button
                   onClick={onAssignVideo}
-                  className="flex items-center gap-3 p-4 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20 hover:border-purple-500/30"
+                  className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20 hover:border-purple-500/30"
                 >
-                  <Video className="h-6 w-6" style={{ color: "#8B5CF6" }} />
-                  <div className="text-left">
-                    <div className="font-medium" style={{ color: "#8B5CF6" }}>
+                  <div className="text-center">
+                    <div className="text-xs font-medium" style={{ color: "#8B5CF6" }}>
                       Assign Video
                     </div>
-                    <div className="text-sm text-purple-600/80">
-                      Assign a single video for this day
+                    <div className="text-[10px] text-purple-600/80">
+                      Assign a video
                     </div>
                   </div>
                 </button>
@@ -278,51 +287,69 @@ export default function DayDetailsModal({
             </div>
 
             {/* Scheduled Items */}
-            <div className="space-y-6 pt-2">
+            <div className="space-y-4 pt-2">
               {/* Lessons */}
               {lessons.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">
+                  <h3
+                    className="text-sm font-semibold mb-3"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
                     Lessons
                   </h3>
-                  <div className="space-y-3">
-                    {lessons.map((lesson: any, index: number) => (
-                      <div
-                        key={index}
-                        className={`p-4 rounded-lg border-2 ${getStatusColor(
-                          lesson.status
-                        )}`}
-                      >
+                  <div className="space-y-2">
+                    {lessons.map((lesson: any, index: number) => {
+                      const statusStyles = getStatusColor(lesson.status);
+                      return (
+                        <div
+                          key={index}
+                          className="p-3 rounded-lg border"
+                          style={{
+                            backgroundColor: statusStyles.backgroundColor,
+                            color: statusStyles.color,
+                            borderColor: statusStyles.borderColor,
+                          }}
+                        >
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="font-medium">
+                            <div
+                              className="text-sm font-medium"
+                              style={{ color: COLORS.TEXT_PRIMARY }}
+                            >
                               {formatTimeInUserTimezone(lesson.date)}
                             </div>
-                            <div className="text-sm opacity-80">
+                            <div
+                              className="text-xs"
+                              style={{ color: COLORS.TEXT_SECONDARY }}
+                            >
                               {lesson.title || "Lesson"}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {getStatusIcon(lesson.status)}
-                            <div className="text-xs">{lesson.status}</div>
+                            <div
+                              className="text-[10px]"
+                              style={{ color: COLORS.TEXT_MUTED }}
+                            >
+                              {lesson.status}
+                            </div>
                             {onRemoveLesson && (
                               <button
                                 onClick={() => handleRemoveLesson(lesson)}
-                                className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1"
+                                className="px-2 py-1 rounded text-[10px] font-medium transition-all duration-200"
                                 style={{
                                   backgroundColor: "#EF4444",
                                   color: "#FFFFFF",
                                 }}
                                 title="Remove Lesson"
                               >
-                                <Trash2 className="h-3 w-3" />
                                 Remove
                               </button>
                             )}
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -330,21 +357,35 @@ export default function DayDetailsModal({
               {/* Programs */}
               {programs.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">
+                  <h3
+                    className="text-sm font-semibold mb-3"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
                     Programs
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {programs.map((program: any, index: number) => (
                       <div
                         key={index}
-                        className="p-4 rounded-lg bg-blue-500/20 text-blue-100 border border-blue-400"
+                        className="p-3 rounded-lg border"
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                          borderColor: COLORS.GOLDEN_ACCENT,
+                        }}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4" />
                             <div>
-                              <div className="font-medium">{program.title}</div>
-                              <div className="text-sm opacity-80">
+                              <div
+                                className="text-sm font-medium"
+                                style={{ color: COLORS.TEXT_PRIMARY }}
+                              >
+                                {program.title}
+                              </div>
+                              <div
+                                className="text-xs"
+                                style={{ color: COLORS.TEXT_SECONDARY }}
+                              >
                                 {program.description || "Workout Program"}
                               </div>
                             </div>
@@ -356,48 +397,45 @@ export default function DayDetailsModal({
                                   onClick={() =>
                                     handleRemoveProgram(program, "entire")
                                   }
-                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1"
+                                  className="px-2 py-1 rounded text-[10px] font-medium transition-all duration-200"
                                   style={{
                                     backgroundColor: "#EF4444",
                                     color: "#FFFFFF",
                                   }}
                                   title="Remove entire program from client"
                                 >
-                                  <Trash2 className="h-3 w-3" />
-                                  Remove Entire Program
+                                  Remove Entire
                                 </button>
                                 <button
                                   onClick={() =>
                                     handleRemoveProgram(program, "day")
                                   }
-                                  className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1"
+                                  className="px-2 py-1 rounded text-[10px] font-medium transition-all duration-200"
                                   style={{
                                     backgroundColor: "#F59E0B",
                                     color: "#FFFFFF",
                                   }}
                                   title="Remove just this program day"
                                 >
-                                  <Trash2 className="h-3 w-3" />
-                                  Remove Just This Day
+                                  Remove Day
                                 </button>
                               </>
                             )}
                             {onRemoveProgram && isProgramFinished(program) && (
                               <div
-                                className="px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1 opacity-60"
+                                className="px-2 py-1 rounded text-[10px] font-medium opacity-60"
                                 style={{
                                   backgroundColor: "#6B7280",
                                   color: "#9CA3AF",
                                 }}
                                 title="Program has finished - cannot be removed"
                               >
-                                <Trash2 className="h-3 w-3" />
-                                Program Finished
+                                Finished
                               </div>
                             )}
                             <button
                               onClick={() => handleReplaceWithLesson(program)}
-                              className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105 hover:bg-opacity-80"
+                              className="px-2 py-1 rounded text-[10px] font-medium transition-all duration-200 hover:bg-opacity-80"
                               style={{
                                 backgroundColor: "#10B981",
                                 color: "#000000",
@@ -417,30 +455,43 @@ export default function DayDetailsModal({
               {/* Routine Assignments */}
               {routineAssignments.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">
+                  <h3
+                    className="text-sm font-semibold mb-3"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
                     Routine Assignments
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {routineAssignments.map(
                       (assignment: any, index: number) => (
                         <div
                           key={index}
-                          className="p-4 rounded-lg bg-green-500/5 text-green-100 border border-green-500/20 transition-all duration-200 hover:bg-green-500/10"
+                          className="p-3 rounded-lg border transition-all duration-200"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                            borderColor: COLORS.GREEN_PRIMARY,
+                          }}
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 rounded-lg bg-green-500/10">
-                                <Target className="h-4 w-4 text-green-400" />
-                              </div>
+                            <div className="flex items-center gap-2">
                               <div>
-                                <div className="font-medium text-green-100">
+                                <div
+                                  className="text-sm font-medium"
+                                  style={{ color: COLORS.TEXT_PRIMARY }}
+                                >
                                   {assignment.routine.name}
                                 </div>
-                                <div className="text-sm text-green-200/80">
+                                <div
+                                  className="text-xs"
+                                  style={{ color: COLORS.TEXT_SECONDARY }}
+                                >
                                   {assignment.routine.description ||
                                     "No description"}
                                 </div>
-                                <div className="text-xs text-green-200/60 mt-1">
+                                <div
+                                  className="text-[10px] mt-1"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                >
                                   Assigned{" "}
                                   {format(
                                     new Date(
@@ -452,12 +503,18 @@ export default function DayDetailsModal({
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               <div className="text-right">
-                                <div className="text-lg font-bold text-green-100">
+                                <div
+                                  className="text-sm font-bold"
+                                  style={{ color: COLORS.GREEN_PRIMARY }}
+                                >
                                   {assignment.progress}%
                                 </div>
-                                <div className="text-xs text-green-200/60">
+                                <div
+                                  className="text-[10px]"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                >
                                   Progress
                                 </div>
                               </div>
@@ -467,21 +524,20 @@ export default function DayDetailsModal({
                                     onClick={() =>
                                       handleRemoveRoutine(assignment)
                                     }
-                                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2"
+                                    className="px-2 py-1 rounded text-[10px] font-medium transition-all duration-200"
                                     style={{
                                       backgroundColor: "#EF4444",
                                       color: "#FFFFFF",
                                     }}
                                     title="Remove Routine"
                                   >
-                                    <Trash2 className="h-4 w-4" />
                                     Remove
                                   </button>
                                 )}
                               {onRemoveRoutine &&
                                 isRoutineFinished(assignment) && (
                                   <div
-                                    className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 border opacity-60"
+                                    className="px-2 py-1 rounded text-[10px] font-medium border opacity-60"
                                     style={{
                                       backgroundColor: "#6B7280",
                                       color: "#9CA3AF",
@@ -489,8 +545,7 @@ export default function DayDetailsModal({
                                     }}
                                     title="Routine has finished - cannot be removed"
                                   >
-                                    <Trash2 className="h-4 w-4" />
-                                    Routine Finished
+                                    Finished
                                   </div>
                                 )}
                             </div>
@@ -505,42 +560,50 @@ export default function DayDetailsModal({
               {/* Video Assignments */}
               {videoAssignments.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">
+                  <h3
+                    className="text-sm font-semibold mb-3"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
                     Video Assignments
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {videoAssignments.map((assignment: any, index: number) => (
                       <div
                         key={index}
-                        className="p-4 rounded-lg bg-purple-500/5 text-purple-100 border border-purple-500/20 transition-all duration-200 hover:bg-purple-500/10"
+                        className="p-3 rounded-lg border transition-all duration-200"
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                        }}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-purple-500/10">
-                              <Video className="h-4 w-4 text-purple-400" />
-                            </div>
+                          <div className="flex items-center gap-2">
                             <div>
-                              <div className="font-medium text-purple-100">
+                              <div
+                                className="text-sm font-medium"
+                                style={{ color: COLORS.TEXT_PRIMARY }}
+                              >
                                 {assignment.title}
                               </div>
-                              <div className="text-sm text-purple-200/80">
+                              <div
+                                className="text-xs"
+                                style={{ color: COLORS.TEXT_SECONDARY }}
+                              >
                                 {assignment.description || "Video to complete"}
                               </div>
-                              <div className="text-xs text-purple-200/60 mt-1"></div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             {onRemoveVideo && (
                               <button
                                 onClick={() => handleRemoveVideo(assignment)}
-                                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2 border"
+                                className="px-2 py-1 rounded text-[10px] font-medium transition-all duration-200 border"
                                 style={{
                                   backgroundColor: "#EF4444",
                                   color: "#FFFFFF",
                                   borderColor: "#DC2626",
                                 }}
                               >
-                                <Trash2 className="h-4 w-4" />
                                 Remove
                               </button>
                             )}
@@ -557,12 +620,14 @@ export default function DayDetailsModal({
                 programs.length === 0 &&
                 routineAssignments.length === 0 &&
                 videoAssignments.length === 0 && (
-                  <div className="text-center py-8">
-                    <div className="space-y-4">
-                      <div className="text-lg font-semibold text-white">
+                  <div className="text-center py-6">
+                    <div className="space-y-2">
+                      <div
+                        className="text-sm font-semibold"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         No items scheduled for this day
                       </div>
-                      <div className="flex justify-center gap-4"></div>
                     </div>
                   </div>
                 )}

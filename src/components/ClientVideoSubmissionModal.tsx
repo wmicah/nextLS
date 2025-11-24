@@ -81,7 +81,8 @@ export default function ClientVideoSubmissionModal({
         comment: message.trim() || undefined,
         videoUrl,
         thumbnail: undefined,
-        drillId,
+        // Ensure drillId is either a valid string or undefined (not empty string)
+        drillId: drillId && drillId.trim() !== "" ? drillId : undefined,
         isPublic: false,
       });
     } catch (error) {

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
@@ -73,6 +73,12 @@ import { toZonedTime } from "date-fns-tz";
 import Sidebar from "@/components/Sidebar";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import {
+  COLORS,
+  getGoldenAccent,
+  getGreenPrimary,
+  getRedAlert,
+} from "@/lib/colors";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -91,8 +97,12 @@ import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientDetailPage from "@/components/MobileClientDetailPage";
 import ConflictResolutionModal from "@/components/ConflictResolutionModal";
 import ConvertWeekToProgramModal from "@/components/ConvertWeekToProgramModal";
+import NotesDisplay from "@/components/NotesDisplay";
 import {
   ClipboardData,
+  ClipboardRoutineAssignment,
+  ClipboardProgramAssignment,
+  ClipboardVideoAssignment,
   ConflictResolution,
   CopyPasteMode,
 } from "@/types/clipboard";
@@ -155,6 +165,7 @@ function ClientDetailPage({
   const [weekSelectMode, setWeekSelectMode] = useState(false);
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
   const [showConvertWeekModal, setShowConvertWeekModal] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   // Fetch client data
   const {
@@ -172,14 +183,13 @@ function ClientDetailPage({
 
   // Redirect to clients page if client is archived or not found
   useEffect(() => {
-    if (clientError || (!clientLoading && !client)) {
+    const shouldRedirect =
+      clientError || (!clientLoading && !client) || client?.archived;
+    if (shouldRedirect) {
       router.push(backPath);
     }
-    // Also redirect if client is archived
-    if (client && client.archived) {
-      router.push(backPath);
-    }
-  }, [clientError, clientLoading, client, router, backPath]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientError, clientLoading, client?.archived, router, backPath]);
 
   // Fetch coach's schedule for the current month (includes all client lessons)
   const { data: coachSchedule = [] } =
@@ -1014,6 +1024,155 @@ function ClientDetailPage({
 
   // Clipboard functions
   const handleCopyDay = (date: Date) => {
+    // If in multi-select mode and days are selected, copy all selected days (including blank days)
+    if (multiSelectMode && selectedDays.size > 0) {
+      const daysArray = Array.from(selectedDays)
+        .map(dayKey => {
+          const [year, month, day] = dayKey.split("-").map(Number);
+          return new Date(year, month - 1, day);
+        })
+        .sort((a, b) => a.getTime() - b.getTime()); // Sort days in chronological order
+
+      const sourceDates = daysArray.map(day => day.toISOString().split("T")[0]);
+      const firstDay = daysArray[0];
+
+      // Collect assignments for each day separately (including blank days)
+      const multiDayAssignments = daysArray.map((day, index) => {
+        const routinesForDate = getRoutineAssignmentsForDate(day);
+        const programsForDate = getProgramsForDate(day);
+        const videosForDate = getVideosForDate(day);
+
+        return {
+          dayOffset: index,
+          assignments: {
+            routines: routinesForDate.map((routine: any) => ({
+              id: routine.id,
+              routineId: routine.routine.id,
+              routineName: routine.routine.name,
+              startDate: routine.startDate || routine.assignedAt,
+            })),
+            programs: programsForDate.map((program: any) => ({
+              id: `${program.assignment.id}-${program.weekNumber}-${program.dayNumber}`,
+              programId: program.program.id,
+              programTitle: program.program.title,
+              weekNumber: program.weekNumber,
+              dayNumber: program.dayNumber,
+              isRestDay: program.isRestDay,
+              drillCount: program.drillCount,
+              assignmentId: program.assignment.id,
+              dayTitle: program.programDay.title,
+              dayDescription: program.programDay.description,
+              drills:
+                program.programDay.drills?.map((drill: any) => ({
+                  id: drill.id,
+                  title: drill.title,
+                  description: drill.description,
+                  duration: drill.duration,
+                  videoUrl: drill.videoUrl,
+                  notes: drill.notes,
+                  sets: drill.sets || undefined,
+                  reps: drill.reps || undefined,
+                  tempo: drill.tempo,
+                  order: drill.order,
+                  routineId: drill.routineId,
+                  // Superset fields
+                  supersetId: drill.supersetId || undefined,
+                  supersetOrder: drill.supersetOrder || undefined,
+                  supersetDescription: drill.supersetDescription || undefined,
+                  supersetInstructions: drill.supersetInstructions || undefined,
+                  supersetNotes: drill.supersetNotes || undefined,
+                  // Coach Instructions fields
+                  coachInstructionsWhatToDo:
+                    drill.coachInstructionsWhatToDo || undefined,
+                  coachInstructionsHowToDoIt:
+                    drill.coachInstructionsHowToDoIt || undefined,
+                  coachInstructionsKeyPoints:
+                    drill.coachInstructionsKeyPoints || undefined,
+                  coachInstructionsCommonMistakes:
+                    drill.coachInstructionsCommonMistakes || undefined,
+                  coachInstructionsEasier:
+                    drill.coachInstructionsEasier || undefined,
+                  coachInstructionsHarder:
+                    drill.coachInstructionsHarder || undefined,
+                  coachInstructionsEquipment:
+                    drill.coachInstructionsEquipment || undefined,
+                  coachInstructionsSetup:
+                    drill.coachInstructionsSetup || undefined,
+                  // Video fields
+                  videoId: drill.videoId || undefined,
+                  videoThumbnail: drill.videoThumbnail || undefined,
+                  videoTitle: drill.videoTitle || undefined,
+                  // Type field
+                  type: drill.type || undefined,
+                })) || [],
+            })),
+            videos: videosForDate.map((video: any) => ({
+              id: video.assignment.id,
+              videoId: video.assignment.video?.id || "",
+              videoTitle: video.assignment.video?.title || "Video Assignment",
+              dueDate: video.assignment.dueDate,
+              notes: video.assignment.notes || undefined,
+            })),
+          },
+        };
+      });
+
+      // Calculate total items across all days (blank days will have 0 items)
+      const totalItems = multiDayAssignments.reduce(
+        (sum, day) =>
+          sum +
+          day.assignments.routines.length +
+          day.assignments.programs.length +
+          day.assignments.videos.length,
+        0
+      );
+
+      // Allow copying even if all days are blank (for week structure preservation)
+      const daysWithAssignments = multiDayAssignments.filter(
+        day =>
+          day.assignments.routines.length > 0 ||
+          day.assignments.programs.length > 0 ||
+          day.assignments.videos.length > 0
+      ).length;
+
+      // Convert to clipboard format with multi-day support
+      const clipboardData: ClipboardData = {
+        type: "assignments",
+        sourceDate: firstDay.toISOString().split("T")[0],
+        sourceDates: sourceDates,
+        isMultiDay: true,
+        sourceClientId: clientId,
+        assignments: {
+          routines: [],
+          programs: [],
+          videos: [],
+        },
+        multiDayAssignments: multiDayAssignments,
+        copiedAt: new Date(),
+      };
+
+      setClipboardData(clipboardData);
+      setCopyPasteMode("copy");
+
+      addToast({
+        type: "success",
+        title: "Days Copied!",
+        message: `Copied ${selectedDays.size} day${
+          selectedDays.size !== 1 ? "s" : ""
+        }${
+          totalItems > 0
+            ? ` with ${totalItems} assignment${totalItems !== 1 ? "s" : ""}`
+            : " (including blank days)"
+        }`,
+      });
+
+      // Exit multi-select mode after copying
+      setMultiSelectMode(false);
+      setSelectedDays(new Set());
+      return;
+    }
+
+    // Single day copy (original behavior)
     const dateStr = date.toISOString().split("T")[0];
 
     const routinesForDate = getRoutineAssignmentsForDate(date);
@@ -1139,7 +1298,13 @@ function ClientDetailPage({
       return;
     }
 
-    // Check for conflicts
+    // For multi-day paste, skip conflict checking and paste sequentially
+    if (clipboardData.isMultiDay && clipboardData.multiDayAssignments) {
+      await pasteAssignments(targetDate, "merge");
+      return;
+    }
+
+    // Single day paste - check for conflicts
     const existingRoutines = getRoutineAssignmentsForDate(targetDate);
     const existingPrograms = getProgramsForDate(targetDate);
     const existingVideos = getVideosForDate(targetDate);
@@ -1180,10 +1345,113 @@ function ClientDetailPage({
     if (!clipboardData) return;
 
     try {
-      const targetDateStr = targetDate.toISOString().split("T")[0];
-      let successCount = 0;
-      let errorCount = 0;
+      // If multi-day copy, paste each day sequentially
+      if (clipboardData.isMultiDay && clipboardData.multiDayAssignments) {
+        let totalSuccessCount = 0;
+        let totalErrorCount = 0;
 
+        for (let i = 0; i < clipboardData.multiDayAssignments.length; i++) {
+          const dayData = clipboardData.multiDayAssignments[i];
+          const pasteDate = addDays(targetDate, dayData.dayOffset);
+          const pasteDateStr = pasteDate.toISOString().split("T")[0];
+
+          // Validate paste date
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (pasteDate < today) {
+            addToast({
+              type: "warning",
+              title: "Skipped Past Date",
+              message: `Skipped day ${i + 1} (${format(
+                pasteDate,
+                "MMM d, yyyy"
+              )}) - cannot paste to past dates.`,
+            });
+            continue;
+          }
+
+          // Check if this day has any assignments (blank days will have empty arrays)
+          const hasAssignments =
+            dayData.assignments.routines.length > 0 ||
+            dayData.assignments.programs.length > 0 ||
+            dayData.assignments.videos.length > 0;
+
+          // Paste this day's assignments (even if blank, it preserves the day structure)
+          if (hasAssignments) {
+            const { successCount, errorCount } =
+              await pasteSingleDayAssignments(
+                pasteDate,
+                dayData.assignments,
+                conflictResolution
+              );
+
+            totalSuccessCount += successCount;
+            totalErrorCount += errorCount;
+          }
+          // If blank day, we still count it as processed (day structure preserved)
+        }
+
+        // Show final summary
+        addToast({
+          type: totalErrorCount === 0 ? "success" : "warning",
+          title:
+            totalErrorCount === 0
+              ? "Days Pasted!"
+              : "Paste Completed with Errors",
+          message: `Successfully pasted ${totalSuccessCount} assignment${
+            totalSuccessCount !== 1 ? "s" : ""
+          } across ${clipboardData.multiDayAssignments.length} day${
+            clipboardData.multiDayAssignments.length !== 1 ? "s" : ""
+          }${totalErrorCount > 0 ? ` (${totalErrorCount} failed)` : ""}`,
+        });
+
+        refreshAllData();
+        return;
+      }
+
+      // Single day paste (original behavior)
+      const { successCount, errorCount } = await pasteSingleDayAssignments(
+        targetDate,
+        clipboardData.assignments,
+        conflictResolution
+      );
+
+      addToast({
+        type: successCount > 0 ? "success" : "error",
+        title: successCount > 0 ? "Assignments Pasted!" : "Paste Failed",
+        message:
+          successCount > 0
+            ? `Successfully pasted ${successCount} assignment${
+                successCount !== 1 ? "s" : ""
+              }`
+            : "No assignments could be pasted",
+      });
+
+      refreshAllData();
+    } catch (error) {
+      console.error("Error in pasteAssignments:", error);
+      addToast({
+        type: "error",
+        title: "Paste Failed",
+        message: "An error occurred while pasting assignments.",
+      });
+    }
+  };
+
+  const pasteSingleDayAssignments = async (
+    targetDate: Date,
+    assignments: {
+      routines: ClipboardRoutineAssignment[];
+      programs: ClipboardProgramAssignment[];
+      videos: ClipboardVideoAssignment[];
+    },
+    conflictResolution: "replace" | "merge" | "skip" = "merge"
+  ) => {
+    const targetDateStr = targetDate.toISOString().split("T")[0];
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
       // Handle conflict resolution
       if (conflictResolution === "replace") {
         // Remove existing assignments first
@@ -1229,7 +1497,7 @@ function ClientDetailPage({
       }
 
       // Paste routines
-      for (const routine of clipboardData.assignments.routines) {
+      for (const routine of assignments.routines) {
         try {
           // Check if routine already exists (for merge/skip modes)
           if (conflictResolution === "skip") {
@@ -1253,7 +1521,7 @@ function ClientDetailPage({
       }
 
       // Paste videos
-      for (const video of clipboardData.assignments.videos) {
+      for (const video of assignments.videos) {
         try {
           // Check if video already exists (for merge/skip modes)
           if (conflictResolution === "skip") {
@@ -1278,7 +1546,7 @@ function ClientDetailPage({
       }
 
       // Paste programs (create temporary program day replacement instead of permanent program)
-      for (const program of clipboardData.assignments.programs) {
+      for (const program of assignments.programs) {
         try {
           if (conflictResolution === "skip") {
             const existingPrograms = getProgramsForDate(targetDate);
@@ -1295,7 +1563,7 @@ function ClientDetailPage({
             programTitle: program.programTitle,
             dayTitle: program.dayTitle,
             dayDescription: program.dayDescription,
-            drills: program.drills.map((drill: any, index) => ({
+            drills: program.drills.map((drill: any, index: number) => ({
               order: drill.order !== undefined ? drill.order : index + 1,
               title: drill.title,
               description: drill.description,
@@ -1348,27 +1616,10 @@ function ClientDetailPage({
         }
       }
 
-      addToast({
-        type: successCount > 0 ? "success" : "error",
-        title: successCount > 0 ? "Assignments Pasted!" : "Paste Failed",
-        message:
-          successCount > 0
-            ? `Successfully pasted ${successCount} assignment${
-                successCount !== 1 ? "s" : ""
-              }${errorCount > 0 ? ` (${errorCount} failed)` : ""}`
-            : "No assignments could be pasted",
-      });
-
-      if (successCount > 0) {
-        refreshAllData();
-      }
+      return { successCount, errorCount };
     } catch (error) {
-      console.error("Error in pasteAssignments:", error);
-      addToast({
-        type: "error",
-        title: "Paste Failed",
-        message: "An error occurred while pasting assignments",
-      });
+      console.error("Error in pasteSingleDayAssignments:", error);
+      return { successCount: 0, errorCount: 1 };
     }
   };
 
@@ -1387,11 +1638,23 @@ function ClientDetailPage({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "CONFIRMED":
-        return <CheckCircle className="h-4 w-4 text-green-400" />;
+        return (
+          <CheckCircle
+            className="h-4 w-4"
+            style={{ color: COLORS.GREEN_PRIMARY }}
+          />
+        );
       case "DECLINED":
-        return <XCircle className="h-4 w-4 text-red-400" />;
+        return (
+          <XCircle className="h-4 w-4" style={{ color: COLORS.RED_ALERT }} />
+        );
       case "PENDING":
-        return <AlertCircle className="h-4 w-4 text-yellow-400" />;
+        return (
+          <AlertCircle
+            className="h-4 w-4"
+            style={{ color: COLORS.GOLDEN_ACCENT }}
+          />
+        );
       default:
         return null;
     }
@@ -1400,13 +1663,29 @@ function ClientDetailPage({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CONFIRMED":
-        return "bg-green-500/20 text-green-100 border-green-400";
+        return {
+          backgroundColor: "rgba(245, 158, 11, 0.2)",
+          color: COLORS.TEXT_PRIMARY,
+          borderColor: "#F59E0B",
+        };
       case "DECLINED":
-        return "bg-red-500/20 text-red-100 border-red-400";
+        return {
+          backgroundColor: getRedAlert(0.15),
+          color: COLORS.TEXT_PRIMARY,
+          borderColor: COLORS.RED_ALERT,
+        };
       case "PENDING":
-        return "bg-yellow-500/20 text-yellow-100 border-yellow-400";
+        return {
+          backgroundColor: "rgba(245, 158, 11, 0.2)",
+          color: COLORS.TEXT_PRIMARY,
+          borderColor: "#F59E0B",
+        };
       default:
-        return "bg-blue-500/20 text-blue-100 border-blue-400";
+        return {
+          backgroundColor: "rgba(245, 158, 11, 0.2)",
+          color: COLORS.TEXT_PRIMARY,
+          borderColor: "#F59E0B",
+        };
     }
   };
 
@@ -1437,6 +1716,31 @@ function ClientDetailPage({
       });
   };
 
+  // Memoize day data for the modal to prevent unnecessary recalculations
+  const dayModalData = useMemo(() => {
+    if (!selectedDate) {
+      return {
+        lessons: [],
+        programs: [],
+        routineAssignments: [],
+        videoAssignments: [],
+      };
+    }
+    return {
+      lessons: getLessonsForDate(selectedDate),
+      programs: getProgramsForDate(selectedDate),
+      routineAssignments: getRoutineAssignmentsForDate(selectedDate),
+      videoAssignments: getVideosForDate(selectedDate),
+    };
+  }, [
+    selectedDate,
+    clientLessons,
+    assignedPrograms,
+    assignedRoutines,
+    videoAssignments,
+    temporaryReplacements,
+  ]);
+
   // Wrapper component that conditionally includes Sidebar
   const SidebarWrapper = ({ children }: { children: React.ReactNode }) => {
     console.log("🔍 SidebarWrapper - noSidebar:", noSidebar);
@@ -1452,17 +1756,19 @@ function ClientDetailPage({
       <SidebarWrapper>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ backgroundColor: "#2A3133" }}
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
           <div
             className="flex items-center space-x-3"
-            style={{ color: "#C3BCC2" }}
+            style={{ color: COLORS.TEXT_SECONDARY }}
           >
             <Loader2
               className="h-8 w-8 animate-spin"
-              style={{ color: "#4A5A70" }}
+              style={{ color: COLORS.GOLDEN_ACCENT }}
             />
-            <span className="text-lg">Loading client details...</span>
+            <span className="text-lg" style={{ color: COLORS.TEXT_SECONDARY }}>
+              Loading client details...
+            </span>
           </div>
         </div>
       </SidebarWrapper>
@@ -1474,22 +1780,31 @@ function ClientDetailPage({
       <SidebarWrapper>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ backgroundColor: "#2A3133" }}
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
           <div className="text-center">
             <h2
               className="text-2xl font-semibold mb-3"
-              style={{ color: "#C3BCC2" }}
+              style={{ color: COLORS.TEXT_PRIMARY }}
             >
               Client Not Found
             </h2>
-            <p className="text-lg" style={{ color: "#ABA4AA" }}>
+            <p className="text-lg" style={{ color: COLORS.TEXT_SECONDARY }}>
               The requested client could not be found.
             </p>
             <button
               onClick={() => router.push(backPath)}
               className="mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+              style={{
+                backgroundColor: COLORS.GOLDEN_DARK,
+                color: "#FFFFFF",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
             >
               Back to Clients
             </button>
@@ -1501,18 +1816,33 @@ function ClientDetailPage({
 
   return (
     <SidebarWrapper>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        <div className="max-w-7xl mx-auto p-6">
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
+        <div className="max-w-7xl mx-auto p-4">
           {/* Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             {/* Client Info */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push(backPath)}
-                className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
-                style={{ color: "#C3BCC2" }}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{
+                  color: COLORS.TEXT_SECONDARY,
+                  backgroundColor: "transparent",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4" />
               </button>
 
               <ProfilePictureUploader
@@ -1522,42 +1852,75 @@ function ClientDetailPage({
                 userName={client.name}
                 onAvatarChange={() => {}}
                 readOnly={true}
-                size="lg"
+                size="md"
               />
 
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">
+                <h1
+                  className="text-xl font-semibold mb-1"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   {client.name}
                 </h1>
                 <div
-                  className="flex items-center gap-4 text-sm"
-                  style={{ color: "#ABA4AA" }}
+                  className="flex items-center gap-3 text-xs"
+                  style={{ color: "#9CA3B0" }}
                 >
-                  {client.user?.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      {client.user.email}
-                    </div>
-                  )}
-                  {client.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      {client.phone}
-                    </div>
-                  )}
+                  {client.user?.email && <span>{client.user.email}</span>}
+                  {client.phone && <span>{client.phone}</span>}
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* Notes Button */}
+              <button
+                onClick={() => setShowNotes(!showNotes)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border"
+                style={{
+                  backgroundColor: showNotes
+                    ? getGoldenAccent(0.1)
+                    : COLORS.BACKGROUND_CARD,
+                  color: showNotes ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_PRIMARY,
+                  borderColor: showNotes
+                    ? COLORS.GOLDEN_ACCENT
+                    : COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={e => {
+                  if (!showNotes) {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!showNotes) {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  }
+                }}
+              >
+                Notes
+              </button>
+
               {/* Primary action - Schedule Lesson (most common) */}
               <button
                 onClick={() => setShowScheduleLessonModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/30"
-                style={{ color: "#F59E0B" }}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                style={{
+                  backgroundColor: COLORS.GOLDEN_DARK,
+                  color: "#FFFFFF",
+                  borderColor: COLORS.GOLDEN_BORDER,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                }}
               >
-                <Calendar className="h-4 w-4" />
                 Schedule Lesson
               </button>
 
@@ -1565,47 +1928,90 @@ function ClientDetailPage({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/30"
-                    style={{ color: "#3B82F6" }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      color: COLORS.TEXT_PRIMARY,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                   >
-                    <Plus className="h-4 w-4" />
                     Assign
-                    <ChevronDown className="h-4 w-4" />
+                    <ChevronDown className="h-3 w-3" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
                   className="min-w-[200px] rounded-lg border shadow-xl"
                   style={{
-                    backgroundColor: "#1F2323",
-                    borderColor: "#606364",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
                   }}
                 >
                   <DropdownMenuItem
                     onClick={() => setShowAssignProgramModal(true)}
-                    className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                    style={{ color: "#C3BCC2" }}
+                    className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
+                    style={{
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: "transparent",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
-                    <BookOpen
-                      className="h-4 w-4"
-                      style={{ color: "#3B82F6" }}
-                    />
                     Assign Program
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setShowQuickAssignRoutineModal(true)}
-                    className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                    style={{ color: "#C3BCC2" }}
+                    className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
+                    style={{
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: "transparent",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
-                    <Target className="h-4 w-4" style={{ color: "#10B981" }} />
                     Assign Routine
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setShowAssignVideoModal(true)}
-                    className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                    style={{ color: "#C3BCC2" }}
+                    className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
+                    style={{
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: "transparent",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
-                    <Video className="h-4 w-4" style={{ color: "#8B5CF6" }} />
                     Assign Video
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1613,155 +2019,307 @@ function ClientDetailPage({
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div
-              className="rounded-2xl p-6 shadow-xl border"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    Compliance Rate
-                  </p>
-                  <p className="text-2xl font-bold text-white">
-                    {complianceLoading ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      `${Math.min(
-                        100,
-                        Math.max(0, complianceData?.completionRate || 0)
-                      )}%`
-                    )}
-                  </p>
-                </div>
-                <Target className="h-8 w-8" style={{ color: "#10B981" }} />
-              </div>
-
-              {/* Period Selector */}
-              <div className="flex gap-1 mb-3">
-                {["4", "6", "8", "all"].map(period => (
-                  <button
-                    key={period}
-                    onClick={() => {
-                      setCompliancePeriod(period as "4" | "6" | "8" | "all");
-                      // Refresh compliance data for the new period
-                      utils.clients.getComplianceData.invalidate({
-                        clientId,
-                        period: period as "4" | "6" | "8" | "all",
-                      });
-                    }}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
-                      compliancePeriod === period
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                    style={{
-                      backgroundColor:
-                        compliancePeriod === period ? "#4A5A70" : "transparent",
-                    }}
-                  >
-                    {period === "all" ? "All" : `${period}w`}
-                  </button>
-                ))}
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div
-                  className="h-2 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      complianceData?.completionRate || 0
-                    )}%`,
-                    backgroundColor:
-                      Math.min(100, complianceData?.completionRate || 0) >= 80
-                        ? "#10B981"
-                        : Math.min(100, complianceData?.completionRate || 0) >=
-                          60
-                        ? "#F59E0B"
-                        : "#EF4444",
-                  }}
-                />
-              </div>
-
-              {/* Stats */}
-              {complianceData && (
-                <div
-                  className="flex justify-between text-xs mt-2"
-                  style={{ color: "#ABA4AA" }}
+          {/* Athlete Overview Bar */}
+          <div
+            className="rounded-lg border p-4 mb-6"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {/* Compliance Rate */}
+              <div
+                className="md:col-span-2 border-r pr-4"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <p
+                  className="text-[10px] font-medium mb-1"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
-                  <span>
-                    {Math.min(
-                      complianceData.completed || 0,
-                      complianceData.total || 0
-                    )}{" "}
-                    completed
-                  </span>
-                  <span>{complianceData.total || 0} total</span>
+                  Compliance Rate
+                </p>
+                <p
+                  className="text-xl font-bold mb-2"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  {complianceLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    `${Math.min(
+                      100,
+                      Math.max(0, complianceData?.completionRate || 0)
+                    )}%`
+                  )}
+                </p>
+                <div className="flex gap-0.5 mb-1.5">
+                  {["4", "6", "8", "all"].map(period => (
+                    <button
+                      key={period}
+                      onClick={() => {
+                        setCompliancePeriod(period as "4" | "6" | "8" | "all");
+                        utils.clients.getComplianceData.invalidate({
+                          clientId,
+                          period: period as "4" | "6" | "8" | "all",
+                        });
+                      }}
+                      className="px-1 py-0.5 rounded text-[9px] font-medium transition-all duration-200"
+                      style={{
+                        backgroundColor:
+                          compliancePeriod === period
+                            ? getGoldenAccent(0.1)
+                            : "transparent",
+                        color:
+                          compliancePeriod === period
+                            ? COLORS.TEXT_PRIMARY
+                            : COLORS.TEXT_SECONDARY,
+                      }}
+                      onMouseEnter={e => {
+                        if (compliancePeriod !== period) {
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (compliancePeriod !== period) {
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        }
+                      }}
+                    >
+                      {period === "all" ? "All" : `${period}w`}
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
-
-            <div
-              className="rounded-2xl p-6 shadow-xl border"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "#ABA4AA" }}
+                <div
+                  className="w-full rounded-full h-1.5"
+                  style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+                >
+                  <div
+                    className="h-1.5 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        complianceData?.completionRate || 0
+                      )}%`,
+                      backgroundColor:
+                        Math.min(100, complianceData?.completionRate || 0) >= 80
+                          ? COLORS.GREEN_PRIMARY
+                          : Math.min(
+                              100,
+                              complianceData?.completionRate || 0
+                            ) >= 60
+                          ? COLORS.GOLDEN_ACCENT
+                          : COLORS.RED_ALERT,
+                    }}
+                  />
+                </div>
+                {complianceData && (
+                  <div
+                    className="flex justify-between text-[9px] mt-1"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
                   >
-                    Member Since
+                    <span>
+                      {Math.min(
+                        complianceData.completed || 0,
+                        complianceData.total || 0
+                      )}{" "}
+                      completed
+                    </span>
+                    <span>{complianceData.total || 0} total</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Next Lesson */}
+              <div
+                className="border-r pr-4"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <p
+                  className="text-[10px] font-medium mb-1"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
+                  Next Lesson
+                </p>
+                {upcomingLessons.length > 0 ? (
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
+                      />
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
+                        {format(
+                          new Date(upcomingLessons[0].date),
+                          "MMM d, yyyy"
+                        )}
+                      </p>
+                    </div>
+                    <p
+                      className="text-xs"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      {format(new Date(upcomingLessons[0].date), "h:mm a")}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p
+                      className="text-sm mb-1"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                    >
+                      No lesson scheduled
+                    </p>
+                    <button
+                      onClick={() => setShowScheduleLessonModal(true)}
+                      className="text-xs font-medium transition-colors"
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                      }}
+                    >
+                      Schedule
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Current Program */}
+              <div
+                className="border-r pr-4"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <p
+                  className="text-[10px] font-medium mb-1"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
+                  Current Program
+                </p>
+                {assignedPrograms.length > 0 ? (
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    {assignedPrograms[0].program.title}
                   </p>
-                  <p className="text-2xl font-bold text-white">
-                    {format(new Date(client.createdAt), "MMM yyyy")}
-                  </p>
-                </div>
-                <User className="h-8 w-8" style={{ color: "#F59E0B" }} />
+                ) : (
+                  <div>
+                    <p
+                      className="text-sm mb-1"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                    >
+                      No program assigned
+                    </p>
+                    <button
+                      onClick={() => setShowQuickAssignProgramModal(true)}
+                      className="text-xs font-medium transition-colors"
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                      }}
+                    >
+                      Assign program
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Last Activity */}
+              <div>
+                <p
+                  className="text-[10px] font-medium mb-1"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
+                  Last Activity
+                </p>
+                {/* Mock data for now - replace with real data later */}
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  2 days ago
+                </p>
+                <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                  Completed routine
+                </p>
               </div>
             </div>
           </div>
 
           {/* Calendar Section */}
           <div
-            className="rounded-2xl shadow-xl border p-6"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+            className="rounded-lg border p-4"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             {/* Calendar Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <h2 className="text-2xl font-bold text-white">Calendar View</h2>
-                <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h2
+                  className="text-lg font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Calendar View
+                </h2>
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => setViewMode("month")}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      viewMode === "month"
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
+                    className="px-2 py-1 rounded text-xs font-medium transition-all duration-200"
                     style={{
                       backgroundColor:
-                        viewMode === "month" ? "#4A5A70" : "transparent",
+                        viewMode === "month"
+                          ? getGoldenAccent(0.1)
+                          : "transparent",
+                      color:
+                        viewMode === "month"
+                          ? COLORS.TEXT_PRIMARY
+                          : COLORS.TEXT_SECONDARY,
+                    }}
+                    onMouseEnter={e => {
+                      if (viewMode !== "month") {
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (viewMode !== "month") {
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }
                     }}
                   >
                     Month
                   </button>
                   <button
                     onClick={() => setViewMode("week")}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      viewMode === "week"
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
+                    className="px-2 py-1 rounded text-xs font-medium transition-all duration-200"
                     style={{
                       backgroundColor:
-                        viewMode === "week" ? "#4A5A70" : "transparent",
+                        viewMode === "week"
+                          ? getGoldenAccent(0.1)
+                          : "transparent",
+                      color:
+                        viewMode === "week"
+                          ? COLORS.TEXT_PRIMARY
+                          : COLORS.TEXT_SECONDARY,
+                    }}
+                    onMouseEnter={e => {
+                      if (viewMode !== "week") {
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (viewMode !== "week") {
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }
                     }}
                   >
                     Week
@@ -1777,13 +2335,30 @@ function ClientDetailPage({
                       setSelectedDays(new Set());
                     }
                   }}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    multiSelectMode
-                      ? "bg-red-500/20 text-red-300 border border-red-500/30"
-                      : "bg-gray-700/50 text-gray-300 hover:bg-gray-700/70"
-                  }`}
+                  className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
+                  style={{
+                    backgroundColor: multiSelectMode
+                      ? COLORS.BACKGROUND_CARD
+                      : COLORS.BACKGROUND_CARD,
+                    color: multiSelectMode
+                      ? COLORS.TEXT_SECONDARY
+                      : COLORS.TEXT_SECONDARY,
+                    borderColor: multiSelectMode
+                      ? COLORS.BORDER_SUBTLE
+                      : COLORS.BORDER_SUBTLE,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
                 >
-                  {multiSelectMode ? "Cancel Selection" : "Select Days"}
+                  {multiSelectMode ? "Cancel" : "Select Days"}
                 </button>
 
                 {/* Week Select Mode Toggle */}
@@ -1795,63 +2370,165 @@ function ClientDetailPage({
                       setSelectedWeekStart(null);
                     }
                   }}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    weekSelectMode
-                      ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                      : "bg-gray-700/50 text-gray-300 hover:bg-gray-700/70"
-                  }`}
+                  className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
+                  style={{
+                    backgroundColor: weekSelectMode
+                      ? COLORS.BACKGROUND_CARD
+                      : COLORS.BACKGROUND_CARD,
+                    color: weekSelectMode
+                      ? COLORS.TEXT_SECONDARY
+                      : COLORS.TEXT_SECONDARY,
+                    borderColor: weekSelectMode
+                      ? COLORS.BORDER_SUBTLE
+                      : COLORS.BORDER_SUBTLE,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
                 >
-                  {weekSelectMode ? "Cancel Week Select" : "Select Week"}
+                  {weekSelectMode ? "Cancel" : "Select Week"}
                 </button>
 
-                {/* Delete Selected Button */}
+                {/* Copy and Delete Selected Buttons */}
                 {multiSelectMode && selectedDays.size > 0 && (
-                  <button
-                    onClick={handleDeleteMultipleDays}
-                    disabled={isDeletingMultipleDays}
-                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 hover:border-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ color: "#EF4444" }}
-                  >
-                    {isDeletingMultipleDays ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Deleting...
-                      </span>
-                    ) : (
-                      `Delete ${selectedDays.size} Day${
-                        selectedDays.size !== 1 ? "s" : ""
-                      }`
-                    )}
-                  </button>
+                  <>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        // Copy all selected days
+                        if (selectedDays.size > 0) {
+                          const daysArray = Array.from(selectedDays).map(
+                            dayKey => {
+                              const [year, month, day] = dayKey
+                                .split("-")
+                                .map(Number);
+                              return new Date(year, month - 1, day);
+                            }
+                          );
+                          // Use the first selected day to trigger copy (will handle multiple days)
+                          handleCopyDay(daysArray[0]);
+                        }
+                      }}
+                      className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
+                      style={{
+                        backgroundColor: getGoldenAccent(0.1),
+                        color: COLORS.GOLDEN_ACCENT,
+                        borderColor: COLORS.GOLDEN_BORDER,
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          getGoldenAccent(0.15);
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor =
+                          getGoldenAccent(0.1);
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_BORDER;
+                      }}
+                    >
+                      Copy {selectedDays.size} Day
+                      {selectedDays.size !== 1 ? "s" : ""}
+                    </button>
+                    <button
+                      onClick={handleDeleteMultipleDays}
+                      disabled={isDeletingMultipleDays}
+                      className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: getRedAlert(0.1),
+                        color: COLORS.RED_ALERT,
+                        borderColor: COLORS.RED_BORDER,
+                      }}
+                      onMouseEnter={e => {
+                        if (!e.currentTarget.disabled) {
+                          e.currentTarget.style.backgroundColor =
+                            getRedAlert(0.15);
+                          e.currentTarget.style.borderColor = COLORS.RED_ALERT;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!e.currentTarget.disabled) {
+                          e.currentTarget.style.backgroundColor =
+                            getRedAlert(0.1);
+                          e.currentTarget.style.borderColor = COLORS.RED_BORDER;
+                        }
+                      }}
+                    >
+                      {isDeletingMultipleDays ? (
+                        <span className="flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Deleting...
+                        </span>
+                      ) : (
+                        `Delete ${selectedDays.size}`
+                      )}
+                    </button>
+                  </>
                 )}
 
                 {/* Convert Week Button */}
                 {weekSelectMode && selectedWeekStart && (
                   <button
                     onClick={() => setShowConvertWeekModal(true)}
-                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 hover:border-blue-500/50 flex items-center gap-2"
-                    style={{ color: "#3B82F6" }}
+                    className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
+                    style={{
+                      backgroundColor: getGoldenAccent(0.1),
+                      color: COLORS.GOLDEN_ACCENT,
+                      borderColor: COLORS.GOLDEN_BORDER,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        getGoldenAccent(0.15);
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor =
+                        getGoldenAccent(0.1);
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                    }}
                   >
-                    <BookOpen className="h-4 w-4" />
-                    Convert Week to Program
+                    Convert to Program
                   </button>
                 )}
 
                 {/* Clipboard Indicator */}
                 {clipboardData && (
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-                    <Clipboard className="h-4 w-4 text-cyan-400" />
-                    <span className="text-sm text-cyan-300">
+                  <div
+                    className="flex items-center gap-1.5 px-2 py-1 rounded border"
+                    style={{
+                      backgroundColor: getGoldenAccent(0.1),
+                      borderColor: COLORS.GOLDEN_BORDER,
+                    }}
+                  >
+                    <span
+                      className="text-xs"
+                      style={{ color: COLORS.GOLDEN_HOVER }}
+                    >
                       {clipboardData.assignments.routines.length +
                         clipboardData.assignments.programs.length +
                         clipboardData.assignments.videos.length}{" "}
-                      items copied
+                      copied
                     </span>
                     <button
                       onClick={() => setClipboardData(null)}
-                      className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                      className="transition-colors"
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                      }}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-2.5 w-2.5" />
                     </button>
                   </div>
                 )}
@@ -1861,13 +2538,28 @@ function ClientDetailPage({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => navigateMonth("prev")}
-                    className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
-                    style={{ color: "#C3BCC2" }}
+                    className="p-2 rounded-lg transition-colors"
+                    style={{
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: "transparent",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                     title="Previous"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <h3 className="text-xl font-semibold text-white min-w-[200px] text-center">
+                  <h3
+                    className="text-xl font-semibold min-w-[200px] text-center"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
                     {viewMode === "week"
                       ? `${format(calendarStart, "MMM d")} - ${format(
                           calendarEnd,
@@ -1877,8 +2569,20 @@ function ClientDetailPage({
                   </h3>
                   <button
                     onClick={() => navigateMonth("next")}
-                    className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
-                    style={{ color: "#C3BCC2" }}
+                    className="p-2 rounded-lg transition-colors"
+                    style={{
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: "transparent",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                     title="Next"
                   >
                     <ChevronRight className="h-5 w-5" />
@@ -1888,29 +2592,65 @@ function ClientDetailPage({
             </div>
 
             {/* Calendar Legend */}
-            <div className="flex items-center gap-6 mb-6 text-sm flex-wrap">
+            <div className="flex items-center gap-4 mb-4 text-xs flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-green-500 border-2 border-green-400" />
-                <span className="text-white font-medium">Lessons</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-yellow-500 border-2 border-yellow-400" />
-                <span className="text-white font-medium">Pending Lessons</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
-                <span className="text-white font-medium">Program Days</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-cyan-500 border-2 border-cyan-400" />
-                <span className="text-white font-medium">
-                  Temporary Programs
+                <div
+                  className="w-4 h-4 rounded border-2"
+                  style={{
+                    backgroundColor: "rgba(245, 158, 11, 0.2)",
+                    borderColor: "#F59E0B",
+                  }}
+                />
+                <span
+                  className="font-medium"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Lessons
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-green-500/20 border-2 border-green-500/40" />
-                <span className="text-white font-medium">
-                  Routine Assignments
+                <div
+                  className="w-4 h-4 rounded border-2"
+                  style={{
+                    backgroundColor: "rgba(59, 130, 246, 0.2)",
+                    borderColor: "#3B82F6",
+                  }}
+                />
+                <span
+                  className="font-medium"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Programs
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-4 h-4 rounded border-2"
+                  style={{
+                    backgroundColor: "rgba(16, 185, 129, 0.2)",
+                    borderColor: "#10B981",
+                  }}
+                />
+                <span
+                  className="font-medium"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Routines
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-4 h-4 rounded border-2"
+                  style={{
+                    backgroundColor: "rgba(139, 92, 246, 0.2)",
+                    borderColor: "#8B5CF6",
+                  }}
+                />
+                <span
+                  className="font-medium"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Videos
                 </span>
               </div>
             </div>
@@ -1920,8 +2660,11 @@ function ClientDetailPage({
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                 <div
                   key={day}
-                  className="text-center text-sm font-bold py-3 border-b-2"
-                  style={{ color: "#4A5A70", borderColor: "#606364" }}
+                  className="text-center text-xs font-semibold py-2 border-b"
+                  style={{
+                    color: COLORS.TEXT_SECONDARY,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                 >
                   {day}
                 </div>
@@ -1953,33 +2696,72 @@ function ClientDetailPage({
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`
-                      ${
-                        viewMode === "week" ? "min-h-[200px]" : "min-h-[120px]"
-                      } p-2 rounded-lg transition-all duration-200 border-2 relative group
-                      ${
-                        isSelected
-                          ? "bg-red-500/30 text-white border-red-400 ring-2 ring-red-400"
-                          : isInSelectedWeek
-                          ? "bg-blue-500/30 text-white border-blue-400 ring-2 ring-blue-400"
-                          : isToday
-                          ? "bg-blue-500/20 text-blue-300 border-blue-400"
-                          : isPastDay
-                          ? "text-gray-500 bg-gray-700/30 border-gray-600"
-                          : isCurrentMonth
-                          ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
-                          : "text-gray-600 bg-gray-900/30 border-gray-700"
+                    className={`${
+                      viewMode === "week" ? "min-h-[200px]" : "min-h-[120px]"
+                    } p-2 rounded-lg transition-all duration-200 border-2 relative group cursor-pointer`}
+                    style={{
+                      backgroundColor: isSelected
+                        ? getRedAlert(0.15)
+                        : isInSelectedWeek
+                        ? getGoldenAccent(0.15)
+                        : isToday
+                        ? getGoldenAccent(0.1)
+                        : isPastDay
+                        ? COLORS.BACKGROUND_CARD
+                        : isCurrentMonth
+                        ? COLORS.BACKGROUND_CARD
+                        : COLORS.BACKGROUND_DARK,
+                      color: isSelected
+                        ? COLORS.TEXT_PRIMARY
+                        : isInSelectedWeek
+                        ? COLORS.TEXT_PRIMARY
+                        : isToday
+                        ? COLORS.TEXT_PRIMARY
+                        : isPastDay
+                        ? COLORS.TEXT_MUTED
+                        : isCurrentMonth
+                        ? COLORS.TEXT_PRIMARY
+                        : COLORS.TEXT_MUTED,
+                      borderColor: isSelected
+                        ? COLORS.RED_ALERT
+                        : isInSelectedWeek
+                        ? COLORS.GOLDEN_ACCENT
+                        : isToday
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.BORDER_SUBTLE,
+                      boxShadow: isSelected
+                        ? `0 0 0 2px ${COLORS.RED_ALERT}`
+                        : isInSelectedWeek
+                        ? `0 0 0 2px ${COLORS.GOLDEN_ACCENT}`
+                        : "none",
+                    }}
+                    onMouseEnter={e => {
+                      if (!isSelected && !isInSelectedWeek && !isToday) {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }
-                      cursor-pointer
-                    `}
+                    }}
+                    onMouseLeave={e => {
+                      if (!isSelected && !isInSelectedWeek && !isToday) {
+                        e.currentTarget.style.backgroundColor = isPastDay
+                          ? COLORS.BACKGROUND_CARD
+                          : isCurrentMonth
+                          ? COLORS.BACKGROUND_CARD
+                          : COLORS.BACKGROUND_DARK;
+                        e.currentTarget.style.borderColor =
+                          COLORS.BORDER_SUBTLE;
+                      }
+                    }}
                     onClick={
                       weekSelectMode
-                        ? (e) => {
+                        ? e => {
                             e.stopPropagation();
                             handleWeekSelection(day);
                           }
-                        : multiSelectMode && hasAssignments
-                        ? (e) => {
+                        : multiSelectMode
+                        ? e => {
                             e.stopPropagation();
                             toggleDaySelection(day);
                           }
@@ -1987,62 +2769,41 @@ function ClientDetailPage({
                     }
                   >
                     {/* Selection Checkbox */}
-                    {multiSelectMode && hasAssignments && (
+                    {multiSelectMode && (
                       <div className="absolute top-2 left-2 z-20">
                         <div
-                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
-                            isSelected
-                              ? "bg-red-500 border-red-400"
-                              : "bg-gray-800/80 border-gray-500"
-                          }`}
+                          className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200"
+                          style={{
+                            backgroundColor: isSelected
+                              ? COLORS.RED_ALERT
+                              : COLORS.BACKGROUND_CARD,
+                            borderColor: isSelected
+                              ? COLORS.RED_DARK
+                              : COLORS.BORDER_SUBTLE,
+                          }}
                         >
                           {isSelected && (
-                            <CheckCircle className="h-3 w-3 text-white" />
+                            <CheckCircle
+                              className="h-3 w-3"
+                              style={{ color: "#FFFFFF" }}
+                            />
                           )}
                         </div>
                       </div>
                     )}
-                    {/* Hover Overlay with Copy/Paste Buttons */}
-                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 z-10">
-                      {/* Copy Button */}
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleCopyDay(day);
-                        }}
-                        className="p-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 hover:border-cyan-500/50 transition-all duration-200"
-                        title="Copy day assignments"
-                      >
-                        <Copy className="h-3 w-3 text-cyan-400" />
-                      </button>
-
-                      {/* Paste Button - only show if clipboard has data */}
-                      {clipboardData && (
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            handlePasteDay(day);
-                          }}
-                          className="p-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 hover:border-emerald-500/50 transition-all duration-200"
-                          title="Paste assignments to this day"
-                        >
-                          <Clipboard className="h-3 w-3 text-emerald-400" />
-                        </button>
-                      )}
-                    </div>
 
                     {/* Day Content - clickable area */}
                     <div
                       onClick={
                         !multiSelectMode && !weekSelectMode
-                          ? (e) => {
+                          ? e => {
                               e.stopPropagation();
                               handleDateClick(day);
                             }
                           : weekSelectMode
                           ? undefined // Let parent handle the click in week select mode
                           : multiSelectMode
-                          ? (e) => {
+                          ? e => {
                               // Stop propagation in multi-select mode to prevent modal
                               e.stopPropagation();
                             }
@@ -2053,30 +2814,99 @@ function ClientDetailPage({
                           ? "cursor-pointer h-full"
                           : "h-full"
                       }
-                      style={
-                        multiSelectMode
-                          ? { paddingLeft: hasAssignments ? "1.75rem" : "0" }
-                          : {}
-                      }
+                      style={multiSelectMode ? { paddingLeft: "1.75rem" } : {}}
                     >
-                      <div className="font-bold text-sm mb-2">
-                        {format(day, "d")}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1">
+                          <div
+                            className="font-bold text-sm"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
+                            {format(day, "d")}
+                          </div>
+                          {/* Copy/Paste Buttons */}
+                          <div className="flex items-center gap-0.5">
+                            {/* Copy Button - only show if day has assignments */}
+                            {(lessonsForDay.length > 0 ||
+                              programsForDay.length > 0 ||
+                              routineAssignmentsForDay.length > 0 ||
+                              videosForDay.length > 0) && (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  handleCopyDay(day);
+                                }}
+                                className="p-0.5 rounded transition-all duration-200"
+                                style={{
+                                  backgroundColor: "transparent",
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.backgroundColor =
+                                    getGoldenAccent(0.15);
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                }}
+                                title="Copy day assignments"
+                              >
+                                <Copy
+                                  className="h-2.5 w-2.5"
+                                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                                />
+                              </button>
+                            )}
+
+                            {/* Paste Button - only show if clipboard has data */}
+                            {clipboardData && (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  handlePasteDay(day);
+                                }}
+                                className="p-0.5 rounded transition-all duration-200"
+                                style={{
+                                  backgroundColor: "transparent",
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.backgroundColor =
+                                    getGreenPrimary(0.15);
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                }}
+                                title="Paste assignments"
+                              >
+                                <Clipboard
+                                  className="h-2.5 w-2.5"
+                                  style={{ color: COLORS.GREEN_PRIMARY }}
+                                />
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Lessons */}
                       {lessonsForDay.map((lesson: any, index: number) => (
                         <div
                           key={`lesson-${index}`}
-                          className={`text-xs p-1 rounded border mb-1 ${getStatusColor(
-                            lesson.status
-                          )}`}
+                          className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center gap-1"
+                          style={getStatusColor(lesson.status)}
                         >
-                          <div className="flex items-center gap-1">
-                            {getStatusIcon(lesson.status)}
-                            <span className="truncate">
-                              {formatTimeInUserTimezone(lesson.date)}
-                            </span>
-                          </div>
+                          <div
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              backgroundColor:
+                                lesson.status === "DECLINED"
+                                  ? COLORS.RED_ALERT
+                                  : "#F59E0B",
+                            }}
+                          />
+                          <span className="truncate">
+                            {formatTimeInUserTimezone(lesson.date)}
+                          </span>
                         </div>
                       ))}
 
@@ -2084,16 +2914,20 @@ function ClientDetailPage({
                       {programsForDay.map((program: any, index: number) => (
                         <div
                           key={`program-${index}`}
-                          className={`text-xs p-1 rounded border mb-1 ${
-                            program.isTemporary
-                              ? "bg-cyan-500/20 text-cyan-100 border-cyan-400"
-                              : "bg-blue-500/20 text-blue-100 border-blue-400"
-                          }`}
+                          className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center gap-1"
+                          style={{
+                            backgroundColor: "rgba(59, 130, 246, 0.2)",
+                            color: COLORS.TEXT_PRIMARY,
+                            borderColor: "#3B82F6",
+                          }}
                         >
-                          <div className="flex items-center gap-1">
-                            <BookOpen className="h-3 w-3" />
-                            <span className="truncate">{program.title}</span>
-                          </div>
+                          <div
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              backgroundColor: "#3B82F6",
+                            }}
+                          />
+                          <span className="truncate">{program.title}</span>
                         </div>
                       ))}
 
@@ -2101,32 +2935,64 @@ function ClientDetailPage({
                       {videosForDay.map((video: any, index: number) => (
                         <div
                           key={`video-${index}`}
-                          className="text-xs p-1 rounded bg-purple-500/20 text-purple-100 border border-purple-400 mb-1"
+                          className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center gap-1"
+                          style={{
+                            backgroundColor: "rgba(139, 92, 246, 0.2)",
+                            color: COLORS.TEXT_PRIMARY,
+                            borderColor: "#8B5CF6",
+                          }}
                         >
-                          <div className="flex items-center gap-1">
-                            <Video className="h-3 w-3" />
-                            <span className="truncate">{video.title}</span>
-                          </div>
+                          <div
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              backgroundColor: "#8B5CF6",
+                            }}
+                          />
+                          <span className="truncate">{video.title}</span>
                         </div>
                       ))}
 
                       {/* Routine Assignments */}
                       {routineAssignmentsForDay.map(
-                        (assignment: any, index: number) => (
-                          <div
-                            key={`routine-${index}`}
-                            className="text-xs p-1.5 rounded-lg bg-green-500/5 text-green-100 border border-green-500/20 mb-1 transition-all duration-200 hover:bg-green-500/10"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <div className="p-0.5 rounded bg-green-500/10">
-                                <Target className="h-2.5 w-2.5 text-green-400" />
-                              </div>
-                              <span className="truncate font-medium">
+                        (assignment: any, index: number) => {
+                          // Mock: Check if routine is completed (replace with real logic later)
+                          const isCompleted = Math.random() > 0.5;
+                          const isMissed = !isCompleted && isPast(day);
+
+                          return (
+                            <div
+                              key={`routine-${index}`}
+                              className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center gap-1"
+                              style={{
+                                backgroundColor: isCompleted
+                                  ? "rgba(16, 185, 129, 0.2)"
+                                  : isMissed
+                                  ? getRedAlert(0.1)
+                                  : "rgba(16, 185, 129, 0.1)",
+                                color: COLORS.TEXT_PRIMARY,
+                                borderColor: isCompleted
+                                  ? "#10B981"
+                                  : isMissed
+                                  ? COLORS.RED_ALERT
+                                  : "#10B981",
+                              }}
+                            >
+                              <div
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{
+                                  backgroundColor: isCompleted
+                                    ? "#10B981"
+                                    : isMissed
+                                    ? COLORS.RED_ALERT
+                                    : "#10B981",
+                                }}
+                              />
+                              <span className="truncate">
                                 {assignment.routine.name}
                               </span>
                             </div>
-                          </div>
-                        )
+                          );
+                        }
                       )}
                     </div>
                   </div>
@@ -2134,6 +3000,58 @@ function ClientDetailPage({
               })}
             </div>
           </div>
+
+          {/* Notes Modal */}
+          {showNotes && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div
+                className="absolute inset-0 bg-black bg-opacity-50"
+                onClick={() => setShowNotes(false)}
+              />
+              <div
+                className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg border shadow-xl"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div
+                  className="sticky top-0 flex items-center justify-between p-4 border-b z-10"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
+                >
+                  <h2
+                    className="text-xl font-semibold"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    Notes for {client.name}
+                  </h2>
+                  <button
+                    onClick={() => setShowNotes(false)}
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="p-6">
+                  <NotesDisplay clientId={clientId} showComposer={true} />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Modals */}
           {showAssignProgramModal && (
@@ -2256,14 +3174,10 @@ function ClientDetailPage({
             isOpen={showDayDetailsModal}
             onClose={() => setShowDayDetailsModal(false)}
             selectedDate={selectedDate}
-            lessons={selectedDate ? getLessonsForDate(selectedDate) : []}
-            programs={selectedDate ? getProgramsForDate(selectedDate) : []}
-            routineAssignments={
-              selectedDate ? getRoutineAssignmentsForDate(selectedDate) : []
-            }
-            videoAssignments={
-              selectedDate ? getVideosForDate(selectedDate) : []
-            }
+            lessons={dayModalData.lessons}
+            programs={dayModalData.programs}
+            routineAssignments={dayModalData.routineAssignments}
+            videoAssignments={dayModalData.videoAssignments}
             onScheduleLesson={() => {
               setShowScheduleLessonModal(true);
               setShowDayDetailsModal(false);

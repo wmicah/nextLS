@@ -328,3 +328,220 @@
   transition: none !important;
   transform: none !important;
 }
+
+/* Sidebar Icon Animations - Resend Style */
+@keyframes buildHouse {
+  0% {
+    transform: scale(0.8) translateY(4px);
+    opacity: 0.7;
+  }
+  30% {
+    transform: scale(1.1) translateY(-2px);
+  }
+  60% {
+    transform: scale(0.95) translateY(1px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes waveHi {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(-12deg);
+  }
+  30% {
+    transform: rotate(12deg);
+  }
+  45% {
+    transform: rotate(-8deg);
+  }
+  60% {
+    transform: rotate(8deg);
+  }
+  75% {
+    transform: rotate(-4deg);
+  }
+  90% {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes openBook {
+  0% {
+    transform: rotateY(0deg) scale(1);
+  }
+  50% {
+    transform: rotateY(15deg) scale(1.05);
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+  }
+}
+
+@keyframes checkClipboard {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-3px) scale(1.05);
+  }
+  50% {
+    transform: translateY(0) scale(1.1);
+  }
+  75% {
+    transform: translateY(-2px) scale(1.05);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes flipCalendar {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+@keyframes playVideo {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.2) translateX(2px);
+  }
+  60% {
+    transform: scale(1.1) translateX(-1px);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes openBriefcase {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  30% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  60% {
+    transform: scale(1.05) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes spinSettings {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* Animation classes for sidebar icons */
+.animate-build-house {
+  animation: buildHouse 0.6s ease-in-out;
+}
+
+.animate-wave-hi {
+  animation: waveHi 0.6s ease-in-out;
+}
+
+.animate-open-book {
+  animation: openBook 0.6s ease-in-out;
+}
+
+.animate-check-clipboard {
+  animation: checkClipboard 0.6s ease-in-out;
+}
+
+.animate-flip-calendar {
+  animation: flipCalendar 0.6s ease-in-out;
+}
+
+.animate-play-video {
+  animation: playVideo 0.6s ease-in-out;
+}
+
+.animate-open-briefcase {
+  animation: openBriefcase 0.6s ease-in-out;
+}
+
+.animate-spin-settings {
+  animation: spinSettings 0.6s ease-in-out;
+}
+
+/* Lottie icon color matching - make black icons match text color */
+.lottie-icon-wrapper {
+  color: inherit;
+  display: inline-block;
+}
+
+/* Convert black Lottie icons to match text color using CSS filters */
+.lottie-icon-wrapper svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: brightness(0) saturate(100%);
+}
+
+/* Match zinc-400 color (inactive links) */
+.text-zinc-400 .lottie-icon-wrapper svg {
+  filter: brightness(0) saturate(100%) invert(58%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1.2);
+}
+
+/* Match zinc-300 color (hover state) */
+.text-zinc-300 .lottie-icon-wrapper svg {
+  filter: brightness(0) saturate(100%) invert(70%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1.3);
+}
+
+/* Match white color (active links) */
+.text-white .lottie-icon-wrapper svg {
+  filter: brightness(0) saturate(100%) invert(100%);
+}
+
+/* Search input placeholder styling */
+input::placeholder {
+  color: #606364;
+  opacity: 1;
+}
+
+/* Native select dropdown styling for dark theme */
+select {
+  background-color: #15191a !important;
+  color: #F5F5F5 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+select option {
+  background-color: #15191a !important;
+  color: #F5F5F5 !important;
+}
+
+select:focus option:checked {
+  background-color: rgba(229, 178, 50, 0.2) !important;
+  color: #E5B232 !important;
+}
+
+select option:hover,
+select option:focus {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #E5B232 !important;
+}

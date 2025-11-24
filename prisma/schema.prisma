@@ -681,6 +681,7 @@ model RoutineExerciseCompletion {
   routineAssignment   RoutineAssignment  @relation(fields: [routineAssignmentId], references: [id], onDelete: Cascade)
 
   @@unique([routineAssignmentId, exerciseId, clientId, completedAt])
+  @@index([clientId, completedAt])
   @@map("routine_exercise_completions")
 }
 
@@ -907,6 +908,7 @@ model ProgramDrillCompletion {
   drill                 ProgramDrill      @relation(fields: [drillId], references: [id], onDelete: Cascade)
 
   @@unique([drillId, programAssignmentId])
+  @@index([clientId, completedAt])
   @@map("program_drill_completions")
 }
 
@@ -924,6 +926,7 @@ model ExerciseCompletion {
 
   @@unique([clientId, exerciseId, programDrillId, date])
   @@index([clientId, exerciseId])
+  @@index([clientId, completedAt])
   @@map("exercise_completions")
 }
 
