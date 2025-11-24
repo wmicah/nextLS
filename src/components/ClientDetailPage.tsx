@@ -3016,10 +3016,6 @@ function ClientDetailPage({
                       {/* Routine Assignments */}
                       {routineAssignmentsForDay.map(
                         (assignment: any, index: number) => {
-                          // Mock: Check if routine is completed (replace with real logic later)
-                          const isCompleted = Math.random() > 0.5;
-                          const isMissed = !isCompleted && isPast(day);
-
                           const handleDetailsClick = (e: React.MouseEvent) => {
                             e.stopPropagation();
                             // Extract exercises from routine
@@ -3045,28 +3041,16 @@ function ClientDetailPage({
                               key={`routine-${index}`}
                               className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center justify-between gap-1"
                               style={{
-                                backgroundColor: isCompleted
-                                  ? "rgba(16, 185, 129, 0.2)"
-                                  : isMissed
-                                  ? getRedAlert(0.1)
-                                  : "rgba(16, 185, 129, 0.1)",
+                                backgroundColor: "rgba(16, 185, 129, 0.1)",
                                 color: COLORS.TEXT_PRIMARY,
-                                borderColor: isCompleted
-                                  ? "#10B981"
-                                  : isMissed
-                                  ? COLORS.RED_ALERT
-                                  : "#10B981",
+                                borderColor: "#10B981",
                               }}
                             >
                               <div className="flex items-center gap-1 flex-1 min-w-0">
                                 <div
                                   className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                                   style={{
-                                    backgroundColor: isCompleted
-                                      ? "#10B981"
-                                      : isMissed
-                                      ? COLORS.RED_ALERT
-                                      : "#10B981",
+                                    backgroundColor: "#10B981",
                                   }}
                                 />
                                 <span className="truncate">

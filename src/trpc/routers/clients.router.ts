@@ -1848,7 +1848,7 @@ export const clientsRouter = router({
       // Supersets don't affect how completions are stored - they're still tracked by exerciseId and programDrillId
       // So we just need to count all ExerciseCompletion records that match routine drills
       const exerciseCompletionsForRoutineDrills = exerciseCompletionsForProgramDrills.filter(
-        completion => routineDrillIds.has(completion.programDrillId)
+        completion => completion.programDrillId && routineDrillIds.has(completion.programDrillId)
       );
       
       // Count each exercise completion individually (whether in a superset or not)
@@ -1857,10 +1857,12 @@ export const clientsRouter = router({
       
       // For regular program drills (not routine drills), count the drill once if completed
       const exerciseCompletionsForRegularDrills = exerciseCompletionsForProgramDrills.filter(
-        completion => !routineDrillIds.has(completion.programDrillId)
+        completion => !completion.programDrillId || !routineDrillIds.has(completion.programDrillId)
       );
       const uniqueRegularDrillCompletions = new Set(
-        exerciseCompletionsForRegularDrills.map(c => c.programDrillId).filter(Boolean)
+        exerciseCompletionsForRegularDrills
+          .map(c => c.programDrillId)
+          .filter((id): id is string => id !== null)
       );
       
       // Only count drills that weren't already counted in ProgramDrillCompletion/DrillCompletion
