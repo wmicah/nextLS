@@ -46,6 +46,12 @@ import {
   ChevronDown,
 } from "lucide-react";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   format,
   startOfMonth,
   endOfMonth,
@@ -166,6 +172,14 @@ function ClientDetailPage({
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
   const [showConvertWeekModal, setShowConvertWeekModal] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+
+  // Hover tooltip state
+  // Modal state for showing program/routine details
+  const [selectedEventDetails, setSelectedEventDetails] = useState<{
+    type: "program" | "routine";
+    name: string;
+    items: Array<{ title: string; sets?: number; reps?: number }>;
+  } | null>(null);
 
   // Fetch client data
   const {
@@ -1741,19 +1755,35 @@ function ClientDetailPage({
     temporaryReplacements,
   ]);
 
+  // Create a stable Sidebar component reference outside of render
+  const StableSidebar = React.useMemo(() => React.memo(Sidebar), []);
+
   // Wrapper component that conditionally includes Sidebar
-  const SidebarWrapper = ({ children }: { children: React.ReactNode }) => {
-    console.log("🔍 SidebarWrapper - noSidebar:", noSidebar);
-    if (noSidebar) {
-      console.log("🔍 Rendering without Sidebar wrapper");
-      return <>{children}</>;
+  // Memoized to prevent re-rendering when hover state changes
+  const SidebarWrapperComponent = React.memo(
+    ({
+      children,
+      noSidebar,
+    }: {
+      children: React.ReactNode;
+      noSidebar: boolean;
+    }) => {
+      if (noSidebar) {
+        return <>{children}</>;
+      }
+      return <StableSidebar user={undefined}>{children}</StableSidebar>;
+    },
+    (prevProps, nextProps) => {
+      // Only re-render if noSidebar changes, ignore children changes
+      return prevProps.noSidebar === nextProps.noSidebar;
     }
-    return <Sidebar>{children}</Sidebar>;
-  };
+  );
+
+  SidebarWrapperComponent.displayName = "SidebarWrapper";
 
   if (clientLoading) {
     return (
-      <SidebarWrapper>
+      <SidebarWrapperComponent noSidebar={noSidebar}>
         <div
           className="min-h-screen flex items-center justify-center"
           style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
@@ -1771,13 +1801,13 @@ function ClientDetailPage({
             </span>
           </div>
         </div>
-      </SidebarWrapper>
+      </SidebarWrapperComponent>
     );
   }
 
   if (!client) {
     return (
-      <SidebarWrapper>
+      <SidebarWrapperComponent noSidebar={noSidebar}>
         <div
           className="min-h-screen flex items-center justify-center"
           style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
@@ -1810,12 +1840,12 @@ function ClientDetailPage({
             </button>
           </div>
         </div>
-      </SidebarWrapper>
+      </SidebarWrapperComponent>
     );
   }
 
   return (
-    <SidebarWrapper>
+    <SidebarWrapperComponent noSidebar={noSidebar}>
       <div
         className="min-h-screen"
         style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
@@ -2911,25 +2941,56 @@ function ClientDetailPage({
                       ))}
 
                       {/* Programs */}
-                      {programsForDay.map((program: any, index: number) => (
-                        <div
-                          key={`program-${index}`}
-                          className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center gap-1"
-                          style={{
-                            backgroundColor: "rgba(59, 130, 246, 0.2)",
-                            color: COLORS.TEXT_PRIMARY,
-                            borderColor: "#3B82F6",
-                          }}
-                        >
+                      {programsForDay.map((program: any, index: number) => {
+                        const handleDetailsClick = (e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          // Extract drills from program day
+                          const drills = program.programDay?.drills || [];
+                          const drillItems = drills.map((drill: any) => ({
+                            title: drill.title,
+                            sets: drill.sets,
+                            reps: drill.reps,
+                          }));
+
+                          setSelectedEventDetails({
+                            type: "program",
+                            name: program.title,
+                            items: drillItems,
+                          });
+                        };
+
+                        return (
                           <div
-                            className="w-1.5 h-1.5 rounded-full"
+                            key={`program-${index}`}
+                            className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center justify-between gap-1"
                             style={{
-                              backgroundColor: "#3B82F6",
+                              backgroundColor: "rgba(59, 130, 246, 0.2)",
+                              color: COLORS.TEXT_PRIMARY,
+                              borderColor: "#3B82F6",
                             }}
-                          />
-                          <span className="truncate">{program.title}</span>
-                        </div>
-                      ))}
+                          >
+                            <div className="flex items-center gap-1 flex-1 min-w-0">
+                              <div
+                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{
+                                  backgroundColor: "#3B82F6",
+                                }}
+                              />
+                              <span className="truncate">{program.title}</span>
+                            </div>
+                            <button
+                              onClick={handleDetailsClick}
+                              className="text-[8px] px-1 py-0.5 rounded flex-shrink-0 hover:opacity-80 transition-opacity"
+                              style={{
+                                backgroundColor: COLORS.BACKGROUND_CARD,
+                                color: COLORS.TEXT_SECONDARY,
+                              }}
+                            >
+                              details
+                            </button>
+                          </div>
+                        );
+                      })}
 
                       {/* Videos */}
                       {videosForDay.map((video: any, index: number) => (
@@ -2959,10 +3020,30 @@ function ClientDetailPage({
                           const isCompleted = Math.random() > 0.5;
                           const isMissed = !isCompleted && isPast(day);
 
+                          const handleDetailsClick = (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            // Extract exercises from routine
+                            const exercises =
+                              assignment.routine?.exercises || [];
+                            const exerciseItems = exercises.map(
+                              (exercise: any) => ({
+                                title: exercise.title,
+                                sets: exercise.sets,
+                                reps: exercise.reps,
+                              })
+                            );
+
+                            setSelectedEventDetails({
+                              type: "routine",
+                              name: assignment.routine.name,
+                              items: exerciseItems,
+                            });
+                          };
+
                           return (
                             <div
                               key={`routine-${index}`}
-                              className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center gap-1"
+                              className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center justify-between gap-1"
                               style={{
                                 backgroundColor: isCompleted
                                   ? "rgba(16, 185, 129, 0.2)"
@@ -2977,19 +3058,33 @@ function ClientDetailPage({
                                   : "#10B981",
                               }}
                             >
-                              <div
-                                className="w-1.5 h-1.5 rounded-full"
+                              <div className="flex items-center gap-1 flex-1 min-w-0">
+                                <div
+                                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                  style={{
+                                    backgroundColor: isCompleted
+                                      ? "#10B981"
+                                      : isMissed
+                                      ? COLORS.RED_ALERT
+                                      : "#10B981",
+                                  }}
+                                />
+                                <span className="truncate">
+                                  {assignment.routine.name}
+                                </span>
+                              </div>
+                              <button
+                                onClick={handleDetailsClick}
+                                className="text-[8px] px-1 py-0.5 rounded flex-shrink-0 hover:opacity-80 transition-opacity"
                                 style={{
-                                  backgroundColor: isCompleted
-                                    ? "#10B981"
-                                    : isMissed
-                                    ? COLORS.RED_ALERT
-                                    : "#10B981",
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  color: COLORS.TEXT_SECONDARY,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  border: "1px solid",
                                 }}
-                              />
-                              <span className="truncate">
-                                {assignment.routine.name}
-                              </span>
+                              >
+                                details
+                              </button>
                             </div>
                           );
                         }
@@ -3238,9 +3333,107 @@ function ClientDetailPage({
               getVideosForDate={getVideosForDate}
             />
           )}
+
+          {/* Event Details Modal */}
+          <Dialog
+            open={!!selectedEventDetails}
+            onOpenChange={(open: boolean) => {
+              if (!open) setSelectedEventDetails(null);
+            }}
+          >
+            <DialogContent
+              className="max-w-md"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle
+                  style={{
+                    color: COLORS.TEXT_PRIMARY,
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  {selectedEventDetails?.name}
+                </DialogTitle>
+              </DialogHeader>
+              {selectedEventDetails && (
+                <div>
+                  {selectedEventDetails.items &&
+                    selectedEventDetails.items.length > 0 && (
+                      <div className="mb-3">
+                        <div
+                          className="text-xs mb-2"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
+                          {selectedEventDetails.items.length}{" "}
+                          {selectedEventDetails.type === "program"
+                            ? "drill"
+                            : "exercise"}
+                          {selectedEventDetails.items.length !== 1 ? "s" : ""}
+                        </div>
+                        <div
+                          className="max-h-[400px] overflow-y-auto space-y-1.5"
+                          style={{
+                            borderColor: COLORS.BORDER_SUBTLE,
+                          }}
+                        >
+                          {selectedEventDetails.items.map((item, index) => (
+                            <div
+                              key={index}
+                              className="px-3 py-2 rounded border"
+                              style={{
+                                backgroundColor: COLORS.BACKGROUND_CARD,
+                                borderColor: COLORS.BORDER_SUBTLE,
+                                borderLeft: `3px solid ${
+                                  selectedEventDetails.type === "program"
+                                    ? "#3B82F6"
+                                    : "#10B981"
+                                }`,
+                              }}
+                            >
+                              <div
+                                className="text-sm font-medium"
+                                style={{ color: COLORS.TEXT_PRIMARY }}
+                              >
+                                {item.title}
+                              </div>
+                              {(item.sets || item.reps) && (
+                                <div
+                                  className="text-xs mt-1"
+                                  style={{ color: COLORS.TEXT_SECONDARY }}
+                                >
+                                  {item.sets && item.reps
+                                    ? `${item.sets} sets × ${item.reps} reps`
+                                    : item.sets
+                                    ? `${item.sets} sets`
+                                    : `${item.reps} reps`}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {(!selectedEventDetails.items ||
+                    selectedEventDetails.items.length === 0) && (
+                    <div
+                      className="py-4 text-sm text-center"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      No items
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
-    </SidebarWrapper>
+    </SidebarWrapperComponent>
   );
 }
 
