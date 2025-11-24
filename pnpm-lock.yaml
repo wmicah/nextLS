@@ -119,6 +119,9 @@ importers:
       jose:
         specifier: ^6.0.13
         version: 6.0.13
+      lottie:
+        specifier: ^0.0.1
+        version: 0.0.1
       lottie-react:
         specifier: ^2.4.1
         version: 2.4.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -3549,6 +3552,9 @@ packages:
 
   lottie-web@5.13.0:
     resolution: {integrity: sha512-+gfBXl6sxXMPe8tKQm7qzLnUy5DUPJPKIyRHwtpCpyUEYjHYRJC/5gjUvdkuO2c3JllrPtHXH5UJJK8LRYl5yQ==}
+
+  lottie@0.0.1:
+    resolution: {integrity: sha512-WdqM3pbQLzxOojtuxL9tqDgR1AeOFDLT43+dmjXl0/dhiNjf3PFzqwg7Sw4tME+DTG0DcXfAN3b1Z+HfdMf6oA==}
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
@@ -8303,6 +8309,8 @@ snapshots:
       react-dom: 19.1.0(react@19.1.0)
 
   lottie-web@5.13.0: {}
+
+  lottie@0.0.1: {}
 
   lru-cache@10.4.3: {}
 

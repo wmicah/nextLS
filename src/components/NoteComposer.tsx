@@ -207,7 +207,7 @@ export default function NoteComposer({
         // Update existing note
         const updatedNote = await updateNoteMutation.mutateAsync({
           noteId: editingNote.id,
-          title: title.trim() || null,
+          title: title.trim() || undefined,
           content: content.trim(),
           type,
           priority,
@@ -235,7 +235,7 @@ export default function NoteComposer({
         // Create new note - attachments will be handled in onSuccess
         await createNoteMutation.mutateAsync({
           clientId,
-          title: title.trim() || null,
+          title: title.trim() || undefined,
           content: content.trim(),
           type,
           priority,
