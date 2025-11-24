@@ -927,6 +927,8 @@ export const routinesRouter = router({
                   id: true,
                   title: true,
                   order: true,
+                  sets: true,
+                  reps: true,
                 },
                 orderBy: {
                   order: "asc",
