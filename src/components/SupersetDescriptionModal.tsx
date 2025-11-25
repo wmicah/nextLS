@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Trash2 } from "lucide-react";
+import { COLORS } from "@/lib/colors";
 
 interface Exercise {
   id: string;
@@ -127,30 +128,39 @@ export default function SupersetDescriptionModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         nested={true}
-        className="bg-[#2A3133] border-[#606364] w-full max-w-[95vw] sm:max-w-3xl max-h-[90vh] flex flex-col"
+        className="w-full max-w-[95vw] sm:max-w-3xl max-h-[90vh] flex flex-col [&>button]:hidden"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
       >
         <DialogHeader>
-          <DialogTitle className="text-[#C3BCC2]">
-            {isCircuit ? "Circuit" : "Superset"} - Exercise Details
+          <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
+            <span style={{ color: "#EC4899" }}>{isCircuit ? "Circuit" : "Superset"}</span>
+            {" - Exercise Details"}
             {isCircuit && ` (${exercises.length} exercises)`}
           </DialogTitle>
         </DialogHeader>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {/* Exercises List */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {exercises.map((exercise, index) => (
               <div
                 key={exercise.id || index}
-                className="bg-[#353A3A] rounded-lg p-4 space-y-3 border border-[#606364]"
+                className="rounded-md p-3 space-y-2.5 border"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
               >
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-[#C3BCC2]">
+                  <h4 className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Exercise {index + 1}
                     {exercise.title &&
                       exercise.title !== `Exercise ${index + 1}` && (
-                        <span className="text-[#ABA4AA] ml-2">
+                        <span className="ml-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                           - {exercise.title}
                         </span>
                       )}
@@ -161,16 +171,23 @@ export default function SupersetDescriptionModal({
                       variant="ghost"
                       size="sm"
                       onClick={() => removeExercise(index)}
-                      className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-8 w-8 p-0 min-h-[40px] min-w-[40px]"
+                      className="h-7 w-7 p-0"
+                      style={{ color: COLORS.RED_ALERT }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
                       title="Remove exercise"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#ABA4AA]">Sets</Label>
+                    <Label className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Sets</Label>
                     <Input
                       type="number"
                       value={exercise.sets || ""}
@@ -181,13 +198,24 @@ export default function SupersetDescriptionModal({
                           parseInt(e.target.value) || undefined
                         )
                       }
-                      className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] h-10"
+                      className="h-9 text-sm"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = "#EC4899";
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      }}
                       min="0"
                       placeholder="Sets"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#ABA4AA]">Reps</Label>
+                    <Label className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Reps</Label>
                     <Input
                       type="number"
                       value={exercise.reps || ""}
@@ -198,21 +226,43 @@ export default function SupersetDescriptionModal({
                           parseInt(e.target.value) || undefined
                         )
                       }
-                      className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] h-10"
+                      className="h-9 text-sm"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = "#EC4899";
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      }}
                       min="0"
                       placeholder="Reps"
                     />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-[#ABA4AA]">Description</Label>
+                  <Label className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Description</Label>
                   <Textarea
                     placeholder="Exercise instructions, form cues, or modifications..."
                     value={exercise.description || ""}
                     onChange={e =>
                       updateExercise(index, "description", e.target.value)
                     }
-                    className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] min-h-[60px]"
+                    className="text-sm min-h-[60px]"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = "#EC4899";
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                     rows={2}
                   />
                 </div>
@@ -222,17 +272,40 @@ export default function SupersetDescriptionModal({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="border-t border-[#606364] p-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <DialogFooter className="border-t p-3 flex flex-col gap-2 sm:flex-row sm:justify-end" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="w-full sm:w-auto border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] h-11 min-h-[44px]"
+            className="w-full sm:w-auto text-xs h-8 px-3"
+            style={{
+              borderColor: COLORS.BORDER_SUBTLE,
+              color: COLORS.TEXT_SECONDARY,
+              backgroundColor: COLORS.BACKGROUND_CARD,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white h-11 min-h-[44px]"
+            className="w-full sm:w-auto text-xs h-8 px-3"
+            style={{
+              backgroundColor: "#EC4899",
+              color: COLORS.TEXT_PRIMARY,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = "#DB2777";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = "#EC4899";
+            }}
           >
             Save {isCircuit ? "Circuit" : "Superset"}
           </Button>

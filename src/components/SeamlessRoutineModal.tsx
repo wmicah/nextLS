@@ -241,19 +241,23 @@ function ExerciseEditDialog({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
         nested={true}
-        className="bg-[#2A3133] border-gray-600 max-w-2xl"
+        className="max-w-2xl [&>button]:hidden"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
       >
         <DialogHeader>
-          <DialogTitle className="text-white">Edit Exercise</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Edit Exercise</DialogTitle>
+          <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
             Update the exercise details and instructions
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {/* Basic Information */}
           <div>
-            <Label htmlFor="title" className="text-gray-400 text-sm">
+            <Label htmlFor="title" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
               Exercise Title
             </Label>
             <Input
@@ -262,7 +266,18 @@ function ExerciseEditDialog({
               onChange={e =>
                 setFormData(prev => ({ ...prev, title: e.target.value }))
               }
-              className="bg-[#353A3A] border-gray-600 text-white"
+              className="mt-1.5 h-9 text-sm"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = "#F28F3B";
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+              }}
               placeholder="Exercise name"
               required
             />
@@ -270,11 +285,11 @@ function ExerciseEditDialog({
 
           {/* Description */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="description" className="text-gray-400 text-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <Label htmlFor="description" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Exercise Description
               </Label>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                 {formData.description.length}/120
               </span>
             </div>
@@ -287,7 +302,18 @@ function ExerciseEditDialog({
                   setFormData(prev => ({ ...prev, description: value }));
                 }
               }}
-              className="bg-[#353A3A] border-gray-600 text-white"
+              className="text-sm"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = "#F28F3B";
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+              }}
               placeholder="Describe how to perform this exercise..."
               rows={3}
               maxLength={120}
@@ -295,9 +321,9 @@ function ExerciseEditDialog({
           </div>
 
           {/* Sets, Reps, Duration */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label htmlFor="sets" className="text-gray-400 text-sm">
+              <Label htmlFor="sets" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Sets
               </Label>
               <Input
@@ -310,13 +336,24 @@ function ExerciseEditDialog({
                     sets: e.target.value ? parseInt(e.target.value) : undefined,
                   }))
                 }
-                className="bg-[#353A3A] border-gray-600 text-white"
+                className="mt-1.5 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = "#F28F3B";
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 min="0"
               />
             </div>
 
             <div>
-              <Label htmlFor="reps" className="text-gray-400 text-sm">
+              <Label htmlFor="reps" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Reps
               </Label>
               <Input
@@ -329,13 +366,24 @@ function ExerciseEditDialog({
                     reps: e.target.value ? parseInt(e.target.value) : undefined,
                   }))
                 }
-                className="bg-[#353A3A] border-gray-600 text-white"
+                className="mt-1.5 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = "#F28F3B";
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 min="0"
               />
             </div>
 
             <div>
-              <Label htmlFor="tempo" className="text-gray-400 text-sm">
+              <Label htmlFor="tempo" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Duration
               </Label>
               <Input
@@ -344,24 +392,60 @@ function ExerciseEditDialog({
                 onChange={e =>
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
-                className="bg-[#353A3A] border-gray-600 text-white"
+                className="mt-1.5 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = "#F28F3B";
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 placeholder="e.g., 30 seconds"
               />
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="text-xs h-8 px-3"
+              style={{
+                backgroundColor: "#F28F3B",
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onMouseEnter={e => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = "#D67A2F";
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "#F28F3B";
+              }}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Saving..." : "Save Changes"}

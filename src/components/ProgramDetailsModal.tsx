@@ -119,7 +119,6 @@ export default function ProgramDetailsModal({
   program,
 }: ProgramDetailsModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
@@ -157,7 +156,6 @@ export default function ProgramDetailsModal({
   // Initialize editing state when program changes
   useEffect(() => {
     if (program) {
-      setEditedTitle(program.title);
       setEditedDescription(program.description || "");
     }
   }, [program]);
@@ -190,7 +188,6 @@ export default function ProgramDetailsModal({
 
     updateProgram.mutate({
       id: program.id,
-      title: editedTitle,
       description: editedDescription,
     });
   };
@@ -198,7 +195,6 @@ export default function ProgramDetailsModal({
   // Handle cancel editing
   const handleCancel = () => {
     if (program) {
-      setEditedTitle(program.title);
       setEditedDescription(program.description || "");
     }
     setIsEditing(false);
@@ -244,23 +240,6 @@ export default function ProgramDetailsModal({
             <div className="flex-1">
               {isEditing ? (
                 <div className="space-y-2">
-                  <Input
-                    value={editedTitle}
-                    onChange={e => setEditedTitle(e.target.value)}
-                    className="text-lg font-bold text-sm"
-                    style={{
-                      backgroundColor: COLORS.BACKGROUND_CARD,
-                      borderColor: COLORS.BORDER_SUBTLE,
-                      color: COLORS.TEXT_PRIMARY,
-                    }}
-                    onFocus={e => {
-                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                    }}
-                    onBlur={e => {
-                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                    }}
-                    placeholder="Program title"
-                  />
                   <Textarea
                     value={editedDescription}
                     onChange={e => setEditedDescription(e.target.value)}
@@ -338,27 +317,6 @@ export default function ProgramDetailsModal({
                 </>
               ) : (
                 <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsEditing(true)}
-                    className="h-8 w-8 p-0"
-                    style={{
-                      borderColor: COLORS.BORDER_SUBTLE,
-                      color: COLORS.TEXT_SECONDARY,
-                      backgroundColor: COLORS.BACKGROUND_CARD,
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
-                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                    }}
-                  >
-                    <Edit3 className="h-3.5 w-3.5" />
-                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
