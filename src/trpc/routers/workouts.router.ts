@@ -309,6 +309,16 @@ export const workoutsRouter = router({
         },
       });
 
+      // Update the client's lastCompletedWorkout field when a workout is completed
+      if (input.completed && updatedWorkout.completedAt) {
+        await db.client.update({
+          where: { id: client.id },
+          data: {
+            lastCompletedWorkout: updatedWorkout.completedAt.toISOString(),
+          },
+        });
+      }
+
       return updatedWorkout;
     }),
 });
