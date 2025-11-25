@@ -230,6 +230,126 @@ export const clientsRouter = router({
       return clients;
     }),
 
+  // Get pending client join requests
+  getPendingRequests: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    // Verify user is a COACH
+    const coach = await db.user.findFirst({
+      where: { id: user.id, role: "COACH" },
+    });
+
+    if (!coach) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only coaches can view pending requests",
+      });
+    }
+
+    // Get ALL CLIENT_JOIN_REQUEST notifications for this coach (read and unread)
+    // We'll determine pending status based on actual request state, not read status
+    const notifications = await db.notification.findMany({
+      where: {
+        userId: user.id,
+        type: "CLIENT_JOIN_REQUEST",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Extract all client user IDs from notifications
+    const clientUserIds = notifications
+      .map((notification) => {
+        const notificationData = notification.data as any;
+        return notificationData?.clientUserId || notificationData?.clientId;
+      })
+      .filter((id): id is string => !!id);
+
+    // Get all clients in a single query (much more efficient)
+    const clients = clientUserIds.length > 0
+      ? await db.client.findMany({
+          where: {
+            userId: { in: clientUserIds },
+          },
+          select: {
+            id: true,
+            userId: true,
+            name: true,
+            email: true,
+            coachId: true,
+          },
+        })
+      : [];
+
+    // Create a map for quick lookup
+    const clientMap = new Map(clients.map((client) => [client.userId, client]));
+
+    // Map notifications to pending requests
+    const allPendingRequests = notifications
+      .map((notification) => {
+        const notificationData = notification.data as any;
+        const clientUserId =
+          notificationData?.clientUserId || notificationData?.clientId;
+
+        if (!clientUserId) {
+          return null;
+        }
+
+        const client = clientMap.get(clientUserId);
+
+        // Filter out if:
+        // 1. Client doesn't exist AND notification is read (rejected)
+        if (!client && notification.isRead) {
+          return null;
+        }
+
+        // 2. Client exists with this coach assigned AND notification is read (accepted)
+        if (client && client.coachId === user.id && notification.isRead) {
+          return null;
+        }
+
+        // Otherwise, it's still pending (regardless of read status)
+        // This includes:
+        // - Unread notifications (obviously pending)
+        // - Read notifications where client doesn't exist yet (pending creation)
+        // - Read notifications where client exists but hasn't been accepted yet
+        return {
+          id: notification.id,
+          notificationId: notification.id,
+          clientId: client?.id || null,
+          userId: clientUserId,
+          name: client?.name || notificationData?.clientName || "Unknown Client",
+          email: client?.email || notificationData?.clientEmail || null,
+          createdAt: notification.createdAt,
+          notificationCreatedAt: notification.createdAt,
+        };
+      })
+      .filter((req): req is NonNullable<typeof req> => req !== null);
+
+    // Deduplicate by userId, keeping only the latest request for each client
+    const requestMap = new Map<string, typeof allPendingRequests[0]>();
+    
+    for (const request of allPendingRequests) {
+      const existing = requestMap.get(request.userId);
+      
+      // If no existing request for this user, or this one is newer, use this one
+      if (!existing || request.createdAt > existing.createdAt) {
+        requestMap.set(request.userId, request);
+      }
+    }
+
+    // Convert map back to array and sort by creation date (newest first)
+    const pendingRequests = Array.from(requestMap.values()).sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
+
+    return pendingRequests;
+  }),
+
   dueSoon: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession();
     const user = await getUser();

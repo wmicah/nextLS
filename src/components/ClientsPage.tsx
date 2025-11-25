@@ -735,89 +735,12 @@ function ClientRequestsModal({
   const utils = trpc.useUtils();
   const { addToast } = useUIStore();
 
-  // Get ALL notifications (not just unread) for CLIENT_JOIN_REQUEST
-  // This way, even if acknowledged, they can still accept/deny
+  // Use dedicated endpoint for pending client requests instead of filtering notifications
   const {
-    data: allNotifications = [],
+    data: pendingClientRequests = [],
     refetch,
     isLoading: notificationsLoading,
-  } = trpc.notifications.getNotifications.useQuery({
-    unreadOnly: false, // Get all notifications, not just unread
-    limit: 100,
-  });
-
-  // Filter for CLIENT_JOIN_REQUEST and verify they're still pending
-  // (i.e., the client hasn't been assigned a coach yet, and request hasn't been rejected)
-  const clientRequests = allNotifications.filter((req: any) => {
-    if (req.type !== "CLIENT_JOIN_REQUEST") return false;
-
-    // Filter out rejected requests (marked as read)
-    // Rejected requests are marked as isRead: true
-    if (req.isRead) {
-      return false;
-    }
-
-    // Show ALL CLIENT_JOIN_REQUEST notifications, not just "New Athlete Join Request"
-    // This includes: "New Athlete Join Request", "New Athlete Joined", "New Client Request", etc.
-    return true;
-  });
-
-  // Fetch client data to verify which requests are still pending
-  const { data: allClients = [] } = trpc.clients.list.useQuery();
-
-  // Filter out requests where:
-  // 1. Client already has a coach assigned
-  // 2. Client/user no longer exists in database (deleted)
-  const pendingClientRequests = clientRequests
-    .map((req: any) => {
-      // Parse notification data (could be stored as JSON string or object)
-      let notificationData;
-      try {
-        notificationData =
-          typeof req.data === "string" ? JSON.parse(req.data) : req.data;
-      } catch (error) {
-        console.error("Error parsing notification data:", error, req.data);
-        notificationData = req.data || {};
-      }
-
-      const clientUserId =
-        notificationData?.clientUserId || notificationData?.clientId;
-
-      if (!clientUserId) {
-        return null;
-      }
-
-      // Check if this client still exists in the database
-      const client = allClients.find((c: any) => c.userId === clientUserId);
-
-      // Filter out if:
-      // - Client doesn't exist (user was deleted) - BUT allow if notification has name/email
-      // - Client has a coach assigned to a DIFFERENT coach (not this one)
-      if (!client) {
-        // If we have client name/email in notification, still show it
-        // This handles cases where client record might not be created yet
-        if (notificationData?.clientName || notificationData?.clientEmail) {
-          return {
-            ...req,
-            parsedData: notificationData,
-            clientNotFound: true, // Flag to handle differently
-          };
-        }
-        return null;
-      }
-
-      // Show notification if:
-      // 1. Client doesn't have a coach yet (pending approval), OR
-      // 2. Client's coachId matches the notification's userId (this coach - client just joined through link)
-      if (client.coachId && client.coachId !== req.userId) {
-        return null;
-      }
-      return {
-        ...req,
-        parsedData: notificationData,
-      };
-    })
-    .filter((req: any) => req !== null);
+  } = trpc.clients.getPendingRequests.useQuery();
 
   const acceptRequest = trpc.user.acceptClientRequest.useMutation({
     onSuccess: async data => {
@@ -828,7 +751,7 @@ function ClientRequestsModal({
         message: "The client has been added to your clients list.",
       });
 
-      // Refetch notifications to remove accepted request from list
+      // Refetch pending requests to remove accepted request from list
       await refetch();
 
       // Invalidate ALL client list queries (with all possible parameters)
@@ -861,10 +784,18 @@ function ClientRequestsModal({
 
   const rejectRequest = trpc.user.rejectClientRequest.useMutation({
     onSuccess: () => {
-      // Refetch notifications to get updated isRead status
+      // Refetch pending requests to remove rejected request from list
       refetch();
       // Also invalidate clients list in case client was deleted
       utils.clients.list.invalidate();
+    },
+    onError: (error) => {
+      console.error("Error rejecting client request:", error);
+      addToast({
+        type: "error",
+        title: "Error",
+        message: error.message || "Failed to reject client request",
+      });
     },
   });
 
@@ -925,14 +856,6 @@ function ClientRequestsModal({
         ) : (
           <div className="space-y-4">
             {pendingClientRequests.map((request: any) => {
-              // Use parsedData if available, otherwise parse on the fly
-              const notificationData =
-                request.parsedData ||
-                (typeof request.data === "string"
-                  ? JSON.parse(request.data)
-                  : request.data) ||
-                {};
-
               return (
                 <div
                   key={request.id}
@@ -948,10 +871,10 @@ function ClientRequestsModal({
                         className="font-semibold"
                         style={{ color: COLORS.TEXT_PRIMARY }}
                       >
-                        {notificationData?.clientName || "Unknown Client"}
+                        {request.name || "Unknown Client"}
                       </h3>
                       <p className="text-sm" style={{ color: "#9CA3B0" }}>
-                        {notificationData?.clientEmail || "No email provided"}
+                        {request.email || "No email provided"}
                       </p>
                       <p
                         className="text-xs mt-1"
@@ -964,7 +887,7 @@ function ClientRequestsModal({
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
-                          acceptRequest.mutate({ notificationId: request.id });
+                          acceptRequest.mutate({ notificationId: request.notificationId });
                         }}
                         disabled={
                           acceptRequest.isPending || rejectRequest.isPending
@@ -992,7 +915,7 @@ function ClientRequestsModal({
                       </button>
                       <button
                         onClick={() => {
-                          rejectRequest.mutate({ notificationId: request.id });
+                          rejectRequest.mutate({ notificationId: request.notificationId });
                         }}
                         disabled={
                           acceptRequest.isPending || rejectRequest.isPending
