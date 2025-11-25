@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Filter, ChevronDown, Sparkles, Grid3X3 } from "lucide-react";
+import { COLORS } from "@/lib/colors";
 
 interface CategoryDropdownProps {
   value: string;
@@ -35,7 +36,7 @@ export default function CategoryDropdown({
   useEffect(() => {
     if (isOpen && dropdownRef.current) {
       const rect = dropdownRef.current.getBoundingClientRect();
-      const dropdownWidth = 340;
+      const dropdownWidth = 320;
       const spaceOnRight = window.innerWidth - rect.right;
 
       // Position dropdown to the right if there's space, otherwise to the left
@@ -108,34 +109,34 @@ export default function CategoryDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-all duration-200 text-sm whitespace-nowrap"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-all duration-200 text-xs whitespace-nowrap"
         style={{
-          backgroundColor: style.backgroundColor || "#606364",
-          borderColor: isOpen ? "#C3BCC2" : "#ABA4AA",
-          color: "#C3BCC2",
-          minWidth: "140px",
+          backgroundColor: style.backgroundColor || COLORS.BACKGROUND_DARK,
+          borderColor: isOpen ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+          color: COLORS.TEXT_PRIMARY,
+          minWidth: "120px",
         }}
       >
-        <Filter className="h-4 w-4" style={{ color: "#ABA4AA" }} />
-        <span className="flex-1 text-left truncate text-sm">
+        <Filter className="h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
+        <span className="flex-1 text-left truncate text-xs">
           {displayValue}
         </span>
         <ChevronDown
-          className={`h-4 w-4 transition-transform duration-200 ${
+          className={`h-3.5 w-3.5 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
-          style={{ color: "#ABA4AA" }}
+          style={{ color: COLORS.TEXT_SECONDARY }}
         />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className="fixed rounded-xl border shadow-2xl overflow-hidden"
+          className="fixed rounded-lg border shadow-lg overflow-hidden"
           style={{
-            backgroundColor: "#353A3A",
-            borderColor: "#606364",
-            width: "340px",
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            borderColor: COLORS.BORDER_SUBTLE,
+            width: "320px",
             zIndex: 9999,
             top: `${position.top}px`,
             left: position.left !== "auto" ? `${position.left}px` : undefined,
@@ -147,21 +148,23 @@ export default function CategoryDropdown({
           <button
             type="button"
             onClick={() => handleSelect("All Categories")}
-            className="w-full px-4 py-3 text-left transition-all duration-200 border-b"
+            className="w-full px-3 py-2 text-left transition-all duration-200 border-b text-xs"
             style={{
               backgroundColor:
-                value === "All Categories" ? "#4A5A70" : "transparent",
-              borderColor: "#606364",
-              color: value === "All Categories" ? "#FFFFFF" : "#C3BCC2",
+                value === "All Categories" ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+              borderColor: COLORS.BORDER_SUBTLE,
+              color: value === "All Categories" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
             }}
             onMouseEnter={e => {
               if (value !== "All Categories") {
-                e.currentTarget.style.backgroundColor = "#2A3133";
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }
             }}
             onMouseLeave={e => {
               if (value !== "All Categories") {
-                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               }
             }}
           >
@@ -171,23 +174,23 @@ export default function CategoryDropdown({
           <div className="flex">
             {/* Left Side - Group Selector */}
             <div
-              className="w-32 border-r"
-              style={{ borderColor: "#606364", backgroundColor: "#2A3133" }}
+              className="w-28 border-r"
+              style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_DARK }}
             >
               {/* Standard Group */}
               <button
                 type="button"
                 onMouseEnter={() => setHoveredGroup("standard")}
                 onClick={() => setHoveredGroup("standard")}
-                className="w-full px-4 py-3 text-left transition-all duration-200 flex items-center gap-2 border-b"
+                className="w-full px-3 py-2 text-left transition-all duration-200 flex items-center gap-1.5 border-b text-xs"
                 style={{
                   backgroundColor:
-                    hoveredGroup === "standard" ? "#4A5A70" : "transparent",
-                  borderColor: "#606364",
-                  color: hoveredGroup === "standard" ? "#FFFFFF" : "#C3BCC2",
+                    hoveredGroup === "standard" ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: hoveredGroup === "standard" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                 }}
               >
-                <span className="text-sm font-medium">Standard</span>
+                <span className="text-xs font-medium">Standard</span>
               </button>
 
               {/* Custom Group */}
@@ -196,14 +199,14 @@ export default function CategoryDropdown({
                   type="button"
                   onMouseEnter={() => setHoveredGroup("custom")}
                   onClick={() => setHoveredGroup("custom")}
-                  className="w-full px-4 py-3 text-left transition-all duration-200 flex items-center gap-2"
+                  className="w-full px-3 py-2 text-left transition-all duration-200 flex items-center gap-1.5 text-xs"
                   style={{
                     backgroundColor:
-                      hoveredGroup === "custom" ? "#4A5A70" : "transparent",
-                    color: hoveredGroup === "custom" ? "#FFFFFF" : "#C3BCC2",
+                      hoveredGroup === "custom" ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                    color: hoveredGroup === "custom" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                   }}
                 >
-                  <span className="text-sm font-medium">Custom</span>
+                  <span className="text-xs font-medium">Custom</span>
                 </button>
               )}
             </div>
@@ -217,20 +220,22 @@ export default function CategoryDropdown({
                       key={cat}
                       type="button"
                       onClick={() => handleSelect(cat)}
-                      className="w-full px-4 py-3 text-left transition-all duration-200 hover:pl-6"
+                      className="w-full px-3 py-2 text-left transition-all duration-200 hover:pl-4 text-xs"
                       style={{
                         backgroundColor:
-                          value === cat ? "#4A5A70" : "transparent",
-                        color: value === cat ? "#FFFFFF" : "#C3BCC2",
+                          value === cat ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                        color: value === cat ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                       }}
                       onMouseEnter={e => {
                         if (value !== cat) {
-                          e.currentTarget.style.backgroundColor = "#2A3133";
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                         }
                       }}
                       onMouseLeave={e => {
                         if (value !== cat) {
-                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                         }
                       }}
                     >
@@ -247,25 +252,27 @@ export default function CategoryDropdown({
                       key={cat.name}
                       type="button"
                       onClick={() => handleSelect(cat.name)}
-                      className="w-full px-4 py-3 text-left transition-all duration-200 hover:pl-6 flex items-center justify-between"
+                      className="w-full px-3 py-2 text-left transition-all duration-200 hover:pl-4 flex items-center justify-between text-xs"
                       style={{
                         backgroundColor:
-                          value === cat.name ? "#4A5A70" : "transparent",
-                        color: value === cat.name ? "#FFFFFF" : "#C3BCC2",
+                          value === cat.name ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                        color: value === cat.name ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                       }}
                       onMouseEnter={e => {
                         if (value !== cat.name) {
-                          e.currentTarget.style.backgroundColor = "#2A3133";
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                         }
                       }}
                       onMouseLeave={e => {
                         if (value !== cat.name) {
-                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                         }
                       }}
                     >
                       <span>{cat.name}</span>
-                      <span className="text-xs" style={{ color: "#ABA4AA" }}>
+                      <span className="text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
                         ({cat.count})
                       </span>
                     </button>
@@ -274,8 +281,8 @@ export default function CategoryDropdown({
               )}
 
               {!hoveredGroup && (
-                <div className="px-4 py-8 text-center">
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                <div className="px-3 py-6 text-center">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Hover over a group to see categories
                   </p>
                 </div>

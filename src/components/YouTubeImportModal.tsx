@@ -8,6 +8,7 @@ import {
   isYouTubeShortsUrl,
   convertShortsToWatchUrl,
 } from "@/lib/youtube-utils";
+import { COLORS } from "@/lib/colors";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -115,39 +116,47 @@ export default function YouTubeImportModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.7)" }}>
       <div
-        className="rounded-lg p-6 w-full max-w-lg shadow-lg border"
-        style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+        className="rounded-lg p-4 w-full max-w-lg shadow-lg border"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <h2
-            className="text-xl font-bold flex items-center gap-2"
-            style={{ color: "#C3BCC2" }}
+            className="text-lg font-bold flex items-center gap-2"
+            style={{ color: COLORS.TEXT_PRIMARY }}
           >
-            <Youtube className="h-5 w-5 text-red-500" />
+            <Youtube className="h-4 w-4" style={{ color: COLORS.RED_ALERT }} />
             Import from YouTube
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg transition-all duration-300"
-            style={{ color: "#ABA4AA" }}
+            className="p-1.5 rounded-md transition-all duration-200"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {/* Import Type */}
           <div>
             <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: "#ABA4AA" }}
+              className="block text-xs font-medium mb-1.5"
+              style={{ color: COLORS.TEXT_SECONDARY }}
             >
               Import Type
             </label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-1.5">
                 <input
                   type="radio"
                   value="single"
@@ -155,11 +164,11 @@ export default function YouTubeImportModal({
                   onChange={e =>
                     setImportType(e.target.value as "single" | "playlist")
                   }
-                  className="text-blue-500"
+                  style={{ accentColor: COLORS.GOLDEN_ACCENT }}
                 />
-                <span style={{ color: "#C3BCC2" }}>Single Video</span>
+                <span className="text-xs" style={{ color: COLORS.TEXT_PRIMARY }}>Single Video</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-1.5">
                 <input
                   type="radio"
                   value="playlist"
@@ -167,9 +176,9 @@ export default function YouTubeImportModal({
                   onChange={e =>
                     setImportType(e.target.value as "single" | "playlist")
                   }
-                  className="text-blue-500"
+                  style={{ accentColor: COLORS.GOLDEN_ACCENT }}
                 />
-                <span style={{ color: "#C3BCC2" }}>Entire Playlist</span>
+                <span className="text-xs" style={{ color: COLORS.TEXT_PRIMARY }}>Entire Playlist</span>
               </label>
             </div>
           </div>
@@ -177,8 +186,8 @@ export default function YouTubeImportModal({
           {/* URL Input */}
           <div>
             <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: "#ABA4AA" }}
+              className="block text-xs font-medium mb-1.5"
+              style={{ color: COLORS.TEXT_SECONDARY }}
             >
               YouTube {importType === "single" ? "Video" : "Playlist"} URL
             </label>
@@ -192,14 +201,20 @@ export default function YouTubeImportModal({
                   : "playlist"
               } URL here...`}
               required
-              className="w-full px-3 py-2 rounded-lg border"
+              className="w-full px-2.5 py-1.5 rounded-md border text-xs focus:outline-none transition-all duration-200"
               style={{
-                backgroundColor: "#606364",
-                borderColor: "#ABA4AA",
-                color: "#C3BCC2",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
               }}
             />
-            <p className="text-xs mt-1" style={{ color: "#ABA4AA" }}>
+            <p className="text-[10px] mt-1" style={{ color: COLORS.TEXT_MUTED }}>
               Supports: youtube.com/watch, youtu.be, youtube.com/shorts, and
               playlists
             </p>
@@ -208,8 +223,8 @@ export default function YouTubeImportModal({
           {/* Custom Name */}
           <div>
             <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: "#ABA4AA" }}
+              className="block text-xs font-medium mb-1.5"
+              style={{ color: COLORS.TEXT_SECONDARY }}
             >
               Custom Name (Optional)
             </label>
@@ -218,14 +233,20 @@ export default function YouTubeImportModal({
               value={customName}
               onChange={e => setCustomName(e.target.value)}
               placeholder="Enter a custom name for this video..."
-              className="w-full px-3 py-2 rounded-lg border"
+              className="w-full px-2.5 py-1.5 rounded-md border text-xs focus:outline-none transition-all duration-200"
               style={{
-                backgroundColor: "#606364",
-                borderColor: "#ABA4AA",
-                color: "#C3BCC2",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
               }}
             />
-            <p className="text-xs mt-1" style={{ color: "#ABA4AA" }}>
+            <p className="text-[10px] mt-1" style={{ color: COLORS.TEXT_MUTED }}>
               Leave empty to use the original YouTube title
             </p>
           </div>
@@ -233,28 +254,34 @@ export default function YouTubeImportModal({
           {/* Category */}
           <div>
             <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: "#ABA4AA" }}
+              className="block text-xs font-medium mb-1.5"
+              style={{ color: COLORS.TEXT_SECONDARY }}
             >
               Category *
             </label>
 
             {!showCustomInput ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value)}
                   required={!showCustomInput}
-                  className="w-full px-3 py-2 rounded-lg border"
+                  className="w-full px-2.5 py-1.5 rounded-md border text-xs focus:outline-none transition-all duration-200"
                   style={{
-                    backgroundColor: "#606364",
-                    borderColor: "#ABA4AA",
-                    color: "#C3BCC2",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   }}
                 >
                   <option
                     value=""
-                    style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                    style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_SECONDARY }}
                   >
                     Select category...
                   </option>
@@ -262,44 +289,17 @@ export default function YouTubeImportModal({
                   {/* Standard Categories */}
                   <optgroup
                     label="Standard Categories"
-                    style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                    style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}
                   >
-                    <option
-                      value="Conditioning"
-                      style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                    >
-                      Conditioning
-                    </option>
-                    <option
-                      value="Drive"
-                      style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                    >
-                      Drive
-                    </option>
-                    <option
-                      value="Whip"
-                      style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                    >
-                      Whip
-                    </option>
-                    <option
-                      value="Separation"
-                      style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                    >
-                      Separation
-                    </option>
-                    <option
-                      value="Stability"
-                      style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                    >
-                      Stability
-                    </option>
-                    <option
-                      value="Extension"
-                      style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
-                    >
-                      Extension
-                    </option>
+                    {DEFAULT_CATEGORIES.map(cat => (
+                      <option
+                        key={cat}
+                        value={cat}
+                        style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}
+                      >
+                        {cat}
+                      </option>
+                    ))}
                   </optgroup>
 
                   {/* User's Custom Categories */}
@@ -308,7 +308,7 @@ export default function YouTubeImportModal({
                   ).length > 0 && (
                     <optgroup
                       label="Your Categories"
-                      style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                      style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}
                     >
                       {categoriesData
                         .filter(cat => !DEFAULT_CATEGORIES.includes(cat.name))
@@ -317,8 +317,8 @@ export default function YouTubeImportModal({
                             key={cat.name}
                             value={cat.name}
                             style={{
-                              backgroundColor: "#353A3A",
-                              color: "#C3BCC2",
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              color: COLORS.TEXT_PRIMARY,
                             }}
                           >
                             {cat.name} ({cat.count})
@@ -335,27 +335,27 @@ export default function YouTubeImportModal({
                     setShowCustomInput(true);
                     setCategory("");
                   }}
-                  className="w-full p-3 rounded-lg border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-2 font-medium text-sm"
+                  className="w-full px-2.5 py-1.5 rounded-md border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
                   style={{
-                    borderColor: "#606364",
-                    color: "#ABA4AA",
-                    backgroundColor: "transparent",
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_SECONDARY,
+                    backgroundColor: COLORS.BACKGROUND_CARD,
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = "#C3BCC2";
-                    e.currentTarget.style.color = "#C3BCC2";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = "#606364";
-                    e.currentTarget.style.color = "#ABA4AA";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                   }}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                   Or create a new category
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <input
                   type="text"
                   value={customCategory}
@@ -363,17 +363,17 @@ export default function YouTubeImportModal({
                   placeholder="Enter new category name (e.g., Pitching Mechanics)"
                   required
                   maxLength={50}
-                  className="w-full p-3 rounded-lg border-2 focus:outline-none transition-all duration-200"
+                  className="w-full px-2.5 py-1.5 rounded-md border-2 text-xs focus:outline-none transition-all duration-200"
                   style={{
-                    backgroundColor: "#2A3133",
-                    borderColor: "#C3BCC2",
-                    color: "#C3BCC2",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.GOLDEN_ACCENT,
+                    color: COLORS.TEXT_PRIMARY,
                   }}
                   onFocus={e => {
-                    e.currentTarget.style.borderColor = "#DC2626";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                   }}
                   onBlur={e => {
-                    e.currentTarget.style.borderColor = "#C3BCC2";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                   }}
                   autoFocus
                 />
@@ -383,16 +383,18 @@ export default function YouTubeImportModal({
                     setShowCustomInput(false);
                     setCustomCategory("");
                   }}
-                  className="text-sm px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                  className="text-xs px-3 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5"
                   style={{
-                    color: "#ABA4AA",
-                    backgroundColor: "#2A3133",
+                    color: COLORS.TEXT_SECONDARY,
+                    backgroundColor: COLORS.BACKGROUND_DARK,
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.color = "#C3BCC2";
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.color = "#ABA4AA";
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
                   }}
                 >
                   <ChevronLeft className="h-3 w-3" />
@@ -403,15 +405,23 @@ export default function YouTubeImportModal({
           </div>
 
           {/* Submit */}
-          <div className="flex gap-3">
+          <div className="flex gap-2 pt-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border transition-all duration-300"
+              className="flex-1 px-3 py-2 rounded-md border transition-all duration-200 text-xs font-medium"
               style={{
-                backgroundColor: "transparent",
-                borderColor: "#606364",
-                color: "#ABA4AA",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               }}
             >
               Cancel
@@ -419,20 +429,30 @@ export default function YouTubeImportModal({
             <button
               type="submit"
               disabled={importVideo.isPending || importPlaylist.isPending}
-              className="flex-1 px-4 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
+              className="flex-1 px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-center gap-1.5 text-xs font-medium disabled:opacity-50"
               style={{
-                backgroundColor: "#DC2626",
+                backgroundColor: COLORS.RED_ALERT,
                 color: "#FFFFFF",
+              }}
+              onMouseEnter={e => {
+                if (!importVideo.isPending && !importPlaylist.isPending) {
+                  e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                }
+              }}
+              onMouseLeave={e => {
+                if (!importVideo.isPending && !importPlaylist.isPending) {
+                  e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                }
               }}
             >
               {importVideo.isPending || importPlaylist.isPending ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current" />
                   Importing...
                 </>
               ) : (
                 <>
-                  <Upload className="h-4 w-4" />
+                  <Upload className="h-3.5 w-3.5" />
                   Import {importType === "single" ? "Video" : "Playlist"}
                 </>
               )}

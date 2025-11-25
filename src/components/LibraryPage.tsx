@@ -29,6 +29,7 @@ import MobileLibraryPage from "./MobileLibraryPage";
 import CategoryDropdown from "./ui/CategoryDropdown";
 import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonVideoGrid, SkeletonCard } from "@/components/SkeletonLoader";
+import { COLORS } from "@/lib/colors";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -393,7 +394,7 @@ function LibraryPage() {
     return (
       <Sidebar>
         <div className="flex items-center justify-center h-64">
-          <p className="text-red-400">Error loading library: {error.message}</p>
+          <p style={{ color: COLORS.RED_ALERT }}>Error loading library: {error.message}</p>
         </div>
       </Sidebar>
     );
@@ -402,23 +403,24 @@ function LibraryPage() {
   return (
     <Sidebar>
       {/* Compact Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: "#C3BCC2" }}>
+          <h1 className="text-lg font-bold mb-0.5" style={{ color: COLORS.TEXT_PRIMARY }}>
             Training Library
           </h1>
-          <p className="text-sm" style={{ color: "#ABA4AA" }}>
+          <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
             {activeTab === "master"
               ? "Browse shared training resources from administrators"
               : "Manage your personal training resources and uploads"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span
-            className="px-3 py-1 rounded-full text-sm font-medium"
+            className="px-2.5 py-1 rounded-full text-xs font-medium"
             style={{
-              backgroundColor: "#4A5A70",
-              color: "#C3BCC2",
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              color: COLORS.TEXT_SECONDARY,
+              border: `1px solid ${COLORS.BORDER_SUBTLE}`,
             }}
           >
             {libraryItems.length}{" "}
@@ -429,32 +431,32 @@ function LibraryPage() {
 
       {/* Enhanced Search and Filters */}
       <div
-        className="rounded-xl p-4 mb-8 shadow-xl border relative"
-        style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+        className="rounded-lg p-3 mb-4 shadow-lg border"
+        style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
       >
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-2 items-center">
           {/* Search */}
           <div className="relative flex-1">
             <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-              style={{ color: "#ABA4AA" }}
+              className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5"
+              style={{ color: COLORS.TEXT_SECONDARY }}
             />
             <input
               type="text"
               placeholder="Search resources..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm"
+              className="w-full pl-9 pr-3 py-1.5 rounded-md border text-xs focus:outline-none transition-all duration-300"
               style={{
-                backgroundColor: "#606364",
-                borderColor: "#ABA4AA",
-                color: "#C3BCC2",
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
               }}
             />
           </div>
 
           {/* Filters - Right Side */}
-          <div className="flex gap-2 items-center flex-shrink-0">
+          <div className="flex gap-1.5 items-center flex-shrink-0">
             <CategoryDropdown
               value={selectedCategory}
               onChange={setSelectedCategory}
@@ -463,42 +465,62 @@ function LibraryPage() {
                 cat => !DEFAULT_CATEGORIES.includes(cat.name)
               )}
               style={{
-                backgroundColor: "#606364",
-                borderColor: "#ABA4AA",
-                color: "#C3BCC2",
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
               }}
             />
 
             <div
-              className="flex rounded-lg border overflow-hidden"
-              style={{ borderColor: "#606364" }}
+              className="flex rounded-md border overflow-hidden"
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
             >
               <button
                 onClick={() => setViewMode("grid")}
-                className={`px-3 py-2.5 transition-all duration-300 flex items-center gap-1.5 text-sm ${
+                className={`px-2 py-1.5 transition-all duration-300 flex items-center gap-1 text-xs ${
                   viewMode === "grid" ? "font-medium" : ""
                 }`}
                 style={{
                   backgroundColor:
-                    viewMode === "grid" ? "#4A5A70" : "transparent",
-                  color: "#C3BCC2",
+                    viewMode === "grid" ? COLORS.GOLDEN_DARK : "transparent",
+                  color: viewMode === "grid" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                }}
+                onMouseEnter={e => {
+                  if (viewMode !== "grid") {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (viewMode !== "grid") {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }
                 }}
               >
-                <Grid3X3 className="h-4 w-4" />
+                <Grid3X3 className="h-3.5 w-3.5" />
                 <span>Grid</span>
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`px-3 py-2.5 transition-all duration-300 flex items-center gap-1.5 text-sm ${
+                className={`px-2 py-1.5 transition-all duration-300 flex items-center gap-1 text-xs ${
                   viewMode === "list" ? "font-medium" : ""
                 }`}
                 style={{
                   backgroundColor:
-                    viewMode === "list" ? "#4A5A70" : "transparent",
-                  color: "#C3BCC2",
+                    viewMode === "list" ? COLORS.GOLDEN_DARK : "transparent",
+                  color: viewMode === "list" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                }}
+                onMouseEnter={e => {
+                  if (viewMode !== "list") {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (viewMode !== "list") {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }
                 }}
               >
-                <List className="h-4 w-4" />
+                <List className="h-3.5 w-3.5" />
                 <span>List</span>
               </button>
             </div>
@@ -507,87 +529,114 @@ function LibraryPage() {
       </div>
 
       {/* Tabs + Actions Combined */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between gap-4 bg-[#1A1D1E] rounded-xl p-3 border border-[#4A5A70]">
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-3 rounded-lg p-2.5 border"
+          style={{ 
+            backgroundColor: COLORS.BACKGROUND_DARK, 
+            borderColor: COLORS.BORDER_SUBTLE 
+          }}
+        >
           {/* Left: Tabs */}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <button
               onClick={() => handleTabChange("master")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all duration-200 font-medium ${
-                activeTab === "master"
-                  ? "bg-[#4A5A70] text-white shadow-lg"
-                  : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium ${
+                activeTab === "master" ? "" : ""
               }`}
+              style={{
+                backgroundColor: activeTab === "master" ? COLORS.GOLDEN_DARK : "transparent",
+                color: activeTab === "master" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+              }}
+              onMouseEnter={e => {
+                if (activeTab !== "master") {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }
+              }}
+              onMouseLeave={e => {
+                if (activeTab !== "master") {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }
+              }}
             >
-              <BookOpen className="h-4 w-4" />
-              <div className="flex flex-col items-start">
-                <span>Shared Library</span>
-                <span className="text-xs opacity-70">(Read-only)</span>
-              </div>
+              <BookOpen className="h-3.5 w-3.5" />
+              <span>Shared</span>
             </button>
             <button
               onClick={() => handleTabChange("local")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all duration-200 font-medium ${
-                activeTab === "local"
-                  ? "bg-[#4A5A70] text-white shadow-lg"
-                  : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium ${
+                activeTab === "local" ? "" : ""
               }`}
+              style={{
+                backgroundColor: activeTab === "local" ? COLORS.GOLDEN_DARK : "transparent",
+                color: activeTab === "local" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+              }}
+              onMouseEnter={e => {
+                if (activeTab !== "local") {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }
+              }}
+              onMouseLeave={e => {
+                if (activeTab !== "local") {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }
+              }}
             >
-              <Video className="h-4 w-4" />
-              <div className="flex flex-col items-start">
-                <span>My Library</span>
-                <span className="text-xs opacity-70">(Full access)</span>
-              </div>
+              <Video className="h-3.5 w-3.5" />
+              <span>My Library</span>
             </button>
           </div>
 
           {/* Right: Action Buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {activeTab === "local" ? (
               <>
                 <button
                   onClick={() => setIsYouTubeModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                  style={{ backgroundColor: "#DC2626", color: "#FFFFFF" }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                  style={{ backgroundColor: COLORS.RED_ALERT, color: "#FFFFFF" }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#B91C1C";
+                    e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#DC2626";
+                    e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
                   }}
                 >
-                  <Video className="h-4 w-4" />
-                  Import YouTube
+                  <Video className="h-3.5 w-3.5" />
+                  <span>Import YouTube</span>
                 </button>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                  style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                  style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#606364";
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#4A5A70";
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                   }}
                 >
-                  <Plus className="h-4 w-4" />
-                  Upload
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Upload</span>
                 </button>
               </>
             ) : (
               <div
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs"
                 style={{
-                  backgroundColor: "#2D3748",
-                  borderColor: "#4A5A70",
-                  color: "#ABA4AA",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_SECONDARY,
                 }}
               >
-                <BookOpen className="h-4 w-4" />
-                <span className="text-sm">Read-only access</span>
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Read-only</span>
                 <span
-                  className="text-xs px-2 py-1 rounded"
-                  style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                  className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_MUTED }}
                 >
                   Admin Only
                 </span>
@@ -597,8 +646,8 @@ function LibraryPage() {
         </div>
 
         {/* Resource Count */}
-        <div className="mt-3 px-2">
-          <p className="text-sm" style={{ color: "#ABA4AA" }}>
+        <div className="mt-2 px-1">
+          <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
             {libraryItems.length}{" "}
             {libraryItems.length === 1 ? "resource" : "resources"} found
           </p>
@@ -608,22 +657,22 @@ function LibraryPage() {
       {/* Permission Guidance */}
       {activeTab === "master" && (
         <div
-          className="mb-6 p-4 rounded-lg border"
+          className="mb-4 p-3 rounded-lg border"
           style={{
-            backgroundColor: "#2D3748",
-            borderColor: "#4A5A70",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
-          <div className="flex items-center gap-3">
-            <BookOpen className="h-5 w-5" style={{ color: "#4A5A70" }} />
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
             <div>
               <h4
-                className="font-semibold text-sm"
-                style={{ color: "#C3BCC2" }}
+                className="font-semibold text-xs"
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Shared Library Access
               </h4>
-              <p className="text-xs" style={{ color: "#ABA4AA" }}>
+              <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                 You can view and assign these resources to clients, but only
                 administrators can add or modify them.
               </p>
@@ -635,29 +684,23 @@ function LibraryPage() {
       {/* Empty State */}
       {libraryItems.length === 0 && (
         <div
-          className="flex flex-col items-center justify-center h-96 rounded-2xl shadow-xl border relative overflow-hidden"
-          style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+          className="flex flex-col items-center justify-center h-64 rounded-lg shadow-lg border relative overflow-hidden"
+          style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
         >
-          <div
-            className="absolute inset-0 opacity-5"
-            style={{
-              background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-            }}
-          />
           <div className="relative text-center">
             <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-              style={{ backgroundColor: "#4A5A70" }}
+              className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4"
+              style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
             >
               {activeTab === "master" ? (
-                <BookOpen className="h-10 w-10" style={{ color: "#C3BCC2" }} />
+                <BookOpen className="h-8 w-8" style={{ color: COLORS.GOLDEN_ACCENT }} />
               ) : (
-                <Video className="h-10 w-10" style={{ color: "#C3BCC2" }} />
+                <Video className="h-8 w-8" style={{ color: COLORS.GOLDEN_ACCENT }} />
               )}
             </div>
             <h3
-              className="text-2xl font-bold mb-3"
-              style={{ color: "#C3BCC2" }}
+              className="text-lg font-bold mb-2"
+              style={{ color: COLORS.TEXT_PRIMARY }}
             >
               {searchTerm || selectedCategory !== "All"
                 ? "No resources found"
@@ -666,8 +709,8 @@ function LibraryPage() {
                 : "Start Building Your Library"}
             </h3>
             <p
-              className="text-center mb-8 max-w-md"
-              style={{ color: "#ABA4AA" }}
+              className="text-center mb-6 max-w-md text-xs"
+              style={{ color: COLORS.TEXT_SECONDARY }}
             >
               {searchTerm || selectedCategory !== "All"
                 ? "Try adjusting your search terms or filters to find what you're looking for."
@@ -675,31 +718,31 @@ function LibraryPage() {
                 ? "The shared library doesn't have any resources yet. Contact your administrator to add training resources that everyone can access."
                 : "Upload your first training resource or import from YouTube to start building your personal library."}
             </p>
-            <div className="flex gap-3 justify-center flex-wrap">
+            <div className="flex gap-2 justify-center flex-wrap">
               {activeTab === "local" && (
                 <>
                   <button
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    className="px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#606364";
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                     }}
                   >
                     Upload Video
                   </button>
                   <button
                     onClick={() => setIsYouTubeModalOpen(true)}
-                    className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                    style={{ backgroundColor: "#DC2626", color: "#FFFFFF" }}
+                    className="px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                    style={{ backgroundColor: COLORS.RED_ALERT, color: "#FFFFFF" }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#B91C1C";
+                      e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#DC2626";
+                      e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
                     }}
                   >
                     Import from YouTube
@@ -716,13 +759,19 @@ function LibraryPage() {
                       setSelectedCategory("All");
                     }
                   }}
-                  className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
-                  style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                  className="px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                  style={{ 
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    color: COLORS.TEXT_SECONDARY,
+                    border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                  }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#606364";
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#4A5A70";
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                   }}
                 >
                   {searchTerm || selectedCategory !== "All"
@@ -739,42 +788,33 @@ function LibraryPage() {
       {libraryItems.length > 0 && (
         <div className="w-full">
           {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-6 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 w-full">
               {libraryItems.map((item: any, index: number) => (
                 <div
                   key={`${item.id}-${index}`}
-                  className="rounded-xl shadow-2xl border-2 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group w-full h-full"
+                  className="rounded-lg shadow-lg border transition-all duration-300 transform hover:-translate-y-1 cursor-pointer relative overflow-hidden group w-full h-full"
                   style={{
-                    backgroundColor: "#1A1D1E",
-                    borderColor: "#2D3748",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
                     animationDelay: index * 50 + "ms",
                   }}
                   onClick={() => handleItemClick(item)}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#2D3748";
-                    e.currentTarget.style.borderColor = "#4A5A70";
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                     e.currentTarget.style.boxShadow =
-                      "0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px #4A5A70";
+                      "0 10px 25px rgba(0, 0, 0, 0.3)";
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#1A1D1E";
-                    e.currentTarget.style.borderColor = "#2D3748";
-                    e.currentTarget.style.boxShadow =
-                      "0 10px 25px rgba(0, 0, 0, 0.4)";
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #4A5A70 0%, #2D3748 50%, #1A1D1E 100%)",
-                    }}
-                  />
-
                   <div className="relative">
                     <div
-                      className="h-28 lg:h-32 rounded-t-xl overflow-hidden relative"
-                      style={{ backgroundColor: "#0F1416" }}
+                      className="h-24 rounded-t-lg overflow-hidden relative"
+                      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                     >
                       <VideoThumbnail
                         item={item}
@@ -784,50 +824,50 @@ function LibraryPage() {
                       {/* Play overlay */}
                       <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                         <div
-                          className="w-12 h-12 rounded-full flex items-center justify-center shadow-2xl"
+                          className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg"
                           style={{
-                            backgroundColor: "#4A5A70",
-                            border: "2px solid #C3BCC2",
+                            backgroundColor: COLORS.GOLDEN_ACCENT,
+                            border: `2px solid ${COLORS.BACKGROUND_DARK}`,
                           }}
                         >
                           <Play
-                            className="h-6 w-6 ml-0.5"
-                            style={{ color: "#FFFFFF" }}
+                            className="h-5 w-5 ml-0.5"
+                            style={{ color: COLORS.BACKGROUND_DARK }}
                           />
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-4 lg:p-5">
-                      <div className="flex items-center justify-between mb-2 lg:mb-3">
+                    <div className="p-2.5">
+                      <div className="flex items-center justify-between mb-1.5">
                         <span
-                          className="px-2 lg:px-3 py-1 text-xs font-bold rounded-full border"
+                          className="px-1.5 py-0.5 text-[10px] font-bold rounded-full border"
                           style={{
-                            backgroundColor: "#4A5A70",
-                            color: "#FFFFFF",
-                            borderColor: "#6B7280",
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            color: COLORS.TEXT_SECONDARY,
+                            borderColor: COLORS.BORDER_SUBTLE,
                           }}
                         >
                           {item.category}
                         </span>
                         <div className="flex items-center gap-1">
                           {item.isYoutube ? (
-                            <Video className="h-3 w-3 text-red-500" />
+                            <Video className="h-3 w-3" style={{ color: COLORS.RED_ALERT }} />
                           ) : item.type === "video" ? (
                             <Video
                               className="h-3 w-3"
-                              style={{ color: "#ABA4AA" }}
+                              style={{ color: COLORS.TEXT_SECONDARY }}
                             />
                           ) : (
                             <FileText
                               className="h-3 w-3"
-                              style={{ color: "#ABA4AA" }}
+                              style={{ color: COLORS.TEXT_SECONDARY }}
                             />
                           )}
                           {item.duration && (
                             <span
-                              style={{ color: "#ABA4AA" }}
-                              className="text-xs"
+                              style={{ color: COLORS.TEXT_MUTED }}
+                              className="text-[10px]"
                             >
                               {item.duration}
                             </span>
@@ -836,101 +876,85 @@ function LibraryPage() {
                       </div>
 
                       <h3
-                        className="text-sm lg:text-base font-bold mb-2 lg:mb-3 line-clamp-1"
-                        style={{ color: "#FFFFFF" }}
+                        className="text-xs font-bold mb-1 line-clamp-1"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {item.title}
                       </h3>
 
                       <p
-                        className="text-xs lg:text-sm mb-3 lg:mb-4 line-clamp-2"
-                        style={{ color: "#D1D5DB" }}
+                        className="text-[10px] mb-2 line-clamp-2"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         {item.description}
                       </p>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 lg:gap-2">
-                          {/* Rating and views removed - not necessary */}
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="space-y-4 max-w-6xl mx-auto">
+            <div className="space-y-2.5 max-w-6xl mx-auto">
               {libraryItems.map((item: any, index: number) => (
                 <div
                   key={`${item.id}-${index}`}
-                  className="rounded-xl shadow-2xl p-5 border-2 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group w-full"
+                  className="rounded-lg shadow-lg p-3 border transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group w-full"
                   style={{
-                    backgroundColor: "#1A1D1E",
-                    borderColor: "#2D3748",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
                     animationDelay: index * 30 + "ms",
                   }}
                   onClick={() => handleItemClick(item)}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#2D3748";
-                    e.currentTarget.style.borderColor = "#4A5A70";
-                    e.currentTarget.style.boxShadow =
-                      "0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px #4A5A70";
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.boxShadow = "0 10px 25px rgba(0, 0, 0, 0.3)";
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#1A1D1E";
-                    e.currentTarget.style.borderColor = "#2D3748";
-                    e.currentTarget.style.boxShadow =
-                      "0 10px 25px rgba(0, 0, 0, 0.4)";
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #4A5A70 0%, #2D3748 50%, #1A1D1E 100%)",
-                    }}
-                  />
-
-                  <div className="relative flex items-center gap-4">
+                  <div className="relative flex items-center gap-3">
                     <div
-                      className="w-20 h-20 rounded-xl flex items-center justify-center text-xl flex-shrink-0 overflow-hidden relative border"
+                      className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative border"
                       style={{
-                        backgroundColor: "#0F1416",
-                        borderColor: "#4A5A70",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <VideoThumbnail
                         item={item}
                         videoType={activeTab === "master" ? "master" : "local"}
-                        className="w-20 h-20"
+                        className="w-16 h-16"
                       />
 
                       {/* Play overlay */}
                       <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                         <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center shadow-xl border"
+                          className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border"
                           style={{
-                            backgroundColor: "#4A5A70",
-                            borderColor: "#C3BCC2",
+                            backgroundColor: COLORS.GOLDEN_ACCENT,
+                            borderColor: COLORS.BACKGROUND_DARK,
                           }}
                         >
                           <Play
-                            className="h-5 w-5 ml-0.5"
-                            style={{ color: "#FFFFFF" }}
+                            className="h-4 w-4 ml-0.5"
+                            style={{ color: COLORS.BACKGROUND_DARK }}
                           />
                         </div>
                       </div>
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="flex items-center gap-1.5 mb-1.5">
                         <span
-                          className="px-3 py-1 text-xs font-bold rounded-full border"
+                          className="px-2 py-0.5 text-[10px] font-bold rounded-full border"
                           style={{
-                            backgroundColor: "#4A5A70",
-                            color: "#FFFFFF",
-                            borderColor: "#6B7280",
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            color: COLORS.TEXT_SECONDARY,
+                            borderColor: COLORS.BORDER_SUBTLE,
                           }}
                         >
                           {item.category}
@@ -938,10 +962,10 @@ function LibraryPage() {
 
                         {item.isYoutube && (
                           <span
-                            className="px-2 py-0.5 text-xs rounded-full"
+                            className="px-1.5 py-0.5 text-[10px] rounded-full"
                             style={{
-                              backgroundColor: "#DC2626",
-                              color: "#C3BCC2",
+                              backgroundColor: COLORS.RED_ALERT,
+                              color: "#FFFFFF",
                             }}
                           >
                             YouTube
@@ -950,49 +974,47 @@ function LibraryPage() {
                       </div>
 
                       <h3
-                        className="text-lg font-bold mb-2 line-clamp-1"
-                        style={{ color: "#FFFFFF" }}
+                        className="text-sm font-bold mb-1 line-clamp-1"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {item.title}
                       </h3>
 
                       <p
-                        className="text-sm mb-3 line-clamp-1"
-                        style={{ color: "#D1D5DB" }}
+                        className="text-xs mb-2 line-clamp-1"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         {item.description}
                       </p>
 
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1">
                           {item.isYoutube ? (
-                            <Video className="h-3 w-3 text-red-500" />
+                            <Video className="h-3 w-3" style={{ color: COLORS.RED_ALERT }} />
                           ) : item.type === "video" ? (
                             <Video
                               className="h-3 w-3"
-                              style={{ color: "#ABA4AA" }}
+                              style={{ color: COLORS.TEXT_SECONDARY }}
                             />
                           ) : (
                             <FileText
                               className="h-3 w-3"
-                              style={{ color: "#ABA4AA" }}
+                              style={{ color: COLORS.TEXT_SECONDARY }}
                             />
                           )}
                           {item.duration && (
                             <span
-                              style={{ color: "#ABA4AA" }}
-                              className="text-xs"
+                              style={{ color: COLORS.TEXT_MUTED }}
+                              className="text-[10px]"
                             >
                               {item.duration}
                             </span>
                           )}
                         </div>
-
-                        {/* Rating and views removed - not necessary */}
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <button
                         onClick={e => {
                           e.stopPropagation();
@@ -1002,27 +1024,27 @@ function LibraryPage() {
                             window.open(item.url, "_blank");
                           }
                         }}
-                        className="p-3 rounded-lg transition-all duration-300 transform hover:scale-110 border-2"
+                        className="p-2 rounded-md transition-all duration-300 border"
                         style={{
                           backgroundColor: "transparent",
-                          color: "#9CA3AF",
-                          borderColor: "#4A5A70",
+                          color: COLORS.TEXT_SECONDARY,
+                          borderColor: COLORS.BORDER_SUBTLE,
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#4A5A70";
-                          e.currentTarget.style.color = "#FFFFFF";
-                          e.currentTarget.style.borderColor = "#6B7280";
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                          e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.backgroundColor = "transparent";
-                          e.currentTarget.style.color = "#9CA3AF";
-                          e.currentTarget.style.borderColor = "#4A5A70";
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                         }}
                       >
                         {item.isYoutube || item.type === "video" ? (
-                          <Play className="h-5 w-5" />
+                          <Play className="h-4 w-4" />
                         ) : (
-                          <Eye className="h-5 w-5" />
+                          <Eye className="h-4 w-4" />
                         )}
                       </button>
                     </div>
@@ -1034,13 +1056,13 @@ function LibraryPage() {
 
           {/* Load More Button */}
           {hasMore && (
-            <div className="mt-6 text-center">
+            <div className="mt-4 text-center">
               <button
                 onClick={loadMore}
                 disabled={isLoadingMore}
-                className="text-sm transition-all duration-200 hover:opacity-70 disabled:opacity-50 disabled:cursor-not-allowed underline decoration-dotted underline-offset-4"
+                className="text-xs transition-all duration-200 hover:opacity-70 disabled:opacity-50 disabled:cursor-not-allowed underline decoration-dotted underline-offset-4"
                 style={{
-                  color: "#ABA4AA",
+                  color: COLORS.TEXT_SECONDARY,
                 }}
               >
                 {isLoadingMore ? "Loading more..." : "Load more"}
@@ -1050,10 +1072,10 @@ function LibraryPage() {
 
           {/* Auto-loading indicator */}
           {isLoadingMore && (
-            <div className="mt-4 text-center">
+            <div className="mt-3 text-center">
               <div
-                className="inline-flex items-center gap-2 text-sm"
-                style={{ color: "#ABA4AA" }}
+                className="inline-flex items-center gap-2 text-xs"
+                style={{ color: COLORS.TEXT_SECONDARY }}
               >
                 <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin"></div>
                 Loading more content...
@@ -1063,8 +1085,8 @@ function LibraryPage() {
 
           {/* End of results indicator */}
           {!hasMore && libraryItems.length > 0 && (
-            <div className="mt-8 text-center">
-              <p className="text-sm" style={{ color: "#ABA4AA" }}>
+            <div className="mt-6 text-center">
+              <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                 You've reached the end of the results
               </p>
             </div>
