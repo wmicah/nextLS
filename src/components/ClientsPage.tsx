@@ -220,7 +220,7 @@ function QuickMessagePopup({
       `}</style>
       <div
         data-quick-message-popup
-        className={`fixed w-[400px] h-[500px] max-w-[90vw] max-h-[80vh] rounded-lg shadow-lg border z-50 ${
+        className={`fixed w-[320px] h-[420px] max-w-[90vw] max-h-[80vh] rounded-lg shadow-lg border z-50 ${
           isAnimating && !isOpen
             ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
             : isAnimating
@@ -230,31 +230,33 @@ function QuickMessagePopup({
         style={{
           top: buttonPosition.top,
           left: buttonPosition.left,
-          backgroundColor: COLORS.BACKGROUND_CARD,
+          backgroundColor: COLORS.BACKGROUND_DARK,
           borderColor: COLORS.BORDER_SUBTLE,
           transformOrigin: "top center",
           animation:
             !isAnimating && isOpen ? "slideInDown 0.3s ease-out" : undefined,
-          boxShadow:
-            "0 20px 40px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
         }}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
           {/* Header */}
           <div
-            className="flex items-center justify-between p-4 border-b"
-            style={{ borderColor: COLORS.BORDER_SUBTLE }}
+            className="flex items-center justify-between px-3 py-2.5 border-b"
+            style={{ 
+              borderColor: COLORS.BORDER_SUBTLE,
+              backgroundColor: COLORS.BACKGROUND_DARK,
+            }}
           >
             <div className="flex items-center gap-2">
               <MessageCircle
-                className="h-5 w-5"
-                style={{ color: COLORS.TEXT_PRIMARY }}
+                className="h-4 w-4"
+                style={{ color: COLORS.GOLDEN_ACCENT }}
               />
               <span
-                className="font-medium"
+                className="text-sm font-medium"
                 style={{ color: COLORS.TEXT_PRIMARY }}
               >
-                Messages with {client.name}
+                {client.name}
               </span>
             </div>
             <button
@@ -262,7 +264,7 @@ function QuickMessagePopup({
               className="p-1 rounded-md transition-colors"
               style={{ color: COLORS.TEXT_SECONDARY }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
@@ -270,7 +272,7 @@ function QuickMessagePopup({
                 e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               }}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
@@ -278,52 +280,76 @@ function QuickMessagePopup({
           <div
             className="flex-1 overflow-y-auto"
             style={{
-              maxHeight: "350px", // Reduced for smaller popup
-              minHeight: "200px", // Reduced minimum height
+              maxHeight: "280px",
+              minHeight: "150px",
+              backgroundColor: COLORS.BACKGROUND_DARK,
             }}
           >
             {!conversationToUse || conversationToUse.messages.length === 0 ? (
-              <div className="p-4 text-center">
+              <div className="p-3 text-center">
                 <MessageCircle
-                  className="h-8 w-8 mx-auto mb-2 opacity-50"
-                  style={{ color: COLORS.TEXT_SECONDARY }}
+                  className="h-6 w-6 mx-auto mb-1.5 opacity-50"
+                  style={{ color: COLORS.TEXT_MUTED }}
                 />
-                <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
-                  No messages with {client.name} yet
+                <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+                  No messages yet
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 p-2">
+              <div className="space-y-1.5 p-2">
                 {conversationToUse.messages
                   .slice()
                   .reverse()
-                  .map((message: any, index: number) => (
-                    <div
-                      key={message.id}
-                      className={`p-3 rounded-lg ${
-                        message.senderId === currentUserId ? "ml-8" : "mr-8"
-                      }`}
-                      style={{
-                        animationDelay: `${index * 50}ms`,
-                        animation:
-                          isOpen && !isAnimating
-                            ? `slideInLeft 0.3s ease-out ${index * 50}ms both`
-                            : undefined,
-                      }}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <FormattedMessage content={message.content} />
-                        </div>
-                        <span
-                          className="text-xs ml-2 flex-shrink-0"
-                          style={{ color: COLORS.TEXT_SECONDARY }}
+                  .map((message: any, index: number) => {
+                    const isCurrentUser = message.senderId === currentUserId;
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${
+                          isCurrentUser ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`max-w-[80%] px-2.5 py-1.5 rounded-lg ${
+                            isCurrentUser ? "rounded-br-sm" : "rounded-bl-sm"
+                          }`}
+                          style={{
+                            backgroundColor: isCurrentUser 
+                              ? COLORS.GOLDEN_ACCENT 
+                              : COLORS.BACKGROUND_CARD,
+                            color: isCurrentUser 
+                              ? COLORS.BACKGROUND_DARK 
+                              : COLORS.TEXT_PRIMARY,
+                            border: "1px solid",
+                            borderColor: isCurrentUser 
+                              ? COLORS.GOLDEN_BORDER 
+                              : COLORS.BORDER_SUBTLE,
+                            animationDelay: `${index * 50}ms`,
+                            animation:
+                              isOpen && !isAnimating
+                                ? `slideInLeft 0.3s ease-out ${index * 50}ms both`
+                                : undefined,
+                          }}
                         >
-                          {formatTime(message.createdAt)}
-                        </span>
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="flex-1 text-xs leading-relaxed">
+                              <FormattedMessage content={message.content} />
+                            </div>
+                            <span
+                              className="text-[10px] flex-shrink-0 opacity-60 ml-1.5"
+                              style={{ 
+                                color: isCurrentUser 
+                                  ? COLORS.BACKGROUND_DARK 
+                                  : COLORS.TEXT_MUTED 
+                              }}
+                            >
+                              {formatTime(message.createdAt)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -331,10 +357,13 @@ function QuickMessagePopup({
           {/* Message Input */}
           {conversationToUse && (
             <div
-              className="p-3 border-t"
-              style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              className="px-2.5 py-2 border-t"
+              style={{ 
+                borderColor: COLORS.BORDER_SUBTLE,
+                backgroundColor: COLORS.BACKGROUND_DARK,
+              }}
             >
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 <input
                   type="text"
                   value={messageText}
@@ -346,21 +375,21 @@ function QuickMessagePopup({
                     }
                   }}
                   placeholder="Type a message..."
-                  className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                  className="flex-1 px-2.5 py-1.5 rounded-md border text-xs"
                   style={{
-                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    backgroundColor: COLORS.BACKGROUND_CARD,
                     borderColor: COLORS.BORDER_SUBTLE,
-                    color: COLORS.TEXT_SECONDARY,
+                    color: COLORS.TEXT_PRIMARY,
                   }}
                   disabled={isSending}
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!messageText.trim() || isSending}
-                  className="px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-2.5 py-1.5 rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                   style={{
                     backgroundColor: COLORS.GOLDEN_DARK,
-                    color: "white",
+                    color: COLORS.TEXT_PRIMARY,
                   }}
                   onMouseEnter={e => {
                     if (!e.currentTarget.disabled) {
@@ -376,9 +405,9 @@ function QuickMessagePopup({
                   }}
                 >
                   {isSending ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3 w-3" />
                   )}
                 </button>
               </div>
@@ -386,20 +415,29 @@ function QuickMessagePopup({
           )}
 
           {/* Footer */}
-          <div className="p-3 border-t" style={{ borderColor: "#606364" }}>
+          <div 
+            className="px-2.5 py-2 border-t" 
+            style={{ 
+              borderColor: COLORS.BORDER_SUBTLE,
+              backgroundColor: COLORS.BACKGROUND_DARK,
+            }}
+          >
             <Link
               href="/messages"
               onClick={onClose}
-              className="block w-full text-center py-2 px-4 rounded-md transition-all duration-200 hover:transform hover:scale-105"
+              className="block w-full text-center py-1.5 px-3 rounded-md transition-all duration-200 text-xs font-medium"
               style={{
-                backgroundColor: COLORS.GOLDEN_DARK,
-                color: "white",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_SECONDARY,
+                border: `1px solid ${COLORS.BORDER_SUBTLE}`,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#5A6A80";
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               }}
             >
               View All Messages

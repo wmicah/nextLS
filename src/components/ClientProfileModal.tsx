@@ -33,6 +33,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { COLORS } from "@/lib/colors";
 
 interface ClientProfileModalProps {
   isOpen: boolean;
@@ -253,64 +254,64 @@ ClientProfileModalProps) {
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
-        className="rounded-2xl border max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl shadow-black/50"
+        className="rounded-lg border max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl shadow-black/50"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header - Fixed */}
-        <div className="p-6 border-b" style={{ borderColor: "#606364" }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
+              <h3 className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Client Profile
               </h3>
-              <p className="text-sm mt-1" style={{ color: "#ABA4AA" }}>
+              <p className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Overview of {clientName}&apos;s information and progress
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
-                style={{ color: "#ABA4AA" }}
+                className="p-1.5 rounded-md transition-all duration-200"
+                style={{ color: COLORS.TEXT_SECONDARY }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.color = "#C3BCC2";
-                  e.currentTarget.style.backgroundColor = "#3A4040";
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.color = "#ABA4AA";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                   e.currentTarget.style.backgroundColor = "transparent";
                 }}
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Scrollable Content */}
-        <ScrollArea className="h-[calc(95vh-180px)]">
-          <div className="p-6">
+        <ScrollArea className="h-[calc(95vh-140px)]">
+          <div className="p-4">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
                 <div
-                  className="animate-spin rounded-full h-8 w-8 border-2"
-                  style={{ borderColor: "#4A5A70", borderTopColor: "#C3BCC2" }}
+                  className="animate-spin rounded-full h-6 w-6 border-2"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE, borderTopColor: COLORS.GOLDEN_ACCENT }}
                 />
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Client Info Card */}
                 <div
-                  className="rounded-2xl shadow-xl border p-6"
+                  className="rounded-lg shadow-lg border p-4"
                   style={{
-                    backgroundColor: "#2A2F2F",
-                    borderColor: "#606364",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
                   }}
                 >
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-3 mb-3">
                     <ProfilePictureUploader
                       currentAvatarUrl={
                         client?.user?.settings?.avatarUrl || client?.avatar
@@ -323,7 +324,7 @@ ClientProfileModalProps) {
                     />
                     <div>
                       {isEditingName ? (
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-1">
                           <input
                             type="text"
                             value={editedName}
@@ -332,52 +333,72 @@ ClientProfileModalProps) {
                               if (e.key === "Enter") handleSaveName();
                               if (e.key === "Escape") handleCancelEdit();
                             }}
-                            className="text-2xl font-bold bg-gray-700 border-2 border-blue-400 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                            className="text-lg font-bold border-2 rounded px-2 py-1 focus:outline-none"
                             style={{
-                              color: "#C3BCC2",
-                              backgroundColor: "#2A2F2F",
+                              color: COLORS.TEXT_PRIMARY,
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.GOLDEN_ACCENT,
                             }}
                             autoFocus
                           />
                           <button
                             onClick={handleSaveName}
                             disabled={updateClientMutation.isPending}
-                            className="p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50"
+                            className="p-1.5 rounded-md transition-colors disabled:opacity-50"
+                            style={{
+                              backgroundColor: COLORS.GREEN_PRIMARY,
+                              color: COLORS.BACKGROUND_DARK,
+                            }}
                             title="Save"
                           >
-                            <Save className="h-4 w-4" />
+                            <Save className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={handleCancelEdit}
                             disabled={updateClientMutation.isPending}
-                            className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
+                            className="p-1.5 rounded-md transition-colors disabled:opacity-50"
+                            style={{
+                              backgroundColor: COLORS.RED_ALERT,
+                              color: "#FFFFFF",
+                            }}
                             title="Cancel"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-1">
                           <h2
-                            className="text-2xl font-bold"
-                            style={{ color: "#C3BCC2" }}
+                            className="text-lg font-bold"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             {clientName}
                           </h2>
                           <button
                             onClick={handleEditName}
-                            className="p-1 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                            className="p-1 rounded-md transition-colors"
+                            style={{ 
+                              color: COLORS.TEXT_SECONDARY,
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                            }}
                             title="Edit name"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       )}
-                      <div className="flex items-center gap-4 text-sm mt-1">
+                      <div className="flex items-center gap-3 text-xs mt-0.5">
                         {clientEmail && (
                           <div
                             className="flex items-center gap-1"
-                            style={{ color: "#ABA4AA" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             <Mail className="h-3 w-3" />
                             {clientEmail}
@@ -386,7 +407,7 @@ ClientProfileModalProps) {
                         {clientPhone && (
                           <div
                             className="flex items-center gap-1"
-                            style={{ color: "#ABA4AA" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             <Phone className="h-3 w-3" />
                             {clientPhone}
@@ -395,20 +416,20 @@ ClientProfileModalProps) {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                     <div
-                      className="flex items-center gap-3 p-3 rounded-lg"
-                      style={{ backgroundColor: "#353A3A" }}
+                      className="flex items-center gap-2 p-2.5 rounded-lg"
+                      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                     >
                       <Calendar
-                        className="h-5 w-5"
-                        style={{ color: "#4A5A70" }}
+                        className="h-4 w-4"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
                       />
                       <div>
-                        <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                        <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                           Member Since
                         </p>
-                        <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                        <p className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                           {client?.createdAt
                             ? format(new Date(client.createdAt), "MMM dd, yyyy")
                             : "N/A"}
@@ -416,15 +437,15 @@ ClientProfileModalProps) {
                       </div>
                     </div>
                     <div
-                      className="flex items-center gap-3 p-3 rounded-lg"
-                      style={{ backgroundColor: "#353A3A" }}
+                      className="flex items-center gap-2 p-2.5 rounded-lg"
+                      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                     >
-                      <Clock className="h-5 w-5" style={{ color: "#10B981" }} />
+                      <Clock className="h-4 w-4" style={{ color: COLORS.GREEN_PRIMARY }} />
                       <div>
-                        <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                        <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                           Next Lesson
                         </p>
-                        <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                        <p className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                           {client?.nextLessonDate
                             ? format(
                                 new Date(client.nextLessonDate),
@@ -435,18 +456,18 @@ ClientProfileModalProps) {
                       </div>
                     </div>
                     <div
-                      className="flex items-center gap-3 p-3 rounded-lg"
-                      style={{ backgroundColor: "#353A3A" }}
+                      className="flex items-center gap-2 p-2.5 rounded-lg"
+                      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                     >
                       <Activity
-                        className="h-5 w-5"
-                        style={{ color: "#8B5CF6" }}
+                        className="h-4 w-4"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
                       />
                       <div>
-                        <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                        <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                           Last Activity
                         </p>
-                        <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                        <p className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                           {client?.lastCompletedWorkout
                             ? format(
                                 new Date(client.lastCompletedWorkout),
@@ -461,44 +482,50 @@ ClientProfileModalProps) {
 
                 {/* Client Information Section */}
                 <div
-                  className="rounded-2xl shadow-xl border p-6"
+                  className="rounded-lg shadow-lg border p-4"
                   style={{
-                    backgroundColor: "#2A2F2F",
-                    borderColor: "#606364",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
                   }}
                 >
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Target
-                        className="h-5 w-5"
-                        style={{ color: "#C3BCC2" }}
+                        className="h-4 w-4"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
                       />
-                      <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
+                      <h3 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                         Client Information
                       </h3>
                     </div>
                     {!isEditingClientInfo && (
                       <button
                         onClick={() => setIsEditingClientInfo(true)}
-                        className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
+                        className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1"
                         style={{
-                          backgroundColor: "#4A5A70",
-                          color: "#FFFFFF",
+                          backgroundColor: COLORS.GOLDEN_DARK,
+                          color: COLORS.TEXT_PRIMARY,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                         }}
                       >
-                        <Edit className="h-4 w-4 inline mr-1" />
+                        <Edit className="h-3 w-3" />
                         Edit
                       </button>
                     )}
                   </div>
                   {isEditingClientInfo ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label
                             htmlFor="age"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
+                            className="block text-xs font-medium mb-1.5"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Age
                           </label>
@@ -508,11 +535,11 @@ ClientProfileModalProps) {
                             name="age"
                             value={editedPitchingData.age}
                             onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                            className="w-full px-2.5 py-1.5 rounded-md border text-sm transition-colors focus:outline-none"
                             style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
                             }}
                             placeholder="Age"
                           />
@@ -520,8 +547,8 @@ ClientProfileModalProps) {
                         <div>
                           <label
                             htmlFor="height"
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "#C3BCC2" }}
+                            className="block text-xs font-medium mb-1.5"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Height
                           </label>
@@ -531,11 +558,11 @@ ClientProfileModalProps) {
                             name="height"
                             value={editedPitchingData.height}
                             onChange={handlePitchingInputChange}
-                            className="w-full px-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                            className="w-full px-2.5 py-1.5 rounded-md border text-sm transition-colors focus:outline-none"
                             style={{
-                              backgroundColor: "#353A3A",
-                              borderColor: "#606364",
-                              color: "#C3BCC2",
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
                             }}
                             placeholder="e.g., 5'10&quot;, 178cm"
                           />
@@ -544,13 +571,13 @@ ClientProfileModalProps) {
 
                       {/* Custom Fields Editing */}
                       <div
-                        className="mt-6 pt-6 border-t"
-                        style={{ borderColor: "#606364" }}
+                        className="mt-4 pt-4 border-t"
+                        style={{ borderColor: COLORS.BORDER_SUBTLE }}
                       >
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between mb-3">
                           <h4
-                            className="text-md font-semibold"
-                            style={{ color: "#C3BCC2" }}
+                            className="text-sm font-semibold"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Custom Metrics
                           </h4>
@@ -562,38 +589,44 @@ ClientProfileModalProps) {
                                 { key: "", value: "", type: "text" },
                               ])
                             }
-                            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
+                            className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1"
                             style={{
-                              backgroundColor: "#10B981",
-                              color: "#FFFFFF",
+                              backgroundColor: COLORS.GREEN_PRIMARY,
+                              color: COLORS.BACKGROUND_DARK,
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
                             }}
                           >
-                            <Plus className="h-4 w-4 inline mr-1" />
+                            <Plus className="h-3 w-3" />
                             Add Field
                           </button>
                         </div>
 
                         {customFields.length === 0 ? (
                           <p
-                            className="text-gray-400 text-sm mb-4"
-                            style={{ color: "#ABA4AA" }}
+                            className="text-xs mb-3"
+                            style={{ color: COLORS.TEXT_MUTED }}
                           >
                             Add custom metrics specific to your coaching needs.
                             For example: "Wing Span", "Weight", "Grip Strength",
                             etc.
                           </p>
                         ) : (
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             {customFields.map((field, index) => (
                               <div
                                 key={index}
-                                className="flex items-start gap-2 p-3 rounded-lg"
+                                className="flex items-start gap-2 p-2 rounded-md"
                                 style={{
-                                  backgroundColor: "#353A3A",
-                                  borderColor: "#606364",
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                                 }}
                               >
-                                <div className="flex-1 grid grid-cols-12 gap-2">
+                                <div className="flex-1 grid grid-cols-12 gap-1.5">
                                   <div className="col-span-4">
                                     <input
                                       placeholder="Field name"
@@ -603,11 +636,11 @@ ClientProfileModalProps) {
                                         updated[index].key = e.target.value;
                                         setCustomFields(updated);
                                       }}
-                                      className="w-full px-3 py-2 rounded-lg border text-sm"
+                                      className="w-full px-2 py-1 rounded-md border text-xs"
                                       style={{
-                                        backgroundColor: "#2A2F2F",
-                                        borderColor: "#606364",
-                                        color: "#C3BCC2",
+                                        backgroundColor: COLORS.BACKGROUND_CARD,
+                                        borderColor: COLORS.BORDER_SUBTLE,
+                                        color: COLORS.TEXT_PRIMARY,
                                       }}
                                     />
                                   </div>
@@ -623,11 +656,11 @@ ClientProfileModalProps) {
                                         updated[index].value = "";
                                         setCustomFields(updated);
                                       }}
-                                      className="w-full px-3 py-2 rounded-lg border text-sm"
+                                      className="w-full px-2 py-1 rounded-md border text-xs"
                                       style={{
-                                        backgroundColor: "#2A2F2F",
-                                        borderColor: "#606364",
-                                        color: "#C3BCC2",
+                                        backgroundColor: COLORS.BACKGROUND_CARD,
+                                        borderColor: COLORS.BORDER_SUBTLE,
+                                        color: COLORS.TEXT_PRIMARY,
                                       }}
                                     >
                                       <option value="text">Text</option>
@@ -644,11 +677,11 @@ ClientProfileModalProps) {
                                           updated[index].value = e.target.value;
                                           setCustomFields(updated);
                                         }}
-                                        className="w-full px-3 py-2 rounded-lg border text-sm"
+                                        className="w-full px-2 py-1 rounded-md border text-xs"
                                         style={{
-                                          backgroundColor: "#2A2F2F",
-                                          borderColor: "#606364",
-                                          color: "#C3BCC2",
+                                          backgroundColor: COLORS.BACKGROUND_CARD,
+                                          borderColor: COLORS.BORDER_SUBTLE,
+                                          color: COLORS.TEXT_PRIMARY,
                                         }}
                                       >
                                         <option value="">Select...</option>
@@ -678,11 +711,11 @@ ClientProfileModalProps) {
                                           updated[index].value = e.target.value;
                                           setCustomFields(updated);
                                         }}
-                                        className="w-full px-3 py-2 rounded-lg border text-sm"
+                                        className="w-full px-2 py-1 rounded-md border text-xs"
                                         style={{
-                                          backgroundColor: "#2A2F2F",
-                                          borderColor: "#606364",
-                                          color: "#C3BCC2",
+                                          backgroundColor: COLORS.BACKGROUND_CARD,
+                                          borderColor: COLORS.BORDER_SUBTLE,
+                                          color: COLORS.TEXT_PRIMARY,
                                         }}
                                       />
                                     )}
@@ -695,13 +728,19 @@ ClientProfileModalProps) {
                                       customFields.filter((_, i) => i !== index)
                                     )
                                   }
-                                  className="p-2 rounded-lg transition-all"
+                                  className="p-1.5 rounded-md transition-all"
                                   style={{
-                                    backgroundColor: "#DC2626",
+                                    backgroundColor: COLORS.RED_ALERT,
                                     color: "#FFFFFF",
                                   }}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                                  }}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-3 w-3" />
                                 </button>
                               </div>
                             ))}
@@ -709,7 +748,7 @@ ClientProfileModalProps) {
                         )}
                       </div>
 
-                      <div className="flex gap-3 pt-4">
+                      <div className="flex gap-2 pt-3">
                         <button
                           onClick={() => {
                             setIsEditingClientInfo(false);
@@ -741,11 +780,19 @@ ClientProfileModalProps) {
                             }
                           }}
                           disabled={isUpdating}
-                          className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                          className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
                           style={{
-                            backgroundColor: "#353A3A",
-                            color: "#C3BCC2",
-                            borderColor: "#606364",
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                            color: COLORS.TEXT_SECONDARY,
+                            border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                           }}
                         >
                           Cancel
@@ -753,10 +800,20 @@ ClientProfileModalProps) {
                         <button
                           onClick={handleSavePitchingData}
                           disabled={isUpdating}
-                          className="px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                          className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200"
                           style={{
-                            backgroundColor: "#4A5A70",
-                            color: "#FFFFFF",
+                            backgroundColor: COLORS.GOLDEN_DARK,
+                            color: COLORS.TEXT_PRIMARY,
+                          }}
+                          onMouseEnter={e => {
+                            if (!e.currentTarget.disabled) {
+                              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                            }
+                          }}
+                          onMouseLeave={e => {
+                            if (!e.currentTarget.disabled) {
+                              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                            }
                           }}
                         >
                           {isUpdating ? "Saving..." : "Save Changes"}
@@ -764,27 +821,27 @@ ClientProfileModalProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
                       {client?.age && (
                         <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
+                          className="p-2.5 rounded-lg"
+                          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                         >
-                          <div className="text-xs text-gray-400 mb-1">Age</div>
-                          <div className="text-sm font-medium text-white">
+                          <div className="text-xs mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>Age</div>
+                          <div className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {client.age}
                           </div>
                         </div>
                       )}
                       {client?.height && (
                         <div
-                          className="p-3 rounded-lg"
-                          style={{ backgroundColor: "#353A3A" }}
+                          className="p-2.5 rounded-lg"
+                          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                         >
-                          <div className="text-xs text-gray-400 mb-1">
+                          <div className="text-xs mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                             Height
                           </div>
-                          <div className="text-sm font-medium text-white">
+                          <div className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {client.height}
                           </div>
                         </div>
@@ -799,27 +856,27 @@ ClientProfileModalProps) {
                     Object.keys((client as any).customFields).length > 0 && (
                       <>
                         <div
-                          className="mt-6 pt-6 border-t"
-                          style={{ borderColor: "#606364" }}
+                          className="mt-4 pt-4 border-t"
+                          style={{ borderColor: COLORS.BORDER_SUBTLE }}
                         >
                           <h4
-                            className="text-md font-semibold mb-4"
-                            style={{ color: "#C3BCC2" }}
+                            className="text-sm font-semibold mb-3"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Custom Metrics
                           </h4>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
                             {Object.entries((client as any).customFields).map(
                               ([key, value]) => (
                                 <div
                                   key={key}
-                                  className="p-3 rounded-lg"
-                                  style={{ backgroundColor: "#353A3A" }}
+                                  className="p-2.5 rounded-lg"
+                                  style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                                 >
-                                  <div className="text-xs text-gray-400 mb-1">
+                                  <div className="text-xs mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                                     {key}
                                   </div>
-                                  <div className="text-sm font-medium text-white">
+                                  <div className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                                     {typeof value === "boolean"
                                       ? value
                                         ? "Yes"
@@ -839,10 +896,10 @@ ClientProfileModalProps) {
 
             {/* Notes Section */}
             <div
-              className="rounded-2xl shadow-xl border p-6"
+              className="rounded-lg shadow-lg border p-4"
               style={{
-                backgroundColor: "#2A2F2F",
-                borderColor: "#606364",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
               }}
             >
               <NotesDisplay
@@ -854,63 +911,63 @@ ClientProfileModalProps) {
 
             {/* Assigned Programs Section */}
             <div
-              className="rounded-2xl shadow-xl border p-6"
+              className="rounded-lg shadow-lg border p-4"
               style={{
-                backgroundColor: "#2A2F2F",
-                borderColor: "#606364",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
               }}
             >
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-                <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                <h3 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Assigned Programs ({client?.programAssignments?.length || 0})
                 </h3>
               </div>
               <div>
                 {client?.programAssignments &&
                 client.programAssignments.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-2.5">
                     {client.programAssignments.map(assignment => (
                       <div
                         key={assignment.id}
-                        className="p-4 rounded-lg borderoadt"
+                        className="p-3 rounded-lg border"
                         style={{
-                          backgroundColor: "#353A3A",
-                          borderColor: "#606364",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
                         }}
                       >
-                        <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start justify-between mb-2">
                           <div>
                             <h4
-                              className="font-medium mb-1"
-                              style={{ color: "#C3BCC2" }}
+                              className="text-sm font-medium mb-1"
+                              style={{ color: COLORS.TEXT_PRIMARY }}
                             >
                               {assignment.program.title}
                             </h4>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <span
-                                className="px-2 py-1 rounded-full text-xs font-medium"
+                                className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
                                 style={{
-                                  backgroundColor: "#4A5A70",
-                                  color: "#C3BCC2",
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  color: COLORS.TEXT_SECONDARY,
                                 }}
                               >
                                 {assignment.program.sport || "General"}
                               </span>
                               <span
-                                className="px-2 py-1 rounded-full text-xs font-medium"
+                                className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
                                 style={{
-                                  backgroundColor: "#10B981",
-                                  color: "#FFFFFF",
+                                  backgroundColor: COLORS.GREEN_PRIMARY,
+                                  color: COLORS.BACKGROUND_DARK,
                                 }}
                               >
                                 {assignment.program.level}
                               </span>
                               <span
-                                className="px-2 py-1 rounded-full text-xs font-medium"
+                                className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
                                 style={{
-                                  backgroundColor: "#8B5CF6",
-                                  color: "#FFFFFF",
+                                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                                  color: COLORS.BACKGROUND_DARK,
                                 }}
                               >
                                 {assignment.program.status}
@@ -919,8 +976,8 @@ ClientProfileModalProps) {
                           </div>
                           <div className="text-right">
                             <div
-                              className="text-sm"
-                              style={{ color: "#ABA4AA" }}
+                              className="text-xs"
+                              style={{ color: COLORS.TEXT_SECONDARY }}
                             >
                               Assigned{" "}
                               {format(
@@ -931,28 +988,28 @@ ClientProfileModalProps) {
                           </div>
                         </div>
                         <div>
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-1.5">
                             <span
-                              className="text-sm"
-                              style={{ color: "#ABA4AA" }}
+                              className="text-xs"
+                              style={{ color: COLORS.TEXT_SECONDARY }}
                             >
                               Progress
                             </span>
                             <span
-                              className="font-medium"
-                              style={{ color: "#C3BCC2" }}
+                              className="text-xs font-medium"
+                              style={{ color: COLORS.TEXT_PRIMARY }}
                             >
                               {assignment.progress}%
                             </span>
                           </div>
                           <div
-                            className="w-full rounded-full h-2"
-                            style={{ backgroundColor: "#2A2F2F" }}
+                            className="w-full rounded-full h-1.5"
+                            style={{ backgroundColor: COLORS.BACKGROUND_CARD }}
                           >
                             <div
-                              className="h-2 rounded-full transition-all duration-300"
+                              className="h-1.5 rounded-full transition-all duration-300"
                               style={{
-                                backgroundColor: "#4A5A70",
+                                backgroundColor: COLORS.GOLDEN_ACCENT,
                                 width: `${assignment.progress}%`,
                               }}
                             />
@@ -962,12 +1019,12 @@ ClientProfileModalProps) {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
+                  <div className="text-center py-6">
                     <BookOpen
-                      className="h-12 w-12 mx-auto mb-3"
-                      style={{ color: "#ABA4AA" }}
+                      className="h-8 w-8 mx-auto mb-2"
+                      style={{ color: COLORS.TEXT_MUTED }}
                     />
-                    <p style={{ color: "#ABA4AA" }}>
+                    <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                       No programs assigned to this client
                     </p>
                   </div>
@@ -977,30 +1034,30 @@ ClientProfileModalProps) {
 
             {/* Recent Activity Section */}
             <div
-              className="rounded-2xl shadow-xl border p-6"
+              className="rounded-lg shadow-lg border p-4"
               style={{
-                backgroundColor: "#2A2F2F",
-                borderColor: "#606364",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
               }}
             >
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-                <h3 className="font-bold" style={{ color: "#C3BCC2" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                <h3 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Recent Activity
                 </h3>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {client?.lastCompletedWorkout ? (
                   <div
-                    className="flex items-center gap-3 p-3 rounded-lg"
-                    style={{ backgroundColor: "#353A3A" }}
+                    className="flex items-center gap-2 p-2.5 rounded-lg"
+                    style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                   >
-                    <Target className="h-5 w-5" style={{ color: "#10B981" }} />
+                    <Target className="h-4 w-4" style={{ color: COLORS.GREEN_PRIMARY }} />
                     <div>
-                      <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                      <p className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                         Last Completed Workout
                       </p>
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {format(
                           new Date(client.lastCompletedWorkout),
                           "MMM dd, yyyy 'at' h:mm a"
@@ -1010,15 +1067,15 @@ ClientProfileModalProps) {
                   </div>
                 ) : (
                   <div
-                    className="flex items-center gap-3 p-3 rounded-lg"
-                    style={{ backgroundColor: "#353A3A" }}
+                    className="flex items-center gap-2 p-2.5 rounded-lg"
+                    style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                   >
-                    <Clock className="h-5 w-5" style={{ color: "#ABA4AA" }} />
+                    <Clock className="h-4 w-4" style={{ color: COLORS.TEXT_MUTED }} />
                     <div>
-                      <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                      <p className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                         No Recent Activity
                       </p>
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                         This client hasn&apos;t completed any workouts yet
                       </p>
                     </div>
