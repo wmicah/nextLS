@@ -58,6 +58,16 @@ import ProgramDetailsModal from "./ProgramDetailsModal";
 import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
 import RoutinesTab from "@/components/RoutinesTab";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import SimpleAssignRoutineModal from "@/components/SimpleAssignRoutineModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import CategoryDropdown from "./ui/CategoryDropdown";
@@ -186,6 +196,9 @@ function ProgramsPage() {
   const [activeTab, setActiveTab] = useState<"programs" | "routines">(
     "programs"
   );
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [programToRename, setProgramToRename] = useState<ProgramListItem | null>(null);
+  const [renameTitle, setRenameTitle] = useState("");
 
   const debouncedSearch = useDebounce(searchTerm, 300);
   const { toast } = useToast();
@@ -272,6 +285,41 @@ function ProgramsPage() {
       });
     },
   });
+
+  const renameProgram = trpc.programs.update.useMutation({
+    onSuccess: () => {
+      utils.programs.list.invalidate();
+      setIsRenameModalOpen(false);
+      setProgramToRename(null);
+      setRenameTitle("");
+      toast({
+        title: "Program renamed",
+        description: "The program has been renamed successfully.",
+      });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to rename program",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRename = (program: ProgramListItem) => {
+    setProgramToRename(program);
+    setRenameTitle(program.title);
+    setIsRenameModalOpen(true);
+  };
+
+  const handleRenameSubmit = () => {
+    if (!programToRename || !renameTitle.trim()) return;
+    renameProgram.mutate({
+      id: programToRename.id,
+      title: renameTitle.trim(),
+    });
+  };
 
   // Routine mutations
   const createRoutine = trpc.routines.create.useMutation({
@@ -942,6 +990,7 @@ function ProgramsPage() {
                           // Handle edit - navigate to edit page
                           window.location.href = `/programs/${program.id}`;
                         }}
+                        onRename={() => handleRename(program)}
                         onAssign={() => {
                           setSelectedProgram(program);
                           setIsAssignModalOpen(true);
@@ -1127,6 +1176,104 @@ function ProgramsPage() {
             program={selectedProgram as any}
           />
 
+          {/* Rename Program Dialog */}
+          <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+            <DialogContent
+              className="max-w-md [&>button]:hidden"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                  Rename Program
+                </DialogTitle>
+                <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
+                  Enter a new name for this program
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-3">
+                <div>
+                  <Label htmlFor="rename-title" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    Program Name
+                  </Label>
+                  <Input
+                    id="rename-title"
+                    value={renameTitle}
+                    onChange={e => setRenameTitle(e.target.value)}
+                    className="mt-1.5 h-9 text-sm"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
+                    placeholder="Program name"
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        handleRenameSubmit();
+                      }
+                    }}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsRenameModalOpen(false);
+                    setProgramToRename(null);
+                    setRenameTitle("");
+                  }}
+                  className="text-xs h-8 px-3"
+                  style={{
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_SECONDARY,
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleRenameSubmit}
+                  disabled={!renameTitle.trim() || renameProgram.isPending}
+                  className="text-xs h-8 px-3"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_DARK,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (!renameProgram.isPending) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                  }}
+                >
+                  {renameProgram.isPending ? "Renaming..." : "Rename"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <SeamlessRoutineModal
             isOpen={isRoutineModalOpen}
             onClose={() => {
@@ -1278,6 +1425,7 @@ function ProgramCard({
   viewMode,
   onViewDetails,
   onEdit,
+  onRename,
   onAssign,
   onDelete,
   onDuplicate,
@@ -1286,6 +1434,7 @@ function ProgramCard({
   viewMode: "grid" | "list";
   onViewDetails: () => void;
   onEdit: () => void;
+  onRename: () => void;
   onAssign: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
@@ -1384,7 +1533,7 @@ function ProgramCard({
                   style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }}
                 >
                   <DropdownMenuItem
-                    onClick={onEdit}
+                    onClick={onRename}
                     style={{ color: COLORS.TEXT_PRIMARY }}
                     onMouseEnter={e => {
                       e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
@@ -1393,11 +1542,10 @@ function ProgramCard({
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    <Edit className="h-3.5 w-3.5 mr-2" />
-                    Edit
+                    Rename
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={onAssign}
+                    onClick={onViewDetails}
                     style={{ color: COLORS.TEXT_PRIMARY }}
                     onMouseEnter={e => {
                       e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
@@ -1406,21 +1554,7 @@ function ProgramCard({
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    <Users className="h-3.5 w-3.5 mr-2" />
-                    Assign
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={onDuplicate}
-                    style={{ color: COLORS.TEXT_PRIMARY }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    <Copy className="h-3.5 w-3.5 mr-2" />
-                    Duplicate
+                    View Details
                   </DropdownMenuItem>
                   <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
                   <DropdownMenuItem
@@ -1433,7 +1567,6 @@ function ProgramCard({
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    <Trash2 className="h-3.5 w-3.5 mr-2" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1513,6 +1646,18 @@ function ProgramCard({
               style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }}
             >
               <DropdownMenuItem
+                onClick={onRename}
+                style={{ color: COLORS.TEXT_PRIMARY }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={onViewDetails}
                 style={{ color: COLORS.TEXT_PRIMARY }}
                 onMouseEnter={e => {
@@ -1522,21 +1667,7 @@ function ProgramCard({
                   e.currentTarget.style.backgroundColor = "transparent";
                 }}
               >
-                <Eye className="h-3.5 w-3.5 mr-2" />
                 View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={onDuplicate}
-                style={{ color: COLORS.TEXT_PRIMARY }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <Copy className="h-3.5 w-3.5 mr-2" />
-                Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
               <DropdownMenuItem
@@ -1549,7 +1680,6 @@ function ProgramCard({
                   e.currentTarget.style.backgroundColor = "transparent";
                 }}
               >
-                <Trash2 className="h-3.5 w-3.5 mr-2" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

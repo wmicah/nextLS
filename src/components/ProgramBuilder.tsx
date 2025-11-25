@@ -3451,12 +3451,12 @@ function SortableDrillItem({
       style={{
         ...style,
         backgroundColor: isSuperset
-          ? "rgba(242, 143, 59, 0.1)"
+          ? "rgba(236, 72, 153, 0.1)"
           : isRoutine
           ? "rgba(242, 143, 59, 0.1)"
           : COLORS.BACKGROUND_DARK,
         borderColor: isSuperset
-          ? "rgba(242, 143, 59, 0.3)"
+          ? "rgba(236, 72, 153, 0.3)"
           : isRoutine
           ? "rgba(242, 143, 59, 0.3)"
           : COLORS.BORDER_SUBTLE,
@@ -3467,7 +3467,7 @@ function SortableDrillItem({
     >
       {/* Superset/Circuit indicator */}
       {isSuperset && supersetGroup && (
-        <div className="text-[10px] mb-1.5 flex items-center justify-between" style={{ color: "#F28F3B" }}>
+        <div className="text-[10px] mb-1.5 flex items-center justify-between" style={{ color: "#EC4899" }}>
           <div className="flex items-center gap-1">
             <Link className="h-3 w-3" />
             <span className="font-medium">
@@ -3488,14 +3488,14 @@ function SortableDrillItem({
                 onOpenSupersetDescriptionModal(item.supersetId!, groupName);
               }}
               className="p-0.5 h-5 w-5"
-              style={{ color: "#F28F3B" }}
+              style={{ color: "#EC4899" }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "rgba(242, 143, 59, 0.2)";
+                e.currentTarget.style.backgroundColor = "rgba(236, 72, 153, 0.2)";
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = "#F28F3B";
+                e.currentTarget.style.color = "#EC4899";
               }}
               title="Edit group details"
             >
@@ -3508,14 +3508,14 @@ function SortableDrillItem({
                 onOpenSupersetModal(item, item.supersetId!);
               }}
               className="p-0.5 h-5 w-5"
-              style={{ color: "#F28F3B" }}
+              style={{ color: "#EC4899" }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "rgba(242, 143, 59, 0.2)";
+                e.currentTarget.style.backgroundColor = "rgba(236, 72, 153, 0.2)";
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = "#F28F3B";
+                e.currentTarget.style.color = "#EC4899";
               }}
               title="Add exercise to group"
             >
@@ -3560,7 +3560,7 @@ function SortableDrillItem({
                     {supersetItem.title}
                   </span>
                   {index === 0 && (
-                    <span className="text-[10px] font-medium" style={{ color: "#F28F3B" }}>
+                    <span className="text-[10px] font-medium" style={{ color: "#EC4899" }}>
                       +
                     </span>
                   )}
@@ -3762,21 +3762,21 @@ function ProgramItemCard({
       className="border"
       style={{
         backgroundColor: isSuperset
-          ? "rgba(242, 143, 59, 0.1)"
+          ? "rgba(236, 72, 153, 0.1)"
           : COLORS.BACKGROUND_CARD,
         borderColor: isSuperset
-          ? "rgba(242, 143, 59, 0.3)"
+          ? "rgba(236, 72, 153, 0.3)"
           : COLORS.BORDER_SUBTLE,
       }}
     >
       <CardContent className="p-3">
         {/* Superset Header */}
         {isSuperset && supersetGroup && (
-          <div className="mb-2.5 pb-2 border-b" style={{ borderColor: "rgba(242, 143, 59, 0.3)" }}>
+          <div className="mb-2.5 pb-2 border-b" style={{ borderColor: "rgba(236, 72, 153, 0.3)" }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Link className="h-3.5 w-3.5" style={{ color: "#F28F3B" }} />
-                <span className="text-xs font-medium" style={{ color: "#F28F3B" }}>
+                <Link className="h-3.5 w-3.5" style={{ color: "#EC4899" }} />
+                <span className="text-xs font-medium" style={{ color: "#EC4899" }}>
                   {supersetGroup.items.length === 2
                     ? "SUPERSET"
                     : `CIRCUIT (${supersetGroup.items.length} exercises)`}
@@ -3794,14 +3794,14 @@ function ProgramItemCard({
                   )
                 }
                 className="px-2 py-0.5 h-6 text-xs"
-                style={{ color: "#F28F3B" }}
+                style={{ color: "#EC4899" }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "rgba(242, 143, 59, 0.2)";
+                  e.currentTarget.style.backgroundColor = "rgba(236, 72, 153, 0.2)";
                   e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.color = "#F28F3B";
+                  e.currentTarget.style.color = "#EC4899";
                 }}
               >
                 <Edit className="h-2.5 w-2.5 mr-1" />
