@@ -870,7 +870,8 @@ export const userRouter = router({
 
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-      const notification = await db.notification.findFirst({
+      // First, try to find the notification with all criteria
+      let notification = await db.notification.findFirst({
         where: {
           id: input.notificationId,
           userId: user.id,
@@ -878,14 +879,51 @@ export const userRouter = router({
         },
       });
 
-      if (!notification || !(notification.data as any)?.clientUserId) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Client request not found",
+      // If not found with strict criteria, try to find it by ID only (for debugging)
+      if (!notification) {
+        notification = await db.notification.findFirst({
+          where: {
+            id: input.notificationId,
+          },
         });
+
+        // If found but doesn't belong to user or wrong type, throw error
+        if (notification) {
+          if (notification.userId !== user.id) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "You don't have permission to reject this request",
+            });
+          }
+          if (notification.type !== "CLIENT_JOIN_REQUEST") {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "This notification is not a client join request",
+            });
+          }
+        } else {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Notification not found",
+          });
+        }
       }
 
-      const clientUserId = (notification.data as any).clientUserId as string;
+      // Extract clientUserId from notification data
+      const notificationData = notification.data as any;
+      const clientUserId = notificationData?.clientUserId || notificationData?.clientId;
+
+      if (!clientUserId) {
+        // Still mark as read even if we can't find clientUserId
+        await db.notification.update({
+          where: { id: input.notificationId },
+          data: { isRead: true },
+        });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Notification data is missing client information",
+        });
+      }
 
       // Check if client record exists before trying to delete
       const clientRecord = await db.client.findFirst({
@@ -901,8 +939,8 @@ export const userRouter = router({
           });
         } catch (error) {
           // If deletion fails (e.g., record already deleted), log but continue
+          console.error("Error deleting client record:", error);
         }
-      } else {
       }
 
       // Mark notification as read
