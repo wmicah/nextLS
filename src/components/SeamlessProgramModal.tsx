@@ -30,6 +30,7 @@ import ProgramBuilder from "./ProgramBuilder";
 import VideoLibraryDialog from "./VideoLibraryDialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import { trpc } from "@/app/_trpc/client";
+import { COLORS } from "@/lib/colors";
 
 // Default program categories
 const DEFAULT_PROGRAM_CATEGORIES = [
@@ -661,18 +662,22 @@ export default function SeamlessProgramModal({
         }}
       >
         <DialogContent
-          className={`bg-[#2A3133] border-gray-600 max-h-[90vh] overflow-hidden flex flex-col p-0 [&>button]:hidden ${
+          className={`max-h-[90vh] overflow-hidden flex flex-col p-0 [&>button]:hidden ${
             currentStep === "structure" ? "max-w-[95vw] w-[95vw]" : "max-w-4xl"
           }`}
-          style={{ pointerEvents: "auto" }}
+          style={{ 
+            pointerEvents: "auto",
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-600">
+          <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
             <div>
-              <DialogTitle className="text-white text-2xl font-bold">
+              <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Create New Program
               </DialogTitle>
-              <DialogDescription className="text-gray-400 mt-1">
+              <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Build a comprehensive training program with weeks, days, and
                 exercises
               </DialogDescription>
@@ -681,15 +686,24 @@ export default function SeamlessProgramModal({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-gray-400 hover:text-white hover:bg-gray-600"
+              className="p-1"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Progress Steps */}
-          <div className="px-6 py-4 border-b border-gray-600">
-            <div className="flex items-center justify-center space-x-8">
+          <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+            <div className="flex items-center justify-center space-x-6">
               {[
                 { key: "details", label: "Details" },
                 { key: "structure", label: "Structure" },
@@ -704,27 +718,23 @@ export default function SeamlessProgramModal({
                 return (
                   <div key={step.key} className="flex items-center">
                     <div
-                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                        isActive
-                          ? "bg-[#4A5A70] border-[#4A5A70] text-white"
-                          : isCompleted
-                          ? "bg-green-500 border-green-500 text-white"
-                          : "bg-transparent border-gray-600 text-gray-400"
-                      }`}
+                      className="flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300 text-xs font-bold"
+                      style={{
+                        backgroundColor: isActive ? COLORS.GOLDEN_DARK : isCompleted ? COLORS.GREEN_PRIMARY : "transparent",
+                        borderColor: isActive ? COLORS.GOLDEN_ACCENT : isCompleted ? COLORS.GREEN_PRIMARY : COLORS.BORDER_SUBTLE,
+                        color: isActive || isCompleted ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                      }}
                     >
-                      <span className="text-sm font-bold">
-                        {isCompleted && !isActive ? "✓" : index + 1}
-                      </span>
+                      {isCompleted && !isActive ? "✓" : index + 1}
                     </div>
                     <span
-                      className={`ml-3 text-sm font-medium ${
-                        isActive ? "text-white" : "text-gray-400"
-                      }`}
+                      className="ml-2 text-xs font-medium"
+                      style={{ color: isActive ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY }}
                     >
                       {step.label}
                     </span>
                     {index < 2 && (
-                      <ArrowRight className="h-4 w-4 text-gray-600 mx-4" />
+                      <ArrowRight className="h-3.5 w-3.5 mx-3" style={{ color: COLORS.BORDER_SUBTLE }} />
                     )}
                   </div>
                 );
@@ -733,23 +743,24 @@ export default function SeamlessProgramModal({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4">
             {currentStep === "details" && (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-2">
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <h3 className="text-sm font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Program Details
                   </h3>
-                  <p className="text-gray-400">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Set up the basic information for your training program
                   </p>
                 </div>
 
-                <div className="max-w-2xl mx-auto space-y-6">
+                <div className="max-w-2xl mx-auto space-y-4">
                   <div>
                     <Label
                       htmlFor="program-title"
-                      className="text-white text-sm font-medium"
+                      className="text-xs font-medium"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Program Title *
                     </Label>
@@ -757,16 +768,21 @@ export default function SeamlessProgramModal({
                       id="program-title"
                       {...register("title")}
                       placeholder="e.g., Advanced Hitting Program, Beginner Pitching Development"
-                      className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12 text-lg"
+                      className="mt-1.5 h-9 text-sm"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
                       maxLength={60}
                     />
                     <div className="flex justify-between items-center mt-1">
                       {errors.title && (
-                        <p className="text-red-400 text-sm">
+                        <p className="text-xs" style={{ color: COLORS.RED_ALERT }}>
                           {errors.title.message}
                         </p>
                       )}
-                      <p className="text-gray-400 text-sm ml-auto">
+                      <p className="text-xs ml-auto" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {watch("title")?.length || 0}/60 characters
                       </p>
                     </div>
@@ -775,7 +791,8 @@ export default function SeamlessProgramModal({
                   <div>
                     <Label
                       htmlFor="program-description"
-                      className="text-white text-sm font-medium"
+                      className="text-xs font-medium"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Description
                     </Label>
@@ -783,7 +800,12 @@ export default function SeamlessProgramModal({
                       id="program-description"
                       {...register("description")}
                       placeholder="Describe what this program covers and who it's designed for..."
-                      className="bg-[#353A3A] border-gray-600 text-white mt-2 min-h-[100px] resize-none"
+                      className="mt-1.5 min-h-[80px] resize-none text-sm"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
                       rows={4}
                     />
                   </div>
@@ -792,25 +814,37 @@ export default function SeamlessProgramModal({
                     <div>
                       <Label
                         htmlFor="program-level"
-                        className="text-white text-sm font-medium"
+                        className="text-xs font-medium"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Focus Area *
                       </Label>
 
                       {!showCustomCategory ? (
-                        <div className="space-y-2 mt-2">
+                        <div className="space-y-2 mt-1.5">
                           <select
                             value={watchedValues.level}
                             onChange={e => setValue("level", e.target.value)}
-                            className="w-full px-3 py-3 rounded-lg border bg-[#353A3A] border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-12"
+                            className="w-full px-2.5 py-2 rounded-md border text-sm focus:outline-none h-9"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                            }}
                           >
-                            <option value="">Select focus area...</option>
+                            <option value="" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>Select focus area...</option>
 
                             <optgroup
                               label="Standard Categories"
                               style={{
-                                backgroundColor: "#2A3133",
-                                color: "#C3BCC2",
+                                backgroundColor: COLORS.BACKGROUND_DARK,
+                                color: COLORS.TEXT_PRIMARY,
                               }}
                             >
                               {DEFAULT_PROGRAM_CATEGORIES.map(cat => (
@@ -818,8 +852,8 @@ export default function SeamlessProgramModal({
                                   key={cat}
                                   value={cat}
                                   style={{
-                                    backgroundColor: "#353A3A",
-                                    color: "#C3BCC2",
+                                    backgroundColor: COLORS.BACKGROUND_DARK,
+                                    color: COLORS.TEXT_PRIMARY,
                                   }}
                                 >
                                   {cat}
@@ -834,8 +868,8 @@ export default function SeamlessProgramModal({
                               <optgroup
                                 label="Your Categories"
                                 style={{
-                                  backgroundColor: "#2A3133",
-                                  color: "#C3BCC2",
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  color: COLORS.TEXT_PRIMARY,
                                 }}
                               >
                                 {programCategoriesData
@@ -850,8 +884,8 @@ export default function SeamlessProgramModal({
                                       key={cat.name}
                                       value={cat.name}
                                       style={{
-                                        backgroundColor: "#353A3A",
-                                        color: "#C3BCC2",
+                                        backgroundColor: COLORS.BACKGROUND_DARK,
+                                        color: COLORS.TEXT_PRIMARY,
                                       }}
                                     >
                                       {cat.name} ({cat.count})
@@ -864,27 +898,27 @@ export default function SeamlessProgramModal({
                           <button
                             type="button"
                             onClick={() => setShowCustomCategory(true)}
-                            className="w-full p-3 rounded-lg border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-2 font-medium text-sm"
+                            className="w-full p-2 rounded-md border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-1.5 text-xs font-medium"
                             style={{
-                              borderColor: "#606364",
-                              color: "#ABA4AA",
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_SECONDARY,
                               backgroundColor: "transparent",
                             }}
                             onMouseEnter={e => {
-                              e.currentTarget.style.borderColor = "#C3BCC2";
-                              e.currentTarget.style.color = "#C3BCC2";
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                             }}
                             onMouseLeave={e => {
-                              e.currentTarget.style.borderColor = "#606364";
-                              e.currentTarget.style.color = "#ABA4AA";
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                             }}
                           >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-3.5 w-3.5" />
                             Or create a new category
                           </button>
                         </div>
                       ) : (
-                        <div className="space-y-3 mt-2">
+                        <div className="space-y-2 mt-1.5">
                           <input
                             type="text"
                             value={customCategory}
@@ -894,17 +928,17 @@ export default function SeamlessProgramModal({
                             }}
                             placeholder="Enter new category name (e.g., Velocity)"
                             maxLength={50}
-                            className="w-full p-3 rounded-lg border-2 focus:outline-none transition-all duration-200 h-12"
+                            className="w-full px-2.5 py-2 rounded-md border-2 focus:outline-none transition-all duration-200 h-9 text-sm"
                             style={{
-                              backgroundColor: "#2A3133",
-                              borderColor: "#C3BCC2",
-                              color: "#C3BCC2",
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
                             }}
                             onFocus={e => {
-                              e.currentTarget.style.borderColor = "#3B82F6";
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                             }}
                             onBlur={e => {
-                              e.currentTarget.style.borderColor = "#C3BCC2";
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                             }}
                             autoFocus
                           />
@@ -921,16 +955,16 @@ export default function SeamlessProgramModal({
                                 setValue("level", "");
                               }
                             }}
-                            className="text-sm px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                            className="text-xs px-3 py-1.5 rounded-md transition-all duration-200 flex items-center gap-1.5"
                             style={{
-                              color: "#ABA4AA",
-                              backgroundColor: "#2A3133",
+                              color: COLORS.TEXT_SECONDARY,
+                              backgroundColor: COLORS.BACKGROUND_DARK,
                             }}
                             onMouseEnter={e => {
-                              e.currentTarget.style.color = "#C3BCC2";
+                              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                             }}
                             onMouseLeave={e => {
-                              e.currentTarget.style.color = "#ABA4AA";
+                              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                             }}
                           >
                             <ChevronLeft className="h-3 w-3" />
@@ -940,7 +974,7 @@ export default function SeamlessProgramModal({
                       )}
 
                       {errors.level && (
-                        <p className="text-red-400 text-sm mt-1">
+                        <p className="text-xs mt-1" style={{ color: COLORS.RED_ALERT }}>
                           {errors.level.message}
                         </p>
                       )}
@@ -949,7 +983,8 @@ export default function SeamlessProgramModal({
                     <div>
                       <Label
                         htmlFor="program-duration"
-                        className="text-white text-sm font-medium"
+                        className="text-xs font-medium"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Duration (Weeks) - Auto-calculated *
                       </Label>
@@ -959,10 +994,15 @@ export default function SeamlessProgramModal({
                         min="1"
                         {...register("duration", { valueAsNumber: true })}
                         placeholder="Auto-calculated from weeks"
-                        className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12 cursor-not-allowed opacity-75"
+                        className="mt-1.5 h-9 text-sm cursor-not-allowed opacity-75"
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_SECONDARY,
+                        }}
                         readOnly
                       />
-                      <p className="text-gray-400 text-sm mt-1">
+                      <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                         Duration automatically updates based on number of weeks
                       </p>
                     </div>
@@ -972,49 +1012,64 @@ export default function SeamlessProgramModal({
             )}
 
             {currentStep === "structure" && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-medium text-white mb-1">
+                  <h3 className="text-sm font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Program Structure
                   </h3>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Build your program with weeks, days, and exercises
                   </p>
                 </div>
 
                 <div className="max-w-full mx-auto">
-                  <div className="flex items-center gap-4 mb-4">
-                    <h4 className="text-base font-medium text-white">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h4 className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Program Weeks
                     </h4>
                     <Badge
                       variant="outline"
-                      className="text-gray-400 border-gray-600"
+                      className="text-xs px-2 py-0.5"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                      }}
                     >
                       {programBuilderWeeks.length} weeks
                     </Badge>
                   </div>
 
                   {programBuilderWeeks.length === 0 ? (
-                    <Card className="bg-[#353A3A] border-gray-600">
-                      <CardContent className="p-12 text-center">
-                        <h4 className="text-lg font-medium text-white mb-2">
+                    <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+                      <CardContent className="p-8 text-center">
+                        <h4 className="text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                           No weeks added yet
                         </h4>
-                        <p className="text-gray-400 mb-6">
+                        <p className="text-xs mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                           Start building your program by adding weeks and
                           organizing your training schedule
                         </p>
                         <Button
                           onClick={() => setCurrentStep("structure")}
-                          className="bg-[#4A5A70] hover:bg-[#606364]"
+                          className="text-xs h-8 px-3"
+                          style={{
+                            backgroundColor: COLORS.GOLDEN_DARK,
+                            color: COLORS.TEXT_PRIMARY,
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                          }}
                         >
                           Start Building
                         </Button>
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <ProgramBuilder
                         onSave={handleProgramBuilderSave}
                         initialWeeks={programBuilderWeeks}
@@ -1029,26 +1084,26 @@ export default function SeamlessProgramModal({
             )}
 
             {currentStep === "review" && (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-2">
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <h3 className="text-sm font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Review Your Program
                   </h3>
-                  <p className="text-gray-400">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Double-check everything looks good before saving
                   </p>
                 </div>
 
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <Card className="bg-[#353A3A] border-gray-600">
-                    <CardContent className="p-6">
-                      <h4 className="text-lg font-semibold text-white mb-2">
+                <div className="max-w-4xl mx-auto space-y-4">
+                  <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+                    <CardContent className="p-4">
+                      <h4 className="text-sm font-semibold mb-1.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                         {watchedValues.title}
                       </h4>
-                      <p className="text-gray-400 mb-4">
+                      <p className="text-xs mb-3" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {watchedValues.description}
                       </p>
-                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                      <div className="flex items-center gap-3 text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                         <Badge
                           variant="outline"
                           className={getLevelColor(watchedValues.level)}
@@ -1065,23 +1120,25 @@ export default function SeamlessProgramModal({
                     </CardContent>
                   </Card>
 
-                  <div className="space-y-3">
-                    <h5 className="text-white font-medium">
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Program Structure:
                     </h5>
                     {programBuilderWeeks.map((week, index) => (
                       <div
                         key={week.id}
-                        className="flex items-center gap-3 p-3 bg-[#353A3A] rounded-lg border border-gray-600"
+                        className="flex items-center gap-2.5 p-2.5 rounded-md border"
+                        style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
                       >
-                        <div className="w-6 h-6 bg-[#4A5A70] rounded-full flex items-center justify-center text-white text-xs font-medium">
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium"
+                          style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}>
                           {index + 1}
                         </div>
                         <div className="flex-1">
-                          <span className="text-white font-medium">
+                          <span className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {week.name}
                           </span>
-                          <div className="text-sm text-gray-400 mt-1">
+                          <div className="text-[10px] mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {Object.values(week.days).flat().length} total
                             exercises across 7 days
                           </div>
@@ -1095,8 +1152,8 @@ export default function SeamlessProgramModal({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between p-6 border-t border-gray-600">
-            <div className="flex gap-3">
+          <div className="flex items-center justify-between p-4 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+            <div className="flex gap-2">
               {currentStep !== "details" && (
                 <Button
                   variant="outline"
@@ -1104,18 +1161,44 @@ export default function SeamlessProgramModal({
                     if (currentStep === "structure") setCurrentStep("details");
                     if (currentStep === "review") setCurrentStep("structure");
                   }}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_SECONDARY,
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
                 >
                   Back
                 </Button>
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 onClick={onClose}
-                className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                className="text-xs h-8 px-3"
+                style={{
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_SECONDARY,
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
                 Cancel
               </Button>
@@ -1124,10 +1207,21 @@ export default function SeamlessProgramModal({
                 <Button
                   onClick={() => setCurrentStep("structure")}
                   disabled={!canProceedToStructure}
-                  className="bg-[#4A5A70] hover:bg-[#606364] text-white"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_DARK,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (!canProceedToStructure) return;
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                  }}
                 >
                   Next: Build Structure
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                 </Button>
               )}
 
@@ -1135,10 +1229,21 @@ export default function SeamlessProgramModal({
                 <Button
                   onClick={() => setCurrentStep("review")}
                   disabled={!canProceedToReview}
-                  className="bg-[#4A5A70] hover:bg-[#606364] text-white"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_DARK,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (!canProceedToReview) return;
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                  }}
                 >
                   Next: Review
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                 </Button>
               )}
 
@@ -1146,11 +1251,24 @@ export default function SeamlessProgramModal({
                 <Button
                   onClick={handleSubmit(handleSubmitForm)}
                   disabled={isSubmitting}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    backgroundColor: COLORS.GREEN_PRIMARY,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (isSubmitting) return;
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
                       Creating...
                     </>
                   ) : (

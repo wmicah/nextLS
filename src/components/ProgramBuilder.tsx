@@ -78,6 +78,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { COLORS } from "@/lib/colors";
 
 // Types
 import {
@@ -203,19 +204,24 @@ function ExerciseEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl">
+      <DialogContent className="z-[120] max-w-2xl [&>button]:hidden"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+      >
         <DialogHeader>
-          <DialogTitle className="text-white">Edit Exercise</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Edit Exercise</DialogTitle>
+          <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
             Update the exercise details and instructions
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="title" className="text-gray-400 text-sm">
+              <Label htmlFor="title" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Exercise Title
               </Label>
               <Input
@@ -224,14 +230,25 @@ function ExerciseEditDialog({
                 onChange={e =>
                   setFormData(prev => ({ ...prev, title: e.target.value }))
                 }
-                className="bg-[#353A3A] border-gray-600 text-white"
+                className="mt-1.5 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 placeholder="Exercise name"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="duration" className="text-gray-400 text-sm">
+              <Label htmlFor="duration" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Duration (optional)
               </Label>
               <Input
@@ -240,7 +257,18 @@ function ExerciseEditDialog({
                 onChange={e =>
                   setFormData(prev => ({ ...prev, duration: e.target.value }))
                 }
-                className="bg-[#353A3A] border-gray-600 text-white"
+                className="mt-1.5 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 placeholder="e.g., 30 seconds"
               />
             </div>
@@ -248,11 +276,11 @@ function ExerciseEditDialog({
 
           {/* Description */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="description" className="text-gray-400 text-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <Label htmlFor="description" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Exercise Description
               </Label>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                 {formData.description.length}/120
               </span>
             </div>
@@ -265,7 +293,18 @@ function ExerciseEditDialog({
                   setFormData(prev => ({ ...prev, description: value }));
                 }
               }}
-              className="bg-[#353A3A] border-gray-600 text-white"
+              className="text-sm"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+              }}
               placeholder="Describe how to perform this exercise..."
               rows={3}
               maxLength={120}
@@ -273,9 +312,9 @@ function ExerciseEditDialog({
           </div>
 
           {/* Sets, Reps, Duration */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label htmlFor="sets" className="text-gray-400 text-sm">
+              <Label htmlFor="sets" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Sets
               </Label>
               <Input
@@ -288,13 +327,24 @@ function ExerciseEditDialog({
                     sets: e.target.value ? parseInt(e.target.value) : undefined,
                   }))
                 }
-                className="bg-[#353A3A] border-gray-600 text-white"
+                className="mt-1.5 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 min="0"
               />
             </div>
 
             <div>
-              <Label htmlFor="reps" className="text-gray-400 text-sm">
+              <Label htmlFor="reps" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Reps
               </Label>
               <Input
@@ -307,13 +357,24 @@ function ExerciseEditDialog({
                     reps: e.target.value ? parseInt(e.target.value) : undefined,
                   }))
                 }
-                className="bg-[#353A3A] border-gray-600 text-white"
+                className="mt-1.5 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 min="0"
               />
             </div>
 
             <div>
-              <Label htmlFor="tempo" className="text-gray-400 text-sm">
+              <Label htmlFor="tempo" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Duration
               </Label>
               <Input
@@ -322,24 +383,60 @@ function ExerciseEditDialog({
                 onChange={e =>
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
-                className="bg-[#353A3A] border-gray-600 text-white"
+                className="mt-1.5 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 placeholder="e.g., 30 seconds"
               />
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="text-xs h-8 px-3"
+              style={{
+                backgroundColor: COLORS.GOLDEN_DARK,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onMouseEnter={e => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Saving..." : "Save Changes"}
@@ -1540,42 +1637,66 @@ function ProgramBuilder({
   return (
     <div
       className="min-h-screen p-4 overflow-x-auto"
-      style={{ backgroundColor: "#2A3133" }}
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
     >
       {/* Program Details Header */}
       {programDetails && (
-        <div className="mb-8 p-6 bg-[#353A3A] rounded-2xl border border-gray-600">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="mb-6 p-4 rounded-lg border"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <div className="flex items-center gap-4 mb-2">
+              <div className="flex items-center gap-3 mb-1.5">
                 {programDetails.onBack && (
                   <Button
                     variant="ghost"
                     onClick={programDetails.onBack}
-                    className="text-gray-400 hover:text-white"
+                    className="p-1 h-8"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
+                    <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-xs">Back</span>
                   </Button>
                 )}
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                   {programDetails.title || "Untitled Program"}
                 </h2>
               </div>
-              <p className="text-gray-400">
+              <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                 {programDetails.description || "No description provided"}
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Badge
                 variant="outline"
-                className="bg-green-500/10 text-green-400 border-green-500/20"
+                className="text-xs px-2 py-0.5"
+                style={{
+                  backgroundColor: "rgba(112, 207, 112, 0.1)",
+                  color: COLORS.GREEN_PRIMARY,
+                  borderColor: "rgba(112, 207, 112, 0.2)",
+                }}
               >
                 {programDetails.level}
               </Badge>
               <Badge
                 variant="outline"
-                className="bg-purple-500/10 text-purple-400 border-purple-500/20"
+                className="text-xs px-2 py-0.5"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  color: COLORS.TEXT_SECONDARY,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
               >
                 {programDetails.duration} weeks
               </Badge>
@@ -1586,15 +1707,27 @@ function ProgramBuilder({
                   handleSave();
                 }}
                 disabled={programDetails.isSaving}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="text-xs h-8 px-3"
+                style={{
+                  backgroundColor: COLORS.GREEN_PRIMARY,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onMouseEnter={e => {
+                  if (!programDetails.isSaving) {
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                  }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                }}
               >
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-3.5 w-3.5 mr-1.5" />
                 {programDetails.isSaving ? "Saving..." : "Save Program"}
               </Button>
             </div>
           </div>
           {programDetails.lastSaved && (
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-xs mt-2" style={{ color: COLORS.TEXT_MUTED }}>
               Last saved: {programDetails.lastSaved.toLocaleTimeString()}
             </p>
           )}
@@ -1603,29 +1736,52 @@ function ProgramBuilder({
 
       {/* Top Toolbar - Only show when not in edit mode */}
       {!programDetails && (
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Button
                 onClick={addWeek}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="text-xs h-8 px-3"
+                style={{
+                  backgroundColor: COLORS.GOLDEN_DARK,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                }}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Add Week
               </Button>
               <Button
                 onClick={toggleCollapseAll}
                 variant="outline"
-                className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+                className="text-xs h-8 px-3"
+                style={{
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_SECONDARY,
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
                 {weeks.every(week => week.collapsed) ? (
                   <>
-                    <Expand className="h-4 w-4 mr-2" />
+                    <Expand className="h-3.5 w-3.5 mr-1.5" />
                     Expand All
                   </>
                 ) : (
                   <>
-                    <Minimize className="h-4 w-4 mr-2" />
+                    <Minimize className="h-3.5 w-3.5 mr-1.5" />
                     Collapse All
                   </>
                 )}
@@ -1637,28 +1793,51 @@ function ProgramBuilder({
 
       {/* Action Buttons - Show when in edit mode */}
       {programDetails && (
-        <div className="mb-8">
-          <div className="flex items-center gap-4">
+        <div className="mb-6">
+          <div className="flex items-center gap-2">
             <Button
               onClick={addWeek}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="text-xs h-8 px-3"
+              style={{
+                backgroundColor: COLORS.GOLDEN_DARK,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               Add Week
             </Button>
             <Button
               onClick={toggleCollapseAll}
               variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               {weeks.every(week => week.collapsed) ? (
                 <>
-                  <Expand className="h-4 w-4 mr-2" />
+                  <Expand className="h-3.5 w-3.5 mr-1.5" />
                   Expand All
                 </>
               ) : (
                 <>
-                  <Minimize className="h-4 w-4 mr-2" />
+                  <Minimize className="h-3.5 w-3.5 mr-1.5" />
                   Collapse All
                 </>
               )}
@@ -1724,9 +1903,14 @@ function ProgramBuilder({
 
       {/* Superset/Circuit Modal */}
       <Dialog open={isSupersetModalOpen} onOpenChange={setIsSupersetModalOpen}>
-        <DialogContent className="bg-[#2A3133] border-gray-600 z-[120] max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogContent className="z-[120] max-w-2xl max-h-[80vh] flex flex-col [&>button]:hidden"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
               {isAddingToExisting
                 ? `Add to ${
                     existingSupersetId
@@ -1735,28 +1919,33 @@ function ProgramBuilder({
                   }`
                 : "Create Superset or Circuit"}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
               {isAddingToExisting
                 ? "Select exercises to add to this group"
                 : "Select one or more exercises from the same day. Select 1 exercise for a Superset (2 total) or 2+ exercises for a Circuit (3+ total)."}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto space-y-4 p-4">
+          <div className="flex-1 overflow-y-auto space-y-3 p-4">
             <div>
-              <Label className="text-white">
+              <Label className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {isAddingToExisting ? "Current Group" : "First Exercise"}
               </Label>
-              <div className="p-3 bg-gray-700 rounded border border-gray-600">
-                <p className="text-white font-medium">
+              <div className="p-2.5 rounded-md border mt-1.5"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
+                <p className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                   {pendingSupersetDrill?.title}
                 </p>
-                <p className="text-gray-400 text-sm">
+                <p className="text-[10px] mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                   {pendingSupersetDrill?.notes}
                 </p>
               </div>
             </div>
             <div>
-              <Label className="text-white">
+              <Label className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {isAddingToExisting
                   ? "Exercises to Add"
                   : selectedExerciseIds.size === 0
@@ -1767,7 +1956,12 @@ function ProgramBuilder({
                       selectedExerciseIds.size + 1
                     } exercises)`}
               </Label>
-              <div className="max-h-64 overflow-y-auto border border-gray-600 rounded p-2 space-y-2 bg-gray-800">
+              <div className="max-h-64 overflow-y-auto border rounded p-2 space-y-1.5 mt-1.5"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 {weeks
                   .find(week => week.id === selectedWeekId)
                   ?.days[selectedDayKey]?.filter(item => {
@@ -1786,20 +1980,36 @@ function ProgramBuilder({
                   .map(item => (
                     <label
                       key={item.id}
-                      className="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded cursor-pointer"
+                      className="flex items-center space-x-2.5 p-2 rounded-md cursor-pointer transition-colors"
+                      style={{
+                        backgroundColor: selectedExerciseIds.has(item.id) ? COLORS.BACKGROUND_CARD_HOVER : "transparent",
+                      }}
+                      onMouseEnter={e => {
+                        if (!selectedExerciseIds.has(item.id)) {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!selectedExerciseIds.has(item.id)) {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        }
+                      }}
                     >
                       <input
                         type="checkbox"
                         checked={selectedExerciseIds.has(item.id)}
                         onChange={() => toggleExerciseSelection(item.id)}
-                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                        className="w-3.5 h-3.5 rounded"
+                        style={{
+                          accentColor: COLORS.GOLDEN_ACCENT,
+                        }}
                       />
                       <div className="flex-1">
-                        <p className="text-white text-sm font-medium">
+                        <p className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                           {item.title}
                         </p>
                         {item.notes && (
-                          <p className="text-gray-400 text-xs">{item.notes}</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>{item.notes}</p>
                         )}
                       </div>
                     </label>
@@ -1807,7 +2017,7 @@ function ProgramBuilder({
               </div>
             </div>
           </div>
-          <DialogFooter className="border-t border-gray-700 p-4">
+          <DialogFooter className="border-t p-3 gap-2" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
             <Button
               variant="outline"
               onClick={() => {
@@ -1817,14 +2027,38 @@ function ProgramBuilder({
                 setIsAddingToExisting(false);
                 setExistingSupersetId(null);
               }}
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirmSuperset}
               disabled={!isAddingToExisting && selectedExerciseIds.size === 0}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="text-xs h-8 px-3"
+              style={{
+                backgroundColor: COLORS.GOLDEN_DARK,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onMouseEnter={e => {
+                if (!isAddingToExisting && selectedExerciseIds.size === 0) return;
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
             >
               {isAddingToExisting ? "Add Exercises" : "Create Group"}
             </Button>
@@ -1837,20 +2071,25 @@ function ProgramBuilder({
         open={isCreateRoutineModalOpen}
         onOpenChange={setIsCreateRoutineModalOpen}
       >
-        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-4xl z-[110]">
+        <DialogContent className="max-w-4xl z-[110] [&>button]:hidden"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           <DialogHeader>
-            <DialogTitle className="text-white">Create New Routine</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Create New Routine</DialogTitle>
+            <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
               Add videos/exercises to create a reusable routine. This routine
               can then be added to any program day.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Routine Details */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="routine-name" className="text-white">
+                <Label htmlFor="routine-name" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Routine Name
                 </Label>
                 <Input
@@ -1860,11 +2099,22 @@ function ProgramBuilder({
                     setNewRoutine(prev => ({ ...prev, name: e.target.value }))
                   }
                   placeholder="e.g., Drive Warm-up, Core Stability"
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="mt-1.5 h-9 text-sm"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#F28F3B";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  }}
                 />
               </div>
               <div>
-                <Label htmlFor="routine-description" className="text-white">
+                <Label htmlFor="routine-description" className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Description
                 </Label>
                 <Input
@@ -1877,15 +2127,26 @@ function ProgramBuilder({
                     }))
                   }
                   placeholder="Describe what this routine focuses on..."
-                  className="bg-gray-700 border-gray-600 text-white"
+                  className="mt-1.5 h-9 text-sm"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#F28F3B";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  }}
                 />
               </div>
             </div>
 
             {/* Routine Day */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-white">Routine Day</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Routine Day</h3>
                 <Button
                   onClick={() => {
                     // Open video library to select videos for the routine
@@ -1894,30 +2155,49 @@ function ProgramBuilder({
                     setSelectedDayKey("sun");
                   }}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    backgroundColor: "#F28F3B",
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "#D67A2F";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#F28F3B";
+                  }}
                 >
-                  <Video className="h-4 w-4 mr-2" />
+                  <Video className="h-3.5 w-3.5 mr-1.5" />
                   Add from Library
                 </Button>
               </div>
 
-              <Card className="bg-gray-700/50 border-gray-600">
+              <Card className="border"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 <CardContent className="p-4">
                   {!newRoutine.exercises ||
                   newRoutine.exercises.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>
+                    <div className="text-center py-6" style={{ color: COLORS.TEXT_SECONDARY }}>
+                      <Target className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                      <p className="text-xs">
                         No exercises added yet. Click "Add Exercise" to get
                         started.
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {newRoutine.exercises?.map((exercise, index) => (
                         <div
                           key={exercise.id}
-                          className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg border border-gray-600"
+                          className="flex items-center gap-2.5 p-2.5 rounded-md border"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                          }}
                         >
                           <div className="flex-1">
                             <Input
@@ -1936,9 +2216,20 @@ function ProgramBuilder({
                                 }));
                               }}
                               placeholder="Exercise name"
-                              className="bg-gray-700 border-gray-600 text-white mb-2"
+                              className="mb-1.5 h-8 text-xs"
+                              style={{
+                                backgroundColor: COLORS.BACKGROUND_CARD,
+                                borderColor: COLORS.BORDER_SUBTLE,
+                                color: COLORS.TEXT_PRIMARY,
+                              }}
+                              onFocus={e => {
+                                e.currentTarget.style.borderColor = "#F28F3B";
+                              }}
+                              onBlur={e => {
+                                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                              }}
                             />
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-3 gap-1.5">
                               <Input
                                 value={exercise.sets || ""}
                                 onChange={e => {
@@ -1957,7 +2248,18 @@ function ProgramBuilder({
                                   }));
                                 }}
                                 type="number"
-                                className="bg-gray-700 border-gray-600 text-white text-sm"
+                                className="h-7 text-xs"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_PRIMARY,
+                                }}
+                                onFocus={e => {
+                                  e.currentTarget.style.borderColor = "#F28F3B";
+                                }}
+                                onBlur={e => {
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                }}
                               />
                               <Input
                                 value={exercise.reps || ""}
@@ -1977,7 +2279,18 @@ function ProgramBuilder({
                                   }));
                                 }}
                                 type="number"
-                                className="bg-gray-700 border-gray-600 text-white text-sm"
+                                className="h-7 text-xs"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_PRIMARY,
+                                }}
+                                onFocus={e => {
+                                  e.currentTarget.style.borderColor = "#F28F3B";
+                                }}
+                                onBlur={e => {
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                }}
                               />
                               <Input
                                 value={exercise.tempo || ""}
@@ -1995,7 +2308,18 @@ function ProgramBuilder({
                                   }));
                                 }}
                                 placeholder="e.g., 30 seconds"
-                                className="bg-gray-700 border-gray-600 text-white text-sm"
+                                className="h-7 text-xs"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_PRIMARY,
+                                }}
+                                onFocus={e => {
+                                  e.currentTarget.style.borderColor = "#F28F3B";
+                                }}
+                                onBlur={e => {
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                }}
                               />
                             </div>
                             <Input
@@ -2014,7 +2338,18 @@ function ProgramBuilder({
                                 }));
                               }}
                               placeholder="Notes (optional)"
-                              className="bg-gray-700 border-gray-600 text-white text-sm mt-2"
+                              className="h-7 text-xs mt-1.5"
+                              style={{
+                                backgroundColor: COLORS.BACKGROUND_CARD,
+                                borderColor: COLORS.BORDER_SUBTLE,
+                                color: COLORS.TEXT_PRIMARY,
+                              }}
+                              onFocus={e => {
+                                e.currentTarget.style.borderColor = "#F28F3B";
+                              }}
+                              onBlur={e => {
+                                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                              }}
                             />
                           </div>
                           <div className="flex gap-1">
@@ -2026,10 +2361,17 @@ function ProgramBuilder({
                                 setIsExerciseEditDialogOpen(true);
                                 setSelectedWeekId("routine-creation");
                               }}
-                              className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                              className="p-1 h-7 w-7"
+                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.backgroundColor = "transparent";
+                              }}
                               type="button"
                             >
-                              <Edit className="h-4 w-4" />
+                              <Edit className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -2044,10 +2386,17 @@ function ProgramBuilder({
                                   exercises: updatedExercises,
                                 }));
                               }}
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              className="p-1 h-7 w-7"
+                              style={{ color: COLORS.RED_ALERT }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.backgroundColor = "transparent";
+                              }}
                               type="button"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
@@ -2059,14 +2408,27 @@ function ProgramBuilder({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => {
                 setIsCreateRoutineModalOpen(false);
                 setNewRoutine({ name: "", description: "", exercises: [] });
               }}
-              className="border-gray-600 text-gray-300"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
@@ -2078,7 +2440,21 @@ function ProgramBuilder({
                 !newRoutine.exercises ||
                 newRoutine.exercises.length === 0
               }
-              className="bg-green-600 hover:bg-green-700"
+              className="text-xs h-8 px-3"
+              style={{
+                backgroundColor: "#F28F3B",
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onMouseEnter={e => {
+                if (!newRoutine.name.trim() ||
+                    !newRoutine.description.trim() ||
+                    !newRoutine.exercises ||
+                    newRoutine.exercises.length === 0) return;
+                e.currentTarget.style.backgroundColor = "#D67A2F";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "#F28F3B";
+              }}
             >
               Create Routine
             </Button>
@@ -2091,48 +2467,76 @@ function ProgramBuilder({
         open={isAddRoutineModalOpen}
         onOpenChange={setIsAddRoutineModalOpen}
       >
-        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-2xl z-[120]">
+        <DialogContent className="max-w-2xl z-[120] [&>button]:hidden"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           <DialogHeader>
-            <DialogTitle className="text-white">Add Routine to Day</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Add Routine to Day</DialogTitle>
+            <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
               Select a routine to add to this day. The routine will appear as a
               single item but expand to show all exercises for clients.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Search Bar */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
               <Input
                 type="text"
                 placeholder="Search routines..."
                 value={routineSearchTerm}
                 onChange={e => setRoutineSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500"
+                className="pl-9 h-9 text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = "#F28F3B";
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
               />
             </div>
 
             {routines.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No routines created yet.</p>
-                <p className="text-sm">
+              <div className="text-center py-6" style={{ color: COLORS.TEXT_SECONDARY }}>
+                <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-xs">No routines created yet.</p>
+                <p className="text-[10px] mt-1">
                   Create a routine first to use this feature.
                 </p>
               </div>
             ) : filteredRoutines.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No routines found matching "{routineSearchTerm}"</p>
-                <p className="text-sm">Try adjusting your search terms.</p>
+              <div className="text-center py-6" style={{ color: COLORS.TEXT_SECONDARY }}>
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-xs">No routines found matching "{routineSearchTerm}"</p>
+                <p className="text-[10px] mt-1">Try adjusting your search terms.</p>
               </div>
             ) : (
-              <div className="grid gap-3 max-h-96 overflow-y-auto">
+              <div className="grid gap-2 max-h-96 overflow-y-auto">
                 {filteredRoutines.map(routine => (
                   <Card
                     key={routine.id}
-                    className="bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 cursor-pointer transition-colors"
+                    className="border cursor-pointer transition-colors"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = "#F28F3B";
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    }}
                     onClick={() => {
                       if (pendingRoutineDay) {
                         handleAddRoutineToDay(
@@ -2145,16 +2549,16 @@ function ProgramBuilder({
                       }
                     }}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-medium text-white mb-1">
+                          <h3 className="text-xs font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {routine.name}
                           </h3>
-                          <p className="text-sm text-gray-400 mb-2">
+                          <p className="text-[10px] mb-1.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {routine.description || "No description provided"}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <div className="flex items-center gap-1.5 text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
                             <span>
                               {routine.exercises.length} exercise
                               {routine.exercises.length !== 1 ? "s" : ""}
@@ -2171,9 +2575,19 @@ function ProgramBuilder({
                         </div>
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="text-xs h-7 px-2"
+                          style={{
+                            backgroundColor: "#F28F3B",
+                            color: COLORS.TEXT_PRIMARY,
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = "#D67A2F";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = "#F28F3B";
+                          }}
                         >
-                          <Plus className="h-4 w-4 mr-2" />
+                          <Plus className="h-3 w-3 mr-1" />
                           Add
                         </Button>
                       </div>
@@ -2191,7 +2605,20 @@ function ProgramBuilder({
                 setIsAddRoutineModalOpen(false);
                 setPendingRoutineDay(null);
               }}
-              className="border-gray-600 text-gray-300"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
@@ -2294,40 +2721,71 @@ function WeekCard({
   return (
     <Card
       ref={setNodeRef}
-      style={style}
-      className="bg-[#353A3A] border-gray-600 shadow-xl w-full"
+      style={{
+        ...style,
+        backgroundColor: COLORS.BACKGROUND_CARD,
+        borderColor: COLORS.BORDER_SUBTLE,
+      }}
+      className="shadow-xl w-full"
     >
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggleCollapse}
-              className="p-1 h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-600 flex-shrink-0"
+              className="p-1 h-7 w-7 flex-shrink-0"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
               {week.collapsed ? (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3.5 w-3.5" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3.5 w-3.5" />
               )}
             </Button>
-            <CardTitle className="text-xl font-bold text-white truncate">
+            <CardTitle className="text-sm font-bold truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
               {week.name}
             </CardTitle>
             <Badge
               variant="outline"
-              className="bg-blue-500/10 text-blue-400 border-blue-500/20 flex-shrink-0"
+              className="text-xs px-2 py-0.5 flex-shrink-0"
+              style={{
+                backgroundColor: "rgba(229, 178, 50, 0.1)",
+                color: COLORS.GOLDEN_ACCENT,
+                borderColor: "rgba(229, 178, 50, 0.2)",
+              }}
             >
               {weekIndex + 1}
             </Badge>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={onDuplicate}
-              className="border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
               title="Duplicate week"
             >
               <Copy className="h-3.5 w-3.5" />
@@ -2336,7 +2794,18 @@ function WeekCard({
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="border-red-500 text-red-400 hover:bg-red-500/10 h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
+              style={{
+                borderColor: COLORS.RED_ALERT,
+                color: COLORS.RED_ALERT,
+                backgroundColor: "transparent",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
               title="Delete week"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -2501,18 +2970,27 @@ function DayCard({
   return (
     <div className="space-y-3">
       {/* Day Header */}
-      <div className="text-center mb-3">
+      <div className="text-center mb-2.5">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-sm font-medium text-gray-300">{dayLabel}</h3>
+          <h3 className="text-xs font-medium" style={{ color: COLORS.TEXT_SECONDARY }}>{dayLabel}</h3>
           <div className="flex items-center gap-1">
             {/* Copy Button */}
             <button
               onClick={() => onCopyDay(weekId, dayKey)}
-              className="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+              className="p-1 rounded transition-colors"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
               title="Copy this day"
             >
               <svg
-                className="h-4 w-4"
+                className="h-3.5 w-3.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -2529,15 +3007,27 @@ function DayCard({
             <button
               onClick={() => onPasteDay(weekId, dayKey)}
               disabled={!copiedDay}
-              className={`p-1 rounded transition-colors ${
-                copiedDay
-                  ? "text-gray-400 hover:text-white hover:bg-gray-600"
-                  : "text-gray-600 cursor-not-allowed"
-              }`}
+              className="p-1 rounded transition-colors"
+              style={{
+                color: copiedDay ? COLORS.TEXT_SECONDARY : COLORS.TEXT_MUTED,
+                cursor: copiedDay ? "pointer" : "not-allowed",
+              }}
+              onMouseEnter={e => {
+                if (copiedDay) {
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }
+              }}
+              onMouseLeave={e => {
+                if (copiedDay) {
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }
+              }}
               title={copiedDay ? "Paste copied day" : "No day copied"}
             >
               <svg
-                className="h-4 w-4"
+                className="h-3.5 w-3.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -2556,17 +3046,16 @@ function DayCard({
 
       {/* Day Content */}
       <Card
-        className={cn(
-          "min-h-[300px] w-full",
-          isRestDay
-            ? "bg-gray-700/30 border-gray-500/30"
-            : "bg-gray-700/50 border-gray-500/50"
-        )}
+        className="min-h-[250px] w-full border"
+        style={{
+          backgroundColor: isRestDay ? COLORS.BACKGROUND_DARK : COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
       >
-        <CardContent className="p-3">
+        <CardContent className="p-2.5">
           {isRestDay ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-              <Moon className="h-6 w-6 mb-2 opacity-50" />
+            <div className="flex flex-col items-center justify-center h-full text-center" style={{ color: COLORS.TEXT_SECONDARY }}>
+              <Moon className="h-5 w-5 mb-1.5 opacity-50" />
               <span className="text-xs font-medium">Rest Day</span>
             </div>
           ) : (
@@ -2699,12 +3188,27 @@ function DayCard({
       </Card>
 
       {/* Add Buttons */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Button
           onClick={() => onAddItem()}
           variant="outline"
           size="sm"
-          className="w-full border-gray-500/50 text-gray-400 hover:bg-gray-600 hover:text-white hover:border-gray-400"
+          className="w-full text-xs h-7"
+          style={{
+            borderColor: COLORS.BORDER_SUBTLE,
+            color: COLORS.TEXT_SECONDARY,
+            backgroundColor: COLORS.BACKGROUND_CARD,
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+          }}
         >
           <Video className="h-3 w-3 mr-1" />
           Add from Library
@@ -2713,7 +3217,20 @@ function DayCard({
           onClick={() => onOpenAddRoutine(weekId, dayKey)}
           variant="outline"
           size="sm"
-          className="w-full border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-400"
+          className="w-full text-xs h-7"
+          style={{
+            borderColor: "rgba(242, 143, 59, 0.3)",
+            color: "#F28F3B",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.backgroundColor = "rgba(242, 143, 59, 0.1)";
+            e.currentTarget.style.borderColor = "#F28F3B";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+            e.currentTarget.style.borderColor = "rgba(242, 143, 59, 0.3)";
+          }}
         >
           <Target className="h-3 w-3 mr-1" />
           Add Routine
@@ -2728,18 +3245,42 @@ function DayCard({
                 }}
                 variant="outline"
                 size="sm"
-                className="w-full border-blue-500/50 text-green-600 hover:bg-blue-500/10 hover:border-green-700"
+                className="w-full text-xs h-7"
+                style={{
+                  borderColor: "rgba(242, 143, 59, 0.3)",
+                  color: "#F28F3B",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = "rgba(242, 143, 59, 0.1)";
+                  e.currentTarget.style.borderColor = "#F28F3B";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.borderColor = "rgba(242, 143, 59, 0.3)";
+                }}
               >
                 Save as Routine
               </Button>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Input
                   type="text"
                   value={routineName}
                   onChange={e => setRoutineName(e.target.value)}
                   placeholder="Name of Routine"
-                  className="w-full h-9 text-xs bg-stone-800 border-neutral-500/50 text-white placeholder-gray-500"
+                  className="w-full h-7 text-xs"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = "#F28F3B";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  }}
                   autoFocus
                   onKeyDown={e => {
                     if (e.key === "Enter" && routineName.trim()) {
@@ -2765,7 +3306,7 @@ function DayCard({
                     }
                   }}
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   <Button
                     onClick={() => {
                       setShowRoutineInput(false);
@@ -2773,7 +3314,20 @@ function DayCard({
                     }}
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-7 text-xs border-gray-600 text-gray-400 hover:bg-gray-600"
+                    className="flex-1 h-7 text-xs"
+                    style={{
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
                     Cancel
                   </Button>
@@ -2800,7 +3354,20 @@ function DayCard({
                     }}
                     disabled={!routineName.trim()}
                     size="sm"
-                    className="flex-1 h-7 text-xs bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                    className="flex-1 h-7 text-xs"
+                    style={{
+                      backgroundColor: "#F28F3B",
+                      color: COLORS.TEXT_PRIMARY,
+                      opacity: !routineName.trim() ? 0.5 : 1,
+                    }}
+                    onMouseEnter={e => {
+                      if (routineName.trim()) {
+                        e.currentTarget.style.backgroundColor = "#D67A2F";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "#F28F3B";
+                    }}
                   >
                     Create
                   </Button>
@@ -2881,20 +3448,26 @@ function SortableDrillItem({
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={cn(
-        "rounded-lg p-3 border transition-all duration-200 group",
-        isDragging && "opacity-50 scale-95",
-        isSuperset
-          ? "bg-purple-600/30 border-purple-500/50"
+      style={{
+        ...style,
+        backgroundColor: isSuperset
+          ? "rgba(242, 143, 59, 0.1)"
           : isRoutine
-          ? "bg-green-900/20 border-green-400"
-          : "bg-gray-800 border-gray-600"
-      )}
+          ? "rgba(242, 143, 59, 0.1)"
+          : COLORS.BACKGROUND_DARK,
+        borderColor: isSuperset
+          ? "rgba(242, 143, 59, 0.3)"
+          : isRoutine
+          ? "rgba(242, 143, 59, 0.3)"
+          : COLORS.BORDER_SUBTLE,
+        opacity: isDragging ? 0.5 : 1,
+        transform: isDragging ? "scale(0.95)" : undefined,
+      }}
+      className="rounded-md p-2 border transition-all duration-200 group"
     >
       {/* Superset/Circuit indicator */}
       {isSuperset && supersetGroup && (
-        <div className="text-xs text-purple-300 mb-2 flex items-center justify-between">
+        <div className="text-[10px] mb-1.5 flex items-center justify-between" style={{ color: "#F28F3B" }}>
           <div className="flex items-center gap-1">
             <Link className="h-3 w-3" />
             <span className="font-medium">
@@ -2914,10 +3487,19 @@ function SortableDrillItem({
                     : `Circuit (${supersetGroup.items.length})`;
                 onOpenSupersetDescriptionModal(item.supersetId!, groupName);
               }}
-              className="text-purple-300 hover:text-white hover:bg-purple-600/20 p-1 h-6"
+              className="p-0.5 h-5 w-5"
+              style={{ color: "#F28F3B" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "rgba(242, 143, 59, 0.2)";
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = "#F28F3B";
+              }}
               title="Edit group details"
             >
-              <Edit className="h-3 w-3" />
+              <Edit className="h-2.5 w-2.5" />
             </Button>
             <Button
               variant="ghost"
@@ -2925,10 +3507,19 @@ function SortableDrillItem({
               onClick={() => {
                 onOpenSupersetModal(item, item.supersetId!);
               }}
-              className="text-purple-300 hover:text-white hover:bg-purple-600/20 p-1 h-6"
+              className="p-0.5 h-5 w-5"
+              style={{ color: "#F28F3B" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "rgba(242, 143, 59, 0.2)";
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = "#F28F3B";
+              }}
               title="Add exercise to group"
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-2.5 w-2.5" />
             </Button>
           </div>
         </div>
@@ -2936,17 +3527,24 @@ function SortableDrillItem({
 
       {/* Routine indicator */}
       {isRoutine && (
-        <div className="flex items-center gap-2 mb-2 p-2 bg-green-900/30 rounded-lg">
-          <span className="text-green-300 text-xs font-medium">Routine</span>
+        <div className="flex items-center gap-1.5 mb-1.5 p-1.5 rounded-md" style={{ backgroundColor: "rgba(242, 143, 59, 0.1)" }}>
+          <span className="text-xs font-medium" style={{ color: "#F28F3B" }}>Routine</span>
         </div>
       )}
 
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-1.5">
         {/* Drag handle */}
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-white"
+          className="cursor-grab active:cursor-grabbing p-0.5"
+          style={{ color: COLORS.TEXT_SECONDARY }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+          }}
         >
           <GripVertical className="h-3 w-3" />
         </div>
@@ -2955,14 +3553,14 @@ function SortableDrillItem({
         <div className="flex-1 min-w-0">
           {/* For supersets, show both titles stacked */}
           {isSuperset && supersetGroup ? (
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {supersetGroup.items.map((supersetItem, index) => (
-                <div key={supersetItem.id} className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-white truncate whitespace-nowrap">
+                <div key={supersetItem.id} className="flex items-center gap-1.5">
+                  <span className="text-xs font-medium truncate whitespace-nowrap" style={{ color: COLORS.TEXT_PRIMARY }}>
                     {supersetItem.title}
                   </span>
                   {index === 0 && (
-                    <span className="text-xs text-purple-300 font-medium">
+                    <span className="text-[10px] font-medium" style={{ color: "#F28F3B" }}>
                       +
                     </span>
                   )}
@@ -2970,8 +3568,8 @@ function SortableDrillItem({
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-white truncate whitespace-nowrap">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-xs font-medium truncate whitespace-nowrap" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {item.title}
               </span>
             </div>
@@ -2979,34 +3577,56 @@ function SortableDrillItem({
 
           {/* Notes - show notes from first item in superset */}
           {(isSuperset ? supersetGroup?.items[0]?.notes : item.notes) && (
-            <p className="text-xs text-gray-400 line-clamp-2">
+            <p className="text-[10px] line-clamp-2 mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
               {isSuperset ? supersetGroup?.items[0]?.notes : item.notes}
             </p>
           )}
         </div>
 
         {/* Action buttons - always visible */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {/* Superset Chain Link Button */}
           {!item.supersetId ? (
             <Button
               variant="ghost"
               size="sm"
               onClick={onAddSuperset}
-              className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30"
+              className="h-6 w-6 p-0 border"
+              style={{
+                color: COLORS.GOLDEN_ACCENT,
+                borderColor: "rgba(229, 178, 50, 0.3)",
+                backgroundColor: "transparent",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "rgba(229, 178, 50, 0.1)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
               title="Add Superset"
             >
-              <Link className="h-4 w-4" />
+              <Link className="h-3 w-3" />
             </Button>
           ) : (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onRemoveSuperset(item.id)}
-              className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30"
+              className="h-6 w-6 p-0 border"
+              style={{
+                color: COLORS.RED_ALERT,
+                borderColor: "rgba(217, 83, 79, 0.3)",
+                backgroundColor: "transparent",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
               title="Remove Superset"
             >
-              <Unlink className="h-4 w-4" />
+              <Unlink className="h-3 w-3" />
             </Button>
           )}
 
@@ -3019,18 +3639,34 @@ function SortableDrillItem({
                 e.preventDefault();
                 onEdit();
               }}
-              className="h-6 w-6 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
+              className="h-5 w-5 p-0"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
-              <Edit className="h-3 w-3" />
+              <Edit className="h-2.5 w-2.5" />
             </Button>
           )}
           <Button
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            className="h-5 w-5 p-0"
+            style={{ color: COLORS.RED_ALERT }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-2.5 w-2.5" />
           </Button>
         </div>
       </div>
@@ -3047,7 +3683,7 @@ function SortableDrillItem({
 
         return (
           details.length > 0 && (
-            <div className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-600/50">
+            <div className="text-[10px] mt-1.5 pt-1.5 border-t" style={{ color: COLORS.TEXT_SECONDARY, borderColor: COLORS.BORDER_SUBTLE }}>
               {details.join(" • ")}
             </div>
           )
@@ -3108,7 +3744,7 @@ function ProgramItemCard({
       case "video":
         return "bg-purple-400";
       case "routine":
-        return "bg-yellow-400";
+        return "bg-[#F28F3B]";
       default:
         return "bg-green-400";
     }
@@ -3123,20 +3759,24 @@ function ProgramItemCard({
 
   return (
     <Card
-      className={`${
-        isSuperset
-          ? "bg-purple-600/30 border-purple-500/50"
-          : "bg-gray-600/50 border-gray-500/50"
-      }`}
+      className="border"
+      style={{
+        backgroundColor: isSuperset
+          ? "rgba(242, 143, 59, 0.1)"
+          : COLORS.BACKGROUND_CARD,
+        borderColor: isSuperset
+          ? "rgba(242, 143, 59, 0.3)"
+          : COLORS.BORDER_SUBTLE,
+      }}
     >
       <CardContent className="p-3">
         {/* Superset Header */}
         {isSuperset && supersetGroup && (
-          <div className="mb-3 pb-2 border-b border-purple-500/30">
+          <div className="mb-2.5 pb-2 border-b" style={{ borderColor: "rgba(242, 143, 59, 0.3)" }}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Link className="h-4 w-4 text-purple-300" />
-                <span className="text-sm font-medium text-purple-300">
+              <div className="flex items-center gap-1.5">
+                <Link className="h-3.5 w-3.5" style={{ color: "#F28F3B" }} />
+                <span className="text-xs font-medium" style={{ color: "#F28F3B" }}>
                   {supersetGroup.items.length === 2
                     ? "SUPERSET"
                     : `CIRCUIT (${supersetGroup.items.length} exercises)`}
@@ -3153,9 +3793,18 @@ function ProgramItemCard({
                       : `Circuit (${supersetGroup.items.length})`
                   )
                 }
-                className="text-purple-300 hover:text-white hover:bg-purple-600/20 px-2 py-1 h-7 text-xs"
+                className="px-2 py-0.5 h-6 text-xs"
+                style={{ color: "#F28F3B" }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = "rgba(242, 143, 59, 0.2)";
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = "#F28F3B";
+                }}
               >
-                <Edit className="h-3 w-3 mr-1" />
+                <Edit className="h-2.5 w-2.5 mr-1" />
                 Edit Instructions
               </Button>
             </div>
@@ -3163,32 +3812,32 @@ function ProgramItemCard({
         )}
 
         {/* Exercise Content */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <div className={cn("w-2 h-2 rounded-full", getItemColor())} />
-                <span className="text-sm font-medium text-white truncate">
+              <div className="flex items-center gap-1.5 mb-1">
+                <div className={cn("w-1.5 h-1.5 rounded-full", getItemColor())} />
+                <span className="text-xs font-medium truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                   {item.title}
                 </span>
               </div>
 
               {item.sets && item.reps && (
-                <div className="text-xs text-gray-300 mb-1">
+                <div className="text-[10px] mb-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                   {item.sets} × {item.reps}
                   {item.tempo && ` @ ${item.tempo}`}
                 </div>
               )}
 
               {item.duration && (
-                <div className="text-xs text-gray-300 mb-1 flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
+                <div className="text-[10px] mb-0.5 flex items-center gap-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+                  <Clock className="h-2.5 w-2.5" />
                   {item.duration}
                 </div>
               )}
 
               {item.notes && (
-                <p className="text-xs text-gray-400 line-clamp-2">
+                <p className="text-[10px] line-clamp-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                   {item.notes}
                 </p>
               )}
@@ -3213,20 +3862,42 @@ function ProgramItemCard({
                   variant="ghost"
                   size="sm"
                   onClick={onAddSuperset}
-                  className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30"
+                  className="h-6 w-6 p-0 border"
+                  style={{
+                    color: COLORS.GOLDEN_ACCENT,
+                    borderColor: "rgba(229, 178, 50, 0.3)",
+                    backgroundColor: "transparent",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "rgba(229, 178, 50, 0.1)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
                   title="Add Superset"
                 >
-                  <Link className="h-4 w-4" />
+                  <Link className="h-3 w-3" />
                 </Button>
               ) : (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemoveSuperset(item.id)}
-                  className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30"
+                  className="h-6 w-6 p-0 border"
+                  style={{
+                    color: COLORS.RED_ALERT,
+                    borderColor: "rgba(217, 83, 79, 0.3)",
+                    backgroundColor: "transparent",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
                   title="Remove Superset"
                 >
-                  <Unlink className="h-4 w-4" />
+                  <Unlink className="h-3 w-3" />
                 </Button>
               )}
 
@@ -3236,27 +3907,55 @@ function ProgramItemCard({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-gray-500"
+                    className="h-6 w-6 p-0"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
                     <MoreHorizontal className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-gray-700 border-gray-600">
+                <DropdownMenuContent className="border"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
+                >
                   <DropdownMenuItem
                     onClick={e => {
                       e.stopPropagation();
                       e.preventDefault();
                       onEdit();
                     }}
-                    className="text-white hover:bg-gray-600"
+                    className="text-xs"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
                     <Edit className="h-3 w-3 mr-2" />
                     Edit Exercise
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-gray-600" />
+                  <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
                   <DropdownMenuItem
                     onClick={onDelete}
-                    className="text-red-400 hover:bg-red-400/10"
+                    className="text-xs"
+                    style={{ color: COLORS.RED_ALERT }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
                     <Trash2 className="h-3 w-3 mr-2" />
                     Delete

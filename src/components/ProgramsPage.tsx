@@ -4,6 +4,7 @@ import React from "react";
 import { useState, useCallback } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useDebounce } from "@/lib/hooks/use-debounce";
+import { COLORS } from "@/lib/colors";
 import {
   Plus,
   Search,
@@ -494,7 +495,7 @@ function ProgramsPage() {
         <div className="flex items-center justify-center h-64">
           <div
             className="animate-spin rounded-full h-8 w-8 border-b-2"
-            style={{ borderColor: "#4A5A70" }}
+            style={{ borderColor: COLORS.GOLDEN_ACCENT }}
           />
         </div>
       </Sidebar>
@@ -505,7 +506,7 @@ function ProgramsPage() {
     return (
       <Sidebar>
         <div className="flex items-center justify-center h-64">
-          <p className="text-red-400">
+          <p style={{ color: COLORS.RED_ALERT }}>
             Error loading programs: {error.message}
           </p>
         </div>
@@ -517,103 +518,137 @@ function ProgramsPage() {
     <>
       <Sidebar>
         <div
-          className="min-h-screen p-6"
-          style={{ backgroundColor: "#2A3133" }}
+          className="min-h-screen"
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
-          {/* Compact Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1
-                className="text-2xl font-bold mb-1"
-                style={{ color: "#C3BCC2" }}
-              >
-                Training Programs
-              </h1>
-              <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                {activeTab === "programs"
-                  ? "Create and manage comprehensive training programs for your athletes"
-                  : "Build reusable exercise routines to use in your programs"}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className="px-3 py-1 rounded-full text-sm font-medium"
-                style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#C3BCC2",
-                }}
-              >
-                {activeTab === "programs"
-                  ? `${programs.length} ${
-                      programs.length === 1 ? "Program" : "Programs"
-                    }`
-                  : `${routines.length} ${
-                      routines.length === 1 ? "Routine" : "Routines"
-                    }`}
-              </span>
+          {/* Header with Golden Bar Indicator */}
+          <div className="mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div>
+                  <h1
+                    className="text-lg font-semibold pl-2"
+                    style={{
+                      color: COLORS.TEXT_PRIMARY,
+                      borderLeft: `3px solid ${COLORS.GOLDEN_ACCENT}`,
+                    }}
+                  >
+                    Training Programs
+                  </h1>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="px-2.5 py-1 rounded-full text-xs font-medium"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    color: COLORS.TEXT_SECONDARY,
+                    border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                  }}
+                >
+                  {activeTab === "programs"
+                    ? `${programs.length} ${
+                        programs.length === 1 ? "Program" : "Programs"
+                      }`
+                    : `${routines.length} ${
+                        routines.length === 1 ? "Routine" : "Routines"
+                      }`}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Tab Navigation */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between gap-4 bg-[#1A1D1E] rounded-xl p-3 border border-[#4A5A70]">
+          <div className="mb-4">
+            <div className="flex items-center justify-between gap-3 rounded-lg p-2.5 border"
+              style={{ 
+                backgroundColor: COLORS.BACKGROUND_DARK, 
+                borderColor: COLORS.BORDER_SUBTLE 
+              }}
+            >
               {/* Left: Tabs */}
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 <button
                   onClick={() => setActiveTab("programs")}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all duration-200 font-medium ${
-                    activeTab === "programs"
-                      ? "bg-[#4A5A70] text-white shadow-lg"
-                      : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
+                  className={`px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium ${
+                    activeTab === "programs" ? "" : ""
                   }`}
+                  style={{
+                    backgroundColor: activeTab === "programs" ? COLORS.GOLDEN_DARK : "transparent",
+                    color: activeTab === "programs" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (activeTab !== "programs") {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (activeTab !== "programs") {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }
+                  }}
                 >
-                  <BookOpen className="h-4 w-4" />
                   Programs
                 </button>
                 <button
                   onClick={() => setActiveTab("routines")}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all duration-200 font-medium ${
-                    activeTab === "routines"
-                      ? "bg-[#4A5A70] text-white shadow-lg"
-                      : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
+                  className={`px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium ${
+                    activeTab === "routines" ? "" : ""
                   }`}
+                  style={{
+                    backgroundColor: activeTab === "routines" ? COLORS.GOLDEN_DARK : "transparent",
+                    color: activeTab === "routines" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (activeTab !== "routines") {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (activeTab !== "routines") {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }
+                  }}
                 >
-                  <Target className="h-4 w-4" />
                   Routines
                 </button>
               </div>
 
               {/* Right: Action Buttons */}
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 {activeTab === "programs" ? (
                   <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#606364";
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                     }}
                   >
-                    <Plus className="h-4 w-4" />
-                    Create Program
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Create Program</span>
                   </button>
                 ) : (
                   <button
                     onClick={() => setIsRoutineModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#606364";
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                     }}
                   >
-                    <Plus className="h-4 w-4" />
-                    Create Routine
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Create Routine</span>
                   </button>
                 )}
               </div>
@@ -625,32 +660,38 @@ function ProgramsPage() {
             <>
               {/* Enhanced Search and Filters - Matching LibraryPage */}
               <div
-                className="rounded-xl p-4 mb-8 shadow-xl border relative"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                className="rounded-lg p-3 mb-4 shadow-lg border"
+                style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
               >
-                <div className="flex gap-3 items-center">
+                <div className="flex gap-2 items-center">
                   {/* Search */}
                   <div className="relative flex-1">
                     <Search
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                      style={{ color: "#ABA4AA" }}
+                      className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
                     />
                     <input
                       type="text"
                       placeholder="Search programs..."
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm"
+                      className="w-full pl-9 pr-3 py-1.5 rounded-md border text-xs focus:outline-none transition-all duration-300"
                       style={{
-                        backgroundColor: "#606364",
-                        borderColor: "#ABA4AA",
-                        color: "#C3BCC2",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                       }}
                     />
                   </div>
 
                   {/* Filters - Right Side */}
-                  <div className="flex gap-2 items-center flex-shrink-0">
+                  <div className="flex gap-1.5 items-center flex-shrink-0">
                     <CategoryDropdown
                       value={selectedCategory}
                       onChange={setSelectedCategory}
@@ -660,9 +701,9 @@ function ProgramsPage() {
                           !DEFAULT_PROGRAM_CATEGORIES.includes(cat.name)
                       )}
                       style={{
-                        backgroundColor: "#606364",
-                        borderColor: "#ABA4AA",
-                        color: "#C3BCC2",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                     />
 
@@ -670,51 +711,79 @@ function ProgramsPage() {
                     <select
                       value={sortBy}
                       onChange={e => setSortBy(e.target.value)}
-                      className="px-3 py-2.5 rounded-lg border focus:outline-none focus:ring-2 transition-all duration-300 text-sm whitespace-nowrap"
+                      className="px-2 py-1.5 rounded-md border text-xs focus:outline-none transition-all duration-300 whitespace-nowrap"
                       style={{
-                        backgroundColor: "#606364",
-                        borderColor: "#ABA4AA",
-                        color: "#C3BCC2",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                       }}
                     >
-                      <option value="updated">Recently Updated</option>
-                      <option value="name">Name (A-Z)</option>
-                      <option value="assigned">Most Assigned</option>
-                      <option value="newest">Newest First</option>
+                      <option value="updated" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>Recently Updated</option>
+                      <option value="name" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>Name (A-Z)</option>
+                      <option value="assigned" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>Most Assigned</option>
+                      <option value="newest" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>Newest First</option>
                     </select>
 
                     {/* View Mode Toggle */}
                     <div
-                      className="flex rounded-lg border overflow-hidden"
-                      style={{ borderColor: "#ABA4AA" }}
+                      className="flex rounded-md border overflow-hidden"
+                      style={{ borderColor: COLORS.BORDER_SUBTLE }}
                     >
                       <button
                         onClick={() => setViewMode("grid")}
-                        className={`p-2 transition-all duration-200 ${
-                          viewMode === "grid" ? "" : ""
+                        className={`px-2 py-1.5 transition-all duration-300 flex items-center gap-1 text-xs ${
+                          viewMode === "grid" ? "font-medium" : ""
                         }`}
                         style={{
                           backgroundColor:
-                            viewMode === "grid" ? "#4A5A70" : "#606364",
-                          color: "#C3BCC2",
+                            viewMode === "grid" ? COLORS.GOLDEN_DARK : "transparent",
+                          color: viewMode === "grid" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                        }}
+                        onMouseEnter={e => {
+                          if (viewMode !== "grid") {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (viewMode !== "grid") {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                          }
                         }}
                         title="Grid View"
                       >
-                        <Grid3X3 className="h-4 w-4" />
+                        <Grid3X3 className="h-3.5 w-3.5" />
+                        <span>Grid</span>
                       </button>
                       <button
                         onClick={() => setViewMode("list")}
-                        className={`p-2 transition-all duration-200 ${
-                          viewMode === "list" ? "" : ""
+                        className={`px-2 py-1.5 transition-all duration-300 flex items-center gap-1 text-xs ${
+                          viewMode === "list" ? "font-medium" : ""
                         }`}
                         style={{
                           backgroundColor:
-                            viewMode === "list" ? "#4A5A70" : "#606364",
-                          color: "#C3BCC2",
+                            viewMode === "list" ? COLORS.GOLDEN_DARK : "transparent",
+                          color: viewMode === "list" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                        }}
+                        onMouseEnter={e => {
+                          if (viewMode !== "list") {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (viewMode !== "list") {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                          }
                         }}
                         title="List View"
                       >
-                        <List className="h-4 w-4" />
+                        <List className="h-3.5 w-3.5" />
+                        <span>List</span>
                       </button>
                     </div>
                   </div>
@@ -722,73 +791,60 @@ function ProgramsPage() {
               </div>
 
               {/* Programs Section */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
                     <h2
-                      className="text-xl font-semibold"
-                      style={{ color: "#C3BCC2" }}
+                      className="text-sm font-semibold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Your Programs
                     </h2>
-                    <Badge
-                      variant="secondary"
-                      className="text-sm px-3 py-1"
+                    <span
+                      className="px-2 py-0.5 rounded-full text-xs font-medium"
                       style={{
-                        backgroundColor: "#606364",
-                        color: "#C3BCC2",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        color: COLORS.TEXT_SECONDARY,
+                        border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                       }}
                     >
                       {filteredPrograms.length}{" "}
                       {filteredPrograms.length === 1 ? "program" : "programs"}
-                    </Badge>
+                    </span>
                   </div>
                 </div>
 
                 {filteredPrograms.length === 0 ? (
                   <div
-                    className="flex flex-col items-center justify-center h-96 rounded-2xl shadow-xl border relative overflow-hidden"
+                    className="flex flex-col items-center justify-center h-64 rounded-lg shadow-lg border relative overflow-hidden"
                     style={{
-                      backgroundColor: "#353A3A",
-                      borderColor: "#606364",
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
                     }}
                   >
-                    <div
-                      className="absolute inset-0 opacity-5"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-                      }}
-                    />
                     <div className="relative text-center px-4">
-                      <div className="mb-6 relative">
-                        <div className="absolute inset-0 animate-ping opacity-20">
-                          <Target
-                            className="h-20 w-20 mx-auto"
-                            style={{ color: "#4A5A70" }}
-                          />
-                        </div>
+                      <div className="mb-4 relative">
                         <div
-                          className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto relative"
-                          style={{ backgroundColor: "#4A5A70" }}
+                          className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto relative"
+                          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                         >
                           <BookOpen
-                            className="h-10 w-10"
-                            style={{ color: "#C3BCC2" }}
+                            className="h-8 w-8"
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
                           />
                         </div>
                       </div>
                       <h3
-                        className="text-2xl font-bold mb-3"
-                        style={{ color: "#C3BCC2" }}
+                        className="text-lg font-bold mb-2"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {searchTerm || selectedCategory !== "All Categories"
                           ? "No Programs Found"
                           : "Start Building Your Programs"}
                       </h3>
                       <p
-                        className="text-center mb-8 max-w-md mx-auto"
-                        style={{ color: "#ABA4AA" }}
+                        className="text-center mb-6 max-w-md mx-auto text-xs"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         {searchTerm || selectedCategory !== "All Categories" ? (
                           <>
@@ -799,7 +855,14 @@ function ProgramsPage() {
                                 setSearchTerm("");
                                 setSelectedCategory("All Categories");
                               }}
-                              className="underline hover:text-blue-400 transition-colors"
+                              className="underline transition-colors"
+                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                              }}
                             >
                               clear all filters
                             </button>{" "}
@@ -809,7 +872,7 @@ function ProgramsPage() {
                           "Create comprehensive training programs for your athletes. Build structured workouts with exercises, drills, and progressions."
                         )}
                       </p>
-                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <div className="flex flex-col sm:flex-row gap-2 justify-center">
                         {(searchTerm ||
                           selectedCategory !== "All Categories") &&
                         programs.length > 0 ? (
@@ -818,31 +881,40 @@ function ProgramsPage() {
                               setSearchTerm("");
                               setSelectedCategory("All Categories");
                             }}
-                            className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+                            className="px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
                             style={{
-                              backgroundColor: "#606364",
-                              color: "#C3BCC2",
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              color: COLORS.TEXT_SECONDARY,
+                              border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                             }}
                           >
-                            <Filter className="h-5 w-5 inline-block mr-2" />
+                            <Filter className="h-3.5 w-3.5 inline-block mr-1.5" />
                             Clear Filters
                           </button>
                         ) : null}
                         <button
                           onClick={() => setIsCreateModalOpen(true)}
-                          className="px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-medium"
+                          className="px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
                           style={{
-                            backgroundColor: "#4A5A70",
-                            color: "#C3BCC2",
+                            backgroundColor: COLORS.GOLDEN_DARK,
+                            color: COLORS.TEXT_PRIMARY,
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor = "#606364";
+                            e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor = "#4A5A70";
+                            e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                           }}
                         >
-                          <Plus className="h-5 w-5 inline-block mr-2" />
+                          <Plus className="h-3.5 w-3.5 inline-block mr-1.5" />
                           Create Program
                         </button>
                       </div>
@@ -851,10 +923,10 @@ function ProgramsPage() {
                 ) : (
                   <div
                     className={cn(
-                      "gap-6",
+                      "gap-3",
                       viewMode === "grid"
                         ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-                        : "space-y-4"
+                        : "space-y-2.5"
                     )}
                   >
                     {filteredPrograms.map((program: ProgramListItem) => (
@@ -878,93 +950,94 @@ function ProgramsPage() {
                           handleDeleteProgram(program.id, program.title)
                         }
                         onDuplicate={async () => {
-                          // Create a duplicate program with a new name
-                          console.log("Original program:", program);
-                          const duplicatedProgram = {
-                            title: `${program.title} (Copy)`,
-                            description: program.description || undefined,
-                            level: program.level as
-                              | "Drive"
-                              | "Whip"
-                              | "Separation"
-                              | "Stability"
-                              | "Extension",
-                            duration: program.duration,
-                            weeks: program.weeks.map(week => ({
-                              weekNumber: week.weekNumber,
-                              title: week.title,
-                              description: week.description || undefined,
-                              days: week.days.map(dayData => ({
-                                dayNumber: dayData.dayNumber,
-                                title: dayData.title,
-                                description: dayData.description || undefined,
-                                drills: dayData.drills.map(
-                                  (drill: any, index) => ({
-                                    order: index + 1,
-                                    title: drill.title,
-                                    type: drill.type || undefined,
-                                    description: drill.description || undefined,
-                                    duration: drill.duration || undefined,
-                                    videoUrl: drill.videoUrl || undefined,
-                                    videoId: drill.videoId || undefined,
-                                    videoTitle: drill.videoTitle || undefined,
-                                    videoThumbnail:
-                                      drill.videoThumbnail || undefined,
-                                    notes: drill.notes || undefined,
-                                    sets: drill.sets || undefined,
-                                    reps: drill.reps || undefined,
-                                    tempo: drill.tempo || undefined,
-                                    routineId: drill.routineId || undefined,
-                                    supersetId: drill.supersetId || undefined,
-                                    supersetOrder:
-                                      drill.supersetOrder || undefined,
-                                    supersetDescription:
-                                      drill.supersetDescription || undefined,
-                                    supersetInstructions:
-                                      drill.supersetInstructions || undefined,
-                                    supersetNotes:
-                                      drill.supersetNotes || undefined,
-                                    // Coach Instructions - flatten the nested object
-                                    coachInstructionsWhatToDo:
-                                      drill.coachInstructions?.whatToDo ||
-                                      drill.coachInstructionsWhatToDo ||
-                                      undefined,
-                                    coachInstructionsHowToDoIt:
-                                      drill.coachInstructions?.howToDoIt ||
-                                      drill.coachInstructionsHowToDoIt ||
-                                      undefined,
-                                    coachInstructionsKeyPoints:
-                                      drill.coachInstructions?.keyPoints ||
-                                      drill.coachInstructionsKeyPoints ||
-                                      undefined,
-                                    coachInstructionsCommonMistakes:
-                                      drill.coachInstructions?.commonMistakes ||
-                                      drill.coachInstructionsCommonMistakes ||
-                                      undefined,
-                                    coachInstructionsEasier:
-                                      drill.coachInstructions?.easier ||
-                                      drill.coachInstructionsEasier ||
-                                      undefined,
-                                    coachInstructionsHarder:
-                                      drill.coachInstructions?.harder ||
-                                      drill.coachInstructionsHarder ||
-                                      undefined,
-                                    coachInstructionsEquipment:
-                                      drill.coachInstructions?.equipment ||
-                                      drill.coachInstructionsEquipment ||
-                                      undefined,
-                                    coachInstructionsSetup:
-                                      drill.coachInstructions?.setup ||
-                                      drill.coachInstructionsSetup ||
-                                      undefined,
-                                  })
-                                ),
-                              })),
-                            })),
-                          };
-
-
                           try {
+                            // Fetch the full program structure for duplication
+                            const fullProgram = await utils.programs.getById.fetch({ id: program.id });
+                            
+                            // Create a duplicate program with a new name
+                            const duplicatedProgram = {
+                              title: `${program.title} (Copy)`,
+                              description: program.description || undefined,
+                              level: program.level as
+                                | "Drive"
+                                | "Whip"
+                                | "Separation"
+                                | "Stability"
+                                | "Extension",
+                              duration: program.duration,
+                              weeks: fullProgram.weeks.map(week => ({
+                                weekNumber: week.weekNumber,
+                                title: week.title,
+                                description: week.description || undefined,
+                                days: week.days.map(dayData => ({
+                                  dayNumber: dayData.dayNumber,
+                                  title: dayData.title,
+                                  description: dayData.description || undefined,
+                                  drills: dayData.drills.map(
+                                    (drill: any, index) => ({
+                                      order: index + 1,
+                                      title: drill.title,
+                                      type: drill.type || undefined,
+                                      description: drill.description || undefined,
+                                      duration: drill.duration || undefined,
+                                      videoUrl: drill.videoUrl || undefined,
+                                      videoId: drill.videoId || undefined,
+                                      videoTitle: drill.videoTitle || undefined,
+                                      videoThumbnail:
+                                        drill.videoThumbnail || undefined,
+                                      notes: drill.notes || undefined,
+                                      sets: drill.sets || undefined,
+                                      reps: drill.reps || undefined,
+                                      tempo: drill.tempo || undefined,
+                                      routineId: drill.routineId || undefined,
+                                      supersetId: drill.supersetId || undefined,
+                                      supersetOrder:
+                                        drill.supersetOrder || undefined,
+                                      supersetDescription:
+                                        drill.supersetDescription || undefined,
+                                      supersetInstructions:
+                                        drill.supersetInstructions || undefined,
+                                      supersetNotes:
+                                        drill.supersetNotes || undefined,
+                                      // Coach Instructions - flatten the nested object
+                                      coachInstructionsWhatToDo:
+                                        drill.coachInstructions?.whatToDo ||
+                                        drill.coachInstructionsWhatToDo ||
+                                        undefined,
+                                      coachInstructionsHowToDoIt:
+                                        drill.coachInstructions?.howToDoIt ||
+                                        drill.coachInstructionsHowToDoIt ||
+                                        undefined,
+                                      coachInstructionsKeyPoints:
+                                        drill.coachInstructions?.keyPoints ||
+                                        drill.coachInstructionsKeyPoints ||
+                                        undefined,
+                                      coachInstructionsCommonMistakes:
+                                        drill.coachInstructions?.commonMistakes ||
+                                        drill.coachInstructionsCommonMistakes ||
+                                        undefined,
+                                      coachInstructionsEasier:
+                                        drill.coachInstructions?.easier ||
+                                        drill.coachInstructionsEasier ||
+                                        undefined,
+                                      coachInstructionsHarder:
+                                        drill.coachInstructions?.harder ||
+                                        drill.coachInstructionsHarder ||
+                                        undefined,
+                                      coachInstructionsEquipment:
+                                        drill.coachInstructions?.equipment ||
+                                        drill.coachInstructionsEquipment ||
+                                        undefined,
+                                      coachInstructionsSetup:
+                                        drill.coachInstructions?.setup ||
+                                        drill.coachInstructionsSetup ||
+                                        undefined,
+                                    })
+                                  ),
+                                })),
+                              })),
+                            };
+
                             // Create the program directly without opening modal
                             await createProgram.mutateAsync(duplicatedProgram);
                             toast({
@@ -1220,130 +1293,147 @@ function ProgramCard({
   if (viewMode === "list") {
     return (
       <div
-        className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
+        className="rounded-lg shadow-lg border transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
         onMouseEnter={e => {
-          e.currentTarget.style.backgroundColor = "#3A4040";
-          e.currentTarget.style.borderColor = "#4A5A70";
+          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+          e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.backgroundColor = "#353A3A";
-          e.currentTarget.style.borderColor = "#606364";
+          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
         }}
       >
-        <div
-          className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-          style={{
-            background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
-          }}
-        />
-
-        <div className="relative p-6">
-          <div className="flex items-center gap-4">
+        <div className="relative p-3">
+          <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <h3
-                className="text-base font-bold mb-1 line-clamp-1"
-                style={{ color: "#C3BCC2" }}
+                className="text-sm font-bold mb-1 line-clamp-1"
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 {program.title}
               </h3>
 
               <p
-                className="text-sm mb-2 line-clamp-1"
-                style={{ color: "#ABA4AA" }}
+                className="text-xs mb-2 line-clamp-1"
+                style={{ color: COLORS.TEXT_SECONDARY }}
               >
                 {program.description}
               </p>
 
-              <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
                 <div
-                  className="px-2 py-1 rounded text-xs font-medium"
+                  className="px-1.5 py-0.5 rounded text-[10px] font-medium border"
                   style={{
-                    backgroundColor: "#4A5A70",
-                    color: "#C3BCC2",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    color: COLORS.TEXT_SECONDARY,
+                    borderColor: COLORS.BORDER_SUBTLE,
                   }}
                 >
                   {program.level}
                 </div>
                 <div className="flex items-center gap-1">
-                  <Users className="h-3 w-3" style={{ color: "#ABA4AA" }} />
-                  <span style={{ color: "#ABA4AA" }} className="text-xs">
+                  <Users className="h-3 w-3" style={{ color: COLORS.TEXT_MUTED }} />
+                  <span style={{ color: COLORS.TEXT_MUTED }} className="text-[10px]">
                     {program.activeClientCount} assigned
                   </span>
                 </div>
 
                 <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" style={{ color: "#ABA4AA" }} />
-                  <span style={{ color: "#ABA4AA" }} className="text-xs">
+                  <Calendar className="h-3 w-3" style={{ color: COLORS.TEXT_MUTED }} />
+                  <span style={{ color: COLORS.TEXT_MUTED }} className="text-[10px]">
                     {new Date(program.createdAt).toLocaleDateString()}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <button
                 onClick={onViewDetails}
-                className="p-2 rounded-lg transition-all duration-300 transform hover:scale-110"
-                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                className="p-1.5 rounded-md transition-all duration-300"
+                style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#606364";
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                 }}
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3.5 w-3.5" />
               </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="p-2 rounded-lg transition-all duration-300 transform hover:scale-110"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    className="p-1.5 rounded-md transition-all duration-300"
+                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#606364";
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#4A5A70";
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                     }}
                   >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="h-3.5 w-3.5" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="bg-[#353A3A] border-gray-600"
-                  style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                  style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }}
                 >
                   <DropdownMenuItem
                     onClick={onEdit}
-                    className="text-white hover:bg-[#606364]"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
-                    <Edit className="h-4 w-4 mr-2" />
+                    <Edit className="h-3.5 w-3.5 mr-2" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={onAssign}
-                    className="text-white hover:bg-[#606364]"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
-                    <Users className="h-4 w-4 mr-2" />
+                    <Users className="h-3.5 w-3.5 mr-2" />
                     Assign
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={onDuplicate}
-                    className="text-white hover:bg-[#606364]"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
-                    <Copy className="h-4 w-4 mr-2" />
+                    <Copy className="h-3.5 w-3.5 mr-2" />
                     Duplicate
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-gray-600" />
+                  <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
                   <DropdownMenuItem
                     onClick={onDelete}
-                    className="text-red-400 hover:bg-red-400/10"
+                    style={{ color: COLORS.RED_ALERT }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-3.5 w-3.5 mr-2" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1357,44 +1447,45 @@ function ProgramCard({
 
   return (
     <div
-      className="rounded-2xl shadow-xl border transition-all duration-300 transform hover:-translate-y-2 cursor-pointer relative overflow-hidden group"
+      className="rounded-lg shadow-lg border transition-all duration-300 transform hover:-translate-y-1 cursor-pointer relative overflow-hidden group"
       style={{
-        backgroundColor: "#353A3A",
-        borderColor: "#606364",
+        backgroundColor: COLORS.BACKGROUND_CARD,
+        borderColor: COLORS.BORDER_SUBTLE,
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.backgroundColor = "#3A4040";
-        e.currentTarget.style.borderColor = "#4A5A70";
+        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.backgroundColor = "#353A3A";
-        e.currentTarget.style.borderColor = "#606364";
+        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
       }}
     >
-      <div className="relative p-6">
+      <div className="relative p-3">
         {/* Header with icon and title */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-2">
             <div>
               <h3
-                className="text-lg font-bold line-clamp-1"
-                style={{ color: "#C3BCC2" }}
+                className="text-xs font-bold line-clamp-1"
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 {program.title}
               </h3>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                 <div
-                  className="px-2 py-1 rounded text-xs font-medium"
+                  className="px-1.5 py-0.5 rounded text-[10px] font-medium border"
                   style={{
-                    backgroundColor: "#4A5A70",
-                    color: "#C3BCC2",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    color: COLORS.TEXT_SECONDARY,
+                    borderColor: COLORS.BORDER_SUBTLE,
                   }}
                 >
                   {program.level}
                 </div>
                 <div className="flex items-center gap-1">
-                  <Users className="h-3 w-3" style={{ color: "#ABA4AA" }} />
-                  <span style={{ color: "#ABA4AA" }} className="text-xs">
+                  <Users className="h-3 w-3" style={{ color: COLORS.TEXT_MUTED }} />
+                  <span style={{ color: COLORS.TEXT_MUTED }} className="text-[10px]">
                     {program.activeClientCount} assigned
                   </span>
                 </div>
@@ -1404,44 +1495,61 @@ function ProgramCard({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="p-1.5 rounded-lg transition-all duration-300 transform hover:scale-110"
-                style={{ color: "#ABA4AA" }}
+                className="p-1 rounded-md transition-all duration-300"
+                style={{ color: COLORS.TEXT_SECONDARY }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.color = "#C3BCC2";
-                  e.currentTarget.style.backgroundColor = "#606364";
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.color = "#ABA4AA";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                   e.currentTarget.style.backgroundColor = "transparent";
                 }}
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="h-3.5 w-3.5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="bg-[#353A3A] border-gray-600"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+              style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }}
             >
               <DropdownMenuItem
                 onClick={onViewDetails}
-                className="text-white hover:bg-[#606364]"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
               >
-                <Eye className="h-4 w-4 mr-2" />
+                <Eye className="h-3.5 w-3.5 mr-2" />
                 View Details
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={onDuplicate}
-                className="text-white hover:bg-[#606364]"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
               >
-                <Copy className="h-4 w-4 mr-2" />
+                <Copy className="h-3.5 w-3.5 mr-2" />
                 Duplicate
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-gray-600" />
+              <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
               <DropdownMenuItem
                 onClick={onDelete}
-                className="text-red-400 hover:bg-red-400/10"
+                style={{ color: COLORS.RED_ALERT }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -1450,53 +1558,55 @@ function ProgramCard({
 
         {/* Description */}
         {program.description && (
-          <p className="text-sm mb-4 line-clamp-2" style={{ color: "#ABA4AA" }}>
+          <p className="text-xs mb-2 line-clamp-2" style={{ color: COLORS.TEXT_SECONDARY }}>
             {program.description}
           </p>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button
             onClick={onEdit}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 font-medium text-sm"
-            style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+            className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-md transition-all duration-200 text-xs font-medium"
+            style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_SECONDARY, border: `1px solid ${COLORS.BORDER_SUBTLE}` }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#606364";
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#4A5A70";
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
             }}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="h-3.5 w-3.5" />
             Edit
           </button>
           <button
             onClick={onAssign}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 font-medium text-sm"
+            className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-md transition-all duration-200 text-xs font-medium"
             style={{
-              backgroundColor: "#10B981",
-              color: "#000000",
+              backgroundColor: COLORS.GOLDEN_DARK,
+              color: COLORS.TEXT_PRIMARY,
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = "#34D399";
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = "#10B981";
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
             }}
           >
-            <Users className="h-4 w-4 text-black" />
+            <Users className="h-3.5 w-3.5" />
             Assign
           </button>
         </div>
 
         {/* Footer with creation date */}
         <div
-          className="flex items-center gap-1 mt-3 pt-3 border-t"
-          style={{ borderColor: "#606364" }}
+          className="flex items-center gap-1 mt-2 pt-2 border-t"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
         >
-          <Calendar className="h-3 w-3" style={{ color: "#ABA4AA" }} />
-          <span style={{ color: "#ABA4AA" }} className="text-xs">
+          <Calendar className="h-3 w-3" style={{ color: COLORS.TEXT_MUTED }} />
+          <span style={{ color: COLORS.TEXT_MUTED }} className="text-[10px]">
             Created {new Date(program.createdAt).toLocaleDateString()}
           </span>
         </div>

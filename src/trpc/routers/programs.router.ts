@@ -117,30 +117,27 @@ export const programsRouter = router({
     // to avoid running cleanup on every program list view
 
     // Get all programs created by this coach and shared with organization
+    // Only fetch what's needed for the list view - not the full program structure
     const programs = await db.program.findMany({
       where: whereClause,
-      include: {
-        // Include client assignments to count active clients
-        assignments: {
-          where: {
-            // Only count active assignments (not completed)
-            completedAt: null,
-          },
-        },
-        // Include weeks with days and drills for detailed structure
-        weeks: {
-          include: {
-            days: {
-              include: {
-                drills: true,
-              },
-              orderBy: {
-                dayNumber: "asc",
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        level: true,
+        duration: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        // Only count assignments, don't fetch full assignment data
+        _count: {
+          select: {
+            assignments: {
+              where: {
+                completedAt: null,
               },
             },
-          },
-          orderBy: {
-            weekNumber: "asc",
+            weeks: true,
           },
         },
       },
@@ -157,10 +154,10 @@ export const programsRouter = router({
       level: program.level,
       duration: program.duration,
       status: program.status,
-      activeClientCount: program.assignments.length,
-      totalWeeks: program.weeks.length,
-      weeks: program.weeks,
-      assignments: program.assignments,
+      activeClientCount: program._count.assignments,
+      totalWeeks: program._count.weeks,
+      weeks: [], // Empty array - full structure only loaded when needed
+      assignments: [], // Empty array - assignments only loaded when needed
       createdAt: program.createdAt,
       updatedAt: program.updatedAt,
     }));

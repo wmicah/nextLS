@@ -37,6 +37,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { trpc } from "@/app/_trpc/client";
 import { useToast } from "@/lib/hooks/use-toast";
 import SupersetDescriptionModal from "./SupersetDescriptionModal";
+import { COLORS } from "@/lib/colors";
 
 interface RoutineExercise {
   id: string;
@@ -1587,14 +1588,19 @@ export default function SeamlessRoutineModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="bg-[#2A3133] border-gray-600 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 [&>button]:hidden"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-600">
+          <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
             <div>
-              <DialogTitle className="text-white text-2xl font-bold">
+              <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {routine && routine.id ? "Edit Routine" : "Create New Routine"}
               </DialogTitle>
-              <DialogDescription className="text-gray-400 mt-1">
+              <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                 {routine
                   ? "Update your routine details and exercises"
                   : "Build a reusable routine that can be added to any program"}
@@ -1604,15 +1610,24 @@ export default function SeamlessRoutineModal({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-gray-400 hover:text-white hover:bg-gray-600"
+              className="p-1"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Progress Steps */}
-          <div className="px-6 py-4 border-b border-gray-600">
-            <div className="flex items-center justify-center space-x-8">
+          <div className="px-4 py-3 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+            <div className="flex items-center justify-center space-x-6">
               {[
                 { key: "details", label: "Details" },
                 { key: "exercises", label: "Exercises" },
@@ -1633,27 +1648,23 @@ export default function SeamlessRoutineModal({
                 return (
                   <div key={step.key} className="flex items-center">
                     <div
-                      className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                        isActive
-                          ? "bg-[#4A5A70] border-[#4A5A70] text-white"
-                          : isCompleted
-                          ? "bg-green-500 border-green-500 text-white"
-                          : "bg-transparent border-gray-600 text-gray-400"
-                      }`}
+                      className="flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300 text-xs font-bold"
+                      style={{
+                        backgroundColor: isActive ? "#F28F3B" : isCompleted ? COLORS.GREEN_PRIMARY : "transparent",
+                        borderColor: isActive ? "#F28F3B" : isCompleted ? COLORS.GREEN_PRIMARY : COLORS.BORDER_SUBTLE,
+                        color: isActive || isCompleted ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                      }}
                     >
-                      <span className="text-sm font-bold">
-                        {isCompleted && !isActive ? "✓" : index + 1}
-                      </span>
+                      {isCompleted && !isActive ? "✓" : index + 1}
                     </div>
                     <span
-                      className={`ml-3 text-sm font-medium ${
-                        isActive ? "text-white" : "text-gray-400"
-                      }`}
+                      className="ml-2 text-xs font-medium"
+                      style={{ color: isActive ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY }}
                     >
                       {step.label}
                     </span>
                     {index < 2 && (
-                      <ArrowRight className="h-4 w-4 text-gray-600 mx-4" />
+                      <ArrowRight className="h-3.5 w-3.5 mx-3" style={{ color: COLORS.BORDER_SUBTLE }} />
                     )}
                   </div>
                 );
@@ -1662,24 +1673,25 @@ export default function SeamlessRoutineModal({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4">
             {currentStep === "details" && (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-2">
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <h3 className="text-sm font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Routine Details
                   </h3>
-                  <p className="text-gray-400">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Give your routine a name to get started (description is
                     optional)
                   </p>
                 </div>
 
-                <div className="max-w-2xl mx-auto space-y-6">
+                <div className="max-w-2xl mx-auto space-y-4">
                   <div>
                     <Label
                       htmlFor="routine-name"
-                      className="text-white text-sm font-medium"
+                      className="text-xs font-medium"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Routine Name *
                     </Label>
@@ -1688,14 +1700,26 @@ export default function SeamlessRoutineModal({
                       value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder="e.g., Drive Warm-up, Core Stability, Power Development"
-                      className="bg-[#353A3A] border-gray-600 text-white mt-2 h-12 text-lg"
+                      className="mt-1.5 h-9 text-sm"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = "#F28F3B";
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      }}
                     />
                   </div>
 
                   <div>
                     <Label
                       htmlFor="routine-description"
-                      className="text-white text-sm font-medium"
+                      className="text-xs font-medium"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Description (Optional)
                     </Label>
@@ -1704,7 +1728,18 @@ export default function SeamlessRoutineModal({
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       placeholder="Describe what this routine focuses on and when to use it... (optional)"
-                      className="bg-[#353A3A] border-gray-600 text-white mt-2 min-h-[100px] resize-none"
+                      className="mt-1.5 min-h-[80px] resize-none text-sm"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = "#F28F3B";
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      }}
                       rows={4}
                     />
                   </div>
@@ -1713,23 +1748,33 @@ export default function SeamlessRoutineModal({
             )}
 
             {currentStep === "exercises" && (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-2">
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <h3 className="text-sm font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Add Exercises
                   </h3>
-                  <p className="text-gray-400">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Build your routine by adding exercises, drills, or videos
                   </p>
                 </div>
 
                 <div className="max-w-4xl mx-auto">
                   {/* Add Exercise Buttons */}
-                  <div className="flex gap-4 mb-6">
+                  <div className="flex gap-2 mb-4">
                     <Button
                       type="button"
                       onClick={() => onOpenVideoLibrary?.()}
-                      className="bg-gray-600 hover:bg-blue-900 hover:cursor-pointer text-white flex-1 h-12"
+                      className="flex-1 h-9 text-xs"
+                      style={{
+                        backgroundColor: "#F28F3B",
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = "#D67A2F";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "#F28F3B";
+                      }}
                     >
                       Add from Video Library
                     </Button>
@@ -1739,7 +1784,20 @@ export default function SeamlessRoutineModal({
                         type="button"
                         onClick={closeAllEditForms}
                         variant="outline"
-                        className="border-gray-600 text-gray-300 hover:bg-gray-600 h-12 px-4"
+                        className="h-9 px-3 text-xs"
+                        style={{
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_SECONDARY,
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        }}
                       >
                         Close All
                       </Button>
@@ -1748,12 +1806,12 @@ export default function SeamlessRoutineModal({
 
                   {/* Exercises List */}
                   {exercises.length === 0 ? (
-                    <Card className="bg-[#353A3A] border-gray-600">
-                      <CardContent className="p-12 text-center">
-                        <h4 className="text-lg font-medium text-white mb-2">
+                    <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+                      <CardContent className="p-8 text-center">
+                        <h4 className="text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                           No exercises added yet
                         </h4>
-                        <p className="text-gray-400 mb-6">
+                        <p className="text-xs mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                           Start building your routine by adding exercises from
                           your library or creating custom ones
                         </p>
@@ -1861,50 +1919,52 @@ export default function SeamlessRoutineModal({
             )}
 
             {currentStep === "review" && (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-2">
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <h3 className="text-sm font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Review Your Routine
                   </h3>
-                  <p className="text-gray-400">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Double-check everything looks good before saving
                   </p>
                 </div>
 
-                <div className="max-w-2xl mx-auto space-y-6">
-                  <Card className="bg-[#353A3A] border-gray-600">
-                    <CardContent className="p-6">
-                      <h4 className="text-lg font-semibold text-white mb-2">
+                <div className="max-w-2xl mx-auto space-y-4">
+                  <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+                    <CardContent className="p-4">
+                      <h4 className="text-sm font-semibold mb-1.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                         {name}
                       </h4>
-                      <p className="text-gray-400 mb-4">{description}</p>
-                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                      <p className="text-xs mb-3" style={{ color: COLORS.TEXT_SECONDARY }}>{description}</p>
+                      <div className="flex items-center gap-3 text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                         <span>{exercises.length} exercises</span>
                         <span>Ready to use</span>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <div className="space-y-3">
-                    <h5 className="text-white font-medium">Exercises:</h5>
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Exercises:</h5>
                     {exercises.map((exercise, index) => (
                       <div
                         key={exercise.id}
-                        className="flex items-center gap-3 p-3 bg-[#353A3A] rounded-lg border border-gray-600"
+                        className="flex items-center gap-2.5 p-2.5 rounded-md border"
+                        style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
                       >
-                        <div className="w-6 h-6 bg-[#4A5A70] rounded-full flex items-center justify-center text-white text-xs font-medium">
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium"
+                          style={{ backgroundColor: "#F28F3B", color: COLORS.TEXT_PRIMARY }}>
                           {index + 1}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">
+                            <span className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                               {exercise.title}
                             </span>
                             <Badge
                               variant="outline"
                               className={getExerciseColor(exercise.type)}
                             >
-                              <span className="capitalize">
+                              <span className="capitalize text-[10px]">
                                 {exercise.type}
                               </span>
                             </Badge>
@@ -1912,7 +1972,7 @@ export default function SeamlessRoutineModal({
                           {(exercise.sets ||
                             exercise.reps ||
                             exercise.tempo) && (
-                            <div className="text-sm text-gray-400 mt-1">
+                            <div className="text-[10px] mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                               {exercise.sets && `${exercise.sets} sets`}
                               {exercise.sets && exercise.reps && " • "}
                               {exercise.reps && `${exercise.reps} reps`}
@@ -1930,8 +1990,8 @@ export default function SeamlessRoutineModal({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between p-6 border-t border-gray-600">
-            <div className="flex gap-3">
+          <div className="flex items-center justify-between p-4 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+            <div className="flex gap-2">
               {currentStep !== "details" && (
                 <Button
                   variant="outline"
@@ -1939,18 +1999,44 @@ export default function SeamlessRoutineModal({
                     if (currentStep === "exercises") setCurrentStep("details");
                     if (currentStep === "review") setCurrentStep("exercises");
                   }}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_SECONDARY,
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
                 >
                   Back
                 </Button>
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 onClick={onClose}
-                className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                className="text-xs h-8 px-3"
+                style={{
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_SECONDARY,
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
                 Cancel
               </Button>
@@ -1959,10 +2045,21 @@ export default function SeamlessRoutineModal({
                 <Button
                   onClick={() => setCurrentStep("exercises")}
                   disabled={!canProceedToExercises}
-                  className="bg-[#4A5A70] hover:bg-[#606364] text-white"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    backgroundColor: "#F28F3B",
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (!canProceedToExercises) return;
+                    e.currentTarget.style.backgroundColor = "#D67A2F";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#F28F3B";
+                  }}
                 >
                   Next: Add Exercises
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                 </Button>
               )}
 
@@ -1970,10 +2067,21 @@ export default function SeamlessRoutineModal({
                 <Button
                   onClick={() => setCurrentStep("review")}
                   disabled={!canProceedToReview}
-                  className="bg-[#4A5A70] hover:bg-[#606364] text-white"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    backgroundColor: "#F28F3B",
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (!canProceedToReview) return;
+                    e.currentTarget.style.backgroundColor = "#D67A2F";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#F28F3B";
+                  }}
                 >
                   Next: Review
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                 </Button>
               )}
 
@@ -1981,15 +2089,26 @@ export default function SeamlessRoutineModal({
                 <Button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="text-xs h-8 px-3"
+                  style={{
+                    backgroundColor: "#F28F3B",
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    if (isSubmitting) return;
+                    e.currentTarget.style.backgroundColor = "#D67A2F";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "#F28F3B";
+                  }}
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
                       {routine ? "Updating..." : "Creating..."}
                     </>
                   ) : (
-                    "Create Routine"
+                    routine ? "Update Routine" : "Create Routine"
                   )}
                 </Button>
               )}
