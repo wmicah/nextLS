@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Lightbulb, AlertTriangle, Dumbbell } from "lucide-react";
+import { COLORS } from "@/lib/colors";
 
 interface CoachInstructions {
   whatToDo: string;
@@ -120,26 +121,30 @@ export default function CoachInstructionsDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="bg-[#2A3133]/95 border-[#606364] text-[#C3BCC2] max-w-2xl max-h-[80vh] overflow-y-auto backdrop-blur-md shadow-2xl"
-        style={{ zIndex: 300 }}
+        className="max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl [&>button]:hidden"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+          zIndex: 300,
+        }}
         onOpenAutoFocus={e => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="text-white text-xl flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-yellow-400" />
+          <DialogTitle className="text-lg font-bold flex items-center gap-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+            <Lightbulb className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
             Coach Instructions for "{exerciseTitle}"
           </DialogTitle>
-          <DialogDescription className="text-[#ABA4AA]">
+          <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
             Provide detailed guidance to help your client understand and perform
             this exercise correctly.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* What to Do */}
-          <Card className="bg-[#353A3A] border-[#606364]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-lg">What to Do</CardTitle>
+          <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>What to Do</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -151,16 +156,27 @@ export default function CoachInstructionsDialog({
                   }))
                 }
                 placeholder="Briefly describe what the client should accomplish with this exercise..."
-                className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA]"
+                className="text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 rows={3}
               />
             </CardContent>
           </Card>
 
           {/* How to Do It */}
-          <Card className="bg-[#353A3A] border-[#606364]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-lg">How to Do It</CardTitle>
+          <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>How to Do It</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -172,27 +188,49 @@ export default function CoachInstructionsDialog({
                   }))
                 }
                 placeholder="Provide step-by-step instructions on how to perform the exercise..."
-                className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA]"
+                className="text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
                 rows={4}
               />
             </CardContent>
           </Card>
 
           {/* Key Points */}
-          <Card className="bg-[#353A3A] border-[#606364]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-lg flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-yellow-400" />
+          <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold flex items-center gap-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <Lightbulb className="h-3.5 w-3.5" style={{ color: COLORS.GOLDEN_ACCENT }} />
                 Key Coaching Points
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2.5">
               <div className="flex gap-2">
                 <Input
                   value={newKeyPoint}
                   onChange={e => setNewKeyPoint(e.target.value)}
                   placeholder="Add a key coaching point..."
-                  className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA]"
+                  className="text-sm h-9"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  }}
                   onKeyPress={e =>
                     e.key === "Enter" && (e.preventDefault(), addKeyPoint())
                   }
@@ -201,30 +239,55 @@ export default function CoachInstructionsDialog({
                   type="button"
                   onClick={addKeyPoint}
                   size="sm"
-                  className="bg-[#4A5A70] hover:bg-[#606364] text-white"
+                  className="h-9 w-9 p-0"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_DARK,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                  }}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {instructions.keyPoints.map((point, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 bg-[#2A3133] rounded-lg border border-[#606364]"
+                    className="flex items-center gap-2 p-2 rounded-md border"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
                   >
                     <Badge
                       variant="secondary"
-                      className="bg-yellow-400/20 text-yellow-300"
+                      className="text-xs px-1.5 py-0.5"
+                      style={{
+                        backgroundColor: "rgba(229, 178, 50, 0.2)",
+                        color: COLORS.GOLDEN_ACCENT,
+                      }}
                     >
                       {index + 1}
                     </Badge>
-                    <span className="flex-1 text-[#C3BCC2]">{point}</span>
+                    <span className="flex-1 text-xs" style={{ color: COLORS.TEXT_PRIMARY }}>{point}</span>
                     <Button
                       type="button"
                       onClick={() => removeKeyPoint(index)}
                       size="sm"
                       variant="ghost"
-                      className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                      className="h-6 w-6 p-0"
+                      style={{ color: COLORS.RED_ALERT }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -235,20 +298,31 @@ export default function CoachInstructionsDialog({
           </Card>
 
           {/* Common Mistakes */}
-          <Card className="bg-[#353A3A] border-[#606364]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-lg flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-400" />
+          <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold flex items-center gap-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <AlertTriangle className="h-3.5 w-3.5" style={{ color: COLORS.RED_ALERT }} />
                 Common Mistakes to Avoid
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2.5">
               <div className="flex gap-2">
                 <Input
                   value={newMistake}
                   onChange={e => setNewMistake(e.target.value)}
                   placeholder="Add a common mistake to avoid..."
-                  className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA]"
+                  className="text-sm h-9"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  }}
                   onKeyPress={e =>
                     e.key === "Enter" && (e.preventDefault(), addMistake())
                   }
@@ -257,30 +331,55 @@ export default function CoachInstructionsDialog({
                   type="button"
                   onClick={addMistake}
                   size="sm"
-                  className="bg-[#4A5A70] hover:bg-[#606364] text-white"
+                  className="h-9 w-9 p-0"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_DARK,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                  }}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {instructions.commonMistakes.map((mistake, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 bg-[#2A3133] rounded-lg border border-[#606364]"
+                    className="flex items-center gap-2 p-2 rounded-md border"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
                   >
                     <Badge
                       variant="destructive"
-                      className="bg-red-400/20 text-red-300"
+                      className="text-xs px-1.5 py-0.5"
+                      style={{
+                        backgroundColor: "rgba(217, 83, 79, 0.2)",
+                        color: COLORS.RED_ALERT,
+                      }}
                     >
                       {index + 1}
                     </Badge>
-                    <span className="flex-1 text-[#C3BCC2]">{mistake}</span>
+                    <span className="flex-1 text-xs" style={{ color: COLORS.TEXT_PRIMARY }}>{mistake}</span>
                     <Button
                       type="button"
                       onClick={() => removeMistake(index)}
                       size="sm"
                       variant="ghost"
-                      className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                      className="h-6 w-6 p-0"
+                      style={{ color: COLORS.RED_ALERT }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -291,10 +390,10 @@ export default function CoachInstructionsDialog({
           </Card>
 
           {/* Equipment */}
-          <Card className="bg-[#353A3A] border-[#606364]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-white text-lg flex items-center gap-2">
-                <Dumbbell className="h-4 w-4 text-blue-400" />
+          <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold flex items-center gap-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <Dumbbell className="h-3.5 w-3.5" style={{ color: COLORS.GOLDEN_ACCENT }} />
                 Equipment
               </CardTitle>
             </CardHeader>
@@ -308,7 +407,18 @@ export default function CoachInstructionsDialog({
                   }))
                 }
                 placeholder="Required equipment..."
-                className="bg-[#2A3133] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA]"
+                className="text-sm h-9"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
               />
             </CardContent>
           </Card>
@@ -318,7 +428,20 @@ export default function CoachInstructionsDialog({
               type="button"
               variant="outline"
               onClick={handleQuickFill}
-              className="border-[#606364] text-[#C3BCC2] hover:bg-[#4A5A70]"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Quick Fill Template
             </Button>
@@ -326,14 +449,37 @@ export default function CoachInstructionsDialog({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-[#606364] text-[#C3BCC2] hover:bg-[#4A5A70]"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
             <Button
               type="button"
               onClick={handleSave}
-              className="bg-[#4A5A70] hover:bg-[#606364] text-white"
+              className="text-xs h-8 px-3"
+              style={{
+                backgroundColor: COLORS.GOLDEN_DARK,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
             >
               Save Instructions
             </Button>

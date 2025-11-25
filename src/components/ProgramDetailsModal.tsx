@@ -28,6 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { COLORS } from "@/lib/colors";
 import {
   Calendar,
   Users,
@@ -232,32 +233,59 @@ export default function ProgramDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] bg-[#2A3133] border-gray-600 [&>button]:hidden">
+      <DialogContent className="max-w-[90vw] w-[90vw] max-h-[90vh] [&>button]:hidden"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+      >
         <DialogHeader>
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between p-4">
             <div className="flex-1">
               {isEditing ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <Input
                     value={editedTitle}
                     onChange={e => setEditedTitle(e.target.value)}
-                    className="text-white text-2xl font-bold bg-transparent border-gray-600 focus:border-blue-500"
+                    className="text-lg font-bold text-sm"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                     placeholder="Program title"
                   />
                   <Textarea
                     value={editedDescription}
                     onChange={e => setEditedDescription(e.target.value)}
-                    className="text-gray-400 bg-transparent border-gray-600 focus:border-blue-500 resize-none"
+                    className="text-sm resize-none"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_SECONDARY,
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                     placeholder="Program description"
                     rows={2}
                   />
                 </div>
               ) : (
                 <>
-                  <DialogTitle className="text-white text-2xl">
+                  <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                     {program.title}
                   </DialogTitle>
-                  <DialogDescription className="text-gray-400">
+                  <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                     {program.description || "No description provided"}
                   </DialogDescription>
                 </>
@@ -270,17 +298,42 @@ export default function ProgramDetailsModal({
                     size="sm"
                     onClick={handleSave}
                     disabled={updateProgram.isPending}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="h-8 w-8 p-0"
+                    style={{
+                      backgroundColor: COLORS.GREEN_PRIMARY,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                    onMouseEnter={e => {
+                      if (!updateProgram.isPending) {
+                        e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                    }}
                   >
-                    <Save className="h-4 w-4" />
+                    <Save className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={handleCancel}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                    className="h-8 w-8 p-0"
+                    style={{
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5" />
                   </Button>
                 </>
               ) : (
@@ -289,17 +342,43 @@ export default function ProgramDetailsModal({
                     size="sm"
                     variant="outline"
                     onClick={() => setIsEditing(true)}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                    className="h-8 w-8 p-0"
+                    style={{
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
-                    <Edit3 className="h-4 w-4" />
+                    <Edit3 className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={onClose}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                    className="h-8 w-8 p-0"
+                    style={{
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_SECONDARY,
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5" />
                   </Button>
                 </>
               )}
@@ -307,72 +386,86 @@ export default function ProgramDetailsModal({
           </div>
         </DialogHeader>
 
-        <div className="mt-6">
+        <div className="mt-4 px-4">
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-[#3A4245] border-gray-600">
+            <TabsList className="grid w-full grid-cols-3"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
               <TabsTrigger
                 value="overview"
-                className="text-white data-[state=active]:bg-[#4A5A70]"
+                className="text-xs data-[state=active]:bg-[#B1872E] data-[state=active]:text-[#F5F5F5]"
+                style={{
+                  color: COLORS.TEXT_SECONDARY,
+                }}
               >
                 Overview
               </TabsTrigger>
               <TabsTrigger
                 value="structure"
-                className="text-white data-[state=active]:bg-[#4A5A70]"
+                className="text-xs data-[state=active]:bg-[#B1872E] data-[state=active]:text-[#F5F5F5]"
+                style={{
+                  color: COLORS.TEXT_SECONDARY,
+                }}
               >
                 Structure
               </TabsTrigger>
               <TabsTrigger
                 value="assignments"
-                className="text-white data-[state=active]:bg-[#4A5A70]"
+                className="text-xs data-[state=active]:bg-[#B1872E] data-[state=active]:text-[#F5F5F5]"
+                style={{
+                  color: COLORS.TEXT_SECONDARY,
+                }}
               >
                 Assignments
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-[#3A4245] border-gray-600">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-white text-lg flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
+            <TabsContent value="overview" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                      <Calendar className="h-4 w-4" />
                       Duration
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-3xl font-bold text-white">
+                    <p className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                       {program.duration || 0}
                     </p>
-                    <p className="text-gray-400 text-sm">Weeks</p>
+                    <p className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>Weeks</p>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#3A4245] border-gray-600">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-white text-lg flex items-center gap-2">
-                      <Users className="h-5 w-5" />
+                <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                      <Users className="h-4 w-4" />
                       Assignments
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-3xl font-bold text-white">
+                    <p className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                       {program.activeClientCount}
                     </p>
-                    <p className="text-gray-400 text-sm">Active Clients</p>
+                    <p className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>Active Clients</p>
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-[#3A4245] border-gray-600">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
                   <CardHeader>
-                    <CardTitle className="text-white">
+                    <CardTitle className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Program Details
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Level:</span>
+                      <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Level:</span>
                       <Badge
                         variant="outline"
                         className={getLevelColor(program.level)}
@@ -381,36 +474,36 @@ export default function ProgramDetailsModal({
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Created:</span>
-                      <span className="text-white">
+                      <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Created:</span>
+                      <span className="text-xs" style={{ color: COLORS.TEXT_PRIMARY }}>
                         {format(new Date(program.createdAt), "MMM dd, yyyy")}
                       </span>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-[#3A4245] border-gray-600">
+                <Card className="border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
                   <CardHeader>
-                    <CardTitle className="text-white">
+                    <CardTitle className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Program Structure
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Total Weeks:</span>
-                      <span className="text-white font-medium">
+                      <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Total Weeks:</span>
+                      <span className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                         {program.totalWeeks}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Active Clients:</span>
-                      <span className="text-white font-medium">
+                      <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Active Clients:</span>
+                      <span className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                         {program.activeClientCount}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Last Updated:</span>
-                      <span className="text-white font-medium">
+                      <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Last Updated:</span>
+                      <span className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                         {format(new Date(program.updatedAt), "MMM dd, yyyy")}
                       </span>
                     </div>
@@ -419,17 +512,22 @@ export default function ProgramDetailsModal({
               </div>
             </TabsContent>
 
-            <TabsContent value="structure" className="space-y-6 mt-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <BookOpen className="h-6 w-6 text-blue-400" />
-                    <h3 className="text-lg font-medium text-white">
+            <TabsContent value="structure" className="space-y-4 mt-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <BookOpen className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Program Structure
                     </h3>
                     <Badge
                       variant="outline"
-                      className="text-blue-400 border-blue-400/30"
+                      className="text-xs px-2 py-0.5"
+                      style={{
+                        color: COLORS.GOLDEN_ACCENT,
+                        borderColor: COLORS.BORDER_ACCENT,
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                      }}
                     >
                       {program.totalWeeks} weeks
                     </Badge>
@@ -446,26 +544,36 @@ export default function ProgramDetailsModal({
                         return (
                           <Card
                             key={weekId}
-                            className="bg-[#3A4245] border-gray-600 hover:border-gray-500 transition-colors"
+                            className="border transition-colors"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                            }}
                           >
                             <CardHeader
-                              className="pb-3 cursor-pointer"
+                              className="pb-2 cursor-pointer"
                               onClick={() => toggleWeekExpansion(weekId)}
                             >
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2.5">
                                   {isExpanded ? (
-                                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                                    <ChevronDown className="h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                                   ) : (
-                                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                                    <ChevronRight className="h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                                   )}
                                   <div>
-                                    <CardTitle className="text-white text-base">
+                                    <CardTitle className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                                       Week {week.weekNumber || weekIndex + 1}:{" "}
                                       {week.title}
                                     </CardTitle>
                                     {week.description && (
-                                      <CardDescription className="text-gray-400 text-sm">
+                                      <CardDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                                         {week.description}
                                       </CardDescription>
                                     )}
@@ -473,7 +581,12 @@ export default function ProgramDetailsModal({
                                 </div>
                                 <Badge
                                   variant="outline"
-                                  className="text-gray-400 border-gray-400/30"
+                                  className="text-xs px-2 py-0.5"
+                                  style={{
+                                    color: COLORS.TEXT_SECONDARY,
+                                    borderColor: COLORS.BORDER_SUBTLE,
+                                    backgroundColor: COLORS.BACKGROUND_CARD,
+                                  }}
                                 >
                                   {week.days?.length || 0} days
                                 </Badge>
@@ -494,26 +607,30 @@ export default function ProgramDetailsModal({
                                       return (
                                         <div
                                           key={dayId}
-                                          className="bg-[#2A3133] rounded-lg border border-gray-700"
+                                          className="rounded-md border"
+                                          style={{
+                                            backgroundColor: COLORS.BACKGROUND_DARK,
+                                            borderColor: COLORS.BORDER_SUBTLE,
+                                          }}
                                         >
                                           <div
-                                            className="flex items-center justify-between p-3 cursor-pointer"
+                                            className="flex items-center justify-between p-2.5 cursor-pointer"
                                             onClick={() =>
                                               toggleDayExpansion(dayId)
                                             }
                                           >
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2.5">
                                               {isDayExpanded ? (
-                                                <ChevronDown className="h-3 w-3 text-gray-400" />
+                                                <ChevronDown className="h-3 w-3" style={{ color: COLORS.TEXT_SECONDARY }} />
                                               ) : (
-                                                <ChevronRight className="h-3 w-3 text-gray-400" />
+                                                <ChevronRight className="h-3 w-3" style={{ color: COLORS.TEXT_SECONDARY }} />
                                               )}
                                               <div>
-                                                <p className="text-white font-medium text-sm">
+                                                <p className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                                                   {day.title}
                                                 </p>
                                                 {day.description && (
-                                                  <p className="text-gray-400 text-xs">
+                                                  <p className="text-[10px] mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                                                     {day.description}
                                                   </p>
                                                 )}
@@ -523,14 +640,24 @@ export default function ProgramDetailsModal({
                                               {day.isRestDay ? (
                                                 <Badge
                                                   variant="outline"
-                                                  className="text-orange-400 border-orange-400/30 text-xs"
+                                                  className="text-[10px] px-1.5 py-0.5"
+                                                  style={{
+                                                    color: "#F28F3B",
+                                                    borderColor: "rgba(242, 143, 59, 0.3)",
+                                                    backgroundColor: COLORS.BACKGROUND_CARD,
+                                                  }}
                                                 >
                                                   Rest Day
                                                 </Badge>
                                               ) : (
                                                 <Badge
                                                   variant="outline"
-                                                  className="text-green-400 border-green-400/30 text-xs"
+                                                  className="text-[10px] px-1.5 py-0.5"
+                                                  style={{
+                                                    color: COLORS.GREEN_PRIMARY,
+                                                    borderColor: "rgba(112, 207, 112, 0.3)",
+                                                    backgroundColor: COLORS.BACKGROUND_CARD,
+                                                  }}
                                                 >
                                                   {day.drills?.length || 0}{" "}
                                                   drills
@@ -539,10 +666,10 @@ export default function ProgramDetailsModal({
                                             </div>
                                           </div>
 
-                                          {isDayExpanded &&
+                                            {isDayExpanded &&
                                             day.drills &&
                                             day.drills.length > 0 && (
-                                              <div className="px-3 pb-3 border-t border-gray-700 pt-2">
+                                              <div className="px-2.5 pb-2.5 border-t pt-2" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
                                                 <div className="space-y-2">
                                                   {day.drills.map(
                                                     (drill, drillIndex) => {
@@ -589,7 +716,7 @@ export default function ProgramDetailsModal({
                                     })}
                                   </div>
                                 ) : (
-                                  <p className="text-gray-500 text-sm italic">
+                                  <p className="text-xs italic" style={{ color: COLORS.TEXT_SECONDARY }}>
                                     No days configured for this week.
                                   </p>
                                 )}
@@ -602,8 +729,8 @@ export default function ProgramDetailsModal({
                   </ScrollArea>
                 ) : (
                   <div className="text-center py-8">
-                    <BookOpen className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-                    <p className="text-gray-500">
+                    <BookOpen className="h-12 w-12 mx-auto mb-3" style={{ color: COLORS.TEXT_SECONDARY }} />
+                    <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                       No weeks configured for this program yet.
                     </p>
                   </div>
@@ -611,16 +738,21 @@ export default function ProgramDetailsModal({
               </div>
             </TabsContent>
 
-            <TabsContent value="assignments" className="space-y-6 mt-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-6">
-                  <Users className="h-6 w-6 text-blue-400" />
-                  <h3 className="text-lg font-medium text-white">
+            <TabsContent value="assignments" className="space-y-4 mt-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <Users className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                  <h3 className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Active Client Assignments
                   </h3>
                   <Badge
                     variant="outline"
-                    className="text-blue-400 border-blue-400/30"
+                    className="text-xs px-2 py-0.5"
+                    style={{
+                      color: COLORS.GOLDEN_ACCENT,
+                      borderColor: COLORS.BORDER_ACCENT,
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                    }}
                   >
                     {assignments.length} client
                     {assignments.length !== 1 ? "s" : ""}
@@ -629,57 +761,72 @@ export default function ProgramDetailsModal({
 
                 {assignmentsLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: COLORS.GOLDEN_ACCENT }} />
                   </div>
                 ) : assignments.length === 0 ? (
                   <div className="text-center py-12">
-                    <Users className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-                    <h3 className="text-lg font-medium text-white mb-2">
+                    <Users className="h-12 w-12 mx-auto mb-3" style={{ color: COLORS.TEXT_SECONDARY }} />
+                    <h3 className="text-sm font-medium mb-1.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                       No Active Assignments
                     </h3>
-                    <p className="text-gray-400 mb-6">
+                    <p className="text-xs mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                       This program hasn't been assigned to any clients yet.
                     </p>
                   </div>
                 ) : (
                   <ScrollArea className="h-[400px] pr-4">
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {assignments.map(assignment => (
                         <Card
                           key={assignment.id}
-                          className="bg-[#3A4245] border-gray-600 hover:border-gray-500 transition-colors"
+                          className="border transition-colors"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                          }}
                         >
-                          <CardContent className="p-4">
+                          <CardContent className="p-3">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
+                              <div className="flex items-center gap-2.5">
+                                <Avatar className="h-8 w-8">
                                   <AvatarImage
                                     src={assignment.client.avatar || ""}
                                   />
-                                  <AvatarFallback className="bg-blue-500/20 text-blue-300">
+                                  <AvatarFallback className="text-xs"
+                                    style={{
+                                      backgroundColor: COLORS.BACKGROUND_CARD_HOVER,
+                                      color: COLORS.GOLDEN_ACCENT,
+                                    }}
+                                  >
                                     {assignment.client.name?.charAt(0) || "C"}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <h4 className="font-medium text-white">
+                                  <h4 className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                                     {assignment.client.name}
                                   </h4>
-                                  <p className="text-sm text-gray-400">
+                                  <p className="text-[10px] mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                                     {assignment.client.email}
                                   </p>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-1.5 mb-1">
                                   <Progress
                                     value={assignment.progress}
-                                    className="w-20 h-2"
+                                    className="w-16 h-1.5"
                                   />
-                                  <span className="text-sm text-gray-400">
+                                  <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                                     {assignment.progress}%
                                   </span>
                                 </div>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
                                   Assigned{" "}
                                   {format(
                                     new Date(assignment.assignedAt),

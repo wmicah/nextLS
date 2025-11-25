@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { RadioGroupItem } from "@/components/ui/radio-group";
+import { COLORS } from "@/lib/colors";
 
 // Types for ProgramBuilder integration
 type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
@@ -647,8 +648,10 @@ function ProgramEditorPageContent() {
       <Sidebar>
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
-            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading program...</p>
+            <div className="animate-spin h-8 w-8 border-4 border-t-transparent rounded-full mx-auto mb-4"
+              style={{ borderColor: COLORS.GOLDEN_ACCENT }}
+            ></div>
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>Loading program...</p>
           </div>
         </div>
       </Sidebar>
@@ -658,7 +661,7 @@ function ProgramEditorPageContent() {
   return (
     <>
       <Sidebar>
-        <div className="min-h-screen bg-[#2A3133]">
+        <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
           {/* Program Builder */}
           <ProgramBuilder
             onSave={handleProgramBuilderSave}
@@ -698,61 +701,96 @@ function ProgramEditorPageContent() {
         open={showUpdateScopeDialog}
         onOpenChange={setShowUpdateScopeDialog}
       >
-        <DialogContent className="bg-[#2A3133] border-gray-600">
+        <DialogContent className="[&>button]:hidden"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
               Update Program Scope
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
               This program has active client assignments. Choose how to apply
               your changes:
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <div className="space-y-3">
+          <div className="py-3">
+            <div className="space-y-2">
               <div
-                className="flex items-start space-x-3 p-4 rounded-lg border border-gray-600 hover:bg-gray-700/50 cursor-pointer"
+                className="flex items-start space-x-2.5 p-3 rounded-md border cursor-pointer transition-colors"
+                style={{
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  backgroundColor: updateScope === "all" ? COLORS.BACKGROUND_CARD_HOVER : COLORS.BACKGROUND_CARD,
+                }}
                 onClick={() => setUpdateScope("all")}
+                onMouseEnter={e => {
+                  if (updateScope !== "all") {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (updateScope !== "all") {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  }
+                }}
               >
                 <RadioGroupItem
                   value="all"
                   id="all"
-                  className="mt-1"
+                  className="mt-0.5"
                   checked={updateScope === "all"}
                   onChange={() => setUpdateScope("all")}
                 />
                 <div className="flex-1">
                   <Label
                     htmlFor="all"
-                    className="text-white font-medium cursor-pointer"
+                    className="text-xs font-medium cursor-pointer"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Update All Assignments
                   </Label>
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Apply changes to ALL assigned clients. This updates the
                     program for all existing assignments.
                   </p>
                 </div>
               </div>
               <div
-                className="flex items-start space-x-3 p-4 rounded-lg border border-gray-600 hover:bg-gray-700/50 cursor-pointer"
+                className="flex items-start space-x-2.5 p-3 rounded-md border cursor-pointer transition-colors"
+                style={{
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  backgroundColor: updateScope === "future" ? COLORS.BACKGROUND_CARD_HOVER : COLORS.BACKGROUND_CARD,
+                }}
                 onClick={() => setUpdateScope("future")}
+                onMouseEnter={e => {
+                  if (updateScope !== "future") {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (updateScope !== "future") {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  }
+                }}
               >
                 <RadioGroupItem
                   value="future"
                   id="future"
-                  className="mt-1"
+                  className="mt-0.5"
                   checked={updateScope === "future"}
                   onChange={() => setUpdateScope("future")}
                 />
                 <div className="flex-1">
                   <Label
                     htmlFor="future"
-                    className="text-white font-medium cursor-pointer"
+                    className="text-xs font-medium cursor-pointer"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Don't Change Existing Assignments
                   </Label>
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Create a new program version. All existing assignments keep
                     the original program unchanged. New assignments will use the
                     updated version.
@@ -761,20 +799,43 @@ function ProgramEditorPageContent() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => {
                 setShowUpdateScopeDialog(false);
                 setPendingSave(null);
               }}
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              className="text-xs h-8 px-3"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirmSave}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="text-xs h-8 px-3"
+              style={{
+                backgroundColor: COLORS.GOLDEN_DARK,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
             >
               Save Program
             </Button>

@@ -402,30 +402,35 @@ function LibraryPage() {
 
   return (
     <Sidebar>
-      {/* Compact Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-lg font-bold mb-0.5" style={{ color: COLORS.TEXT_PRIMARY }}>
-            Training Library
-          </h1>
-          <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
-            {activeTab === "master"
-              ? "Browse shared training resources from administrators"
-              : "Manage your personal training resources and uploads"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className="px-2.5 py-1 rounded-full text-xs font-medium"
-            style={{
-              backgroundColor: COLORS.BACKGROUND_CARD,
-              color: COLORS.TEXT_SECONDARY,
-              border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-            }}
-          >
-            {libraryItems.length}{" "}
-            {libraryItems.length === 1 ? "Resource" : "Resources"}
-          </span>
+      {/* Header with Golden Bar Indicator */}
+      <div className="mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div>
+              <h1
+                className="text-lg font-semibold pl-2"
+                style={{
+                  color: COLORS.TEXT_PRIMARY,
+                  borderLeft: `3px solid ${COLORS.GOLDEN_ACCENT}`,
+                }}
+              >
+                Training Library
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="px-2.5 py-1 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_SECONDARY,
+                border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+              }}
+            >
+              {libraryItems.length}{" "}
+              {libraryItems.length === 1 ? "Resource" : "Resources"}
+            </span>
+          </div>
         </div>
       </div>
 

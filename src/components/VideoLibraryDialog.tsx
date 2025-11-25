@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { COLORS } from "@/lib/colors";
 
 interface VideoLibraryDialogProps {
   isOpen: boolean;
@@ -150,54 +151,93 @@ export default function VideoLibraryDialog({
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent
         nested={true}
-        className="bg-[#1A1F21] border-gray-600 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+        className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl [&>button]:hidden"
         style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
           boxShadow:
-            "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 20px rgba(59, 130, 246, 0.3)",
+            "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)",
         }}
       >
         <DialogHeader>
-          <DialogTitle className="text-white">Add from Library</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Add from Library</DialogTitle>
+          <DialogDescription className="text-xs mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
             Select a video from your library to add.
           </DialogDescription>
         </DialogHeader>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-600">
+        <div className="flex border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
           <button
             onClick={() => setActiveTab("master")}
-            className={`px-6 py-3 text-sm font-medium ${
-              activeTab === "master"
-                ? "text-white border-b-2 border-blue-500 bg-gray-700/50"
-                : "text-gray-400 hover:text-white hover:bg-gray-700/30"
-            }`}
+            className="px-4 py-2.5 text-xs font-medium transition-colors"
+            style={{
+              color: activeTab === "master" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+              borderBottom: activeTab === "master" ? `2px solid ${COLORS.GOLDEN_ACCENT}` : "2px solid transparent",
+              backgroundColor: activeTab === "master" ? COLORS.BACKGROUND_CARD_HOVER : "transparent",
+            }}
+            onMouseEnter={e => {
+              if (activeTab !== "master") {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }
+            }}
+            onMouseLeave={e => {
+              if (activeTab !== "master") {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }
+            }}
           >
             Master Library
           </button>
           <button
             onClick={() => setActiveTab("local")}
-            className={`px-6 py-3 text-sm font-medium ${
-              activeTab === "local"
-                ? "text-white border-b-2 border-blue-500 bg-gray-700/50"
-                : "text-gray-400 hover:text-white hover:bg-gray-700/30"
-            }`}
+            className="px-4 py-2.5 text-xs font-medium transition-colors"
+            style={{
+              color: activeTab === "local" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+              borderBottom: activeTab === "local" ? `2px solid ${COLORS.GOLDEN_ACCENT}` : "2px solid transparent",
+              backgroundColor: activeTab === "local" ? COLORS.BACKGROUND_CARD_HOVER : "transparent",
+            }}
+            onMouseEnter={e => {
+              if (activeTab !== "local") {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }
+            }}
+            onMouseLeave={e => {
+              if (activeTab !== "local") {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }
+            }}
           >
             Local Library
           </button>
         </div>
 
         {/* Search and Filter */}
-        <div className="p-4 border-b border-gray-600 space-y-3">
+        <div className="p-3 border-b space-y-2.5" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
             <input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Search videos..."
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-600 bg-[#353A3A] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 rounded-md border text-sm"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+              }}
             />
           </div>
 
@@ -206,19 +246,30 @@ export default function VideoLibraryDialog({
             <select
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-[#353A3A] text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 rounded-md border text-sm"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+              }}
             >
-              <option value="all">All Categories</option>
+              <option value="all" style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY }}>All Categories</option>
 
               <optgroup
                 label="Standard Categories"
-                style={{ backgroundColor: "#2A3133", color: "#C3BCC2" }}
+                style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}
               >
                 {DEFAULT_CATEGORIES.map(cat => (
                   <option
                     key={cat}
                     value={cat}
-                    style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                    style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY }}
                   >
                     {cat}
                   </option>
@@ -230,7 +281,7 @@ export default function VideoLibraryDialog({
               ).length > 0 && (
                 <optgroup
                   label="Your Categories"
-                  style={{ backgroundColor: "#2A3133", color: "#C3BCC2" }}
+                  style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}
                 >
                   {categories
                     .filter(
@@ -240,7 +291,7 @@ export default function VideoLibraryDialog({
                       <option
                         key={cat.name}
                         value={cat.name}
-                        style={{ backgroundColor: "#353A3A", color: "#C3BCC2" }}
+                        style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY }}
                       >
                         {cat.name} ({cat.count})
                       </option>
@@ -252,31 +303,43 @@ export default function VideoLibraryDialog({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-3">
           {isLoading ? (
             <div className="flex items-center justify-center h-48">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-t-transparent" style={{ borderColor: COLORS.GOLDEN_ACCENT }}></div>
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-              <Video className="h-8 w-8 mb-3 opacity-50" />
-              <h3 className="text-lg font-medium mb-1">No videos found</h3>
-              <p className="text-sm text-center">
+            <div className="flex flex-col items-center justify-center h-48" style={{ color: COLORS.TEXT_SECONDARY }}>
+              <Video className="h-7 w-7 mb-2 opacity-50" />
+              <h3 className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>No videos found</h3>
+              <p className="text-xs text-center">
                 {searchTerm
                   ? "Try adjusting your search terms"
                   : `No videos in your ${activeTab} library yet`}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {filteredItems.map((item: any) => (
                 <div
                   key={item.id}
-                  className="bg-[#353A3A] rounded-lg border border-gray-600 overflow-hidden hover:border-blue-500 cursor-pointer group"
+                  className="rounded-md border overflow-hidden cursor-pointer group transition-colors"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  }}
                   onClick={() => onSelectVideo(item)}
                 >
                   {/* Thumbnail */}
-                  <div className="relative aspect-video bg-gray-700">
+                  <div className="relative aspect-video" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
                     {item.thumbnail ? (
                       <img
                         src={item.thumbnail}
@@ -285,46 +348,61 @@ export default function VideoLibraryDialog({
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Video className="h-6 w-6 text-gray-500" />
+                        <Video className="h-5 w-5" style={{ color: COLORS.TEXT_MUTED }} />
                       </div>
                     )}
 
                     {/* Play overlay */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                        <Play className="h-4 w-4 text-white" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5">
+                        <Play className="h-3.5 w-3.5 text-white" />
                       </div>
                     </div>
 
                     {/* Duration badge */}
                     {item.duration && (
-                      <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
+                      <div className="absolute top-1.5 right-1.5 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1"
+                        style={{
+                          backgroundColor: "rgba(0, 0, 0, 0.8)",
+                          color: COLORS.TEXT_PRIMARY,
+                        }}
+                      >
+                        <Clock className="h-2.5 w-2.5" />
                         {item.duration}
                       </div>
                     )}
                   </div>
 
                   {/* Content */}
-                  <div className="p-3">
-                    <h3 className="font-medium text-white mb-1 line-clamp-2 text-sm">
+                  <div className="p-2.5">
+                    <h3 className="font-medium mb-1 line-clamp-2 text-xs" style={{ color: COLORS.TEXT_PRIMARY }}>
                       {item.title}
                     </h3>
 
                     {item.description && (
-                      <p className="text-gray-400 text-xs mb-2 line-clamp-2">
+                      <p className="text-[10px] mb-1.5 line-clamp-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {item.description}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       {item.category && (
-                        <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-1 rounded">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{
+                            backgroundColor: "rgba(229, 178, 50, 0.2)",
+                            color: COLORS.GOLDEN_ACCENT,
+                          }}
+                        >
                           {item.category}
                         </span>
                       )}
                       {item.difficulty && (
-                        <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{
+                            backgroundColor: "rgba(112, 207, 112, 0.2)",
+                            color: COLORS.GREEN_PRIMARY,
+                          }}
+                        >
                           {item.difficulty}
                         </span>
                       )}
@@ -337,20 +415,27 @@ export default function VideoLibraryDialog({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-600">
+        <div className="p-3 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-400">
+            <div className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
               {filteredItems.length} video
               {filteredItems.length !== 1 ? "s" : ""} found
               {filteredItems.length > 8 && (
-                <span className="ml-2 text-xs text-blue-400">
+                <span className="ml-2 text-[10px]" style={{ color: COLORS.GOLDEN_ACCENT }}>
                   (Scroll to see more)
                 </span>
               )}
             </div>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-400 hover:text-white"
+              className="px-3 py-1.5 text-xs transition-colors"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </button>
