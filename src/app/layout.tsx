@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import "@/lib/polyfills"; // Polyfills for browser environment (must be imported first)
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -134,6 +135,21 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Global polyfill - must run before any other scripts */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window !== 'undefined' && typeof global === 'undefined') {
+                  window.global = window;
+                }
+                if (typeof globalThis !== 'undefined' && typeof globalThis.global === 'undefined') {
+                  globalThis.global = globalThis;
+                }
+              })();
+            `,
+          }}
+        />
         {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

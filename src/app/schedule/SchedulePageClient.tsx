@@ -44,6 +44,7 @@ import MobileSchedulePage from "@/components/MobileSchedulePage";
 import WorkingHoursModal from "@/components/WorkingHoursModal";
 import BlockedTimesModal from "@/components/BlockedTimesModal";
 import AddTimeModal from "@/components/AddTimeModal";
+import { COLORS, getGoldenAccent, getRedAlert, getGreenPrimary } from "@/lib/colors";
 
 function SchedulePageClient() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -753,18 +754,18 @@ function SchedulePageClient() {
 
   return (
     <Sidebar>
-      <div className="min-h-screen p-6" style={{ backgroundColor: "#2A3133" }}>
+      <div className="min-h-screen p-6" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
         <div className="max-w-6xl mx-auto">
           {/* Compact Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1
                 className="text-2xl font-bold mb-1"
-                style={{ color: "#C3BCC2" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Schedule Management
               </h1>
-              <p className="text-sm" style={{ color: "#ABA4AA" }}>
+              <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Manage your availability and schedule lessons with clients
               </p>
             </div>
@@ -772,8 +773,9 @@ function SchedulePageClient() {
               <span
                 className="px-3 py-1 rounded-full text-sm font-medium"
                 style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#C3BCC2",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  color: COLORS.TEXT_PRIMARY,
+                  border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                 }}
               >
                 {coachSchedule.length}{" "}
@@ -783,9 +785,9 @@ function SchedulePageClient() {
               <span
                 className="px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2"
                 style={{
-                  backgroundColor: "#5B3A1A",
-                  color: "#FCD9A3",
-                  border: "1px solid rgba(252, 217, 163, 0.35)",
+                  backgroundColor: getGoldenAccent(0.15),
+                  color: COLORS.GOLDEN_ACCENT,
+                  border: `1px solid ${COLORS.GOLDEN_BORDER}`,
                 }}
               >
                 Pending Requests:
@@ -800,7 +802,20 @@ function SchedulePageClient() {
 
               <button
                 onClick={() => refetchPendingRequests()}
-                className="flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border border-blue-500/40 text-blue-200 hover:bg-blue-500/10 transition"
+                className="flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium transition-all duration-200"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  color: COLORS.TEXT_SECONDARY,
+                  border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Refresh
@@ -812,11 +827,11 @@ function SchedulePageClient() {
           {pendingRequests.length > 0 && (
             <div
               className="mb-6 p-4 rounded-lg border-2"
-              style={{ backgroundColor: "#1F2426", borderColor: "#FFA500" }}
+              style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.GOLDEN_BORDER }}
             >
               <div className="flex items-center gap-3 mb-4">
-                <AlertCircle className="h-5 w-5 text-orange-400" />
-                <h2 className="text-lg font-semibold text-white">
+                <AlertCircle className="h-5 w-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Pending Schedule Requests ({pendingRequests.length})
                 </h2>
               </div>
@@ -824,22 +839,26 @@ function SchedulePageClient() {
                 {pendingRequests.map((request: any) => (
                   <div
                     key={request.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-orange-500/20 bg-orange-500/10"
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                    style={{
+                      backgroundColor: getGoldenAccent(0.1),
+                      borderColor: COLORS.GOLDEN_BORDER,
+                    }}
                   >
                     <div className="flex-1">
-                      <div className="font-medium text-orange-300">
+                      <div className="font-medium" style={{ color: COLORS.GOLDEN_ACCENT }}>
                         {request.client?.name ||
                           request.client?.email ||
                           "Client"}
                       </div>
-                      <div className="text-sm text-orange-200">
+                      <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {format(
                           new Date(request.date),
                           "MMM d, yyyy 'at' h:mm a"
                         )}
                       </div>
                       {request.description && (
-                        <div className="text-xs text-orange-100 mt-1">
+                        <div className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
                           Reason: {request.description}
                         </div>
                       )}
@@ -854,8 +873,18 @@ function SchedulePageClient() {
                         disabled={approveScheduleRequestMutation.isPending}
                         className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
-                          backgroundColor: "#10B981",
-                          color: "#FFFFFF",
+                          backgroundColor: COLORS.GREEN_PRIMARY,
+                          color: COLORS.BACKGROUND_DARK,
+                        }}
+                        onMouseEnter={e => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                          }
                         }}
                       >
                         {approveScheduleRequestMutation.isPending
@@ -867,8 +896,18 @@ function SchedulePageClient() {
                         disabled={rejectScheduleRequestMutation.isPending}
                         className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
-                          backgroundColor: "#EF4444",
-                          color: "#FFFFFF",
+                          backgroundColor: COLORS.RED_ALERT,
+                          color: COLORS.TEXT_PRIMARY,
+                        }}
+                        onMouseEnter={e => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                          }
                         }}
                       >
                         {rejectScheduleRequestMutation.isPending
@@ -884,27 +923,32 @@ function SchedulePageClient() {
 
           {/* Quick Actions & Today's Schedule */}
           <div className="mb-6">
-            <div className="flex items-center justify-between gap-4 bg-[#1A1D1E] rounded-xl p-3 border border-[#4A5A70]">
+            <div className="flex items-center justify-between gap-4 rounded-xl p-3 border"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
               {/* Left: Today's Schedule */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" style={{ color: "#10B981" }} />
+                  <Calendar className="h-4 w-4" style={{ color: COLORS.GREEN_PRIMARY }} />
                   <span
                     className="text-sm font-medium"
-                    style={{ color: "#C3BCC2" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {getLessonsForDate(new Date()).length} lessons today
                   </span>
                 </div>
                 <div
                   className="h-4 w-px"
-                  style={{ backgroundColor: "#606364" }}
+                  style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                 />
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" style={{ color: "#3B82F6" }} />
+                  <Clock className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
                   <span
                     className="text-sm font-medium"
-                    style={{ color: "#C3BCC2" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {upcomingLessons.length} upcoming
                   </span>
@@ -916,12 +960,15 @@ function SchedulePageClient() {
                 <button
                   onClick={() => setShowBlockedTimesModal(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                  style={{ backgroundColor: "#b76e79", color: "#FFFFFF" }}
+                  style={{
+                    backgroundColor: COLORS.RED_ALERT,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#a15f6a";
+                    e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#b76e79";
+                    e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
                   }}
                 >
                   <X className="h-4 w-4" />
@@ -930,12 +977,15 @@ function SchedulePageClient() {
                 <button
                   onClick={() => setShowAddTimeModal(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                  style={{ backgroundColor: "#5a7fa4", color: "#FFFFFF" }}
+                  style={{
+                    backgroundColor: COLORS.GREEN_PRIMARY,
+                    color: COLORS.BACKGROUND_DARK,
+                  }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#4c6b8a";
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#5a7fa4";
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
                   }}
                 >
                   <Plus className="h-4 w-4" />
@@ -944,12 +994,18 @@ function SchedulePageClient() {
                 <button
                   onClick={() => setShowWorkingHoursModal(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm"
-                  style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    color: COLORS.TEXT_SECONDARY,
+                    border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                  }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "#606364";
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = "#4A5A70";
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                   }}
                 >
                   <Settings className="h-4 w-4" />
@@ -963,65 +1019,93 @@ function SchedulePageClient() {
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => navigateMonth("prev")}
-              className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+              className="p-2 rounded-lg transition-all duration-200"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_SECONDARY,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
-              <ChevronLeft className="h-5 w-5 text-white" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
-            <h3 className="text-xl font-semibold text-white">
+            <h3 className="text-xl font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
               {format(currentMonth, "MMMM yyyy")}
             </h3>
             <button
               onClick={() => navigateMonth("next")}
-              className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+              className="p-2 rounded-lg transition-all duration-200"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_SECONDARY,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
-              <ChevronRight className="h-5 w-5 text-white" />
+              <ChevronRight className="h-5 w-5" />
             </button>
           </div>
 
           {/* Calendar Legend */}
           <div className="flex items-center gap-6 mb-4 text-sm flex-wrap">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-400" />
-              <span className="text-white font-medium">Scheduled Lessons</span>
+              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getGreenPrimary(0.4), borderColor: COLORS.GREEN_PRIMARY }} />
+              <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Scheduled Lessons</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-orange-500 border-2 border-orange-400" />
-              <span className="text-white font-medium">Pending Requests</span>
+              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getGoldenAccent(0.4), borderColor: COLORS.GOLDEN_ACCENT }} />
+              <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Pending Requests</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
-              <span className="text-white font-medium">Today</span>
+              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getGreenPrimary(0.2), borderColor: COLORS.GREEN_PRIMARY }} />
+              <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Today</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-red-500/20 border-2 border-red-400" />
-              <span className="text-red-300 font-medium">Blocked Time</span>
+              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getRedAlert(0.2), borderColor: COLORS.RED_ALERT }} />
+              <span className="font-medium" style={{ color: COLORS.RED_ALERT }}>Blocked Time</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-orange-500/20 border-2 border-orange-500/50" />
-              <span className="text-orange-300 font-medium">
+              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getGoldenAccent(0.1), borderColor: COLORS.GOLDEN_BORDER }} />
+              <span className="font-medium" style={{ color: COLORS.GOLDEN_ACCENT }}>
                 Non-working Day
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-gray-600 border-2 border-gray-500" />
-              <span className="text-gray-300 font-medium">Past Date</span>
+              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }} />
+              <span className="font-medium" style={{ color: COLORS.TEXT_MUTED }}>Past Date</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-gray-700 border-2 border-gray-600" />
-              <span className="text-gray-400 font-medium">Other Month</span>
+              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }} />
+              <span className="font-medium" style={{ color: COLORS.TEXT_MUTED }}>Other Month</span>
             </div>
           </div>
 
           {/* Calendar */}
           <div
             className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
           >
             <div className="grid grid-cols-7 gap-1">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                 <div
                   key={day}
-                  className="text-center text-sm font-bold text-blue-300 py-2 border-b border-blue-500/30"
+                  className="text-center text-sm font-bold py-2 border-b"
+                  style={{
+                    color: COLORS.TEXT_SECONDARY,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                 >
                   {day}
                 </div>
@@ -1059,6 +1143,39 @@ function SchedulePageClient() {
                 const isBlocked = isDayBlocked(day);
                 const hasBlockedTimes = dayBlockedTimes.length > 0;
 
+                // Determine day cell styles
+                let dayBgColor = COLORS.BACKGROUND_CARD;
+                let dayTextColor = COLORS.TEXT_PRIMARY;
+                let dayBorderColor = COLORS.BORDER_SUBTLE;
+                
+                if (isBlocked) {
+                  dayBgColor = getRedAlert(0.2);
+                  dayTextColor = COLORS.RED_ALERT;
+                  dayBorderColor = COLORS.RED_ALERT;
+                } else if (isToday) {
+                  dayBgColor = getGreenPrimary(0.2);
+                  dayTextColor = COLORS.GREEN_PRIMARY;
+                  dayBorderColor = COLORS.GREEN_PRIMARY;
+                } else if (isPast) {
+                  dayBgColor = COLORS.BACKGROUND_DARK;
+                  dayTextColor = COLORS.TEXT_MUTED;
+                  dayBorderColor = COLORS.BORDER_SUBTLE;
+                } else if (isCurrentMonth) {
+                  if (isWorkingDay) {
+                    dayBgColor = COLORS.BACKGROUND_CARD;
+                    dayTextColor = COLORS.TEXT_PRIMARY;
+                    dayBorderColor = COLORS.BORDER_SUBTLE;
+                  } else {
+                    dayBgColor = getGoldenAccent(0.1);
+                    dayTextColor = COLORS.GOLDEN_ACCENT;
+                    dayBorderColor = COLORS.GOLDEN_BORDER;
+                  }
+                } else {
+                  dayBgColor = COLORS.BACKGROUND_DARK;
+                  dayTextColor = COLORS.TEXT_MUTED;
+                  dayBorderColor = COLORS.BORDER_SUBTLE;
+                }
+
                 return (
                   <div
                     key={day.toISOString()}
@@ -1070,20 +1187,24 @@ function SchedulePageClient() {
                           ? "cursor-not-allowed opacity-50"
                           : "cursor-pointer"
                       }
-                      ${
-                        isBlocked
-                          ? "bg-red-500/20 text-red-300 border-red-400 shadow-lg"
-                          : isToday
-                          ? "bg-blue-500/20 text-blue-300 border-blue-400 shadow-lg"
-                          : isPast
-                          ? "text-gray-500 bg-gray-700/30 border-gray-600"
-                          : isCurrentMonth
-                          ? isWorkingDay
-                            ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
-                            : "text-orange-400 bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 hover:border-orange-400"
-                          : "text-gray-600 bg-gray-900/30 border-gray-700"
-                      }
                     `}
+                    style={{
+                      backgroundColor: dayBgColor,
+                      color: dayTextColor,
+                      borderColor: dayBorderColor,
+                    }}
+                    onMouseEnter={e => {
+                      if (!isPast && !isBlocked) {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isPast && !isBlocked) {
+                        e.currentTarget.style.backgroundColor = dayBgColor;
+                        e.currentTarget.style.borderColor = dayBorderColor;
+                      }
+                    }}
                     title={
                       isBlocked
                         ? `Blocked: ${dayBlockedTimes
@@ -1103,24 +1224,39 @@ function SchedulePageClient() {
                       <div className="flex items-center gap-1">
                         {/* Lesson count badge for scheduled days */}
                         {hasLessons && (
-                          <div className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
-                            <span className="text-xs font-bold text-emerald-400">
+                          <div className="w-5 h-5 rounded-full border flex items-center justify-center"
+                            style={{
+                              backgroundColor: getGreenPrimary(0.2),
+                              borderColor: COLORS.GREEN_PRIMARY,
+                            }}
+                          >
+                            <span className="text-xs font-bold" style={{ color: COLORS.GREEN_PRIMARY }}>
                               {lessonsForDay.length}
                             </span>
                           </div>
                         )}
                         {/* Pending requests badge */}
                         {hasPending && (
-                          <div className="w-5 h-5 rounded-full bg-orange-500/20 border border-orange-400/30 flex items-center justify-center">
-                            <span className="text-xs font-bold text-orange-400">
+                          <div className="w-5 h-5 rounded-full border flex items-center justify-center"
+                            style={{
+                              backgroundColor: getGoldenAccent(0.2),
+                              borderColor: COLORS.GOLDEN_ACCENT,
+                            }}
+                          >
+                            <span className="text-xs font-bold" style={{ color: COLORS.GOLDEN_ACCENT }}>
                               {pendingForDay.length}
                             </span>
                           </div>
                         )}
                         {/* Blocked time indicator */}
                         {hasBlockedTimes && (
-                          <div className="w-5 h-5 rounded-full bg-red-500/20 border border-red-400/30 flex items-center justify-center">
-                            <span className="text-xs font-bold text-red-400">
+                          <div className="w-5 h-5 rounded-full border flex items-center justify-center"
+                            style={{
+                              backgroundColor: getRedAlert(0.2),
+                              borderColor: COLORS.RED_ALERT,
+                            }}
+                          >
+                            <span className="text-xs font-bold" style={{ color: COLORS.RED_ALERT }}>
                               🚫
                             </span>
                           </div>
@@ -1132,7 +1268,8 @@ function SchedulePageClient() {
                           !hasLessons &&
                           !hasPending && (
                             <div
-                              className="w-2 h-2 bg-orange-500 rounded-full"
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
                               title="Non-working day"
                             />
                           )}
@@ -1147,14 +1284,19 @@ function SchedulePageClient() {
                           .map((request: any, index: number) => (
                             <div
                               key={`pending-${index}`}
-                              className="text-xs p-1.5 md:p-2 rounded bg-orange-500/40 text-orange-100 border-2 border-orange-400 shadow-md relative group overflow-hidden"
+                              className="text-xs p-1.5 md:p-2 rounded border-2 shadow-md relative group overflow-hidden"
+                              style={{
+                                backgroundColor: getGoldenAccent(0.4),
+                                color: COLORS.TEXT_PRIMARY,
+                                borderColor: COLORS.GOLDEN_ACCENT,
+                              }}
                             >
                               <div className="flex items-start justify-between gap-1">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-bold text-xs leading-tight">
                                     {format(new Date(request.date), "h:mm a")}
                                   </div>
-                                  <div className="truncate text-orange-200 font-medium text-xs leading-tight">
+                                  <div className="truncate font-medium text-xs leading-tight">
                                     {request.client?.name ||
                                       request.client?.email ||
                                       "Client"}
@@ -1169,7 +1311,18 @@ function SchedulePageClient() {
                                     disabled={
                                       approveScheduleRequestMutation.isPending
                                     }
-                                    className="p-0.5 rounded hover:bg-green-500/30 text-green-300 hover:text-green-200 transition-colors"
+                                    className="p-0.5 rounded transition-colors"
+                                    style={{ color: COLORS.GREEN_PRIMARY }}
+                                    onMouseEnter={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.backgroundColor = getGreenPrimary(0.3);
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.backgroundColor = "transparent";
+                                      }
+                                    }}
                                     title="Approve request"
                                   >
                                     <CheckCircle className="h-2.5 w-2.5" />
@@ -1181,7 +1334,18 @@ function SchedulePageClient() {
                                     disabled={
                                       rejectScheduleRequestMutation.isPending
                                     }
-                                    className="p-0.5 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200 transition-colors"
+                                    className="p-0.5 rounded transition-colors"
+                                    style={{ color: COLORS.RED_ALERT }}
+                                    onMouseEnter={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.backgroundColor = getRedAlert(0.3);
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (!e.currentTarget.disabled) {
+                                        e.currentTarget.style.backgroundColor = "transparent";
+                                      }
+                                    }}
                                     title="Reject request"
                                   >
                                     <XCircle className="h-2.5 w-2.5" />
@@ -1191,7 +1355,7 @@ function SchedulePageClient() {
                             </div>
                           ))}
                         {pendingForDay.length > 2 && (
-                          <div className="text-xs text-orange-400 text-center py-1">
+                          <div className="text-xs text-center py-1" style={{ color: COLORS.GOLDEN_ACCENT }}>
                             +{pendingForDay.length - 2} more pending
                           </div>
                         )}
@@ -1206,14 +1370,19 @@ function SchedulePageClient() {
                           .map((lesson: any, index: number) => (
                             <div
                               key={index}
-                              className="text-xs p-1.5 md:p-2 rounded bg-emerald-500/40 text-emerald-100 border-2 border-emerald-400 shadow-md relative group overflow-hidden"
+                              className="text-xs p-1.5 md:p-2 rounded border-2 shadow-md relative group overflow-hidden"
+                              style={{
+                                backgroundColor: getGreenPrimary(0.4),
+                                color: COLORS.TEXT_PRIMARY,
+                                borderColor: COLORS.GREEN_PRIMARY,
+                              }}
                             >
                               <div className="flex items-start justify-between gap-1">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-bold text-xs leading-tight">
                                     {formatTimeInUserTimezone(lesson.date)}
                                   </div>
-                                  <div className="truncate text-emerald-200 font-medium text-xs leading-tight">
+                                  <div className="truncate font-medium text-xs leading-tight">
                                     {lesson.client?.name ||
                                       lesson.client?.email ||
                                       "Client"}
@@ -1224,7 +1393,14 @@ function SchedulePageClient() {
                                     e.stopPropagation();
                                     handleDeleteLesson(lesson.id, lesson.title);
                                   }}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-red-500/30 text-red-300 hover:text-red-200 flex-shrink-0"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded flex-shrink-0"
+                                  style={{ color: COLORS.RED_ALERT }}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.backgroundColor = getRedAlert(0.3);
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.backgroundColor = "transparent";
+                                  }}
                                   title="Delete lesson"
                                 >
                                   <Trash2 className="h-2.5 w-2.5" />
@@ -1233,7 +1409,7 @@ function SchedulePageClient() {
                             </div>
                           ))}
                         {lessonsForDay.length > 3 && (
-                          <div className="text-xs text-gray-400 text-center py-1">
+                          <div className="text-xs text-center py-1" style={{ color: COLORS.TEXT_MUTED }}>
                             +{lessonsForDay.length - 3} more lessons
                           </div>
                         )}
@@ -1246,15 +1422,21 @@ function SchedulePageClient() {
                       isCurrentMonth &&
                       !isPast && (
                         <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
-                            <Plus className="h-2.5 w-2.5 text-blue-400" />
+                          <div className="w-4 h-4 rounded-full border flex items-center justify-center"
+                            style={{
+                              backgroundColor: getGreenPrimary(0.2),
+                              borderColor: COLORS.GREEN_PRIMARY,
+                            }}
+                          >
+                            <Plus className="h-2.5 w-2.5" style={{ color: COLORS.GREEN_PRIMARY }} />
                           </div>
                         </div>
                       )}
                     {!hasLessons && !hasPending && isCurrentMonth && isPast && (
                       <div className="absolute bottom-1 right-1">
                         <div
-                          className="w-2 h-2 rounded-full bg-gray-500/30"
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: COLORS.TEXT_MUTED }}
                           title="Past date"
                         />
                       </div>
@@ -1268,7 +1450,17 @@ function SchedulePageClient() {
                             e.stopPropagation();
                             handleDateClick(day);
                           }}
-                          className="p-1 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs"
+                          className="p-1 rounded text-xs transition-all duration-200"
+                          style={{
+                            backgroundColor: COLORS.GREEN_PRIMARY,
+                            color: COLORS.BACKGROUND_DARK,
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                          }}
                           title="View Day Details"
                         >
                           <Calendar className="h-3 w-3" />
@@ -1318,12 +1510,12 @@ function SchedulePageClient() {
               <div
                 className="rounded-2xl shadow-xl border p-6 w-full max-w-2xl mx-4"
                 style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
                 }}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-white">
+                  <h2 className="text-xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Schedule New Lesson
                   </h2>
                   <button
@@ -1332,7 +1524,14 @@ function SchedulePageClient() {
                       setScheduleForm({ clientId: "", time: "", date: "" });
                       setSelectedDate(null);
                     }}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="transition-colors"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -1340,7 +1539,7 @@ function SchedulePageClient() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Client
                     </label>
                     <select
@@ -1351,10 +1550,11 @@ function SchedulePageClient() {
                           clientId: e.target.value,
                         })
                       }
-                      className="w-full p-2 rounded-lg border text-white"
+                      className="w-full p-2 rounded-lg border"
                       style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                     >
                       <option value="">Select a client</option>
@@ -1367,7 +1567,7 @@ function SchedulePageClient() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Date
                     </label>
                     <input
@@ -1379,16 +1579,17 @@ function SchedulePageClient() {
                           date: e.target.value,
                         })
                       }
-                      className="w-full p-2 rounded-lg border text-white"
+                      className="w-full p-2 rounded-lg border"
                       style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Time
                     </label>
                     <select
@@ -1399,10 +1600,11 @@ function SchedulePageClient() {
                           time: e.target.value,
                         })
                       }
-                      className="w-full p-2 rounded-lg border text-white"
+                      className="w-full p-2 rounded-lg border"
                       style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                     >
                       <option value="">Select a time</option>
@@ -1425,8 +1627,16 @@ function SchedulePageClient() {
                     className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
                     style={{
                       backgroundColor: "transparent",
-                      borderColor: "#606364",
-                      color: "#FFFFFF",
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_SECONDARY,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     }}
                   >
                     Cancel
@@ -1436,8 +1646,18 @@ function SchedulePageClient() {
                     disabled={scheduleLessonMutation.isPending}
                     className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     style={{
-                      backgroundColor: "#10B981",
-                      color: "#FFFFFF",
+                      backgroundColor: COLORS.GREEN_PRIMARY,
+                      color: COLORS.BACKGROUND_DARK,
+                    }}
+                    onMouseEnter={e => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                      }
                     }}
                   >
                     {scheduleLessonMutation.isPending ? (
@@ -1463,16 +1683,16 @@ function SchedulePageClient() {
               <div
                 className="rounded-2xl shadow-xl border p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
                 style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
                 }}
               >
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-white">
+                    <h2 className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                       {format(selectedDate, "EEEE, MMMM d, yyyy")}
                     </h2>
-                    <p className="text-gray-400 text-sm">
+                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                       Working Hours:{" "}
                       {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
                       {coachProfile?.workingHours?.endTime || "6:00 PM"}
@@ -1492,7 +1712,7 @@ function SchedulePageClient() {
                       const isWorkingDay = workingDays.includes(dayName);
 
                       if (!isWorkingDay) {
-                        return <p className="text-orange-400 text-sm mt-1"></p>;
+                        return <p className="text-sm mt-1" style={{ color: COLORS.GOLDEN_ACCENT }}></p>;
                       }
                       return null;
                     })()}
@@ -1505,8 +1725,17 @@ function SchedulePageClient() {
                       }}
                       className="flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200"
                       style={{
-                        backgroundColor: "#4A5A70",
-                        color: "#FFFFFF",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        color: COLORS.TEXT_SECONDARY,
+                        border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                       }}
                     >
                       <Settings className="h-4 w-4" />
@@ -1518,7 +1747,14 @@ function SchedulePageClient() {
                         setSelectedDate(null);
                         setScheduleForm({ clientId: "", time: "", date: "" });
                       }}
-                      className="text-gray-400 hover:text-white transition-colors"
+                      className="transition-colors"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }}
                     >
                       <X className="h-6 w-6" />
                     </button>
@@ -1528,7 +1764,7 @@ function SchedulePageClient() {
                 {/* Existing Lessons */}
                 <div className="mb-6">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-white">
+                    <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Scheduled Lessons
                     </h3>
                   </div>
@@ -1543,39 +1779,46 @@ function SchedulePageClient() {
                           return (
                             <div
                               key={index}
-                              className={`flex items-center justify-between p-4 rounded-lg border group ${
-                                isPast
-                                  ? "bg-gray-800/20 border-gray-600/30"
-                                  : "bg-emerald-500/10 border-emerald-500/20"
-                              }`}
+                              className="flex items-center justify-between p-4 rounded-lg border group"
+                              style={{
+                                backgroundColor: isPast
+                                  ? COLORS.BACKGROUND_DARK
+                                  : getGreenPrimary(0.1),
+                                borderColor: isPast
+                                  ? COLORS.BORDER_SUBTLE
+                                  : COLORS.GREEN_PRIMARY,
+                              }}
                             >
                               <div className="flex-1">
                                 <div
-                                  className={`font-medium ${
-                                    isPast
-                                      ? "text-gray-400"
-                                      : "text-emerald-300"
-                                  }`}
+                                  className="font-medium"
+                                  style={{
+                                    color: isPast
+                                      ? COLORS.TEXT_MUTED
+                                      : COLORS.GREEN_PRIMARY,
+                                  }}
                                 >
                                   {format(lessonDate, "h:mm a")}
                                 </div>
                                 <div
-                                  className={`text-sm ${
-                                    isPast
-                                      ? "text-gray-500"
-                                      : "text-emerald-200"
-                                  }`}
+                                  className="text-sm"
+                                  style={{
+                                    color: isPast
+                                      ? COLORS.TEXT_MUTED
+                                      : COLORS.TEXT_SECONDARY,
+                                  }}
                                 >
                                   {lesson.client?.name ||
                                     lesson.client?.email ||
                                     "Client"}
                                 </div>
                                 <div
-                                  className={`text-xs ${
-                                    isPast
-                                      ? "text-gray-600"
-                                      : "text-emerald-400"
-                                  }`}
+                                  className="text-xs"
+                                  style={{
+                                    color: isPast
+                                      ? COLORS.TEXT_MUTED
+                                      : COLORS.TEXT_MUTED,
+                                  }}
                                 >
                                   {lesson.title}
                                 </div>
@@ -1585,7 +1828,14 @@ function SchedulePageClient() {
                                   onClick={() =>
                                     handleDeleteLesson(lesson.id, lesson.title)
                                   }
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded"
+                                  style={{ color: COLORS.RED_ALERT }}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.backgroundColor = getRedAlert(0.2);
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.backgroundColor = "transparent";
+                                  }}
                                   title="Delete lesson"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -1597,8 +1847,8 @@ function SchedulePageClient() {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                        <p className="text-gray-400">
+                        <Calendar className="h-12 w-12 mx-auto mb-3" style={{ color: COLORS.TEXT_MUTED }} />
+                        <p style={{ color: COLORS.TEXT_SECONDARY }}>
                           No lessons scheduled for this day
                         </p>
                       </div>
@@ -1608,7 +1858,7 @@ function SchedulePageClient() {
 
                 {/* Available Time Slots */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">
+                  <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Available Time Slots
                   </h3>
                   {(() => {
@@ -1796,11 +2046,16 @@ function SchedulePageClient() {
                       // Show warning message but still display time slots
                       return (
                         <div>
-                          <div className="mb-4 p-4 rounded-lg bg-orange-500/20 border border-orange-500/30">
-                            <p className="text-orange-300 text-sm mb-2">
+                          <div className="mb-4 p-4 rounded-lg border"
+                            style={{
+                              backgroundColor: getGoldenAccent(0.1),
+                              borderColor: COLORS.GOLDEN_BORDER,
+                            }}
+                          >
+                            <p className="text-sm mb-2" style={{ color: COLORS.GOLDEN_ACCENT }}>
                               ⚠️ This isn't a normal working day for you
                             </p>
-                            <p className="text-orange-200 text-sm">
+                            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                               You can still schedule lessons outside your
                               regular working hours if needed.
                             </p>
@@ -1814,24 +2069,34 @@ function SchedulePageClient() {
                                     onClick={() =>
                                       setSelectedTimeSlot(slot.time)
                                     }
-                                    className={`p-3 rounded-lg border text-center transition-all duration-200 ${
-                                      selectedTimeSlot === slot.time
-                                        ? "bg-sky-500 border-sky-400 text-white"
-                                        : "hover:bg-sky-500/10 hover:border-sky-500/30"
-                                    }`}
+                                    className="p-3 rounded-lg border text-center transition-all duration-200"
                                     style={{
                                       backgroundColor:
                                         selectedTimeSlot === slot.time
-                                          ? "#0EA5E9"
-                                          : "#2A2F2F",
+                                          ? COLORS.GREEN_PRIMARY
+                                          : COLORS.BACKGROUND_DARK,
                                       borderColor: slot.isBlocked
-                                        ? "#EF4444"
+                                        ? COLORS.RED_ALERT
                                         : selectedTimeSlot === slot.time
-                                        ? "#0EA5E9"
-                                        : "#606364",
+                                        ? COLORS.GREEN_PRIMARY
+                                        : COLORS.BORDER_SUBTLE,
                                       color: slot.isBlocked
-                                        ? "#EF4444"
-                                        : "#FFFFFF",
+                                        ? COLORS.RED_ALERT
+                                        : selectedTimeSlot === slot.time
+                                        ? COLORS.BACKGROUND_DARK
+                                        : COLORS.TEXT_PRIMARY,
+                                    }}
+                                    onMouseEnter={e => {
+                                      if (selectedTimeSlot !== slot.time && !slot.isBlocked) {
+                                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                        e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
+                                      }
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (selectedTimeSlot !== slot.time && !slot.isBlocked) {
+                                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                      }
                                     }}
                                     title={
                                       slot.isBlocked
@@ -1847,17 +2112,17 @@ function SchedulePageClient() {
                               {selectedTimeSlot && (
                                 <div
                                   className="mt-4 pt-4 border-t"
-                                  style={{ borderColor: "#606364" }}
+                                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
                                 >
                                   <div className="flex items-center justify-between">
                                     <div>
-                                      <p className="text-sm text-gray-400">
+                                      <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                                         Selected time:{" "}
-                                        <span className="text-white font-medium">
+                                        <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                                           {selectedTimeSlot}
                                         </span>
                                       </p>
-                                      <p className="text-xs text-gray-500">
+                                      <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                                         Choose a client to schedule the lesson
                                       </p>
                                     </div>
@@ -1877,11 +2142,19 @@ function SchedulePageClient() {
                                           onFocus={() =>
                                             setShowClientDropdown(true)
                                           }
-                                          className="p-2 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          className="p-2 rounded-md text-sm focus:outline-none focus:ring-2 transition-all"
                                           style={{
-                                            backgroundColor: "#2A2F2F",
-                                            borderColor: "#606364",
+                                            backgroundColor: COLORS.BACKGROUND_DARK,
+                                            borderColor: COLORS.BORDER_SUBTLE,
+                                            color: COLORS.TEXT_PRIMARY,
                                             minWidth: "200px",
+                                            border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                                          }}
+                                          onFocus={e => {
+                                            e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
+                                          }}
+                                          onBlur={e => {
+                                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                                           }}
                                         />
 
@@ -1890,8 +2163,8 @@ function SchedulePageClient() {
                                           <div
                                             className="absolute z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg"
                                             style={{
-                                              backgroundColor: "#353A3A",
-                                              borderColor: "#606364",
+                                              backgroundColor: COLORS.BACKGROUND_CARD,
+                                              borderColor: COLORS.BORDER_SUBTLE,
                                               minWidth: "200px",
                                             }}
                                           >
@@ -1915,8 +2188,19 @@ function SchedulePageClient() {
                                                         false
                                                       );
                                                     }}
-                                                    className="w-full px-3 py-2 text-left hover:bg-[#4A5A70] transition-colors flex items-center gap-3"
-                                                    style={{ color: "#C3BCC2" }}
+                                                    className="w-full px-3 py-2 text-left transition-colors flex items-center gap-3"
+                                                    style={{
+                                                      color: COLORS.TEXT_SECONDARY,
+                                                      backgroundColor: "transparent",
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                      e.currentTarget.style.backgroundColor = "transparent";
+                                                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                                                    }}
                                                   >
                                                     <div className="flex-1">
                                                       <div className="font-medium text-sm">
@@ -1924,7 +2208,7 @@ function SchedulePageClient() {
                                                           "Unnamed"}
                                                       </div>
                                                       {client.email && (
-                                                        <div className="text-xs opacity-70">
+                                                        <div className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                                                           {client.email}
                                                         </div>
                                                       )}
@@ -1935,7 +2219,7 @@ function SchedulePageClient() {
                                             ) : (
                                               <div
                                                 className="px-3 py-2 text-center text-sm"
-                                                style={{ color: "#ABA4AA" }}
+                                                style={{ color: COLORS.TEXT_MUTED }}
                                               >
                                                 No clients found
                                               </div>
@@ -1978,9 +2262,24 @@ function SchedulePageClient() {
                                           }
                                         }}
                                         disabled={!scheduleForm.clientId}
-                                        className="px-4 py-2 hover:opacity-80 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                                        className="px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{
-                                          backgroundColor: "#2A2F2F",
+                                          backgroundColor: scheduleForm.clientId
+                                            ? COLORS.GREEN_PRIMARY
+                                            : COLORS.BACKGROUND_DARK,
+                                          color: scheduleForm.clientId
+                                            ? COLORS.BACKGROUND_DARK
+                                            : COLORS.TEXT_MUTED,
+                                        }}
+                                        onMouseEnter={e => {
+                                          if (!e.currentTarget.disabled) {
+                                            e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                                          }
+                                        }}
+                                        onMouseLeave={e => {
+                                          if (!e.currentTarget.disabled) {
+                                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                                          }
                                         }}
                                       >
                                         Schedule Lesson
@@ -1992,11 +2291,11 @@ function SchedulePageClient() {
                             </>
                           ) : (
                             <div className="text-center py-6">
-                              <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                              <p className="text-gray-400">
+                              <Clock className="h-10 w-10 mx-auto mb-2" style={{ color: COLORS.TEXT_MUTED }} />
+                              <p style={{ color: COLORS.TEXT_SECONDARY }}>
                                 No available time slots
                               </p>
-                              <p className="text-gray-500 text-sm">
+                              <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
                                 All working hours are booked
                               </p>
                             </div>

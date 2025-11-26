@@ -59,15 +59,15 @@ export default function Dashboard() {
         <div className="mb-6">
           <h1 className="text-2xl font-semibold mb-1 text-white">
             Welcome back{userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
-          </h1>
+                    </h1>
           <p className="text-sm text-zinc-400">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
+                    {new Date().toLocaleDateString("en-US", {
+                      weekday: "long",
               month: "long",
               day: "numeric",
-            })}
+                    })}
           </p>
-        </div>
+                  </div>
 
         {/* TOP ROW: Week at a Glance + Today's Schedule */}
         <div className="grid grid-cols-[70%_30%] gap-4 mb-6">
@@ -100,7 +100,7 @@ function WeekAtAGlanceCompact() {
         </h2>
         <span className="text-xs text-zinc-400">
           Week of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-        </span>
+                    </span>
       </div>
       <WeekAtAGlance className="compact" />
     </div>
@@ -137,7 +137,7 @@ function TodaysSchedulePanel() {
   if (lessonsLoading || eventsLoading) {
     return (
       <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
-        <div className="animate-pulse">
+          <div className="animate-pulse">
           <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
           <div className="space-y-2">
             <div className="h-3 w-full bg-white/10 rounded"></div>
@@ -185,27 +185,27 @@ function TodaysSchedulePanel() {
         <h2 className="text-lg font-semibold text-white">
           Today's schedule
         </h2>
-      </div>
+        </div>
 
-      {todaysSchedule.length > 0 ? (
+        {todaysSchedule.length > 0 ? (
         <div className="space-y-2">
-          {todaysSchedule.slice(0, 5).map((item: any) => {
-            const isPast = new Date(item.date).getTime() < Date.now();
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.type === "lesson" && item.clientId) {
-                    router.push(`/clients/${item.clientId}`);
-                  } else {
-                    router.push("/schedule");
-                  }
-                }}
+            {todaysSchedule.slice(0, 5).map((item: any) => {
+              const isPast = new Date(item.date).getTime() < Date.now();
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (item.type === "lesson" && item.clientId) {
+                      router.push(`/clients/${item.clientId}`);
+                    } else {
+                      router.push("/schedule");
+                    }
+                  }}
                 className="w-full p-2 rounded border transition-colors text-left"
-                style={{
+                  style={{
                   borderColor: COLORS.GOLDEN_BORDER,
                   backgroundColor: COLORS.BACKGROUND_CARD,
-                }}
+                  }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                 }}
@@ -217,44 +217,44 @@ function TodaysSchedulePanel() {
                   <span
                     className="text-xs font-medium"
                     style={{ color: COLORS.GOLDEN_ACCENT }}
-                  >
-                    {new Date(item.date).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                        >
+                          {new Date(item.date).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p
+                        <p
                       className={`text-xs font-medium truncate ${
                         isPast ? "opacity-50" : ""
-                      }`}
+                          }`}
                       style={{ color: "#F5F5F5" }}
-                    >
-                      {item.type === "lesson"
-                        ? item.client?.name || "Unknown Client"
-                        : item.title}
-                    </p>
+                        >
+                          {item.type === "lesson"
+                            ? item.client?.name || "Unknown Client"
+                            : item.title}
+                        </p>
                     {item.type === "lesson" && (
                       <p
                         className="text-[10px] truncate"
                         style={{ color: "#6B7280" }}
-                      >
+                    >
                         {item.status}
                       </p>
                     )}
                   </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
         <div className="text-center py-4">
           <p className="text-xs text-zinc-400 mb-2">
-            No lessons or reminders for today
-          </p>
-          <Link
-            href="/schedule"
+              No lessons or reminders for today
+            </p>
+            <Link
+              href="/schedule"
             className="inline-block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
             style={{
               backgroundColor: COLORS.GOLDEN_DARK,
@@ -268,7 +268,7 @@ function TodaysSchedulePanel() {
             }}
           >
             Schedule a lesson
-          </Link>
+            </Link>
         </div>
       )}
     </div>
@@ -465,10 +465,10 @@ function AttentionItem({ item, formatTimestamp }: { item: any; formatTimestamp: 
           {item.type !== "missed_drill" && (
             <span
               className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
-            style={{
+        style={{
               backgroundColor: getGoldenAccent(0.12),
               color: COLORS.GOLDEN_HOVER,
-            }}
+        }}
             >
               {getTypeLabel()}
             </span>
@@ -501,10 +501,10 @@ function AttentionItem({ item, formatTimestamp }: { item: any; formatTimestamp: 
         <button
           onClick={handleActionClick}
           className="px-2 py-1 rounded text-[10px] font-medium transition-colors flex-shrink-0"
-          style={{
+                style={{
             backgroundColor: COLORS.GOLDEN_ACCENT,
             color: "#FFFFFF",
-          }}
+                }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
           }}
@@ -515,7 +515,7 @@ function AttentionItem({ item, formatTimestamp }: { item: any; formatTimestamp: 
           {item.actionButton}
         </button>
       )}
-    </div>
+                  </div>
   );
 }
 
@@ -547,9 +547,9 @@ function ClientActivityFeed() {
           <div className="space-y-3">
             <div className="h-12 w-full bg-white/10 rounded"></div>
             <div className="h-12 w-full bg-white/10 rounded"></div>
-          </div>
-        </div>
-      </div>
+                  </div>
+                </div>
+              </div>
     );
   }
 
@@ -570,13 +570,13 @@ function ClientActivityFeed() {
               completion={completion}
               formatTimestamp={formatTimestamp}
             />
-          ))}
-        </div>
-      ) : (
+            ))}
+          </div>
+        ) : (
         <div className="text-center py-6">
           <p className="text-sm text-zinc-400">No recent completions</p>
-        </div>
-      )}
+          </div>
+        )}
     </div>
   );
 }
@@ -735,7 +735,7 @@ function QuickStatsPanel() {
 // Stat Card Component
 function StatCard({ stat }: { stat: any }) {
   return (
-    <div 
+    <div
       className="p-4 rounded-lg border border-white/5 bg-white/[0.02]"
       style={{ borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}` }}
     >
@@ -745,7 +745,7 @@ function StatCard({ stat }: { stat: any }) {
         <div className="mt-2 h-1 rounded-full overflow-hidden bg-white/5">
           <div
             className="h-full rounded-full transition-all"
-            style={{
+              style={{
               backgroundColor: COLORS.GOLDEN_ACCENT,
               width: `${stat.progress}%`,
             }}
