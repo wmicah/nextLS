@@ -76,9 +76,11 @@ export async function sendPushNotification(
     });
 
     // Send notification to all user's devices
+    console.log(`📤 Attempting to send to ${subscriptions.length} subscription(s)...`);
     const results = await Promise.allSettled(
-      subscriptions.map(async subscription => {
+      subscriptions.map(async (subscription, index) => {
         try {
+          console.log(`📤 Sending to subscription ${index + 1}/${subscriptions.length}: ${subscription.endpoint.substring(0, 50)}...`);
           const pushSubscription = {
             endpoint: subscription.endpoint,
             keys: {
@@ -88,10 +90,18 @@ export async function sendPushNotification(
           };
 
           await webpush.sendNotification(pushSubscription, notificationPayload);
+          console.log(`✅ Successfully sent to subscription ${index + 1}`);
           return { success: true, subscriptionId: subscription.id };
         } catch (error: any) {
+          console.error(`❌ Failed to send to subscription ${index + 1}:`, {
+            error: error.message,
+            statusCode: error.statusCode,
+            endpoint: subscription.endpoint.substring(0, 50),
+          });
+          
           // If subscription is invalid (expired, revoked, etc.), remove it
           if (error.statusCode === 410 || error.statusCode === 404) {
+            console.log(`🗑️ Removing invalid subscription ${subscription.id} (status: ${error.statusCode})`);
             await db.pushSubscription.delete({
               where: { id: subscription.id },
             });
