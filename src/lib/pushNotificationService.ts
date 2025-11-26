@@ -77,10 +77,20 @@ export async function sendPushNotification(
 
     // Send notification to all user's devices
     console.log(`📤 Attempting to send to ${subscriptions.length} subscription(s)...`);
+    console.log(`📤 Notification payload:`, {
+      title: cleanTitle,
+      body: cleanBody.substring(0, 50),
+      dataKeys: Object.keys(data || {}),
+    });
+    
     const results = await Promise.allSettled(
       subscriptions.map(async (subscription, index) => {
         try {
-          console.log(`📤 Sending to subscription ${index + 1}/${subscriptions.length}: ${subscription.endpoint.substring(0, 50)}...`);
+          console.log(`📤 Sending to subscription ${index + 1}/${subscriptions.length}:`);
+          console.log(`   Endpoint: ${subscription.endpoint.substring(0, 80)}...`);
+          console.log(`   Has p256dh key: ${!!subscription.p256dh}`);
+          console.log(`   Has auth key: ${!!subscription.auth}`);
+          
           const pushSubscription = {
             endpoint: subscription.endpoint,
             keys: {
@@ -89,15 +99,16 @@ export async function sendPushNotification(
             },
           };
 
-          await webpush.sendNotification(pushSubscription, notificationPayload);
+          const result = await webpush.sendNotification(pushSubscription, notificationPayload);
           console.log(`✅ Successfully sent to subscription ${index + 1}`);
+          console.log(`   Response status: ${result.statusCode || 'N/A'}`);
           return { success: true, subscriptionId: subscription.id };
         } catch (error: any) {
-          console.error(`❌ Failed to send to subscription ${index + 1}:`, {
-            error: error.message,
-            statusCode: error.statusCode,
-            endpoint: subscription.endpoint.substring(0, 50),
-          });
+          console.error(`❌ Failed to send to subscription ${index + 1}:`);
+          console.error(`   Error message: ${error.message}`);
+          console.error(`   Status code: ${error.statusCode || 'N/A'}`);
+          console.error(`   Error name: ${error.name || 'N/A'}`);
+          console.error(`   Full error:`, error);
           
           // If subscription is invalid (expired, revoked, etc.), remove it
           if (error.statusCode === 410 || error.statusCode === 404) {
@@ -146,6 +157,10 @@ export async function sendMessageNotification(
   conversationId: string
 ) {
   try {
+    console.log(`📨 sendMessageNotification called for user ${recipientId}`);
+    console.log(`   Sender: ${senderName}`);
+    console.log(`   Message preview: ${messageContent.substring(0, 50)}...`);
+    
     // Check if user has message notifications enabled
     const userSettings = await db.userSettings.findUnique({
       where: { userId: recipientId },
@@ -153,6 +168,11 @@ export async function sendMessageNotification(
         pushNotifications: true,
         messageNotifications: true,
       },
+    });
+
+    console.log(`📨 User settings for ${recipientId}:`, {
+      pushNotifications: userSettings?.pushNotifications,
+      messageNotifications: userSettings?.messageNotifications,
     });
 
     // Check both pushNotifications and messageNotifications settings
