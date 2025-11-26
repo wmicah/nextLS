@@ -4,21 +4,14 @@ import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
 import {
-  Calendar,
-  Users,
-  Target,
   X,
-  BookOpen,
   CheckCircle,
   Plus,
   Trash2,
-  User,
-  Mail,
-  Clock,
-  ArrowRight,
   Search,
 } from "lucide-react";
 import { format } from "date-fns";
+import { COLORS } from "@/lib/colors";
 
 interface SimpleAssignProgramModalProps {
   isOpen: boolean;
@@ -337,86 +330,103 @@ export default function SimpleAssignProgramModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className="rounded-2xl shadow-xl border w-full max-w-7xl max-h-[90vh] overflow-hidden"
+        className="rounded-lg shadow-xl border w-full max-w-7xl max-h-[90vh] overflow-hidden"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between p-6 border-b"
-          style={{ borderColor: "#606364" }}
+          className="flex items-center justify-between p-4 border-b"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
         >
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">
+            <h2 className="text-lg font-bold mb-0.5" style={{ color: COLORS.TEXT_PRIMARY }}>
               {viewMode === "assign" ? "Assign Program" : "Manage Programs"}
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
               {viewMode === "assign"
                 ? "Choose a program and assign it to clients"
                 : "View and manage client program assignments"}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() =>
                 setViewMode(viewMode === "assign" ? "manage" : "assign")
               }
-              className="px-4 py-2 rounded-lg text-sm font-medium"
+              className="px-3 py-1.5 rounded-md text-xs font-medium"
               style={{
-                backgroundColor: "#4A5A70",
-                color: "#FFFFFF",
-                border: "1px solid #606364",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_SECONDARY,
+                borderColor: COLORS.BORDER_SUBTLE,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#606364";
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "#4A5A70";
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               }}
             >
               {viewMode === "assign" ? "Manage" : "Assign"}
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-700/50 "
+              className="p-1.5 rounded-md transition-colors"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
-              <X className="h-5 w-5 text-gray-400 hover:text-white" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className="p-4 overflow-y-auto max-h-[calc(90vh-100px)]">
           {viewMode === "assign" ? (
             /* Assignment Mode */
             <div className="space-y-6">
               {/* Step 1: Select Program */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-blue-400" />
+                <h3 className="text-sm font-bold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Step 1: Choose a Program
                 </h3>
 
                 {/* Program Search */}
-                <div className="mb-4">
+                <div className="mb-3">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                     <input
                       type="text"
                       placeholder="Search programs by title, level, or description..."
                       value={programSearchTerm}
                       onChange={e => setProgramSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 rounded-lg border text-white  focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      className="w-full pl-9 pr-3 py-2 rounded-md border text-sm"
                       style={{
-                        backgroundColor: "#2A3133",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                       }}
                     />
                   </div>
                   {programSearchTerm && (
-                    <p className="text-gray-400 text-sm mt-1">
+                    <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                       {filteredPrograms.length} program
                       {filteredPrograms.length !== 1 ? "s" : ""} found
                     </p>
@@ -424,15 +434,14 @@ export default function SimpleAssignProgramModal({
                 </div>
 
                 {/* Programs Grid - Fixed Height with Scroll */}
-                <div className="max-h-96 overflow-y-auto border border-gray-600/30 rounded-lg p-4 bg-gray-800/20">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="max-h-80 overflow-y-auto border rounded-md p-3" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {filteredPrograms.length === 0 ? (
-                      <div className="col-span-full text-center py-8">
-                        <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-gray-400 text-lg font-medium">
+                      <div className="col-span-full text-center py-6">
+                        <p className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                           No programs found
                         </p>
-                        <p className="text-gray-500 text-sm mt-1">
+                        <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                           {programSearchTerm
                             ? `No programs match "${programSearchTerm}"`
                             : "No programs available"}
@@ -443,29 +452,41 @@ export default function SimpleAssignProgramModal({
                         <button
                           key={program.id}
                           onClick={() => setSelectedProgram(program.id)}
-                          className={`p-4 rounded-xl border-2  text-left ${
-                            selectedProgram === program.id
-                              ? "border-blue-400 bg-blue-500/20"
-                              : "border-gray-600 hover:border-gray-500 bg-gray-800/50"
-                          }`}
+                          className="p-3 rounded-md border-2 text-left transition-colors"
+                          style={{
+                            borderColor: selectedProgram === program.id ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                            backgroundColor: selectedProgram === program.id ? "rgba(229, 178, 50, 0.1)" : COLORS.BACKGROUND_DARK,
+                          }}
+                          onMouseEnter={e => {
+                            if (selectedProgram !== program.id) {
+                              e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            }
+                          }}
+                          onMouseLeave={e => {
+                            if (selectedProgram !== program.id) {
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                            }
+                          }}
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold text-white">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <h4 className="text-xs font-semibold truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                               {program.title}
                             </h4>
                             {selectedProgram === program.id && (
-                              <CheckCircle className="h-5 w-5 text-blue-400" />
+                              <CheckCircle className="h-4 w-4 flex-shrink-0 ml-1" style={{ color: COLORS.GOLDEN_ACCENT }} />
                             )}
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-400">
-                            <span className="px-2 py-1 rounded bg-green-500/20 text-green-300">
+                          <div className="flex items-center gap-2 text-[10px] mb-1">
+                            <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(112, 207, 112, 0.2)", color: COLORS.GREEN_PRIMARY }}>
                               {program.level}
                             </span>
-                            <span className="px-2 py-1 rounded bg-purple-500/20 text-purple-300">
+                            <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(229, 178, 50, 0.2)", color: COLORS.GOLDEN_ACCENT }}>
                               {program.duration} weeks
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="text-[10px] mt-1" style={{ color: COLORS.TEXT_MUTED }}>
                             {program.activeClientCount} active clients
                           </p>
                         </button>
@@ -475,7 +496,7 @@ export default function SimpleAssignProgramModal({
 
                   {/* Programs Summary */}
                   {filteredPrograms.length > 0 && (
-                    <div className="mt-2 text-sm text-gray-400 text-center">
+                    <div className="mt-2 text-xs text-center" style={{ color: COLORS.TEXT_SECONDARY }}>
                       {filteredPrograms.length} program
                       {filteredPrograms.length !== 1 ? "s" : ""} available
                     </div>
@@ -486,21 +507,44 @@ export default function SimpleAssignProgramModal({
               {/* Step 2: Select Clients */}
               {selectedProgram && (
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Users className="h-5 w-5 text-green-400" />
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Step 2: Select Clients ({selectedClients.length} selected)
                     </h3>
                     <div className="flex gap-2">
                       <button
                         onClick={selectAllClients}
-                        className="px-3 py-1 rounded-lg text-xs font-medium  bg-green-500/10 hover:bg-green-500/20 text-green-300 border border-green-500/20"
+                        className="px-2 py-1 rounded-md text-xs font-medium border"
+                        style={{
+                          backgroundColor: "rgba(229, 178, 50, 0.1)",
+                          borderColor: COLORS.BORDER_ACCENT,
+                          color: COLORS.GOLDEN_ACCENT,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = "rgba(229, 178, 50, 0.2)";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = "rgba(229, 178, 50, 0.1)";
+                        }}
                       >
                         Select All ({filteredClients.length})
                       </button>
                       <button
                         onClick={deselectAllClients}
-                        className="px-3 py-1 rounded-lg text-xs font-medium  bg-gray-500/10 hover:bg-gray-500/20 text-gray-300 border border-gray-500/20"
+                        className="px-2 py-1 rounded-md text-xs font-medium border"
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_SECONDARY,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        }}
                       >
                         Clear All
                       </button>
@@ -508,23 +552,30 @@ export default function SimpleAssignProgramModal({
                   </div>
 
                   {/* Client Search */}
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                       <input
                         type="text"
                         placeholder="Search clients by name or email..."
                         value={clientSearchTerm}
                         onChange={e => setClientSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border text-white  focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                        className="w-full pl-9 pr-3 py-2 rounded-md border text-sm"
                         style={{
-                          backgroundColor: "#2A3133",
-                          borderColor: "#606364",
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
+                        }}
+                        onFocus={e => {
+                          e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                        }}
+                        onBlur={e => {
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                         }}
                       />
                     </div>
                     {clientSearchTerm && (
-                      <p className="text-gray-400 text-sm mt-1">
+                      <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {filteredClients.length} client
                         {filteredClients.length !== 1 ? "s" : ""} found
                       </p>
@@ -532,15 +583,14 @@ export default function SimpleAssignProgramModal({
                   </div>
 
                   {/* Clients Grid - Fixed Height with Scroll */}
-                  <div className="max-h-80 overflow-y-auto border border-gray-600/30 rounded-lg p-4 bg-gray-800/20">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+                  <div className="max-h-72 overflow-y-auto border rounded-md p-3" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5">
                       {filteredClients.length === 0 ? (
-                        <div className="col-span-full text-center py-8">
-                          <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                          <p className="text-gray-400 text-lg font-medium">
+                        <div className="col-span-full text-center py-6">
+                          <p className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                             No clients found
                           </p>
-                          <p className="text-gray-500 text-sm mt-1">
+                          <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {clientSearchTerm
                               ? `No clients match "${clientSearchTerm}"`
                               : "No clients available"}
@@ -561,35 +611,47 @@ export default function SimpleAssignProgramModal({
                             <button
                               key={client.id}
                               onClick={() => toggleClientSelection(client.id)}
-                              className={`p-3 rounded-lg border  text-left ${
-                                isSelected
-                                  ? "border-green-400 bg-green-500/20"
-                                  : "border-gray-600 hover:border-gray-500 bg-gray-800/50"
-                              }`}
+                              className="p-2.5 rounded-md border text-left transition-colors"
+                              style={{
+                                borderColor: isSelected ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                                backgroundColor: isSelected ? "rgba(229, 178, 50, 0.1)" : COLORS.BACKGROUND_DARK,
+                              }}
+                              onMouseEnter={e => {
+                                if (!isSelected) {
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                }
+                              }}
+                              onMouseLeave={e => {
+                                if (!isSelected) {
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                                }
+                              }}
                             >
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white font-semibold text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY }}>
                                   {client.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="text-white font-medium truncate text-sm">
+                                  <div className="flex items-center gap-1.5">
+                                    <h4 className="text-xs font-medium truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                                       {client.name}
                                     </h4>
                                     {hasCurrentProgram && (
-                                      <span className="px-1.5 py-0.5 rounded text-xs bg-orange-500/20 text-orange-300">
+                                      <span className="px-1 py-0.5 rounded text-[10px]" style={{ backgroundColor: "rgba(242, 143, 59, 0.2)", color: "#F28F3B" }}>
                                         Has Program
                                       </span>
                                     )}
                                   </div>
                                   {client.email && (
-                                    <p className="text-gray-400 text-xs truncate">
+                                    <p className="text-[10px] truncate mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                                       {client.email}
                                     </p>
                                   )}
                                 </div>
                                 {isSelected && (
-                                  <CheckCircle className="h-4 w-4 text-green-400" />
+                                  <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 ml-1" style={{ color: COLORS.GOLDEN_ACCENT }} />
                                 )}
                               </div>
                             </button>
@@ -601,7 +663,7 @@ export default function SimpleAssignProgramModal({
 
                   {/* Clients Summary */}
                   {filteredClients.length > 0 && (
-                    <div className="mt-2 text-sm text-gray-400 text-center">
+                    <div className="mt-2 text-xs text-center" style={{ color: COLORS.TEXT_SECONDARY }}>
                       {filteredClients.length} client
                       {filteredClients.length !== 1 ? "s" : ""} available
                     </div>
@@ -612,8 +674,7 @@ export default function SimpleAssignProgramModal({
               {/* Step 3: Set Start Date */}
               {selectedProgram && selectedClients.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-yellow-400" />
+                  <h3 className="text-sm font-bold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Step 3: Set Start Date
                   </h3>
                   <div className="max-w-md">
@@ -625,13 +686,20 @@ export default function SimpleAssignProgramModal({
                         const selectedDate = e.target.value;
                         setStartDate(selectedDate);
                       }}
-                      className="w-full p-3 rounded-lg border text-white  focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
+                      className="w-full p-2.5 rounded-md border text-sm"
                       style={{
-                        backgroundColor: "#2A3133",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                       }}
                     />
-                    <p className="text-gray-400 text-sm mt-2">
+                    <p className="text-xs mt-1.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                       When should this program start for the selected clients?
                       (Can be today or in the future)
                     </p>
@@ -641,21 +709,32 @@ export default function SimpleAssignProgramModal({
 
               {/* Assign Button */}
               {selectedProgram && selectedClients.length > 0 && startDate && (
-                <div className="flex justify-center pt-4">
+                <div className="flex justify-center pt-3">
                   <button
                     onClick={handleAssign}
                     disabled={isAssigning}
-                    className="flex items-center gap-3 px-8 py-4 rounded-xl font-semibold text-white   disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: "#10B981" }}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: COLORS.GOLDEN_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                    onMouseEnter={e => {
+                      if (!isAssigning) {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                    }}
                   >
                     {isAssigning ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-t-transparent" style={{ borderColor: COLORS.TEXT_PRIMARY }}></div>
                         Assigning...
                       </>
                     ) : (
                       <>
-                        <Plus className="h-5 w-5" />
+                        <Plus className="h-4 w-4" />
                         Assign Program to {selectedClients.length} Client
                         {selectedClients.length > 1 ? "s" : ""}
                       </>
@@ -666,92 +745,94 @@ export default function SimpleAssignProgramModal({
             </div>
           ) : (
             /* Management Mode */
-            <div className="space-y-6">
+            <div className="space-y-4">
               {clientId ? (
                 /* Client-specific management (existing functionality) */
                 <>
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Target className="h-5 w-5 text-purple-400" />
+                  <h3 className="text-sm font-bold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Current Program Assignments
                   </h3>
 
                   {clientAssignments.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="p-4 rounded-full bg-gray-700/50 w-fit mx-auto mb-4">
-                        <BookOpen className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <h4 className="text-lg font-semibold text-white mb-2">
+                    <div className="text-center py-8">
+                      <h4 className="text-sm font-semibold mb-1.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                         No Programs Assigned
                       </h4>
-                      <p className="text-gray-400 mb-6">
+                      <p className="text-xs mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                         This client doesn't have any programs assigned yet.
                       </p>
                       <button
                         onClick={() => setViewMode("assign")}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium   mx-auto"
-                        style={{ backgroundColor: "#3B82F6", color: "#FFFFFF" }}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium mx-auto"
+                        style={{
+                          backgroundColor: COLORS.GOLDEN_DARK,
+                          color: COLORS.TEXT_PRIMARY,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                        }}
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-3.5 w-3.5" />
                         Assign First Program
                       </button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                       {clientAssignments.map(assignment => (
                         <div
                           key={assignment.id}
-                          className="p-4 rounded-xl border  "
+                          className="p-3 rounded-md border"
                           style={{
-                            backgroundColor: "#2A3133",
-                            borderColor: "#606364",
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                            borderColor: COLORS.BORDER_SUBTLE,
                           }}
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 rounded-lg bg-blue-500/10">
-                                <BookOpen className="h-6 w-6 text-blue-400" />
-                              </div>
+                            <div className="flex items-center gap-3">
                               <div>
-                                <h4 className="font-semibold text-white">
+                                <h4 className="text-xs font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                                   {assignment.program.title}
                                 </h4>
-                                <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    <span>
-                                      Assigned{" "}
-                                      {format(
-                                        new Date(assignment.assignedAt),
-                                        "MMM dd, yyyy"
-                                      )}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Target className="h-3 w-3" />
-                                    <span>{assignment.progress}% Complete</span>
-                                  </div>
+                                <div className="flex items-center gap-3 text-[10px] mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                  <span>
+                                    Assigned{" "}
+                                    {format(
+                                      new Date(assignment.assignedAt),
+                                      "MMM dd, yyyy"
+                                    )}
+                                  </span>
+                                  <span>{assignment.progress}% Complete</span>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               <div className="text-right">
-                                <div className="text-2xl font-bold text-white mb-1">
+                                <div className="text-base font-bold mb-0.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                                   {assignment.progress}%
                                 </div>
-                                <div className="text-xs text-gray-400">
+                                <div className="text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
                                   Progress
                                 </div>
                               </div>
                               <button
                                 onClick={() => handleRemoveProgram(assignment)}
-                                className="p-2 rounded-lg  "
+                                className="p-1.5 rounded-md"
                                 style={{
-                                  backgroundColor: "#EF4444",
-                                  color: "#FFFFFF",
+                                  backgroundColor: COLORS.RED_ALERT,
+                                  color: COLORS.TEXT_PRIMARY,
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
                                 }}
                                 title="Remove Program"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           </div>
@@ -766,29 +847,35 @@ export default function SimpleAssignProgramModal({
                   {!manageSelectedProgram ? (
                     /* Show programs to select */
                     <>
-                      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                        <BookOpen className="h-5 w-5 text-blue-400" />
+                      <h3 className="text-sm font-bold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
                         Select Program to Manage
                       </h3>
 
                       {/* Program Search */}
-                      <div className="mb-4">
+                      <div className="mb-3">
                         <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                           <input
                             type="text"
                             placeholder="Search programs by title, level, or description..."
                             value={programSearchTerm}
                             onChange={e => setProgramSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 rounded-lg border text-white  focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className="w-full pl-9 pr-3 py-2 rounded-md border text-sm"
                             style={{
-                              backgroundColor: "#2A3133",
-                              borderColor: "#606364",
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                             }}
                           />
                         </div>
                         {programSearchTerm && (
-                          <p className="text-gray-400 text-sm mt-1">
+                          <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {filteredPrograms.length} program
                             {filteredPrograms.length !== 1 ? "s" : ""} found
                           </p>
@@ -796,15 +883,14 @@ export default function SimpleAssignProgramModal({
                       </div>
 
                       {/* Programs Grid */}
-                      <div className="max-h-96 overflow-y-auto border border-gray-600/30 rounded-lg p-4 bg-gray-800/20">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      <div className="max-h-80 overflow-y-auto border rounded-md p-3" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                           {filteredPrograms.length === 0 ? (
-                            <div className="col-span-full text-center py-8">
-                              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                              <p className="text-gray-400 text-lg font-medium">
+                            <div className="col-span-full text-center py-6">
+                              <p className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                                 No programs found
                               </p>
-                              <p className="text-gray-500 text-sm mt-1">
+                              <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                                 {programSearchTerm
                                   ? `No programs match "${programSearchTerm}"`
                                   : "No programs available"}
@@ -817,23 +903,33 @@ export default function SimpleAssignProgramModal({
                                 onClick={() =>
                                   setManageSelectedProgram(program.id)
                                 }
-                                className={`p-4 rounded-xl border-2  text-left ${
-                                  manageSelectedProgram === program.id
-                                    ? "border-purple-400 bg-purple-500/20"
-                                    : "border-gray-600 hover:border-purple-400/50 bg-gray-800/50"
-                                }`}
+                                className="p-3 rounded-md border-2 text-left transition-colors"
+                                style={{
+                                  borderColor: manageSelectedProgram === program.id ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                                  backgroundColor: manageSelectedProgram === program.id ? "rgba(229, 178, 50, 0.1)" : COLORS.BACKGROUND_DARK,
+                                }}
+                                onMouseEnter={e => {
+                                  if (manageSelectedProgram !== program.id) {
+                                    e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                  }
+                                }}
+                                onMouseLeave={e => {
+                                  if (manageSelectedProgram !== program.id) {
+                                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                                  }
+                                }}
                               >
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-semibold text-white">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <h4 className="text-xs font-semibold truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                                     {program.title}
                                   </h4>
-                                  {manageSelectedProgram === program.id ? (
-                                    <CheckCircle className="h-5 w-5 text-purple-400" />
-                                  ) : (
-                                    <ArrowRight className="h-4 w-4 text-gray-400" />
+                                  {manageSelectedProgram === program.id && (
+                                    <CheckCircle className="h-4 w-4 flex-shrink-0 ml-1" style={{ color: COLORS.GOLDEN_ACCENT }} />
                                   )}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">
+                                <p className="text-[10px] mt-1" style={{ color: COLORS.TEXT_MUTED }}>
                                   {program.activeClientCount} active clients
                                 </p>
                               </button>
@@ -845,37 +941,56 @@ export default function SimpleAssignProgramModal({
                   ) : (
                     /* Show assigned clients for selected program */
                     <>
-                      <div className="flex items-center gap-4 mb-4">
+                      <div className="flex items-center gap-3 mb-3">
                         <button
                           onClick={() => setManageSelectedProgram("")}
-                          className="p-2 rounded-lg hover:bg-gray-700/50 "
+                          className="px-2 py-1 rounded-md text-xs transition-colors"
+                          style={{ 
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                            color: COLORS.TEXT_SECONDARY,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                          }}
                         >
-                          <ArrowRight className="h-4 w-4 text-gray-400 rotate-180" />
+                          Back
                         </button>
-                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                          <Users className="h-5 w-5 text-green-400" />
+                        <h3 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                           Assigned Clients
                         </h3>
                       </div>
 
                       {/* Client Search */}
-                      <div className="mb-4">
+                      <div className="mb-3">
                         <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                           <input
                             type="text"
                             placeholder="Search assigned clients by name or email..."
                             value={clientSearchTerm}
                             onChange={e => setClientSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 rounded-lg border text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                            className="w-full pl-9 pr-3 py-2 rounded-md border text-sm"
                             style={{
-                              backgroundColor: "#2A3133",
-                              borderColor: "#606364",
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                             }}
                           />
                         </div>
                         {clientSearchTerm && (
-                          <p className="text-gray-400 text-sm mt-1">
+                          <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {filteredAssignedClients.length} client
                             {filteredAssignedClients.length !== 1
                               ? "s"
@@ -886,76 +1001,67 @@ export default function SimpleAssignProgramModal({
                       </div>
 
                       {filteredAssignedClients.length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="p-4 rounded-full bg-gray-700/50 w-fit mx-auto mb-4">
-                            <Users className="h-8 w-8 text-gray-400" />
-                          </div>
-                          <h4 className="text-lg font-semibold text-white mb-2">
+                        <div className="text-center py-8">
+                          <h4 className="text-sm font-semibold mb-1.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {programAssignments.length === 0
                               ? "No Clients Assigned"
                               : "No Clients Found"}
                           </h4>
-                          <p className="text-gray-400 mb-6">
+                          <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {programAssignments.length === 0
                               ? "This program doesn't have any clients assigned yet."
                               : `No clients match "${clientSearchTerm}"`}
                           </p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                           {filteredAssignedClients.map(assignment => (
                             <div
                               key={assignment.id}
-                              className="p-4 rounded-xl border  "
+                              className="p-3 rounded-md border"
                               style={{
-                                backgroundColor: "#2A3133",
-                                borderColor: "#606364",
+                                backgroundColor: COLORS.BACKGROUND_CARD,
+                                borderColor: COLORS.BORDER_SUBTLE,
                               }}
                             >
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white font-semibold">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>
                                     {assignment.client.name
                                       .charAt(0)
                                       .toUpperCase()}
                                   </div>
                                   <div>
-                                    <h4 className="font-semibold text-white">
+                                    <h4 className="text-xs font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                                       {assignment.client.name}
                                     </h4>
-                                    <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        <span>
-                                          {(() => {
-                                            const assignmentDate = new Date(
-                                              assignment.startDate ||
-                                                assignment.assignedAt
-                                            );
-                                            const today = new Date();
-                                            today.setHours(0, 0, 0, 0); // Reset time to start of day
-                                            assignmentDate.setHours(0, 0, 0, 0);
+                                    <div className="flex items-center gap-3 text-[10px] mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                      <span>
+                                        {(() => {
+                                          const assignmentDate = new Date(
+                                            assignment.startDate ||
+                                              assignment.assignedAt
+                                          );
+                                          const today = new Date();
+                                          today.setHours(0, 0, 0, 0); // Reset time to start of day
+                                          assignmentDate.setHours(0, 0, 0, 0);
 
-                                            if (assignmentDate > today) {
-                                              return `Starts ${format(
-                                                assignmentDate,
-                                                "MMM dd, yyyy"
-                                              )}`;
-                                            } else {
-                                              return `Started ${format(
-                                                assignmentDate,
-                                                "MMM dd, yyyy"
-                                              )}`;
-                                            }
-                                          })()}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Target className="h-3 w-3" />
-                                        <span>
-                                          {assignment.progress}% Complete
-                                        </span>
-                                      </div>
+                                          if (assignmentDate > today) {
+                                            return `Starts ${format(
+                                              assignmentDate,
+                                              "MMM dd, yyyy"
+                                            )}`;
+                                          } else {
+                                            return `Started ${format(
+                                              assignmentDate,
+                                              "MMM dd, yyyy"
+                                            )}`;
+                                          }
+                                        })()}
+                                      </span>
+                                      <span>
+                                        {assignment.progress}% Complete
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
@@ -963,10 +1069,16 @@ export default function SimpleAssignProgramModal({
                                   onClick={() =>
                                     handleRemoveProgramAssignment(assignment)
                                   }
-                                  className="px-3 py-1 rounded-lg text-sm font-medium"
+                                  className="px-2.5 py-1 rounded-md text-xs font-medium"
                                   style={{
-                                    backgroundColor: "#EF4444",
-                                    color: "#FFFFFF",
+                                    backgroundColor: COLORS.RED_ALERT,
+                                    color: COLORS.TEXT_PRIMARY,
+                                  }}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
                                   }}
                                 >
                                   Remove
