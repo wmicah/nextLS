@@ -1144,9 +1144,9 @@ function SchedulePageClient() {
                 const hasBlockedTimes = dayBlockedTimes.length > 0;
 
                 // Determine day cell styles
-                let dayBgColor = COLORS.BACKGROUND_CARD;
-                let dayTextColor = COLORS.TEXT_PRIMARY;
-                let dayBorderColor = COLORS.BORDER_SUBTLE;
+                let dayBgColor: string = COLORS.BACKGROUND_CARD;
+                let dayTextColor: string = COLORS.TEXT_PRIMARY;
+                let dayBorderColor: string = COLORS.BORDER_SUBTLE;
                 
                 if (isBlocked) {
                   dayBgColor = getRedAlert(0.2);
@@ -2139,9 +2139,13 @@ function SchedulePageClient() {
                                             setClientSearch(e.target.value);
                                             setShowClientDropdown(true);
                                           }}
-                                          onFocus={() =>
-                                            setShowClientDropdown(true)
-                                          }
+                                          onFocus={e => {
+                                            setShowClientDropdown(true);
+                                            e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
+                                          }}
+                                          onBlur={e => {
+                                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                          }}
                                           className="p-2 rounded-md text-sm focus:outline-none focus:ring-2 transition-all"
                                           style={{
                                             backgroundColor: COLORS.BACKGROUND_DARK,
@@ -2149,12 +2153,6 @@ function SchedulePageClient() {
                                             color: COLORS.TEXT_PRIMARY,
                                             minWidth: "200px",
                                             border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-                                          }}
-                                          onFocus={e => {
-                                            e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
-                                          }}
-                                          onBlur={e => {
-                                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                                           }}
                                         />
 
