@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Store or update subscription
     // Multiple devices can have subscriptions, so we use userId + endpoint as unique constraint
-    await db.pushSubscription.upsert({
+    const result = await db.pushSubscription.upsert({
       where: {
         userId_endpoint: {
           userId: user.id,
@@ -63,7 +63,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true });
+    console.log(`✅ Push subscription saved for user ${user.id}:`, {
+      endpoint: subscription.endpoint.substring(0, 50) + "...",
+      userAgent: userAgent?.substring(0, 50),
+    });
+
+    return NextResponse.json({ 
+      success: true,
+      subscriptionId: result.id,
+    });
   } catch (error) {
     console.error("Error processing push subscription:", error);
     return NextResponse.json(

@@ -4,16 +4,19 @@ import { useEffect } from "react";
 
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      "serviceWorker" in navigator &&
-      process.env.NODE_ENV === "production"
-    ) {
-      // Register service worker
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      // Register service worker (works in both dev and production)
       navigator.serviceWorker
-        .register("/sw.js")
+        .register("/sw.js", {
+          scope: "/",
+        })
         .then(registration => {
-          console.log("Service Worker registered successfully:", registration);
+          console.log("✅ Service Worker registered successfully:", registration.scope);
+
+          // Wait for service worker to be ready
+          navigator.serviceWorker.ready.then(() => {
+            console.log("✅ Service Worker is ready");
+          });
 
           // Check for updates
           registration.addEventListener("updatefound", () => {
@@ -34,7 +37,7 @@ export default function ServiceWorkerRegistration() {
           });
         })
         .catch(error => {
-          console.error("Service Worker registration failed:", error);
+          console.error("❌ Service Worker registration failed:", error);
         });
 
       // Listen for service worker messages

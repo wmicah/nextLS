@@ -41,6 +41,7 @@ export async function sendPushNotification(
     });
 
     if (userSettings?.pushNotifications === false) {
+      console.log(`📱 Push notifications disabled for user ${userId}`);
       return false;
     }
 
@@ -50,8 +51,11 @@ export async function sendPushNotification(
     });
 
     if (subscriptions.length === 0) {
+      console.log(`📱 No push subscriptions found for user ${userId}`);
       return false;
     }
+
+    console.log(`📱 Sending push notification to user ${userId} (${subscriptions.length} subscription(s))`);
 
     // Remove emojis from title and body
     const cleanTitle = removeEmojis(title);
@@ -99,6 +103,19 @@ export async function sendPushNotification(
 
     const successCount = results.filter(r => r.status === "fulfilled").length;
     const failureCount = results.filter(r => r.status === "rejected").length;
+
+    if (successCount > 0) {
+      console.log(`✅ Push notification sent successfully to ${successCount} device(s)`);
+    }
+    if (failureCount > 0) {
+      console.log(`⚠️ Failed to send push notification to ${failureCount} device(s)`);
+      // Log failures for debugging
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          console.error(`❌ Failed subscription ${index}:`, result.reason);
+        }
+      });
+    }
 
     return successCount > 0;
   } catch (error) {
