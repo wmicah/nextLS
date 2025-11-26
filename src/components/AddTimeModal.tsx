@@ -12,6 +12,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { format, addDays, addHours } from "date-fns";
+import { COLORS, getGreenPrimary } from "@/lib/colors";
 
 interface AddTimeModalProps {
   isOpen: boolean;
@@ -105,25 +106,35 @@ export default function AddTimeModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div 
+      className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md"
+      style={{ backgroundColor: "rgba(21, 25, 26, 0.75)" }}
+    >
       <div
         className="rounded-2xl shadow-xl border p-6 w-full max-w-2xl mx-4"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">Add Lesson</h2>
-            <p className="text-gray-400 text-sm">
+            <h2 className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Add Lesson</h2>
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
               Schedule a lesson at any time, regardless of working hours
             </p>
           </div>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
             <X className="h-6 w-6" />
           </button>
@@ -134,7 +145,7 @@ export default function AddTimeModal({
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Client Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Client *
               </label>
               <select
@@ -142,10 +153,11 @@ export default function AddTimeModal({
                 onChange={e =>
                   setFormData(prev => ({ ...prev, clientId: e.target.value }))
                 }
-                className="w-full p-2 rounded-lg border text-white"
+                className="w-full p-2 rounded-lg border"
                 style={{
-                  backgroundColor: "#2A2F2F",
-                  borderColor: "#606364",
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
                 }}
                 required
               >
@@ -161,7 +173,7 @@ export default function AddTimeModal({
             {/* Date and Time */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                   Date *
                 </label>
                 <input
@@ -170,17 +182,18 @@ export default function AddTimeModal({
                   onChange={e =>
                     setFormData(prev => ({ ...prev, date: e.target.value }))
                   }
-                  className="w-full p-2 rounded-lg border text-white"
+                  className="w-full p-2 rounded-lg border"
                   style={{
-                    backgroundColor: "#2A2F2F",
-                    borderColor: "#606364",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
                   }}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                   Time *
                 </label>
                 <input
@@ -189,10 +202,11 @@ export default function AddTimeModal({
                   onChange={e =>
                     setFormData(prev => ({ ...prev, time: e.target.value }))
                   }
-                  className="w-full p-2 rounded-lg border text-white"
+                  className="w-full p-2 rounded-lg border"
                   style={{
-                    backgroundColor: "#2A2F2F",
-                    borderColor: "#606364",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
                   }}
                   required
                 />
@@ -201,7 +215,7 @@ export default function AddTimeModal({
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Duration (minutes) *
               </label>
               <select
@@ -212,10 +226,11 @@ export default function AddTimeModal({
                     duration: parseInt(e.target.value),
                   }))
                 }
-                className="w-full p-2 rounded-lg border text-white"
+                className="w-full p-2 rounded-lg border"
                 style={{
-                  backgroundColor: "#2A2F2F",
-                  borderColor: "#606364",
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
                 }}
                 required
               >
@@ -236,16 +251,19 @@ export default function AddTimeModal({
 
             {/* Info Box */}
             <div
-              className="p-4 rounded-lg"
-              style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+              className="p-4 rounded-lg border"
+              style={{ 
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
             >
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-400 mt-0.5" />
+                <AlertCircle className="h-5 w-5 mt-0.5" style={{ color: COLORS.GOLDEN_ACCENT }} />
                 <div>
-                  <h4 className="font-medium text-white mb-1">
+                  <h4 className="font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Complete Time Freedom
                   </h4>
-                  <p className="text-sm text-gray-300">
+                  <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                     This lesson can be scheduled at any time, even outside your
                     normal working hours. Clients will not be able to book
                     during this time, but you have full control.
@@ -261,8 +279,18 @@ export default function AddTimeModal({
                 disabled={scheduleLessonMutation.isPending}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 style={{
-                  backgroundColor: "#10B981",
-                  color: "#FFFFFF",
+                  backgroundColor: COLORS.GREEN_PRIMARY,
+                  color: COLORS.BACKGROUND_DARK,
+                }}
+                onMouseEnter={e => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                  }
                 }}
               >
                 <Save className="h-4 w-4" />
@@ -276,8 +304,16 @@ export default function AddTimeModal({
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
                 style={{
                   backgroundColor: "transparent",
-                  borderColor: "#606364",
-                  color: "#FFFFFF",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_SECONDARY,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                 }}
               >
                 Cancel

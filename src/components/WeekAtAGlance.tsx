@@ -477,7 +477,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
           transform: rotateY(180deg);
         }
       `}</style>
-      <div 
+      <div
         className={`group rounded-lg border transition-colors ${className}`}
         style={className === "compact" 
           ? { borderColor: "#262737", backgroundColor: "transparent" }
@@ -501,49 +501,49 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 transition-colors" style={{ color: getGoldenAccent(0.6) }} />
                   <h3 className="text-sm font-semibold text-white">
-                    Week at a Glance
-                  </h3>
-                </div>
+                Week at a Glance
+              </h3>
+            </div>
 
                 <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => navigateWeek("prev")}
+              <button
+                onClick={() => navigateWeek("prev")}
                     className="p-1.5 rounded border transition-colors"
                     style={{ borderColor: COLORS.GOLDEN_BORDER, backgroundColor: COLORS.BACKGROUND_CARD }}
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD; }}
-                  >
+              >
                     <ChevronLeft className="h-3.5 w-3.5 text-zinc-400" />
-                  </button>
+              </button>
 
-                  <button
-                    onClick={goToToday}
+              <button
+                onClick={goToToday}
                     className="px-2.5 py-1 rounded border transition-colors text-xs font-medium"
                     style={{ borderColor: COLORS.GOLDEN_BORDER, backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.GOLDEN_ACCENT }}
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD; }}
-                  >
-                    Today
-                  </button>
+              >
+                Today
+              </button>
 
-                  <button
-                    onClick={() => navigateWeek("next")}
+              <button
+                onClick={() => navigateWeek("next")}
                     className="p-1.5 rounded border transition-colors"
                     style={{ borderColor: COLORS.GOLDEN_BORDER, backgroundColor: COLORS.BACKGROUND_CARD }}
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD; }}
-                  >
+              >
                     <ChevronRight className="h-3.5 w-3.5 text-zinc-400" />
-                  </button>
-                </div>
-              </div>
+              </button>
+            </div>
+          </div>
 
-              {/* Week Range Display */}
+          {/* Week Range Display */}
               <div className="text-center mb-3">
                 <p className="text-xs text-zinc-400">
-                  {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
-                </p>
-              </div>
+              {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
+            </p>
+          </div>
             </>
           )}
           
@@ -812,24 +812,24 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
           {/* Footer */}
           {className !== "compact" && (
             <div className="mt-4 pt-3 border-t border-white/10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-white/10" />
                   <span className="text-xs text-zinc-400">
-                    {weekEvents.length}{" "}
-                    {weekEvents.length === 1 ? "event" : "events"} this week
-                  </span>
-                </div>
+                  {weekEvents.length}{" "}
+                  {weekEvents.length === 1 ? "event" : "events"} this week
+                </span>
+              </div>
 
-                <Link
-                  href="/schedule"
+              <Link
+                href="/schedule"
                   className="text-xs transition-colors"
                   style={{ color: COLORS.GOLDEN_ACCENT }}
-                >
-                  View Full Schedule →
-                </Link>
-              </div>
+              >
+                View Full Schedule →
+              </Link>
             </div>
+          </div>
           )}
         </div>
       </div>

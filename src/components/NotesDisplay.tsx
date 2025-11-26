@@ -237,13 +237,13 @@ export default function NotesDisplay({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <div>
+          <div>
           <h2 className="text-sm font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
-            {isClientView ? "Coach's Notes" : "Client Notes"}
-          </h2>
+              {isClientView ? "Coach's Notes" : "Client Notes"}
+            </h2>
           <p className="text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
-            {notes.length} note{notes.length !== 1 ? "s" : ""}
-          </p>
+              {notes.length} note{notes.length !== 1 ? "s" : ""}
+            </p>
         </div>
 
         {showComposer && !isClientView && (
@@ -425,17 +425,17 @@ export default function NotesDisplay({
                   : "none",
               }}
             >
-                  {/* Note Header */}
+              {/* Note Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1">
                         {note.title && (
-                          <h3
+                      <h3
                             className="text-sm font-semibold truncate"
                             style={{ color: COLORS.TEXT_PRIMARY }}
-                          >
+                      >
                             {note.title}
-                          </h3>
+                      </h3>
                         )}
                         {!note.title && (
                           <span
@@ -445,38 +445,38 @@ export default function NotesDisplay({
                             {note.type}
                           </span>
                         )}
-                        {note.isPrivate && (
-                          <span
+                      {note.isPrivate && (
+                        <span
                             className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                            style={{
+                          style={{
                               backgroundColor: COLORS.BACKGROUND_CARD_HOVER,
                               color: COLORS.TEXT_SECONDARY,
                               border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-                            }}
-                          >
-                            Private
-                          </span>
-                        )}
-                      </div>
-                      <div
+                          }}
+                        >
+                          Private
+                        </span>
+                      )}
+                    </div>
+                    <div
                         className="flex items-center gap-3 text-[10px] flex-wrap"
                         style={{ color: COLORS.TEXT_MUTED }}
-                      >
+                    >
                         <span>{note.coach.name || "Unknown Coach"}</span>
                         <span>
-                          {format(
-                            new Date(note.createdAt),
-                            "MMM d, yyyy 'at' h:mm a"
-                          )}
-                        </span>
+                        {format(
+                          new Date(note.createdAt),
+                          "MMM d, yyyy 'at' h:mm a"
+                        )}
+                      </span>
                         <span>{note.priority}</span>
-                      </div>
-                    </div>
+                  </div>
+                </div>
 
-                    {!isClientView && (
+                {!isClientView && (
                       <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                        <button
-                          onClick={() => setEditingNote(note)}
+                    <button
+                      onClick={() => setEditingNote(note)}
                           className="p-1.5 rounded-lg transition-colors"
                           style={{
                             backgroundColor: "transparent",
@@ -490,15 +490,15 @@ export default function NotesDisplay({
                             e.currentTarget.style.backgroundColor = "transparent";
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                           }}
-                          title="Edit note"
-                        >
+                      title="Edit note"
+                    >
                           <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() =>
-                            togglePinNoteMutation.mutate({ noteId: note.id })
-                          }
-                          disabled={togglePinNoteMutation.isPending}
+                    </button>
+                    <button
+                      onClick={() =>
+                        togglePinNoteMutation.mutate({ noteId: note.id })
+                      }
+                      disabled={togglePinNoteMutation.isPending}
                           className="p-1.5 rounded-lg transition-all"
                           style={{
                             backgroundColor: note.isPinned
@@ -520,22 +520,22 @@ export default function NotesDisplay({
                               e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                             }
                           }}
-                          title={note.isPinned ? "Unpin note" : "Pin note"}
-                        >
-                          {note.isPinned ? (
-                            <Pin
+                      title={note.isPinned ? "Unpin note" : "Pin note"}
+                    >
+                      {note.isPinned ? (
+                        <Pin
                               className="w-3.5 h-3.5"
                               style={{ color: COLORS.GOLDEN_ACCENT }}
                               fill={COLORS.GOLDEN_ACCENT}
-                            />
-                          ) : (
-                            <PinOff
+                        />
+                      ) : (
+                        <PinOff
                               className="w-3.5 h-3.5"
-                            />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteNote(note.id)}
+                        />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteNote(note.id)}
                           className="p-1.5 rounded-lg transition-colors"
                           style={{
                             backgroundColor: "transparent",
@@ -551,10 +551,10 @@ export default function NotesDisplay({
                           }}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
+                    </button>
                   </div>
+                )}
+              </div>
 
               {/* Note Content */}
               <div className="mb-3">
@@ -659,7 +659,7 @@ export default function NotesDisplay({
                 e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               }}
             >
-              View All {filteredNotes.length} Notes
+                View All {filteredNotes.length} Notes
             </button>
           )}
         </div>
@@ -726,7 +726,7 @@ export default function NotesDisplay({
                   {/* Note Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1">
                         {note.title && (
                           <h3
                             className="text-sm font-semibold truncate"
@@ -743,30 +743,30 @@ export default function NotesDisplay({
                             {note.type}
                           </span>
                         )}
-                        {note.isPrivate && (
-                          <span
+                          {note.isPrivate && (
+                            <span
                             className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                            style={{
+                              style={{
                               backgroundColor: COLORS.BACKGROUND_CARD_HOVER,
                               color: COLORS.TEXT_SECONDARY,
                               border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-                            }}
-                          >
-                            Private
-                          </span>
-                        )}
-                      </div>
-                      <div
+                              }}
+                            >
+                              Private
+                            </span>
+                          )}
+                        </div>
+                        <div
                         className="flex items-center gap-3 text-[10px] flex-wrap"
                         style={{ color: COLORS.TEXT_MUTED }}
-                      >
+                        >
                         <span>{note.coach.name || "Unknown Coach"}</span>
                         <span>
-                          {format(
-                            new Date(note.createdAt),
-                            "MMM d, yyyy 'at' h:mm a"
-                          )}
-                        </span>
+                            {format(
+                              new Date(note.createdAt),
+                              "MMM d, yyyy 'at' h:mm a"
+                            )}
+                          </span>
                         <span>{note.priority}</span>
                       </div>
                     </div>

@@ -1162,5 +1162,5 @@ export const sidebarRouter = router({
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       })
       .slice(0, 5);
-  }),
+    }),
 });

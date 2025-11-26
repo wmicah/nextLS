@@ -14,6 +14,7 @@ import {
   Save,
 } from "lucide-react";
 import { format, addDays, addHours } from "date-fns";
+import { COLORS, getRedAlert, getGreenPrimary } from "@/lib/colors";
 
 interface BlockedTimesModalProps {
   isOpen: boolean;
@@ -178,19 +179,22 @@ export default function BlockedTimesModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div 
+      className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md"
+      style={{ backgroundColor: "rgba(21, 25, 26, 0.75)" }}
+    >
       <div
         className="rounded-2xl shadow-xl border p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">All Blocked Times</h2>
-            <p className="text-gray-400 text-sm">
+            <h2 className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>All Blocked Times</h2>
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
               Manage your unavailable periods across all months (vacations,
               appointments, etc.)
             </p>
@@ -200,8 +204,14 @@ export default function BlockedTimesModal({
               onClick={() => setShowAddForm(true)}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2"
               style={{
-                backgroundColor: "#10B981",
-                color: "#FFFFFF",
+                backgroundColor: COLORS.GREEN_PRIMARY,
+                color: COLORS.BACKGROUND_DARK,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
               }}
             >
               <Plus className="h-4 w-4" />
@@ -209,7 +219,14 @@ export default function BlockedTimesModal({
             </button>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="transition-colors"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               <X className="h-6 w-6" />
             </button>
@@ -222,8 +239,8 @@ export default function BlockedTimesModal({
             /* Add/Edit Form */
             <div className="space-y-6">
               <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-blue-400" />
-                <h3 className="text-lg font-semibold text-white">
+                <Calendar className="h-5 w-5" style={{ color: COLORS.GREEN_PRIMARY }} />
+                <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                   {editingBlockedTime
                     ? "Edit Blocked Time"
                     : "Add Blocked Time"}
@@ -233,7 +250,7 @@ export default function BlockedTimesModal({
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                       Title *
                     </label>
                     <input
@@ -245,10 +262,11 @@ export default function BlockedTimesModal({
                           title: e.target.value,
                         }))
                       }
-                      className="w-full p-2 rounded-lg border text-white"
+                      className="w-full p-2 rounded-lg border"
                       style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                       placeholder="e.g., Vacation, Doctor Appointment"
                       required
@@ -256,7 +274,7 @@ export default function BlockedTimesModal({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                       All Day Event
                     </label>
                     <div className="flex items-center gap-2">
@@ -269,9 +287,12 @@ export default function BlockedTimesModal({
                             isAllDay: e.target.checked,
                           }))
                         }
-                        className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500"
+                        className="w-4 h-4 rounded"
+                        style={{
+                          accentColor: COLORS.GREEN_PRIMARY,
+                        }}
                       />
-                      <span className="text-sm text-gray-300">
+                      <span className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                         Block entire day(s)
                       </span>
                     </div>
@@ -279,7 +300,7 @@ export default function BlockedTimesModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Description
                   </label>
                   <textarea
@@ -290,10 +311,11 @@ export default function BlockedTimesModal({
                         description: e.target.value,
                       }))
                     }
-                    className="w-full p-2 rounded-lg border text-white"
+                    className="w-full p-2 rounded-lg border"
                     style={{
-                      backgroundColor: "#2A2F2F",
-                      borderColor: "#606364",
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
                     }}
                     rows={3}
                     placeholder="Optional description..."
@@ -302,7 +324,7 @@ export default function BlockedTimesModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                       Start Date *
                     </label>
                     <input
@@ -314,17 +336,18 @@ export default function BlockedTimesModal({
                           startDate: e.target.value,
                         }))
                       }
-                      className="w-full p-2 rounded-lg border text-white"
+                      className="w-full p-2 rounded-lg border"
                       style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                       End Date *
                     </label>
                     <input
@@ -336,10 +359,11 @@ export default function BlockedTimesModal({
                           endDate: e.target.value,
                         }))
                       }
-                      className="w-full p-2 rounded-lg border text-white"
+                      className="w-full p-2 rounded-lg border"
                       style={{
-                        backgroundColor: "#2A2F2F",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                       }}
                       required
                     />
@@ -349,7 +373,7 @@ export default function BlockedTimesModal({
                 {!formData.isAllDay && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                         Start Time *
                       </label>
                       <input
@@ -361,17 +385,18 @@ export default function BlockedTimesModal({
                             startTime: e.target.value,
                           }))
                         }
-                        className="w-full p-2 rounded-lg border text-white"
+                        className="w-full p-2 rounded-lg border"
                         style={{
-                          backgroundColor: "#2A2F2F",
-                          borderColor: "#606364",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                         }}
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                         End Time *
                       </label>
                       <input
@@ -383,10 +408,11 @@ export default function BlockedTimesModal({
                             endTime: e.target.value,
                           }))
                         }
-                        className="w-full p-2 rounded-lg border text-white"
+                        className="w-full p-2 rounded-lg border"
                         style={{
-                          backgroundColor: "#2A2F2F",
-                          borderColor: "#606364",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                         }}
                         required
                       />
@@ -403,8 +429,18 @@ export default function BlockedTimesModal({
                     }
                     className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     style={{
-                      backgroundColor: "#10B981",
-                      color: "#FFFFFF",
+                      backgroundColor: COLORS.GREEN_PRIMARY,
+                      color: COLORS.BACKGROUND_DARK,
+                    }}
+                    onMouseEnter={e => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                      }
                     }}
                   >
                     <Save className="h-4 w-4" />
@@ -416,8 +452,16 @@ export default function BlockedTimesModal({
                     className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
                     style={{
                       backgroundColor: "transparent",
-                      borderColor: "#606364",
-                      color: "#FFFFFF",
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_SECONDARY,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     }}
                   >
                     Cancel
@@ -430,11 +474,11 @@ export default function BlockedTimesModal({
             <div className="space-y-4">
               {blockedTimes.length === 0 ? (
                 <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-white mb-2">
+                  <Calendar className="h-12 w-12 mx-auto mb-4" style={{ color: COLORS.TEXT_MUTED }} />
+                  <h3 className="text-lg font-semibold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                     No Blocked Times
                   </h3>
-                  <p className="text-gray-400 mb-4">
+                  <p className="mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                     You haven't blocked any time periods yet. Block times to
                     prevent clients from scheduling during vacations,
                     appointments, or other unavailable periods.
@@ -443,14 +487,14 @@ export default function BlockedTimesModal({
                     onClick={() => setShowAddForm(true)}
                     className="px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 mx-auto"
                     style={{
-                      backgroundColor: "#10B981",
-                      color: "#FFFFFF",
+                      backgroundColor: COLORS.GREEN_PRIMARY,
+                      color: COLORS.BACKGROUND_DARK,
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#059669";
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#10B981";
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
                     }}
                   >
                     <Plus className="h-4 w-4" />
@@ -479,8 +523,11 @@ export default function BlockedTimesModal({
                       ([monthYear, times]: [string, any]) => (
                         <div key={monthYear}>
                           <h3
-                            className="text-lg font-semibold text-white mb-3 border-b pb-2"
-                            style={{ borderColor: "#606364" }}
+                            className="text-lg font-semibold mb-3 border-b pb-2"
+                            style={{ 
+                              color: COLORS.TEXT_PRIMARY,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                            }}
                           >
                             {monthYear}
                           </h3>
@@ -490,22 +537,23 @@ export default function BlockedTimesModal({
                                 key={blockedTime.id}
                                 className="p-4 rounded-lg border"
                                 style={{
-                                  backgroundColor: "#2A2F2F",
-                                  borderColor: "#606364",
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  borderColor: COLORS.BORDER_SUBTLE,
                                 }}
                               >
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <h4 className="font-semibold text-white">
+                                      <h4 className="font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                                         {blockedTime.title}
                                       </h4>
                                       {blockedTime.isAllDay && (
                                         <span
                                           className="px-2 py-1 text-xs rounded-full"
                                           style={{
-                                            backgroundColor: "#3B82F6",
-                                            color: "#FFFFFF",
+                                            backgroundColor: getRedAlert(0.2),
+                                            color: COLORS.RED_ALERT,
+                                            border: `1px solid ${COLORS.RED_ALERT}`,
                                           }}
                                         >
                                           All Day
@@ -514,14 +562,14 @@ export default function BlockedTimesModal({
                                     </div>
 
                                     {blockedTime.description && (
-                                      <p className="text-gray-300 text-sm mb-2">
+                                      <p className="text-sm mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                                         {blockedTime.description}
                                       </p>
                                     )}
 
                                     <div
                                       className="flex items-center gap-4 text-sm"
-                                      style={{ color: "#ABA4AA" }}
+                                      style={{ color: COLORS.TEXT_SECONDARY }}
                                     >
                                       <div className="flex items-center gap-1">
                                         <Calendar className="h-4 w-4" />
@@ -567,16 +615,18 @@ export default function BlockedTimesModal({
                                       onClick={() => handleEdit(blockedTime)}
                                       className="p-2 rounded-lg transition-colors"
                                       style={{
-                                        color: "#ABA4AA",
+                                        color: COLORS.TEXT_SECONDARY,
                                         backgroundColor: "transparent",
                                       }}
                                       onMouseEnter={e => {
                                         e.currentTarget.style.backgroundColor =
-                                          "#606364";
+                                          COLORS.BACKGROUND_CARD_HOVER;
+                                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                                       }}
                                       onMouseLeave={e => {
                                         e.currentTarget.style.backgroundColor =
                                           "transparent";
+                                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                                       }}
                                     >
                                       <Edit className="h-4 w-4" />
@@ -587,12 +637,12 @@ export default function BlockedTimesModal({
                                       }
                                       className="p-2 rounded-lg transition-colors"
                                       style={{
-                                        color: "#EF4444",
+                                        color: COLORS.RED_ALERT,
                                         backgroundColor: "transparent",
                                       }}
                                       onMouseEnter={e => {
                                         e.currentTarget.style.backgroundColor =
-                                          "#7F1D1D";
+                                          getRedAlert(0.2);
                                       }}
                                       onMouseLeave={e => {
                                         e.currentTarget.style.backgroundColor =

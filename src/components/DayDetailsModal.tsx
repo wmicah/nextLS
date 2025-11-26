@@ -301,15 +301,15 @@ export default function DayDetailsModal({
                     {lessons.map((lesson: any, index: number) => {
                       const statusStyles = getStatusColor(lesson.status);
                       return (
-                        <div
-                          key={index}
+                      <div
+                        key={index}
                           className="p-3 rounded-lg border"
                           style={{
                             backgroundColor: statusStyles.backgroundColor,
                             color: statusStyles.color,
                             borderColor: statusStyles.borderColor,
                           }}
-                        >
+                      >
                         <div className="flex items-center justify-between">
                           <div>
                             <div
