@@ -28,17 +28,20 @@ export default function PushNotificationSetup() {
 
     setIsLoading(true);
     try {
+      console.log("🚀 Starting push notification subscription...");
       const subscription = await pushNotificationService.subscribeToPush();
       if (subscription) {
         setIsSubscribed(true);
         setPermission("granted");
+        console.log("✅ Push notifications enabled successfully");
         // Show success message
         alert("Push notifications enabled successfully!");
       } else {
+        console.error("❌ Subscription returned null");
         alert("Failed to enable push notifications. Please try again.");
       }
     } catch (error: any) {
-      console.error("Error subscribing to push notifications:", error);
+      console.error("❌ Error subscribing to push notifications:", error);
       alert(
         error.message ||
           "Failed to enable push notifications. Please check your browser settings."

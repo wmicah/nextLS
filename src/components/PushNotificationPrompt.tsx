@@ -68,15 +68,24 @@ export default function PushNotificationPrompt() {
 
     setIsLoading(true);
     try {
+      console.log("🚀 Starting push notification subscription...");
       const subscription = await pushNotificationService.subscribeToPush();
       if (subscription) {
         setIsSubscribed(true);
         setPermission(Notification.permission);
         setHasSubscription(true);
         await refetchSubscriptions();
+        console.log("✅ Push notifications enabled successfully");
+      } else {
+        console.error("❌ Subscription returned null");
+        alert("Failed to enable push notifications. Please try again.");
       }
     } catch (error: any) {
-      // Error handled - user can retry if needed
+      console.error("❌ Error subscribing to push notifications:", error);
+      alert(
+        error.message ||
+          "Failed to enable push notifications. Please check your browser settings and try again."
+      );
     } finally {
       setIsLoading(false);
     }

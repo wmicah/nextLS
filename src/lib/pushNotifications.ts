@@ -31,70 +31,99 @@ export class PushNotificationService {
   async subscribeToPush(): Promise<PushSubscription | null> {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
       console.log("❌ Push messaging is not supported");
-      return null;
+      throw new Error("Push messaging is not supported in this browser");
     }
 
     const permission = await this.requestPermission();
     if (!permission) {
       console.log("❌ Permission not granted for push notifications");
-      return null;
+      throw new Error("Notification permission was denied");
     }
 
     try {
-      // Ensure service worker is registered first
-      let registration = await navigator.serviceWorker.getRegistration();
+      // Ensure service worker is registered first with timeout
+      console.log("📱 Checking service worker registration...");
+      let registration = await Promise.race([
+        navigator.serviceWorker.getRegistration(),
+        new Promise<ServiceWorkerRegistration | null>((_, reject) =>
+          setTimeout(() => reject(new Error("Service worker check timeout")), 5000)
+        ),
+      ]);
       
       if (!registration) {
         console.log("📱 Registering service worker...");
-        registration = await navigator.serviceWorker.register("/sw.js", {
-          scope: "/",
-        });
-        // Wait for service worker to be ready
-        await navigator.serviceWorker.ready;
-        console.log("✅ Service worker registered and ready");
-      } else {
-        // Wait for service worker to be ready
-        await navigator.serviceWorker.ready;
-        console.log("✅ Service worker already registered");
+        registration = await Promise.race([
+          navigator.serviceWorker.register("/sw.js", { scope: "/" }),
+          new Promise<ServiceWorkerRegistration>((_, reject) =>
+            setTimeout(() => reject(new Error("Service worker registration timeout")), 10000)
+          ),
+        ]);
       }
+
+      // Wait for service worker to be ready with timeout
+      console.log("📱 Waiting for service worker to be ready...");
+      await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error("Service worker ready timeout")), 10000)
+        ),
+      ]);
+      console.log("✅ Service worker is ready");
 
       // Check if already subscribed
       const existingSubscription = await registration.pushManager.getSubscription();
       if (existingSubscription) {
         console.log("📱 Already subscribed, updating server...");
-        await this.sendSubscriptionToServer(existingSubscription);
+        try {
+          await this.sendSubscriptionToServer(existingSubscription);
+          console.log("✅ Subscription updated on server");
+        } catch (error) {
+          console.error("⚠️ Failed to update server, but subscription exists:", error);
+          // Don't fail if server update fails - subscription still works
+        }
         return existingSubscription;
       }
 
       // Create new subscription
       console.log("📱 Creating new push subscription...");
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey),
-      });
+      const subscription = await Promise.race([
+        registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey),
+        }),
+        new Promise<PushSubscription>((_, reject) =>
+          setTimeout(() => reject(new Error("Subscription creation timeout")), 10000)
+        ),
+      ]);
 
-      console.log("✅ Push subscription created:", subscription.endpoint);
+      console.log("✅ Push subscription created:", subscription.endpoint.substring(0, 50) + "...");
 
       // Send subscription to your server
-      await this.sendSubscriptionToServer(subscription);
+      console.log("📱 Saving subscription to server...");
+      try {
+        await this.sendSubscriptionToServer(subscription);
+        console.log("✅ Push subscription saved to server");
+      } catch (error) {
+        console.error("❌ Failed to save subscription to server:", error);
+        throw new Error("Failed to save subscription to server. Please try again.");
+      }
 
-      console.log("✅ Push subscription saved to server");
       return subscription;
     } catch (error: any) {
       console.error("❌ Error subscribing to push notifications:", error);
       
       // Provide more specific error messages
       if (error.name === "NotAllowedError") {
-        console.error("❌ Push notification permission denied by user");
+        throw new Error("Push notification permission denied. Please allow notifications in your browser settings.");
       } else if (error.name === "NotSupportedError") {
-        console.error("❌ Push notifications not supported on this device/browser");
+        throw new Error("Push notifications are not supported on this device or browser.");
       } else if (error.message?.includes("VAPID")) {
-        console.error("❌ VAPID key error - check your VAPID keys");
+        throw new Error("VAPID key error. Please contact support.");
+      } else if (error.message?.includes("timeout")) {
+        throw new Error("Subscription timed out. Please check your internet connection and try again.");
       } else {
-        console.error("❌ Unknown error:", error.message || error);
+        throw new Error(error.message || "Failed to enable push notifications. Please try again.");
       }
-      
-      return null;
     }
   }
 
@@ -102,25 +131,38 @@ export class PushNotificationService {
     subscription: PushSubscription
   ): Promise<void> {
     try {
+      console.log("📤 Sending subscription to server...");
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(subscription),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || "Failed to send subscription to server"
-        );
+        const errorMessage = errorData.error || `Server error: ${response.status}`;
+        console.error("❌ Server error:", errorMessage);
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
+      console.log("✅ Subscription saved to server:", result);
       return result;
-    } catch (error) {
-      console.error("Error sending subscription to server:", error);
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        console.error("❌ Request timeout - server took too long to respond");
+        throw new Error("Request timed out. Please check your internet connection and try again.");
+      }
+      console.error("❌ Error sending subscription to server:", error);
       throw error;
     }
   }

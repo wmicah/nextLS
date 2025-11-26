@@ -328,12 +328,18 @@ export const messagingRouter = router({
 
             // Send push notification
             try {
-              await sendMessageNotification(
+              console.log(`📱 Attempting to send push notification to recipient ${recipientId}...`);
+              const pushResult = await sendMessageNotification(
                 recipientId,
                 message.sender.name || message.sender.email,
                 input.content,
                 input.conversationId
               );
+              if (pushResult) {
+                console.log(`✅ Push notification sent successfully to ${recipientId}`);
+              } else {
+                console.log(`⚠️ Push notification returned false for ${recipientId} - check logs above for reason`);
+              }
             } catch (pushError) {
               console.error(`❌ Failed to send push notification to user ${recipientId}:`, pushError);
             }
