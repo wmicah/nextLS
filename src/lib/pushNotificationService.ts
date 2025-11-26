@@ -169,6 +169,7 @@ export async function sendMessageNotification(
     console.log(
       `📨 Sending message notification to user ${recipientId} from ${senderName}`
     );
+    console.log(`📨 Message preview: "${cleanContent.substring(0, 50)}..."`);
 
     const result = await sendPushNotification(
       recipientId,
@@ -190,8 +191,12 @@ export async function sendMessageNotification(
       );
     } else {
       console.log(
-        `⚠️ Message notification failed for user ${recipientId} (may not have push subscriptions)`
+        `⚠️ Message notification failed for user ${recipientId}`
       );
+      console.log(`   Possible reasons:`);
+      console.log(`   - No push subscriptions found`);
+      console.log(`   - Push notifications disabled in settings`);
+      console.log(`   - Invalid subscription (will be auto-removed)`);
     }
 
     return result;
