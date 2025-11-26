@@ -11,13 +11,13 @@ import { config } from "dotenv";
 config();
 
 async function sendLessonReminders() {
-  const secret = process.env.LESSON_REMINDER_SECRET;
+  const secret = process.env.CRON_SECRET;
 
   if (!secret) {
     console.error(
-      "❌ LESSON_REMINDER_SECRET not found in environment variables"
+      "❌ CRON_SECRET not found in environment variables"
     );
-    console.log("Please add LESSON_REMINDER_SECRET to your .env file");
+    console.log("Please add CRON_SECRET to your .env file");
     return;
   }
 

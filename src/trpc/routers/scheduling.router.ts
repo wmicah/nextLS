@@ -348,19 +348,19 @@ export const schedulingRouter = router({
       if (clientEmail && client.user?.id) {
         try {
           const emailService = CompleteEmailService.getInstance();
-          // Format the lesson time for the email
-          const lessonTime = utcLessonDate.toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          });
+          // Format the lesson time for the email using client's timezone
+          const { getUserTimezoneFromDB, formatTimeInTimezone, formatDateInTimezone } = await import("@/lib/timezone-utils");
+          const clientTimezone = await getUserTimezoneFromDB(client.user.id);
+          
+          const lessonTime = formatTimeInTimezone(utcLessonDate, clientTimezone, "h:mm a");
+          const lessonDate = formatDateInTimezone(utcLessonDate, clientTimezone, "EEEE, MMMM d");
 
           // Send email (will check user preferences inside)
           await emailService.sendLessonScheduled(
             clientEmail,
             client.name || client.user.name || "Client",
             coach?.name || "Coach",
-            utcLessonDate.toLocaleDateString(),
+            lessonDate,
             lessonTime,
             client.user.id // Pass userId to check preferences
           );
@@ -1452,19 +1452,19 @@ export const schedulingRouter = router({
       if (clientEmail && client.user?.id) {
         try {
           const emailService = CompleteEmailService.getInstance();
-          // Format the lesson time for the email
-          const lessonTime = utcLessonDate.toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          });
+          // Format the lesson time for the email using client's timezone
+          const { getUserTimezoneFromDB, formatTimeInTimezone, formatDateInTimezone } = await import("@/lib/timezone-utils");
+          const clientTimezone = await getUserTimezoneFromDB(client.user.id);
+          
+          const lessonTime = formatTimeInTimezone(utcLessonDate, clientTimezone, "h:mm a");
+          const lessonDate = formatDateInTimezone(utcLessonDate, clientTimezone, "EEEE, MMMM d");
 
           // Send email (will check user preferences inside)
           await emailService.sendLessonScheduled(
             clientEmail,
             client.name || client.user.name || "Client",
             coach?.name || "Coach",
-            utcLessonDate.toLocaleDateString(),
+            lessonDate,
             lessonTime,
             client.user.id // Pass userId to check preferences
           );
