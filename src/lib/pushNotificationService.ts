@@ -128,8 +128,13 @@ export async function sendPushNotification(
     }
 
     return successCount > 0;
-  } catch (error) {
-    // Silently fail in production - errors are handled by removing invalid subscriptions
+  } catch (error: any) {
+    console.error(`❌ Error in sendPushNotification for user ${userId}:`, error);
+    console.error(`   Error details:`, {
+      message: error.message,
+      stack: error.stack,
+    });
+    // Don't silently fail - log the error for debugging
     return false;
   }
 }
