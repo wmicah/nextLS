@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { addDays, startOfDay, endOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { format } from "date-fns";
+import { getUserTimezoneFromDB, formatTimeInTimezone, formatDateInTimezone } from "@/lib/timezone-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const secret = searchParams.get("secret");
 
-    if (secret !== process.env.LESSON_REMINDER_SECRET) {
+    if (secret !== process.env.CRON_SECRET) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -204,12 +205,12 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Format the lesson time using default timezone
-        // lesson.date is stored in UTC, so we format it in the target timezone
-        const timezone = "America/New_York"; // Default timezone (could be improved to use user's timezone)
+        // Format the lesson time using client's timezone from settings
+        // lesson.date is stored in UTC, so we format it in the client's timezone
+        const clientTimezone = await getUserTimezoneFromDB(lesson.client.user.id);
         
-        const lessonTime = formatInTimeZone(lesson.date, timezone, "h:mm a");
-        const lessonDate = formatInTimeZone(lesson.date, timezone, "EEEE, MMMM d");
+        const lessonTime = formatTimeInTimezone(lesson.date, clientTimezone, "h:mm a");
+        const lessonDate = formatDateInTimezone(lesson.date, clientTimezone, "EEEE, MMMM d");
 
         // Create the reminder message with improved formatting
         const reminderMessage = `🔔 **Lesson Reminder**

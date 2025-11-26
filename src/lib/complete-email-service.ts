@@ -296,6 +296,35 @@ export class CompleteEmailService {
     }
   }
 
+  // Daily workout reminder - sent at 8 AM if user has workouts for that day
+  async sendDailyWorkoutReminder(
+    clientEmail: string,
+    clientName: string,
+    coachName: string,
+    workouts: Array<{ title: string; description?: string; duration?: string; type: 'assigned' | 'program' }>
+  ): Promise<boolean> {
+    try {
+      const template = completeEmailTemplates.dailyWorkoutReminder(
+        clientName,
+        coachName,
+        workouts
+      );
+
+      const result = await resend.emails.send({
+        from: this.fromEmail,
+        to: [clientEmail],
+        subject: template.subject,
+        html: template.html,
+      });
+
+      console.log("Daily workout reminder email sent:", result);
+      return true;
+    } catch (error) {
+      console.error("Failed to send daily workout reminder email:", error);
+      return false;
+    }
+  }
+
   // 5. MESSAGE NOTIFICATIONS
   async sendNewMessage(
     clientEmail: string,

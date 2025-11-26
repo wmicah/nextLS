@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { emailService } from "@/lib/email-service";
+import { CompleteEmailService } from "@/lib/complete-email-service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,6 +68,40 @@ export async function POST(request: NextRequest) {
           : "Failed to send program assignment";
         break;
 
+      case "lesson-scheduled":
+        {
+          const completeEmailService = CompleteEmailService.getInstance();
+          // Create a test date for tomorrow at 7:00 PM in the user's timezone
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(19, 0, 0, 0); // 7:00 PM
+          
+          // Format the date and time
+          const lessonDate = tomorrow.toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+          const lessonTime = tomorrow.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
+
+          result = await completeEmailService.sendLessonScheduled(
+            email,
+            name || "Test Client",
+            coachName || "Test Coach",
+            lessonDate,
+            lessonTime
+          );
+          message = result
+            ? "Lesson scheduled email sent successfully!"
+            : "Failed to send lesson scheduled email";
+        }
+        break;
+
       case "test-config":
         result = await emailService.testEmailConfiguration();
         message = result
@@ -78,7 +113,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "Invalid test type. Use: welcome, coach-notification, lesson-reminder, program-assignment, or test-config",
+              "Invalid test type. Use: welcome, coach-notification, lesson-reminder, lesson-scheduled, program-assignment, or test-config",
           },
           { status: 400 }
         );
@@ -110,6 +145,7 @@ export async function GET() {
       "welcome",
       "coach-notification",
       "lesson-reminder",
+      "lesson-scheduled",
       "program-assignment",
       "test-config",
     ],

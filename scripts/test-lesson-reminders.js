@@ -8,9 +8,9 @@
 const https = require("https");
 const http = require("http");
 
-const LESSON_REMINDER_SECRET =
-  process.env.LESSON_REMINDER_SECRET ||
-  "cf87d4e0a4968d3ae8f1c62d1d824d573271dc8e6e2d7263c6d051ee6af485fd";
+const CRON_SECRET =
+  process.env.CRON_SECRET ||
+  "20657f0bd5d8a9102a0da2fb47e473f2b320248fd6e813bc1738f638452a1349";
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 async function testLessonReminders() {
@@ -18,7 +18,7 @@ async function testLessonReminders() {
 
   try {
     // Test the cron endpoint
-    const cronUrl = `${BASE_URL}/api/cron/lesson-reminders?secret=${LESSON_REMINDER_SECRET}`;
+    const cronUrl = `${BASE_URL}/api/cron/lesson-reminders?secret=${CRON_SECRET}`;
     console.log(`📡 Calling cron endpoint: ${cronUrl}`);
 
     const response = await makeRequest(cronUrl);

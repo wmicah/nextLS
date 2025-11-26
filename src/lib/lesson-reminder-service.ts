@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { randomBytes } from "crypto";
 import { CompleteEmailService } from "./complete-email-service";
 import dailyDigestService from "./daily-digest-service";
+import { getUserTimezoneFromDB, formatTimeInTimezone, formatDateInTimezone } from "./timezone-utils";
 
 // In-memory tracking to prevent duplicate reminders
 const sentReminders = new Set<string>();
@@ -207,12 +208,12 @@ class LessonReminderService {
             continue;
           }
 
-          // Format the lesson time using default timezone
-          // lesson.date is stored in UTC, so we format it in the target timezone
-          const timezone = "America/New_York"; // Default timezone (could be improved to use user's timezone)
+          // Format the lesson time using client's timezone from settings
+          // lesson.date is stored in UTC, so we format it in the client's timezone
+          const clientTimezone = await getUserTimezoneFromDB(lesson.client.user.id);
           
-          const lessonTime = formatInTimeZone(lesson.date, timezone, "h:mm a");
-          const lessonDate = formatInTimeZone(lesson.date, timezone, "EEEE, MMMM d");
+          const lessonTime = formatTimeInTimezone(lesson.date, clientTimezone, "h:mm a");
+          const lessonDate = formatDateInTimezone(lesson.date, clientTimezone, "EEEE, MMMM d");
 
           // 48-hour confirmation reminder
           const confirmationToken = randomBytes(32).toString("hex");
@@ -473,16 +474,16 @@ If you can't make it, please let me know as soon as possible so I can offer the 
               });
             }
 
-            // Format the lesson date/time in the target timezone
-            const timezone = "America/New_York"; // Default timezone (could be improved to use user's timezone)
-            const cancelledLessonDate = formatInTimeZone(
+            // Format the lesson date/time in the client's timezone
+            const clientTimezone = await getUserTimezoneFromDB(lesson.client.user.id);
+            const cancelledLessonDate = formatDateInTimezone(
               lesson.date,
-              timezone,
+              clientTimezone,
               "EEEE, MMMM d"
             );
-            const cancelledLessonTime = formatInTimeZone(
+            const cancelledLessonTime = formatTimeInTimezone(
               lesson.date,
-              timezone,
+              clientTimezone,
               "h:mm a"
             );
 
@@ -544,10 +545,10 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
             if (lesson.client?.user?.email && lesson.client?.user?.id) {
               try {
                 const emailService = CompleteEmailService.getInstance();
-                // Format the lesson date/time in the target timezone for email
+                // Format the lesson date/time in the client's timezone for email
                 const cancelledEmailDate = formatInTimeZone(
                   lesson.date,
-                  timezone,
+                  clientTimezone,
                   "EEEE, MMMM d 'at' h:mm a"
                 );
                 

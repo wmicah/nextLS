@@ -14,7 +14,8 @@ import {
 } from "@/lib/youtube";
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
-import { CompleteEmailService } from "@/lib/complete-email-service";
+// NOTE: CompleteEmailService import removed - one-time workout assignment emails disabled
+// Email notifications now handled by daily workout reminders at 8 AM
 
 /**
  * Routines Router
@@ -629,25 +630,26 @@ export const routinesRouter = router({
         )
       );
 
-      // Send email and push notifications to clients about routine assignment
-      const emailService = CompleteEmailService.getInstance();
+      // Send push notifications to clients about routine assignment
+      // NOTE: Email notifications are now handled by daily workout reminders at 8 AM
       const { sendRoutineAssignmentNotification } = await import(
         "@/lib/pushNotificationService"
       );
 
       for (const client of clients) {
-        if (client.email) {
-          try {
-            await emailService.sendWorkoutAssigned(
-              client.email,
-              client.name || "Client",
-              coach.name || "Coach",
-              routine.name
-            );
-          } catch (error) {
-            console.error("Failed to send email notification:", error);
-          }
-        }
+        // One-time email notifications disabled - now using daily workout reminders
+        // if (client.email) {
+        //   try {
+        //     await emailService.sendWorkoutAssigned(
+        //       client.email,
+        //       client.name || "Client",
+        //       coach.name || "Coach",
+        //       routine.name
+        //     );
+        //   } catch (error) {
+        //     console.error("Failed to send email notification:", error);
+        //   }
+        // }
 
         // Send push notification if client has a user account
         if (client.userId) {

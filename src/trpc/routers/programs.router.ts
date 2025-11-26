@@ -2380,16 +2380,17 @@ export const programsRouter = router({
       );
 
       for (const client of clients) {
-        if (client.email) {
-          try {
-            await emailService.sendProgramAssigned(
-              client.email,
-              client.name || "Client",
-              coach.name || "Coach",
-              program.title
-            );
-          } catch (error) {}
-        }
+        // One-time email notifications disabled - now using daily workout reminders
+        // if (client.email) {
+        //   try {
+        //     await emailService.sendProgramAssigned(
+        //       client.email,
+        //       client.name || "Client",
+        //       coach.name || "Coach",
+        //       program.title
+        //     );
+        //   } catch (error) {}
+        // }
 
         // Send push notification if client has a user account
         if (client.userId) {
