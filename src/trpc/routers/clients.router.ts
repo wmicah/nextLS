@@ -1931,7 +1931,10 @@ export const clientsRouter = router({
           if (!completion.completed) return false;
           
           // Check if this completion is for a program drill (has programDrillId and it's not "standalone-routine")
-          if (!completion.programDrillId || completion.programDrillId === "standalone-routine") {
+          // Handle empty strings - if programDrillId is empty string, it's not a program drill completion
+          if (!completion.programDrillId || 
+              completion.programDrillId.trim() === "" || 
+              completion.programDrillId === "standalone-routine") {
             return false;
           }
           
@@ -1953,7 +1956,21 @@ export const clientsRouter = router({
             const dayDateOnly = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate());
             const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
-            if (dayDateOnly <= todayOnly && dayDate >= startDate) {
+            // Don't filter by startDate - match the logic used when counting totalDrills
+            // Only exclude future drills and replaced days
+            const hasReplacement = assignment.replacements?.some(
+              (replacement: any) => {
+                const replacementDate = new Date(replacement.replacedDate);
+                const replacementDateOnly = new Date(
+                  replacementDate.getFullYear(),
+                  replacementDate.getMonth(),
+                  replacementDate.getDate()
+                );
+                return replacementDateOnly.getTime() === dayDateOnly.getTime();
+              }
+            );
+            
+            if (dayDateOnly <= todayOnly && !hasReplacement) {
               day.drills.forEach(drill => {
                 if (drill.routineId && drill.type === "routine") {
                   routineDrillIds.add(drill.id);
@@ -1971,9 +1988,66 @@ export const clientsRouter = router({
         completion => completion.programDrillId && routineDrillIds.has(completion.programDrillId)
       );
       
+      // Also check for completions that might not have programDrillId set but match exercises in routine drills
+      // Build a set of exercise IDs that belong to routine drills
+      const programRoutineExerciseIds = new Set<string>();
+      programAssignments.forEach(assignment => {
+        if (!assignment.startDate) return;
+        const assignmentStartDate = new Date(assignment.startDate);
+        assignment.program.weeks.forEach((week, weekIndex) => {
+          week.days.forEach((day, dayIndex) => {
+            const dayDate = new Date(assignmentStartDate);
+            dayDate.setDate(dayDate.getDate() + weekIndex * 7 + dayIndex);
+            const dayDateOnly = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate());
+            const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            const hasReplacement = assignment.replacements?.some(
+              (replacement: any) => {
+                const replacementDate = new Date(replacement.replacedDate);
+                const replacementDateOnly = new Date(
+                  replacementDate.getFullYear(),
+                  replacementDate.getMonth(),
+                  replacementDate.getDate()
+                );
+                return replacementDateOnly.getTime() === dayDateOnly.getTime();
+              }
+            );
+            
+            if (dayDateOnly <= todayOnly && !hasReplacement) {
+              day.drills.forEach(drill => {
+                if (drill.routineId && drill.type === "routine" && drill.routine?.exercises) {
+                  drill.routine.exercises.forEach((exercise: any) => {
+                    programRoutineExerciseIds.add(exercise.id);
+                  });
+                }
+              });
+            }
+          });
+        });
+      });
+      
+      // Count completions that match routine exercise IDs but might not have programDrillId set correctly
+      // This is a fallback to catch completions that might have been stored without proper programDrillId
+      const additionalRoutineCompletions = allExerciseCompletions.filter(completion => {
+        if (!completion.completed) return false;
+        // If it's a routine exercise
+        if (programRoutineExerciseIds.has(completion.exerciseId)) {
+          // Only count if it wasn't already counted in exerciseCompletionsForRoutineDrills
+          // Check if this completion was already counted
+          const alreadyCounted = exerciseCompletionsForRoutineDrills.some(
+            c => c.exerciseId === completion.exerciseId && 
+                 c.programDrillId === completion.programDrillId &&
+                 c.date === completion.date
+          );
+          return !alreadyCounted;
+        }
+        return false;
+      });
+      
       // Count each exercise completion individually (whether in a superset or not)
       // Each ExerciseCompletion record represents one completed exercise
       completedDrills += exerciseCompletionsForRoutineDrills.length;
+      completedDrills += additionalRoutineCompletions.length;
       
       // For regular program drills (not routine drills), count the drill once if completed
       const exerciseCompletionsForRegularDrills = exerciseCompletionsForProgramDrills.filter(
@@ -2004,7 +2078,7 @@ export const clientsRouter = router({
 
       // Count completed routine exercises from ExerciseCompletion table
       // For ExerciseCompletion, we need to match by exerciseId and check if it belongs to an assigned routine
-      const routineExerciseIds = new Set(
+      const standaloneRoutineExerciseIds = new Set(
         routineAssignments.flatMap(assignment =>
           assignment.routine.exercises.map(ex => ex.id)
         )
@@ -2015,7 +2089,7 @@ export const clientsRouter = router({
       const exerciseCompletionsForRoutines = allExerciseCompletions.filter(
         completion => {
           // Check if this completion is for a routine exercise
-          const isRoutineExercise = routineExerciseIds.has(
+          const isRoutineExercise = standaloneRoutineExerciseIds.has(
             completion.exerciseId
           );
           if (!isRoutineExercise) return false;
@@ -2063,7 +2137,7 @@ export const clientsRouter = router({
           if (!isStandalone) return false;
           
           // Check if this exerciseId belongs to any assigned routine
-          return routineExerciseIds.has(completion.exerciseId);
+          return standaloneRoutineExerciseIds.has(completion.exerciseId);
         }
       );
 
