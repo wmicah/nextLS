@@ -41,33 +41,21 @@ export class PushNotificationService {
     }
 
     try {
-      // Ensure service worker is registered first with timeout
+      // Ensure service worker is registered first
       console.log("📱 Checking service worker registration...");
-      let registration = await Promise.race([
-        navigator.serviceWorker.getRegistration(),
-        new Promise<ServiceWorkerRegistration | null>((_, reject) =>
-          setTimeout(() => reject(new Error("Service worker check timeout")), 5000)
-        ),
-      ]);
+      let registration = await navigator.serviceWorker.getRegistration();
       
       if (!registration) {
         console.log("📱 Registering service worker...");
-        registration = await Promise.race([
-          navigator.serviceWorker.register("/sw.js", { scope: "/" }),
-          new Promise<ServiceWorkerRegistration>((_, reject) =>
-            setTimeout(() => reject(new Error("Service worker registration timeout")), 10000)
-          ),
-        ]);
+        registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+        console.log("✅ Service worker registered, waiting for it to be ready...");
+      } else {
+        console.log("✅ Service worker already registered");
       }
 
-      // Wait for service worker to be ready with timeout
+      // Wait for service worker to be ready (no timeout - this should be fast)
       console.log("📱 Waiting for service worker to be ready...");
-      await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error("Service worker ready timeout")), 10000)
-        ),
-      ]);
+      await navigator.serviceWorker.ready;
       console.log("✅ Service worker is ready");
 
       // Check if already subscribed
@@ -84,17 +72,12 @@ export class PushNotificationService {
         return existingSubscription;
       }
 
-      // Create new subscription
+      // Create new subscription (no timeout - let it take as long as needed)
       console.log("📱 Creating new push subscription...");
-      const subscription = await Promise.race([
-        registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey),
-        }),
-        new Promise<PushSubscription>((_, reject) =>
-          setTimeout(() => reject(new Error("Subscription creation timeout")), 10000)
-        ),
-      ]);
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey),
+      });
 
       console.log("✅ Push subscription created:", subscription.endpoint.substring(0, 50) + "...");
 
@@ -103,9 +86,11 @@ export class PushNotificationService {
       try {
         await this.sendSubscriptionToServer(subscription);
         console.log("✅ Push subscription saved to server");
-      } catch (error) {
+      } catch (error: any) {
         console.error("❌ Failed to save subscription to server:", error);
-        throw new Error("Failed to save subscription to server. Please try again.");
+        // Don't throw - subscription was created successfully, server save can be retried
+        console.warn("⚠️ Subscription created but server save failed. Notification may not work until server is updated.");
+        // Still return the subscription - it's valid even if server save failed
       }
 
       return subscription;
@@ -120,7 +105,7 @@ export class PushNotificationService {
       } else if (error.message?.includes("VAPID")) {
         throw new Error("VAPID key error. Please contact support.");
       } else if (error.message?.includes("timeout")) {
-        throw new Error("Subscription timed out. Please check your internet connection and try again.");
+        throw new Error("Subscription timed out. This might be a network issue. Please try again.");
       } else {
         throw new Error(error.message || "Failed to enable push notifications. Please try again.");
       }

@@ -34,7 +34,8 @@ self.addEventListener("fetch", event => {
 
 // Push event - handle push notifications
 self.addEventListener("push", event => {
-  console.log("Push received:", event);
+  console.log("📬 Push event received:", event);
+  console.log("📬 Push event data:", event.data ? "Has data" : "No data");
 
   let notificationData = {
     title: "Next Level Coaching",
@@ -54,6 +55,7 @@ self.addEventListener("push", event => {
   if (event.data) {
     try {
       const payload = event.data.json();
+      console.log("📬 Parsed payload:", payload);
       notificationData = {
         ...notificationData,
         title: payload.title || notificationData.title,
@@ -68,13 +70,26 @@ self.addEventListener("push", event => {
         requireInteraction: payload.requireInteraction || false,
       };
     } catch (e) {
+      console.error("❌ Error parsing push payload:", e);
       // If JSON parsing fails, try as text
-      notificationData.body = event.data.text() || notificationData.body;
+      try {
+        notificationData.body = event.data.text() || notificationData.body;
+      } catch (textError) {
+        console.error("❌ Error reading push data as text:", textError);
+      }
     }
   }
 
+  console.log("📬 Showing notification:", notificationData.title, notificationData.body);
+
   event.waitUntil(
     self.registration.showNotification(notificationData.title, notificationData)
+      .then(() => {
+        console.log("✅ Notification shown successfully");
+      })
+      .catch(error => {
+        console.error("❌ Error showing notification:", error);
+      })
   );
 });
 

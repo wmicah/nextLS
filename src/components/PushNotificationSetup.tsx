@@ -11,6 +11,24 @@ export default function PushNotificationSetup() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const checkSubscriptionStatus = async () => {
+    if (
+      "serviceWorker" in navigator &&
+      "PushManager" in window
+    ) {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          const subscription = await registration.pushManager.getSubscription();
+          setIsSubscribed(!!subscription);
+        }
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+        setIsSubscribed(false);
+      }
+    }
+  };
+
   useEffect(() => {
     // Check if notifications are supported
     if (
@@ -20,6 +38,7 @@ export default function PushNotificationSetup() {
     ) {
       setIsSupported(true);
       setPermission(Notification.permission);
+      checkSubscriptionStatus();
     }
   }, []);
 
@@ -29,19 +48,35 @@ export default function PushNotificationSetup() {
     setIsLoading(true);
     try {
       console.log("🚀 Starting push notification subscription...");
+      
+      // Request permission first if needed
+      if (Notification.permission === "default") {
+        const newPermission = await Notification.requestPermission();
+        setPermission(newPermission);
+        if (newPermission !== "granted") {
+          alert("Push notifications require browser permission. Please enable notifications in your browser settings.");
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       const subscription = await pushNotificationService.subscribeToPush();
       if (subscription) {
         setIsSubscribed(true);
-        setPermission("granted");
+        setPermission(Notification.permission);
+        await checkSubscriptionStatus();
         console.log("✅ Push notifications enabled successfully");
         // Show success message
         alert("Push notifications enabled successfully!");
       } else {
         console.error("❌ Subscription returned null");
+        setIsSubscribed(false);
         alert("Failed to enable push notifications. Please try again.");
       }
     } catch (error: any) {
       console.error("❌ Error subscribing to push notifications:", error);
+      setIsSubscribed(false);
+      setPermission(Notification.permission);
       alert(
         error.message ||
           "Failed to enable push notifications. Please check your browser settings."
@@ -90,22 +125,54 @@ export default function PushNotificationSetup() {
           </div>
         </div>
 
-        {permission !== "granted" && (
+        {(permission !== "granted" || !isSubscribed) && (
           <button
             onClick={handleSubscribe}
             disabled={isLoading}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
             style={{
-              backgroundColor: "#4A5A70",
+              backgroundColor: isLoading ? "#2A3133" : "#4A5A70",
               color: "#C3BCC2",
               opacity: isLoading ? 0.6 : 1,
+              cursor: isLoading ? "not-allowed" : "pointer",
             }}
           >
-            {isLoading ? "Setting up..." : "Enable"}
+            {isLoading ? "Setting up..." : isSubscribed ? "Re-enable" : "Enable"}
           </button>
         )}
       </div>
 
+      {permission === "granted" && isSubscribed && (
+        <div className="mt-4">
+          <button
+            onClick={async () => {
+              try {
+                console.log("🧪 Testing push notification...");
+                const response = await fetch("/api/push/test", {
+                  method: "POST",
+                });
+                const result = await response.json();
+                if (result.testNotificationSent) {
+                  alert("✅ Test notification sent! Check your device for the notification.");
+                } else {
+                  alert(`⚠️ Test notification failed: ${result.message || "Check console for details"}`);
+                }
+                console.log("Test result:", result);
+              } catch (error) {
+                console.error("Error testing notification:", error);
+                alert("Failed to send test notification. Check console for details.");
+              }
+            }}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: "#E5B232",
+              color: "#2A3133",
+            }}
+          >
+            Test Notification
+          </button>
+        </div>
+      )}
     </div>
   );
 }
