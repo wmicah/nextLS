@@ -30,29 +30,70 @@ export class PushNotificationService {
 
   async subscribeToPush(): Promise<PushSubscription | null> {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      console.log("Push messaging is not supported");
+      console.log("❌ Push messaging is not supported");
       return null;
     }
 
     const permission = await this.requestPermission();
     if (!permission) {
-      console.log("Permission not granted for push notifications");
+      console.log("❌ Permission not granted for push notifications");
       return null;
     }
 
     try {
-      const registration = await navigator.serviceWorker.ready;
+      // Ensure service worker is registered first
+      let registration = await navigator.serviceWorker.getRegistration();
+      
+      if (!registration) {
+        console.log("📱 Registering service worker...");
+        registration = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+        });
+        // Wait for service worker to be ready
+        await navigator.serviceWorker.ready;
+        console.log("✅ Service worker registered and ready");
+      } else {
+        // Wait for service worker to be ready
+        await navigator.serviceWorker.ready;
+        console.log("✅ Service worker already registered");
+      }
+
+      // Check if already subscribed
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        console.log("📱 Already subscribed, updating server...");
+        await this.sendSubscriptionToServer(existingSubscription);
+        return existingSubscription;
+      }
+
+      // Create new subscription
+      console.log("📱 Creating new push subscription...");
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey),
       });
 
+      console.log("✅ Push subscription created:", subscription.endpoint);
+
       // Send subscription to your server
       await this.sendSubscriptionToServer(subscription);
 
+      console.log("✅ Push subscription saved to server");
       return subscription;
-    } catch (error) {
-      console.error("Error subscribing to push notifications:", error);
+    } catch (error: any) {
+      console.error("❌ Error subscribing to push notifications:", error);
+      
+      // Provide more specific error messages
+      if (error.name === "NotAllowedError") {
+        console.error("❌ Push notification permission denied by user");
+      } else if (error.name === "NotSupportedError") {
+        console.error("❌ Push notifications not supported on this device/browser");
+      } else if (error.message?.includes("VAPID")) {
+        console.error("❌ VAPID key error - check your VAPID keys");
+      } else {
+        console.error("❌ Unknown error:", error.message || error);
+      }
+      
       return null;
     }
   }
