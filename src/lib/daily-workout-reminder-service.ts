@@ -160,12 +160,11 @@ class DailyWorkoutReminderService {
 
       // Get all clients who have workouts scheduled for today
       // We'll check both AssignedWorkout and ProgramAssignment
+      // Filter for clients that have a user account (userId is not null)
       const allClients = await db.client.findMany({
         where: {
           archived: false,
-          user: {
-            email: { not: null },
-          },
+          userId: { not: null }, // User must exist
         },
         select: {
           id: true,
@@ -193,7 +192,7 @@ class DailyWorkoutReminderService {
               });
 
               // Skip if email notifications are disabled
-              if (userSettings?.emailNotificationsEnabled === false) {
+              if (userSettings?.emailNotifications === false) {
                 console.log(`⏭️ Skipping ${clientWorkouts.clientName} - email notifications disabled`);
                 continue;
               }
