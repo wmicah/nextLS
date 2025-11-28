@@ -18,6 +18,7 @@ import {
   CheckCheck,
   User,
 } from "lucide-react";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface NotificationPopupProps {
   isOpen: boolean;
@@ -215,10 +216,20 @@ export default function NotificationPopup({
             transform: translateY(${position === "above" ? "8px" : "-8px"});
           }
         }
+        @keyframes messageSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
       `}</style>
       <div
         data-notification-popup
-        className={`fixed w-80 max-h-96 rounded-lg shadow-lg border z-50 ${
+        className={`fixed w-96 h-[500px] max-h-[80vh] rounded-xl shadow-2xl border backdrop-blur-sm z-50 flex flex-col ${
           isAnimating && !isOpen
             ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
             : isAnimating
@@ -228,82 +239,144 @@ export default function NotificationPopup({
         style={{
           top:
             position === "above"
-              ? buttonPosition.top - 384 // Position above (384px is max height of popup)
+              ? buttonPosition.top - 500 // Position above (500px is height of popup)
               : buttonPosition.top, // Position below the button
           left:
             typeof window !== "undefined"
               ? Math.max(
                   8,
-                  Math.min(buttonPosition.left - 160, window.innerWidth - 328)
+                  Math.min(buttonPosition.left - 192, window.innerWidth - 400)
                 )
-              : buttonPosition.left - 160, // Keep within viewport
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+              : buttonPosition.left - 192, // Keep within viewport
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
           transformOrigin:
             position === "above" ? "bottom center" : "top center",
           animation:
             !isAnimating && isOpen ? "slideInUp 0.3s ease-out" : undefined,
-          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
+          boxShadow:
+            "0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(229, 178, 50, 0.1)",
         }}
       >
         {/* Header */}
-        <div className="p-4 border-b" style={{ borderColor: "#606364" }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5" style={{ color: "#C3BCC2" }} />
-              <h3 className="font-semibold" style={{ color: "#C3BCC2" }}>
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b"
+          style={{
+            borderColor: COLORS.BORDER_SUBTLE,
+            backgroundColor: COLORS.BACKGROUND_CARD,
+          }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="flex flex-col">
+              <span
+                className="text-sm font-semibold leading-tight"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Notifications
-              </h3>
+              </span>
               {unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                  {unreadCount}
+                <span
+                  className="text-[10px] leading-tight"
+                  style={{ color: COLORS.TEXT_MUTED }}
+                >
+                  {unreadCount} unread
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  onClick={() => markAllAsReadMutation.mutate()}
-                  disabled={markAllAsReadMutation.isPending}
-                  className="p-1 rounded transition-colors hover:bg-gray-600 disabled:opacity-50"
-                  style={{ color: "#ABA4AA" }}
-                  title="Mark all as read"
-                >
-                  <CheckCheck className="h-4 w-4" />
-                </button>
-              )}
+          </div>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
               <button
-                onClick={onClose}
-                className="p-1 rounded transition-colors hover:bg-gray-600"
-                style={{ color: "#ABA4AA" }}
+                onClick={() => markAllAsReadMutation.mutate()}
+                disabled={markAllAsReadMutation.isPending}
+                className="p-1.5 rounded-lg transition-all duration-200 disabled:opacity-50"
+                style={{
+                  color: COLORS.TEXT_SECONDARY,
+                  backgroundColor: "transparent",
+                }}
+                onMouseEnter={e => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }
+                }}
+                title="Mark all as read"
               >
-                <X className="h-4 w-4" />
+                <CheckCheck className="h-4 w-4" />
               </button>
-            </div>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-all duration-200"
+              style={{
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: "transparent",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
         {/* Notifications List */}
-        <div className="max-h-80 overflow-y-auto">
+        <div
+          className="flex-1 overflow-y-auto"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            scrollbarWidth: "thin",
+            scrollbarColor: `${COLORS.BORDER_SUBTLE} transparent`,
+          }}
+        >
           {notifications.length === 0 ? (
-            <div className="p-4 text-center">
-              <Bell
-                className="h-8 w-8 mx-auto mb-2 opacity-50"
-                style={{ color: "#ABA4AA" }}
-              />
-              <p className="text-sm" style={{ color: "#ABA4AA" }}>
+            <div className="flex flex-col items-center justify-center h-full py-8">
+              <div
+                className="p-3 rounded-full mb-3"
+                style={{
+                  backgroundColor: getGoldenAccent(0.1),
+                  border: `1px solid ${getGoldenAccent(0.2)}`,
+                }}
+              >
+                <Bell
+                  className="h-6 w-6"
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
+              </div>
+              <p
+                className="text-sm font-medium"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
                 No notifications yet
+              </p>
+              <p className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
+                You're all caught up!
               </p>
             </div>
           ) : (
-            <div className="divide-y" style={{ borderColor: "#606364" }}>
-              {(notifications as any[]).map(notification => (
+            <div
+              className="divide-y"
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
+            >
+              {(notifications as any[]).map((notification, index) => (
                 <div
                   key={notification.id}
-                  className={`p-4 transition-colors cursor-pointer ${
-                    !notification.isRead
-                      ? "bg-blue-500/10 border-l-2 border-blue-500"
-                      : ""
+                  className={`px-4 py-3 transition-all duration-200 cursor-pointer animate-[messageSlideIn_0.3s_ease-out] ${
+                    !notification.isRead ? "border-l-4" : ""
                   }`}
                   onClick={() => {
                     handleNotificationClick(
@@ -316,40 +389,64 @@ export default function NotificationPopup({
                   }}
                   style={{
                     backgroundColor: !notification.isRead
-                      ? "#4A5A70"
+                      ? getRedAlert(0.1)
                       : "transparent",
+                    borderLeft: !notification.isRead
+                      ? `4px solid ${COLORS.RED_ALERT}`
+                      : "none",
+                    animationDelay: `${index * 30}ms`,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.transform = "translateX(2px)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = !notification.isRead
+                      ? getRedAlert(0.1)
+                      : "transparent";
+                    e.currentTarget.style.transform = "translateX(0)";
                   }}
                 >
                   <div className="flex items-start gap-3">
-                    <div
-                      className={`mt-1 ${getNotificationColor(
-                        notification.type
-                      )}`}
-                    >
-                      {getNotificationIcon(notification.type)}
-                    </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start justify-between gap-2 mb-1">
                         <h4
-                          className={`text-sm font-medium ${
-                            !notification.isRead ? "font-semibold" : ""
-                          }`}
-                          style={{ color: "#C3BCC2" }}
+                          className={`text-sm ${
+                            !notification.isRead
+                              ? "font-semibold"
+                              : "font-medium"
+                          } truncate`}
+                          style={{
+                            color: !notification.isRead
+                              ? COLORS.TEXT_PRIMARY
+                              : COLORS.TEXT_PRIMARY,
+                          }}
                         >
                           {notification.title}
                         </h4>
                         {!notification.isRead && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1" />
+                          <div
+                            className="w-2 h-2 rounded-full flex-shrink-0 mt-1"
+                            style={{ backgroundColor: COLORS.RED_ALERT }}
+                          />
                         )}
                       </div>
                       <p
                         className="text-xs mt-1 line-clamp-2"
-                        style={{ color: "#ABA4AA" }}
+                        style={{
+                          color: !notification.isRead
+                            ? COLORS.TEXT_SECONDARY
+                            : COLORS.TEXT_SECONDARY,
+                        }}
                       >
                         {notification.message}
                       </p>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs" style={{ color: "#ABA4AA" }}>
+                        <span
+                          className="text-[10px] flex-shrink-0"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        >
                           {formatNotificationTime(notification.createdAt)}
                         </span>
                         <div className="flex items-center gap-2">
@@ -360,7 +457,22 @@ export default function NotificationPopup({
                                 // Navigate to clients page
                                 window.location.href = "/clients";
                               }}
-                              className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                              className="text-xs font-medium px-2 py-1 rounded transition-all duration-200"
+                              style={{
+                                color: COLORS.GOLDEN_ACCENT,
+                                backgroundColor: getGoldenAccent(0.1),
+                                border: `1px solid ${getGoldenAccent(0.2)}`,
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.backgroundColor =
+                                  getGoldenAccent(0.2);
+                                e.currentTarget.style.transform = "scale(1.05)";
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.backgroundColor =
+                                  getGoldenAccent(0.1);
+                                e.currentTarget.style.transform = "scale(1)";
+                              }}
                               title="View client"
                             >
                               View Client
@@ -375,8 +487,27 @@ export default function NotificationPopup({
                                 });
                               }}
                               disabled={markAsReadMutation.isPending}
-                              className="p-1 rounded transition-colors hover:bg-gray-600 disabled:opacity-50"
-                              style={{ color: "#ABA4AA" }}
+                              className="p-1 rounded-lg transition-all duration-200 disabled:opacity-50"
+                              style={{
+                                color: COLORS.TEXT_SECONDARY,
+                                backgroundColor: "transparent",
+                              }}
+                              onMouseEnter={e => {
+                                if (!e.currentTarget.disabled) {
+                                  e.currentTarget.style.backgroundColor =
+                                    COLORS.BACKGROUND_CARD_HOVER;
+                                  e.currentTarget.style.color =
+                                    COLORS.TEXT_PRIMARY;
+                                }
+                              }}
+                              onMouseLeave={e => {
+                                if (!e.currentTarget.disabled) {
+                                  e.currentTarget.style.backgroundColor =
+                                    "transparent";
+                                  e.currentTarget.style.color =
+                                    COLORS.TEXT_SECONDARY;
+                                }
+                              }}
                               title="Mark as read"
                             >
                               <Check className="h-3 w-3" />
@@ -395,16 +526,34 @@ export default function NotificationPopup({
         {/* Footer */}
         {notifications.length > 0 && (
           <div
-            className="p-3 border-t text-center"
-            style={{ borderColor: "#606364" }}
+            className="px-4 py-3 border-t text-center"
+            style={{
+              borderColor: COLORS.BORDER_SUBTLE,
+              backgroundColor: COLORS.BACKGROUND_CARD,
+            }}
           >
             <button
               onClick={() => {
                 // Navigate to the full notifications page
                 window.location.href = "/notifications";
               }}
-              className="text-sm transition-colors hover:text-blue-400"
-              style={{ color: "#ABA4AA" }}
+              className="text-sm font-medium transition-all duration-200 px-4 py-2 rounded-lg"
+              style={{
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: "transparent",
+                border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+              }}
             >
               View all notifications
             </button>

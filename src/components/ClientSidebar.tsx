@@ -36,10 +36,14 @@ import {
   PlayCircle,
   Upload,
   Calendar,
+  Send,
+  ArrowLeft,
 } from "lucide-react";
 import MessagePopup from "./MessagePopup";
 import NotificationPopup from "./NotificationPopup";
 import ProfilePictureUploader from "./ProfilePictureUploader";
+import { COLORS } from "@/lib/colors";
+import FormattedMessage from "./FormattedMessage";
 
 const navLinks = [
   {
@@ -94,6 +98,11 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
   const [showRecentMessages, setShowRecentMessages] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | null
+  >(null);
+  const [messageText, setMessageText] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const messagePopupRef = useRef<HTMLDivElement>(null);
@@ -112,17 +121,15 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
     0
   );
 
-  const { data: conversationsData } = trpc.messaging.getConversations.useQuery(
-    undefined,
-    {
+  const { data: conversationsData, refetch: refetchConversations } =
+    trpc.messaging.getConversations.useQuery(undefined, {
       enabled: showRecentMessages,
       refetchInterval: 60000, // Poll every minute
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      staleTime: 30 * 1000, // Cache for 30 seconds
+      staleTime: 0, // Don't cache - always get fresh data
       gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    }
-  );
+    });
 
   const conversations = conversationsData?.conversations || [];
 
@@ -173,6 +180,59 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
       window.dispatchEvent(new CustomEvent("sidebarToggle"));
     } catch {}
   }, [isOpen]);
+
+  // Get messages for selected conversation
+  const { data: messages = [], refetch: refetchMessages } =
+    trpc.messaging.getMessages.useQuery(
+      { conversationId: selectedConversationId! },
+      {
+        enabled: !!selectedConversationId && showRecentMessages,
+        refetchInterval: 3000, // Poll every 3 seconds when in conversation
+      }
+    );
+
+  // Send message mutation
+  const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
+  const utils = trpc.useUtils();
+
+  // Handle sending message
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!messageText.trim() || !selectedConversationId || isSending) return;
+
+    setIsSending(true);
+    try {
+      await sendMessageMutation.mutateAsync({
+        conversationId: selectedConversationId,
+        content: messageText.trim(),
+      });
+      setMessageText("");
+      refetchMessages();
+      // Invalidate and refetch conversations to update the last message
+      await utils.messaging.getConversations.invalidate();
+      refetchConversations();
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Auto-scroll to bottom when messages change
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (messagesEndRef.current && selectedConversationId) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, selectedConversationId]);
+
+  // Refresh conversation list when exiting conversation view
+  useEffect(() => {
+    if (!selectedConversationId && showRecentMessages) {
+      utils.messaging.getConversations.invalidate();
+      refetchConversations();
+    }
+  }, [selectedConversationId, showRecentMessages, utils, refetchConversations]);
 
   const isActiveLink = (href: string) => pathname === href;
 
@@ -786,7 +846,7 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
               {/* Recent Messages Popup with Animation */}
               {showRecentMessages && (
                 <div
-                  className={`absolute bottom-full mb-2 w-96 h-96 rounded-lg shadow-lg border ${
+                  className={`absolute bottom-full mb-2 w-96 h-[500px] max-h-[80vh] rounded-xl shadow-2xl border backdrop-blur-sm ${
                     isOpen ? "left-0" : "left-12"
                   } ${
                     isAnimating && !showRecentMessages
@@ -796,32 +856,39 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                       : "transform scale-100 opacity-100"
                   }`}
                   style={{
-                    backgroundColor: "#353A3A",
-                    borderColor: "#606364",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
                     transformOrigin: "bottom center",
                     animation:
                       !isAnimating && showRecentMessages
                         ? "slideInUp 0.3s ease-out"
                         : undefined,
-                    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
+                    boxShadow:
+                      "0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(229, 178, 50, 0.1)",
                   }}
                 >
-                  <div className="flex flex-col h-full">
+                  <div className="flex flex-col h-full overflow-hidden">
                     {/* Header */}
                     <div
-                      className="flex items-center justify-between p-4 border-b"
-                      style={{ borderColor: "#606364" }}
+                      className="flex items-center justify-between px-4 py-3 border-b"
+                      style={{
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                      }}
                     >
-                      <div className="flex items-center gap-2">
-                        <MessageCircle
-                          className="h-5 w-5"
-                          style={{ color: "#C3BCC2" }}
-                        />
+                      <div className="flex flex-col">
                         <span
-                          className="font-medium"
-                          style={{ color: "#C3BCC2" }}
+                          className="text-sm font-semibold leading-tight"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
                         >
                           Recent Messages
+                        </span>
+                        <span
+                          className="text-[10px] leading-tight"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        >
+                          {conversations.length} conversation
+                          {conversations.length !== 1 ? "s" : ""}
                         </span>
                       </div>
                       <button
@@ -832,161 +899,383 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                             setIsAnimating(false);
                           }, 200);
                         }}
-                        className="p-1 rounded-md transition-colors"
-                        style={{ color: "#ABA4AA" }}
+                        className="p-1.5 rounded-lg transition-all duration-200"
+                        style={{
+                          color: COLORS.TEXT_SECONDARY,
+                          backgroundColor: "transparent",
+                        }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#606364";
-                          e.currentTarget.style.color = "#C3BCC2";
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.backgroundColor = "transparent";
-                          e.currentTarget.style.color = "#ABA4AA";
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                         }}
                       >
                         <FiX className="h-4 w-4" />
                       </button>
                     </div>
 
-                    {/* Messages List */}
-                    <div className="flex-1 overflow-y-auto">
-                      {conversations.length === 0 ? (
-                        <div className="p-4 text-center">
-                          <MessageCircle
-                            className="h-8 w-8 mx-auto mb-2 opacity-50"
-                            style={{ color: "#ABA4AA" }}
-                          />
-                          <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                            No messages yet
-                          </p>
-                        </div>
-                      ) : (
-                        conversations.map(
-                          (conversation: any, index: number) => {
-                            // Determine the other user based on conversation type
-                            let otherUser;
-                            if (conversation.type === "COACH_CLIENT") {
-                              // Coach-client conversation
-                              otherUser =
-                                conversation.coach?.id !== currentUserId
-                                  ? conversation.coach
-                                  : conversation.client;
-                            } else if (conversation.type === "CLIENT_CLIENT") {
-                              // Client-client conversation
-                              otherUser =
-                                conversation.client1?.id !== currentUserId
-                                  ? conversation.client1
-                                  : conversation.client2;
-                            } else {
-                              // Fallback to old logic
-                              otherUser =
-                                conversation.coach?.id !== currentUserId
-                                  ? conversation.coach
-                                  : conversation.client;
-                            }
-                            const lastMessage = conversation.messages[0];
-                            const unreadCount =
-                              conversation._count?.messages || 0;
+                    {/* Content Area */}
+                    <div
+                      className="flex-1 overflow-y-auto"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        scrollbarWidth: "thin",
+                        scrollbarColor: `${COLORS.BORDER_SUBTLE} transparent`,
+                      }}
+                    >
+                      {selectedConversationId ? (
+                        // Conversation View
+                        <div className="flex flex-col h-full">
+                          {/* Messages */}
+                          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+                            {messages.length === 0 ? (
+                              <div className="flex flex-col items-center justify-center h-full py-8">
+                                <p
+                                  className="text-sm"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                >
+                                  No messages yet. Start the conversation!
+                                </p>
+                              </div>
+                            ) : (
+                              messages.map((message: any) => {
+                                const isCurrentUser =
+                                  message.senderId === currentUserId;
+                                return (
+                                  <div
+                                    key={message.id}
+                                    className={`flex ${
+                                      isCurrentUser
+                                        ? "justify-end"
+                                        : "justify-start"
+                                    }`}
+                                  >
+                                    <div
+                                      className={`max-w-[75%] px-3 py-2 rounded-xl ${
+                                        isCurrentUser
+                                          ? "rounded-br-md"
+                                          : "rounded-bl-md"
+                                      }`}
+                                      style={{
+                                        backgroundColor: isCurrentUser
+                                          ? COLORS.GOLDEN_ACCENT
+                                          : COLORS.BACKGROUND_CARD,
+                                        color: isCurrentUser
+                                          ? COLORS.BACKGROUND_DARK
+                                          : COLORS.TEXT_PRIMARY,
+                                        border: `1px solid ${
+                                          isCurrentUser
+                                            ? "rgba(229, 178, 50, 0.3)"
+                                            : COLORS.BORDER_SUBTLE
+                                        }`,
+                                        boxShadow: isCurrentUser
+                                          ? `0 2px 8px rgba(229, 178, 50, 0.2)`
+                                          : "0 1px 3px rgba(0, 0, 0, 0.2)",
+                                      }}
+                                    >
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 text-xs leading-relaxed break-words">
+                                          <FormattedMessage
+                                            content={message.content}
+                                          />
+                                        </div>
+                                        <span
+                                          className="text-[10px] flex-shrink-0 opacity-70 mt-0.5"
+                                          style={{
+                                            color: isCurrentUser
+                                              ? COLORS.BACKGROUND_DARK
+                                              : COLORS.TEXT_MUTED,
+                                          }}
+                                        >
+                                          {formatTime(message.createdAt)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                            <div ref={messagesEndRef} />
+                          </div>
 
-                            return (
-                              <Link
-                                key={conversation.id}
-                                href={`/client-messages`}
-                                onClick={() => {
-                                  setIsAnimating(true);
-                                  setTimeout(() => {
-                                    setShowRecentMessages(false);
-                                    setIsAnimating(false);
-                                  }, 200);
+                          {/* Message Input */}
+                          <div
+                            className="px-4 py-3 border-t"
+                            style={{
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                            }}
+                          >
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={messageText}
+                                onChange={e => setMessageText(e.target.value)}
+                                onKeyPress={e => {
+                                  if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage();
+                                  }
                                 }}
-                                className="flex items-center gap-3 p-3 border-b transition-all duration-200 hover:transform hover:translate-x-1"
+                                placeholder="Type a message..."
+                                className="flex-1 px-3 py-2 rounded-lg border text-sm transition-all duration-200 focus:outline-none"
                                 style={{
-                                  borderColor: "#606364",
-                                  color: "#C3BCC2",
-                                  animationDelay: `${index * 50}ms`,
-                                  animation:
-                                    showRecentMessages && !isAnimating
-                                      ? `slideInLeft 0.3s ease-out ${
-                                          index * 50
-                                        }ms both`
-                                      : undefined,
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_PRIMARY,
                                 }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    "#2A3133";
-                                  e.currentTarget.style.boxShadow =
-                                    "0 2px 8px rgba(0, 0, 0, 0.2)";
+                                onFocus={e => {
+                                  e.currentTarget.style.borderColor =
+                                    "rgba(229, 178, 50, 0.4)";
+                                  e.currentTarget.style.boxShadow = `0 0 0 2px rgba(229, 178, 50, 0.1)`;
                                 }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    "transparent";
+                                onBlur={e => {
+                                  e.currentTarget.style.borderColor =
+                                    COLORS.BORDER_SUBTLE;
                                   e.currentTarget.style.boxShadow = "none";
                                 }}
+                                disabled={isSending}
+                              />
+                              <button
+                                onClick={handleSendMessage}
+                                disabled={!messageText.trim() || isSending}
+                                className="px-3 py-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 min-w-[44px]"
+                                style={{
+                                  backgroundColor:
+                                    messageText.trim() && !isSending
+                                      ? COLORS.GOLDEN_ACCENT
+                                      : COLORS.BACKGROUND_CARD,
+                                  color:
+                                    messageText.trim() && !isSending
+                                      ? COLORS.BACKGROUND_DARK
+                                      : COLORS.TEXT_MUTED,
+                                  border: `1px solid ${
+                                    messageText.trim() && !isSending
+                                      ? "rgba(229, 178, 50, 0.3)"
+                                      : COLORS.BORDER_SUBTLE
+                                  }`,
+                                }}
+                                onMouseEnter={e => {
+                                  if (
+                                    !e.currentTarget.disabled &&
+                                    messageText.trim()
+                                  ) {
+                                    e.currentTarget.style.backgroundColor =
+                                      COLORS.GOLDEN_HOVER;
+                                    e.currentTarget.style.transform =
+                                      "scale(1.05)";
+                                  }
+                                }}
+                                onMouseLeave={e => {
+                                  if (!e.currentTarget.disabled) {
+                                    e.currentTarget.style.backgroundColor =
+                                      messageText.trim()
+                                        ? COLORS.GOLDEN_ACCENT
+                                        : COLORS.BACKGROUND_CARD;
+                                    e.currentTarget.style.transform =
+                                      "scale(1)";
+                                  }
+                                }}
                               >
-                                <div
-                                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 transition-transform duration-200 hover:scale-110"
-                                  style={{
-                                    backgroundColor: "#4A5A70",
-                                    color: "white",
-                                  }}
-                                >
-                                  {conversation.type === "CLIENT_CLIENT"
-                                    ? "C"
-                                    : (otherUser?.name || otherUser?.email)
-                                        ?.charAt(0)
-                                        ?.toUpperCase() || "?"}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between">
-                                    <p
-                                      className="text-sm font-medium truncate"
-                                      style={{ color: "#C3BCC2" }}
+                                {isSending ? (
+                                  <div
+                                    className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+                                    style={{
+                                      borderColor: COLORS.BACKGROUND_DARK,
+                                    }}
+                                  />
+                                ) : (
+                                  <Send className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        // Conversations List
+                        <>
+                          {conversations.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full py-8">
+                              <div
+                                className="p-3 rounded-full mb-3"
+                                style={{
+                                  backgroundColor: "rgba(229, 178, 50, 0.1)",
+                                  border: "1px solid rgba(229, 178, 50, 0.2)",
+                                }}
+                              >
+                                <MessageCircle
+                                  className="h-6 w-6"
+                                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                                />
+                              </div>
+                              <p
+                                className="text-sm font-medium"
+                                style={{ color: COLORS.TEXT_SECONDARY }}
+                              >
+                                No messages yet
+                              </p>
+                              <p
+                                className="text-xs mt-1"
+                                style={{ color: COLORS.TEXT_MUTED }}
+                              >
+                                Start a conversation to get started
+                              </p>
+                            </div>
+                          ) : (
+                            conversations.map(
+                              (conversation: any, index: number) => {
+                                // Determine the other user based on conversation type
+                                let otherUser;
+                                if (conversation.type === "COACH_CLIENT") {
+                                  // Coach-client conversation
+                                  otherUser =
+                                    conversation.coach?.id !== currentUserId
+                                      ? conversation.coach
+                                      : conversation.client;
+                                } else if (
+                                  conversation.type === "CLIENT_CLIENT"
+                                ) {
+                                  // Client-client conversation
+                                  otherUser =
+                                    conversation.client1?.id !== currentUserId
+                                      ? conversation.client1
+                                      : conversation.client2;
+                                } else {
+                                  // Fallback to old logic
+                                  otherUser =
+                                    conversation.coach?.id !== currentUserId
+                                      ? conversation.coach
+                                      : conversation.client;
+                                }
+                                const lastMessage = conversation.messages[0];
+                                const unreadCount =
+                                  conversation._count?.messages || 0;
+
+                                const hasUnread = unreadCount > 0;
+                                return (
+                                  <button
+                                    key={conversation.id}
+                                    onClick={e => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setSelectedConversationId(
+                                        conversation.id
+                                      );
+                                    }}
+                                    type="button"
+                                    className="flex items-center gap-3 px-4 py-3 border-b transition-all duration-200 relative animate-[messageSlideIn_0.3s_ease-out] w-full text-left"
+                                    style={{
+                                      borderColor: COLORS.BORDER_SUBTLE,
+                                      backgroundColor: hasUnread
+                                        ? "rgba(217, 83, 79, 0.1)"
+                                        : "transparent",
+                                      borderLeft: hasUnread
+                                        ? `4px solid ${COLORS.RED_ALERT}`
+                                        : "none",
+                                      animationDelay: `${index * 30}ms`,
+                                    }}
+                                    onMouseEnter={e => {
+                                      e.currentTarget.style.backgroundColor =
+                                        COLORS.BACKGROUND_CARD;
+                                      e.currentTarget.style.transform =
+                                        "translateX(2px)";
+                                    }}
+                                    onMouseLeave={e => {
+                                      e.currentTarget.style.backgroundColor =
+                                        hasUnread
+                                          ? "rgba(217, 83, 79, 0.1)"
+                                          : "transparent";
+                                      e.currentTarget.style.transform =
+                                        "translateX(0)";
+                                    }}
+                                  >
+                                    <div
+                                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 transition-transform duration-200"
+                                      style={{
+                                        backgroundColor:
+                                          "rgba(229, 178, 50, 0.2)",
+                                        color: COLORS.GOLDEN_ACCENT,
+                                        border:
+                                          "1px solid rgba(229, 178, 50, 0.3)",
+                                      }}
                                     >
                                       {conversation.type === "CLIENT_CLIENT"
-                                        ? "Another Client"
-                                        : otherUser?.name ||
-                                          otherUser?.email?.split("@")[0] ||
-                                          "Unknown"}
-                                    </p>
-                                    {lastMessage && (
-                                      <span
-                                        className="text-xs flex-shrink-0 ml-2"
-                                        style={{ color: "#ABA4AA" }}
-                                      >
-                                        {formatTime(lastMessage.createdAt)}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                    {lastMessage && (
-                                      <p
-                                        className="text-xs truncate"
-                                        style={{ color: "#ABA4AA" }}
-                                      >
-                                        {lastMessage.content}
-                                      </p>
-                                    )}
-                                    {unreadCount > 0 && (
-                                      <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center ml-2 animate-pulse">
-                                        {unreadCount}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </Link>
-                            );
-                          }
-                        )
+                                        ? "C"
+                                        : (otherUser?.name || otherUser?.email)
+                                            ?.charAt(0)
+                                            ?.toUpperCase() || "?"}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-2 mb-1">
+                                        <p
+                                          className="text-sm font-semibold truncate"
+                                          style={{ color: COLORS.TEXT_PRIMARY }}
+                                        >
+                                          {conversation.type === "CLIENT_CLIENT"
+                                            ? "Another Client"
+                                            : otherUser?.name ||
+                                              otherUser?.email?.split("@")[0] ||
+                                              "Unknown"}
+                                        </p>
+                                        {lastMessage && (
+                                          <span
+                                            className="text-[10px] flex-shrink-0"
+                                            style={{ color: COLORS.TEXT_MUTED }}
+                                          >
+                                            {formatTime(lastMessage.createdAt)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center justify-between gap-2">
+                                        {lastMessage && (
+                                          <p
+                                            className="text-xs truncate flex-1"
+                                            style={{
+                                              color: COLORS.TEXT_SECONDARY,
+                                            }}
+                                          >
+                                            {lastMessage.content}
+                                          </p>
+                                        )}
+                                        {hasUnread && (
+                                          <span
+                                            className="text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center font-semibold flex-shrink-0"
+                                            style={{
+                                              backgroundColor: COLORS.RED_ALERT,
+                                              color: "white",
+                                            }}
+                                          >
+                                            {unreadCount > 9
+                                              ? "9+"
+                                              : unreadCount}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </button>
+                                );
+                              }
+                            )
+                          )}
+                        </>
                       )}
                     </div>
 
-                    {/* Footer */}
-                    <div
-                      className="p-3 border-t"
-                      style={{ borderColor: "#606364" }}
-                    >
-                      <div className="flex gap-2">
+                    {/* Footer - Only show when not in conversation */}
+                    {!selectedConversationId && (
+                      <div
+                        className="px-4 py-3 border-t flex gap-2"
+                        style={{
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                        }}
+                      >
                         <Link
-                          href="/client-messages"
+                          href="/client-messages?new=true"
                           onClick={() => {
                             setIsAnimating(true);
                             setTimeout(() => {
@@ -994,19 +1283,21 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                               setIsAnimating(false);
                             }, 200);
                           }}
-                          className="flex-1 text-center py-2 px-3 text-sm rounded-md transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                          className="flex-1 text-center py-2.5 px-4 rounded-lg transition-all duration-200 text-sm font-medium"
                           style={{
-                            backgroundColor: "#4A5A70",
-                            color: "#C3BCC2",
+                            backgroundColor: COLORS.GOLDEN_ACCENT,
+                            color: COLORS.BACKGROUND_DARK,
+                            border: `1px solid rgba(229, 178, 50, 0.3)`,
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor = "#606364";
-                            e.currentTarget.style.boxShadow =
-                              "0 4px 15px rgba(0, 0, 0, 0.2)";
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.GOLDEN_HOVER;
+                            e.currentTarget.style.transform = "scale(1.02)";
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor = "#4A5A70";
-                            e.currentTarget.style.boxShadow = "none";
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.GOLDEN_ACCENT;
+                            e.currentTarget.style.transform = "scale(1)";
                           }}
                         >
                           New message
@@ -1020,26 +1311,31 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                               setIsAnimating(false);
                             }, 200);
                           }}
-                          className="flex-1 text-center py-2 px-3 text-sm rounded-md border transition-all duration-200 hover:scale-105 hover:shadow-lg"
+                          className="flex-1 text-center py-2.5 px-4 rounded-lg transition-all duration-200 text-sm font-medium"
                           style={{
-                            borderColor: "#606364",
-                            color: "#C3BCC2",
+                            backgroundColor: "transparent",
+                            color: COLORS.TEXT_SECONDARY,
+                            border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor = "#606364";
-                            e.currentTarget.style.boxShadow =
-                              "0 4px 15px rgba(0, 0, 0, 0.2)";
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                            e.currentTarget.style.borderColor =
+                              "rgba(229, 178, 50, 0.3)";
                           }}
                           onMouseLeave={e => {
                             e.currentTarget.style.backgroundColor =
                               "transparent";
-                            e.currentTarget.style.boxShadow = "none";
+                            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                            e.currentTarget.style.borderColor =
+                              COLORS.BORDER_SUBTLE;
                           }}
                         >
                           See all
                         </Link>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}
