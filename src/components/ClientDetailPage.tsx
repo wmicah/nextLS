@@ -505,7 +505,7 @@ function QuickMessagePopup({
         }}
       >
         <div
-          className="flex flex-col h-full"
+          className="flex flex-col h-full overflow-hidden"
           style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
           <div
