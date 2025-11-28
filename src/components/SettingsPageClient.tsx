@@ -28,6 +28,7 @@ import Sidebar from "@/components/Sidebar";
 import OrganizationUpgradeModal from "@/components/OrganizationUpgradeModal";
 import { toast } from "sonner";
 import Link from "next/link";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface SettingsPageClientProps {
   // Add props here if needed in the future
@@ -160,18 +161,35 @@ function SettingsPageClient({}: SettingsPageClientProps) {
         "Friday",
       ];
 
-      if (userSettings.workingDays) {
-        if (Array.isArray(userSettings.workingDays)) {
-          workingDays = userSettings.workingDays as string[];
-        } else if (typeof userSettings.workingDays === "string") {
-          try {
-            const parsed = JSON.parse(userSettings.workingDays) as string[];
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              workingDays = parsed;
-            }
-          } catch (error) {
-            console.warn("Failed to parse workingDays from settings:", error);
+      // Extract workingDays to avoid deep type instantiation
+      // Cast userSettings to any first to break Prisma's deep JsonValue type inference
+      const settingsAny = userSettings as any;
+      const rawValue: any = settingsAny.workingDays;
+      if (rawValue != null) {
+        try {
+          let parsedDays: string[] | null = null;
+
+          // Check if it's already an array
+          if (Array.isArray(rawValue) && rawValue.length > 0) {
+            // Direct type assertion - we'll validate at runtime
+            parsedDays = rawValue as string[];
           }
+          // Check if it's a JSON string
+          else if (
+            typeof rawValue === "string" &&
+            rawValue.trim().startsWith("[")
+          ) {
+            const parsed = JSON.parse(rawValue);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsedDays = parsed as string[];
+            }
+          }
+
+          if (parsedDays && parsedDays.length > 0) {
+            workingDays = parsedDays;
+          }
+        } catch (error) {
+          console.warn("Failed to parse workingDays from settings:", error);
         }
       }
 
@@ -306,49 +324,25 @@ function SettingsPageClient({}: SettingsPageClientProps) {
 
   return (
     <Sidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Hero Header */}
-        <div className="mb-8">
-          <div className="rounded-2xl border relative overflow-hidden group">
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background:
-                  "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-              }}
-            />
-            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <h1
-                      className="text-4xl font-bold mb-2"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Settings
-                    </h1>
-                    <div
-                      className="flex items-center gap-2 text-lg"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      <div className="h-5 w-5 rounded-full bg-gray-500 flex items-center justify-center">
-                        <SettingsIcon className="h-3 w-3 text-white" />
-                      </div>
-                      <span>Customize your coaching experience</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div
-                    className="text-2xl font-bold"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {currentUser?.name || "Coach"}
-                  </div>
-                  <div className="text-sm" style={{ color: "#ABA4AA" }}>
-                    Account Settings
-                  </div>
-                </div>
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
+        {/* Header */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <h1
+              className="text-2xl font-bold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Settings
+            </h1>
+            <div className="text-right">
+              <div
+                className="text-sm font-medium"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
+                {currentUser?.name || "Coach"}
               </div>
             </div>
           </div>
@@ -360,11 +354,14 @@ function SettingsPageClient({}: SettingsPageClientProps) {
           <div className="w-full lg:w-80 lg:flex-shrink-0">
             <div
               className="rounded-xl md:rounded-2xl border p-4 md:p-6"
-              style={{ backgroundColor: "#1E1E1E", borderColor: "#2a2a2a" }}
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
             >
               <h2
                 className="text-lg md:text-xl font-bold mb-4 md:mb-6"
-                style={{ color: "#ffffff" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Settings
               </h2>
@@ -373,13 +370,33 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center justify-center lg:justify-start gap-2 lg:gap-3 px-2 lg:px-4 py-2 lg:py-3 rounded-lg lg:rounded-xl text-center lg:text-left transition-all duration-200 touch-manipulation ${
-                      activeTab === tab.id
-                        ? "bg-gray-500/10 border border-gray-500/20"
-                        : "hover:bg-gray-500/5"
-                    }`}
+                    className="w-full flex items-center justify-center lg:justify-start gap-2 lg:gap-3 px-2 lg:px-4 py-2 lg:py-3 rounded-lg lg:rounded-xl text-center lg:text-left transition-all duration-200 touch-manipulation"
                     style={{
-                      color: activeTab === tab.id ? "#ffffff" : "#9ca3af",
+                      backgroundColor:
+                        activeTab === tab.id
+                          ? getGoldenAccent(0.1)
+                          : "transparent",
+                      border:
+                        activeTab === tab.id
+                          ? `1px solid ${COLORS.GOLDEN_ACCENT}`
+                          : "1px solid transparent",
+                      color:
+                        activeTab === tab.id
+                          ? COLORS.GOLDEN_ACCENT
+                          : COLORS.TEXT_SECONDARY,
+                    }}
+                    onMouseEnter={e => {
+                      if (activeTab !== tab.id) {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (activeTab !== tab.id) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }
                     }}
                   >
                     {tab.icon}
@@ -396,14 +413,17 @@ function SettingsPageClient({}: SettingsPageClientProps) {
           <div className="flex-1">
             <div
               className="rounded-2xl border p-8"
-              style={{ backgroundColor: "#1E1E1E", borderColor: "#2a2a2a" }}
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
             >
               {/* Profile Settings */}
               {activeTab === "profile" && (
                 <div>
                   <h3
                     className="text-2xl font-bold mb-6"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Profile Settings
                   </h3>
@@ -412,7 +432,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div>
                       <label
                         className="block text-sm font-medium mb-3"
-                        style={{ color: "#9ca3af" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         Profile Picture
                       </label>
@@ -429,10 +449,16 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                           size="lg"
                         />
                         <div className="flex flex-col gap-2">
-                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                          <p
+                            className="text-sm"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             Click on your profile picture to upload a new one
                           </p>
-                          <p className="text-xs" style={{ color: "#6b7280" }}>
+                          <p
+                            className="text-xs"
+                            style={{ color: COLORS.TEXT_MUTED }}
+                          >
                             Supports JPG, PNG up to 4MB
                           </p>
                         </div>
@@ -444,7 +470,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                       <div>
                         <label
                           className="block text-sm font-medium mb-2"
-                          style={{ color: "#9ca3af" }}
+                          style={{ color: COLORS.TEXT_SECONDARY }}
                         >
                           Full Name
                         </label>
@@ -457,14 +483,32 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                               name: e.target.value,
                             }))
                           }
-                          className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                          className="w-full px-3 py-2 rounded-lg transition-all duration-200"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            color: COLORS.TEXT_PRIMARY,
+                            border: "1px solid",
+                          }}
+                          onFocus={e => {
+                            e.currentTarget.style.borderColor =
+                              COLORS.GOLDEN_ACCENT;
+                            e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                              0.2
+                            )}`;
+                          }}
+                          onBlur={e => {
+                            e.currentTarget.style.borderColor =
+                              COLORS.BORDER_SUBTLE;
+                            e.currentTarget.style.boxShadow = "none";
+                          }}
                           placeholder="Enter your full name"
                         />
                       </div>
                       <div>
                         <label
                           className="block text-sm font-medium mb-2"
-                          style={{ color: "#9ca3af" }}
+                          style={{ color: COLORS.TEXT_SECONDARY }}
                         >
                           Phone Number
                         </label>
@@ -477,7 +521,25 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                               phone: e.target.value,
                             }))
                           }
-                          className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                          className="w-full px-3 py-2 rounded-lg transition-all duration-200"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            color: COLORS.TEXT_PRIMARY,
+                            border: "1px solid",
+                          }}
+                          onFocus={e => {
+                            e.currentTarget.style.borderColor =
+                              COLORS.GOLDEN_ACCENT;
+                            e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                              0.2
+                            )}`;
+                          }}
+                          onBlur={e => {
+                            e.currentTarget.style.borderColor =
+                              COLORS.BORDER_SUBTLE;
+                            e.currentTarget.style.boxShadow = "none";
+                          }}
                           placeholder="Enter your phone number"
                         />
                       </div>
@@ -487,7 +549,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                       <div>
                         <label
                           className="block text-sm font-medium mb-2"
-                          style={{ color: "#9ca3af" }}
+                          style={{ color: COLORS.TEXT_SECONDARY }}
                         >
                           Location
                         </label>
@@ -500,14 +562,32 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                               location: e.target.value,
                             }))
                           }
-                          className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                          className="w-full px-3 py-2 rounded-lg transition-all duration-200"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            color: COLORS.TEXT_PRIMARY,
+                            border: "1px solid",
+                          }}
+                          onFocus={e => {
+                            e.currentTarget.style.borderColor =
+                              COLORS.GOLDEN_ACCENT;
+                            e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                              0.2
+                            )}`;
+                          }}
+                          onBlur={e => {
+                            e.currentTarget.style.borderColor =
+                              COLORS.BORDER_SUBTLE;
+                            e.currentTarget.style.boxShadow = "none";
+                          }}
                           placeholder="Enter your location"
                         />
                       </div>
                       <div>
                         <label
                           className="block text-sm font-medium mb-2"
-                          style={{ color: "#9ca3af" }}
+                          style={{ color: COLORS.TEXT_SECONDARY }}
                         >
                           Bio
                         </label>
@@ -520,12 +600,24 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                             }))
                           }
                           rows={3}
-                          className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                          className="w-full px-3 py-2 rounded-lg transition-all duration-200 resize-none"
                           style={{
-                            backgroundColor: "#374151",
-                            borderColor: "#4B5563",
-                            color: "#ffffff",
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            color: COLORS.TEXT_PRIMARY,
                             border: "1px solid",
+                          }}
+                          onFocus={e => {
+                            e.currentTarget.style.borderColor =
+                              COLORS.GOLDEN_ACCENT;
+                            e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                              0.2
+                            )}`;
+                          }}
+                          onBlur={e => {
+                            e.currentTarget.style.borderColor =
+                              COLORS.BORDER_SUBTLE;
+                            e.currentTarget.style.boxShadow = "none";
                           }}
                           placeholder="Tell your clients about yourself..."
                         />
@@ -536,7 +628,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                   {/* Save Button */}
                   <div
                     className="mt-8 pt-6 border-t"
-                    style={{ borderColor: "#2a2a2a" }}
+                    style={{ borderColor: COLORS.BORDER_SUBTLE }}
                   >
                     <div className="flex justify-between items-center">
                       {saveSuccess && (
@@ -555,7 +647,10 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         onClick={handleSave}
                         disabled={isLoading}
                         className="px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                        style={{ backgroundColor: "#374151", color: "#ffffff" }}
+                        style={{
+                          backgroundColor: COLORS.GOLDEN_ACCENT,
+                          color: "#ffffff",
+                        }}
                       >
                         {isLoading ? (
                           <>
@@ -579,7 +674,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                 <div>
                   <h3
                     className="text-2xl font-bold mb-6"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Client Management Settings
                   </h3>
@@ -589,13 +684,13 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="rounded-xl border p-6"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <h4
                         className="text-lg font-semibold mb-4"
-                        style={{ color: "#ffffff" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Client Onboarding
                       </h4>
@@ -604,7 +699,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <label
                             className="block text-sm font-medium mb-2"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Default Welcome Message
                           </label>
@@ -617,7 +712,25 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                               }))
                             }
                             rows={4}
-                            className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                            className="w-full px-3 py-2 rounded-lg transition-all duration-200"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                              border: "1px solid",
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                                0.2
+                              )}`;
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
                             placeholder="Welcome! I'm excited to start working with you. Let me know if you have any questions..."
                           />
                           <p className="text-xs text-gray-500 mt-1">
@@ -642,7 +755,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                           <label
                             htmlFor="requireClientEmail"
                             className="text-sm font-medium"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Require client email for new registrations
                           </label>
@@ -654,13 +767,13 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="rounded-xl border p-6"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <h4
                         className="text-lg font-semibold mb-4"
-                        style={{ color: "#ffffff" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Client Retention & Archival
                       </h4>
@@ -669,7 +782,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <label
                             className="block text-sm font-medium mb-2"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Auto-Archive After Months of Inactivity
                           </label>
@@ -683,7 +796,25 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                                   parseInt(e.target.value) || 3,
                               }))
                             }
-                            className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                            className="w-full px-3 py-2 rounded-lg transition-all duration-200"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                              border: "1px solid",
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                                0.2
+                              )}`;
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
                             placeholder="3"
                             min="1"
                             max="12"
@@ -697,7 +828,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <label
                             className="block text-sm font-medium mb-2"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Message Retention (months)
                           </label>
@@ -711,7 +842,25 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                                   parseInt(e.target.value) || 3,
                               }))
                             }
-                            className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                            className="w-full px-3 py-2 rounded-lg transition-all duration-200"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                              border: "1px solid",
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                                0.2
+                              )}`;
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
                             placeholder="3"
                             min="1"
                             max="12"
@@ -728,7 +877,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                   {/* Save Button */}
                   <div
                     className="mt-8 pt-6 border-t"
-                    style={{ borderColor: "#2a2a2a" }}
+                    style={{ borderColor: COLORS.BORDER_SUBTLE }}
                   >
                     <div className="flex justify-between items-center">
                       {saveSuccess && (
@@ -747,7 +896,10 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         onClick={handleSave}
                         disabled={isLoading}
                         className="px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                        style={{ backgroundColor: "#374151", color: "#ffffff" }}
+                        style={{
+                          backgroundColor: COLORS.GOLDEN_ACCENT,
+                          color: "#ffffff",
+                        }}
                       >
                         {isLoading ? (
                           <>
@@ -771,7 +923,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                 <div>
                   <h3
                     className="text-2xl font-bold mb-6"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Schedule Settings
                   </h3>
@@ -780,13 +932,13 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="rounded-xl border p-6"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <h4
                         className="text-lg font-semibold mb-4"
-                        style={{ color: "#ffffff" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Time Zone & Availability
                       </h4>
@@ -795,7 +947,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <label
                             className="block text-sm font-medium mb-2"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Time Zone
                           </label>
@@ -807,7 +959,25 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                                 timezone: e.target.value,
                               }))
                             }
-                            className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                            className="w-full px-3 py-2 rounded-lg transition-all duration-200"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                              border: "1px solid",
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                                0.2
+                              )}`;
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
                           >
                             <option value="UTC-5">Eastern Time (UTC-5)</option>
                             <option value="UTC-6">Central Time (UTC-6)</option>
@@ -820,7 +990,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <label
                             className="block text-sm font-medium mb-2"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Client Scheduling Window (days)
                           </label>
@@ -837,12 +1007,30 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                                 ),
                               }))
                             }
-                            className="w-full px-3 py-2 bg-[#374151] border border-[#4B5563] rounded-lg text-white focus:outline-none focus:border-[#606364]"
+                            className="w-full px-3 py-2 rounded-lg transition-all duration-200"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                              border: "1px solid",
+                            }}
+                            onFocus={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                                0.2
+                              )}`;
+                            }}
+                            onBlur={e => {
+                              e.currentTarget.style.borderColor =
+                                COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
                             placeholder="30"
                           />
                           <p
                             className="mt-2 text-xs"
-                            style={{ color: "#6b7280" }}
+                            style={{ color: COLORS.TEXT_MUTED }}
                           >
                             Clients can request lessons up to this many days in
                             advance. Use 0 for no limit.
@@ -852,7 +1040,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <label
                             className="block text-sm font-medium mb-2"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Working Days
                           </label>
@@ -894,7 +1082,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                                 />
                                 <span
                                   className="text-sm"
-                                  style={{ color: "#9ca3af" }}
+                                  style={{ color: COLORS.TEXT_SECONDARY }}
                                 >
                                   {day}
                                 </span>
@@ -909,7 +1097,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                   {/* Save Button */}
                   <div
                     className="mt-8 pt-6 border-t"
-                    style={{ borderColor: "#2a2a2a" }}
+                    style={{ borderColor: COLORS.BORDER_SUBTLE }}
                   >
                     <div className="flex justify-between items-center">
                       {saveSuccess && (
@@ -928,7 +1116,10 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         onClick={handleSave}
                         disabled={isLoading}
                         className="px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                        style={{ backgroundColor: "#374151", color: "#ffffff" }}
+                        style={{
+                          backgroundColor: COLORS.GOLDEN_ACCENT,
+                          color: "#ffffff",
+                        }}
                       >
                         {isLoading ? (
                           <>
@@ -952,7 +1143,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                 <div>
                   <h3
                     className="text-2xl font-bold mb-6"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Notification Settings
                   </h3>
@@ -961,8 +1152,8 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="flex items-center justify-between p-4 rounded-lg border"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <div className="flex items-center gap-3">
@@ -973,7 +1164,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <h4
                             className="font-semibold"
-                            style={{ color: "#ffffff" }}
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Email Notifications
                           </h4>
@@ -1002,8 +1193,8 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="flex items-center justify-between p-4 rounded-lg border"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <div className="flex items-center gap-3">
@@ -1014,7 +1205,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <h4
                             className="font-semibold"
-                            style={{ color: "#ffffff" }}
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Push Notifications
                           </h4>
@@ -1095,8 +1286,8 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="flex items-center justify-between p-4 rounded-lg border"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <div className="flex items-center gap-3">
@@ -1107,7 +1298,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <h4
                             className="font-semibold"
-                            style={{ color: "#ffffff" }}
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Sound Notifications
                           </h4>
@@ -1136,8 +1327,8 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="flex items-center justify-between p-4 rounded-lg border"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <div className="flex items-center gap-3">
@@ -1148,7 +1339,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <h4
                             className="font-semibold"
-                            style={{ color: "#ffffff" }}
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Message Notifications
                           </h4>
@@ -1177,8 +1368,8 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="flex items-center justify-between p-4 rounded-lg border"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <div className="flex items-center gap-3">
@@ -1189,7 +1380,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <h4
                             className="font-semibold"
-                            style={{ color: "#ffffff" }}
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Schedule Notifications
                           </h4>
@@ -1218,8 +1409,8 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="flex items-center justify-between p-4 rounded-lg border"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <div className="flex items-center gap-3">
@@ -1230,7 +1421,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <h4
                             className="font-semibold"
-                            style={{ color: "#ffffff" }}
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Lesson Reminders
                           </h4>
@@ -1263,7 +1454,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                 <div>
                   <h3
                     className="text-2xl font-bold mb-6"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Organization Settings
                   </h3>
@@ -1281,7 +1472,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <h4
                             className="font-semibold text-lg mb-1"
-                            style={{ color: "#ffffff" }}
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Pending Invitations
                           </h4>
@@ -1301,7 +1492,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                             <div>
                               <h5
                                 className="font-medium"
-                                style={{ color: "#ffffff" }}
+                                style={{ color: COLORS.TEXT_PRIMARY }}
                               >
                                 {invitation.organization.name}
                               </h5>
@@ -1313,8 +1504,8 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                               <span
                                 className="inline-block mt-2 px-2 py-1 text-xs rounded"
                                 style={{
-                                  backgroundColor: "#2a2a2a",
-                                  color: "#9ca3af",
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  color: COLORS.TEXT_SECONDARY,
                                 }}
                               >
                                 {invitation.organization.tier}
@@ -1370,12 +1561,12 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                           <div>
                             <h4
                               className="text-2xl font-bold mb-2"
-                              style={{ color: "#C3BCC2" }}
+                              style={{ color: COLORS.TEXT_PRIMARY }}
                             >
                               {organization.name}
                             </h4>
                             {organization.description && (
-                              <p style={{ color: "#ABA4AA" }}>
+                              <p style={{ color: COLORS.TEXT_SECONDARY }}>
                                 {organization.description}
                               </p>
                             )}
@@ -1398,7 +1589,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                           >
                             <div
                               className="text-2xl font-bold"
-                              style={{ color: "#C3BCC2" }}
+                              style={{ color: COLORS.TEXT_PRIMARY }}
                             >
                               {organization._count.coaches}
                             </div>
@@ -1415,7 +1606,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                           >
                             <div
                               className="text-2xl font-bold"
-                              style={{ color: "#C3BCC2" }}
+                              style={{ color: COLORS.TEXT_PRIMARY }}
                             >
                               {organization._count.clients}
                             </div>
@@ -1441,7 +1632,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                       <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                       <h4
                         className="text-xl font-semibold mb-2"
-                        style={{ color: "#ffffff" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Join or Create an Organization
                       </h4>
@@ -1467,7 +1658,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                 <div>
                   <h3
                     className="text-2xl font-bold mb-6"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Billing & Payments
                   </h3>
@@ -1476,13 +1667,13 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="rounded-xl border p-6"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <h4
                         className="text-lg font-semibold mb-4"
-                        style={{ color: "#ffffff" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Subscription Information
                       </h4>
@@ -1515,7 +1706,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                 <div>
                   <h3
                     className="text-2xl font-bold mb-6"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Account Settings
                   </h3>
@@ -1525,13 +1716,13 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="rounded-xl border p-6"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <h4
                         className="text-lg font-semibold mb-4"
-                        style={{ color: "#ffffff" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Account Information
                       </h4>
@@ -1539,7 +1730,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <label
                             className="block text-sm font-medium mb-2"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Email Address
                           </label>
@@ -1556,7 +1747,7 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                         <div>
                           <label
                             className="block text-sm font-medium mb-2"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             Account Role
                           </label>
@@ -1574,13 +1765,13 @@ function SettingsPageClient({}: SettingsPageClientProps) {
                     <div
                       className="rounded-xl border p-6"
                       style={{
-                        backgroundColor: "#1E1E1E",
-                        borderColor: "#2a2a2a",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                     >
                       <h4
                         className="text-lg font-semibold mb-4"
-                        style={{ color: "#ffffff" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         Danger Zone
                       </h4>
