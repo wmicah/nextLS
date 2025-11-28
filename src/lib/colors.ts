@@ -7,25 +7,29 @@ export const COLORS = {
   GOLDEN_HOVER: "#F5C242",
   GOLDEN_DARK: "#B1872E",
   GOLDEN_BORDER: "#3D2C10",
-  
+
   // Alert Colors
   RED_ALERT: "#D9534F",
   RED_DARK: "#A63A37",
   RED_BORDER: "#772C2A",
-  
+
   // Success Colors
   GREEN_PRIMARY: "#70CF70", // Reduced opacity for softer appearance
   GREEN_DARK: "#3E8E41",
-  
+
+  // Communication/Broadcast Colors
+  BLUE_PRIMARY: "#4A90E2",
+  BLUE_DARK: "#357ABD",
+
   // Background Colors
   BACKGROUND_DARK: "#15191a",
   BACKGROUND_CARD: "rgba(255, 255, 255, 0.02)",
   BACKGROUND_CARD_HOVER: "rgba(255, 255, 255, 0.04)",
-  
+
   // Border Colors
   BORDER_SUBTLE: "rgba(255, 255, 255, 0.1)",
   BORDER_ACCENT: "rgba(229, 178, 50, 0.2)",
-  
+
   // Text Colors
   TEXT_PRIMARY: "#F5F5F5",
   TEXT_SECONDARY: "#B3B8C2",
@@ -54,3 +58,9 @@ export const getGreenPrimary = (opacity: number = 1) => {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 };
 
+export const getBluePrimary = (opacity: number = 1) => {
+  const r = 74;
+  const g = 144;
+  const b = 226;
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};

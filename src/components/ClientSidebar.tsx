@@ -42,7 +42,7 @@ import {
 import MessagePopup from "./MessagePopup";
 import NotificationPopup from "./NotificationPopup";
 import ProfilePictureUploader from "./ProfilePictureUploader";
-import { COLORS } from "@/lib/colors";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 import FormattedMessage from "./FormattedMessage";
 
 const navLinks = [
@@ -592,13 +592,14 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                   setHoveredLink(link.name);
                   if (!isActiveLink(link.href)) {
                     e.currentTarget.style.backgroundColor = isOpen
-                      ? "#353A3A"
-                      : "rgba(74, 90, 112, 0.1)";
-                    e.currentTarget.style.color = "#C3BCC2";
-                    e.currentTarget.style.borderColor = "#4A5A70";
+                      ? getGoldenAccent(0.1)
+                      : getGoldenAccent(0.1);
+                    e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                     if (isOpen) {
-                      e.currentTarget.style.boxShadow =
-                        "0 4px 20px rgba(0, 0, 0, 0.3)";
+                      e.currentTarget.style.boxShadow = `0 4px 20px ${getGoldenAccent(
+                        0.2
+                      )}`;
                     }
                   }
                 }}
@@ -686,14 +687,14 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                   <div key={link.name} className="relative">
                     <button
                       onClick={handleNotificationClick}
-                      className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl ${
+                      className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-110 p-3 relative group flex items-center justify-center rounded-xl ${
                         showNotifications ? "scale-110" : ""
                       }`}
                       style={{ color: "#606364" }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.color = "#4A5A70";
+                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
                         e.currentTarget.style.backgroundColor =
-                          "rgba(74, 90, 112, 0.1)";
+                          getGoldenAccent(0.1);
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.color = "#606364";
@@ -757,12 +758,12 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className="text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl"
+                  className="text-xl transition-all duration-300 ease-in-out transform hover:scale-110 p-3 relative group flex items-center justify-center rounded-xl"
                   style={{ color: "#606364" }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.color = "#4A5A70";
+                    e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
                     e.currentTarget.style.backgroundColor =
-                      "rgba(74, 90, 112, 0.1)";
+                      getGoldenAccent(0.1);
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.color = "#606364";
@@ -796,14 +797,13 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
             <div className="relative" ref={messagePopupRef}>
               <button
                 onClick={handleMessageClick}
-                className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl ${
+                className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-110 p-3 relative group flex items-center justify-center rounded-xl ${
                   showRecentMessages ? "scale-110" : ""
                 }`}
                 style={{ color: "#606364" }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.color = "#4A5A70";
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(74, 90, 112, 0.1)";
+                  e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                  e.currentTarget.style.backgroundColor = getGoldenAccent(0.1);
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.color = "#606364";

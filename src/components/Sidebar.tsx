@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { COLORS } from "@/lib/colors";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 import { useTransition } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useState, useRef, useEffect } from "react";
@@ -946,14 +946,15 @@ export default function Sidebar({ user, children }: SidebarProps) {
                   <div key={link.name} className="relative">
                     <button
                       onClick={() => setShowClientSearch(true)}
-                      className="text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl"
+                      className="text-xl transition-all duration-300 ease-in-out transform hover:scale-110 p-3 relative group flex items-center justify-center rounded-xl"
                       style={{ color: "#606364" }}
                       aria-label="Search clients"
                       onMouseEnter={e => {
-                        e.currentTarget.style.color = "#4A5A70";
+                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
                         e.currentTarget.style.backgroundColor =
-                          "rgba(74, 90, 112, 0.1)";
-                        e.currentTarget.style.borderColor = "#4A5A70";
+                          getGoldenAccent(0.1);
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.color = "#606364";
@@ -993,7 +994,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
                     <button
                       ref={notificationButtonRef}
                       onClick={handleNotificationClick}
-                      className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl ${
+                      className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-110 p-3 relative group flex items-center justify-center rounded-xl ${
                         showNotifications ? "scale-110" : ""
                       }`}
                       style={{ color: "#606364" }}
@@ -1003,10 +1004,11 @@ export default function Sidebar({ user, children }: SidebarProps) {
                           : "Open notifications"
                       }
                       onMouseEnter={e => {
-                        e.currentTarget.style.color = "#4A5A70";
+                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
                         e.currentTarget.style.backgroundColor =
-                          "rgba(74, 90, 112, 0.1)";
-                        e.currentTarget.style.borderColor = "#4A5A70";
+                          getGoldenAccent(0.1);
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.color = "#606364";
@@ -1072,13 +1074,13 @@ export default function Sidebar({ user, children }: SidebarProps) {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className="text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl"
+                  className="text-xl transition-all duration-300 ease-in-out transform hover:scale-110 p-3 relative group flex items-center justify-center rounded-xl"
                   style={{ color: "#606364" }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.color = "#4A5A70";
+                    e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
                     e.currentTarget.style.backgroundColor =
-                      "rgba(74, 90, 112, 0.1)";
-                    e.currentTarget.style.borderColor = "#4A5A70";
+                      getGoldenAccent(0.1);
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.color = "#606364";
@@ -1113,15 +1115,14 @@ export default function Sidebar({ user, children }: SidebarProps) {
             <div className="relative" ref={messagePopupRef}>
               <button
                 onClick={handleMessageClick}
-                className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-125 p-3 relative group flex items-center justify-center rounded-xl ${
+                className={`text-xl transition-all duration-300 ease-in-out transform hover:scale-110 p-3 relative group flex items-center justify-center rounded-xl ${
                   showRecentMessages ? "scale-110" : ""
                 }`}
                 style={{ color: "#606364" }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.color = "#4A5A70";
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(74, 90, 112, 0.1)";
-                  e.currentTarget.style.borderColor = "#4A5A70";
+                  e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                  e.currentTarget.style.backgroundColor = getGoldenAccent(0.1);
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.color = "#606364";

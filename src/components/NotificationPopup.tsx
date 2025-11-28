@@ -18,7 +18,7 @@ import {
   CheckCheck,
   User,
 } from "lucide-react";
-import { COLORS, getGoldenAccent } from "@/lib/colors";
+import { COLORS, getGoldenAccent, getRedAlert } from "@/lib/colors";
 
 interface NotificationPopupProps {
   isOpen: boolean;
