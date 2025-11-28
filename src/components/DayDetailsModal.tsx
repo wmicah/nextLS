@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  X,
-} from "lucide-react";
+import { X } from "lucide-react";
 import { format } from "date-fns";
 import { formatTimeInUserTimezone } from "@/lib/timezone-utils";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
@@ -200,7 +198,8 @@ export default function DayDetailsModal({
             className="p-1.5 rounded-lg transition-colors"
             style={{ color: COLORS.TEXT_SECONDARY }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
             }}
             onMouseLeave={e => {
@@ -230,7 +229,10 @@ export default function DayDetailsModal({
                   className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/20 hover:border-yellow-500/30"
                 >
                   <div className="text-center">
-                    <div className="text-xs font-medium" style={{ color: "#F59E0B" }}>
+                    <div
+                      className="text-xs font-medium"
+                      style={{ color: "#F59E0B" }}
+                    >
                       Schedule Lesson
                     </div>
                     <div className="text-[10px] text-yellow-600/80">
@@ -245,7 +247,10 @@ export default function DayDetailsModal({
                   className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 hover:border-blue-500/30"
                 >
                   <div className="text-center">
-                    <div className="text-xs font-medium" style={{ color: "#3B82F6" }}>
+                    <div
+                      className="text-xs font-medium"
+                      style={{ color: "#3B82F6" }}
+                    >
                       Assign Program
                     </div>
                     <div className="text-[10px] text-blue-600/80">
@@ -260,7 +265,10 @@ export default function DayDetailsModal({
                   className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer bg-green-500/10 hover:bg-green-500/20 border-green-500/20 hover:border-green-500/30"
                 >
                   <div className="text-center">
-                    <div className="text-xs font-medium" style={{ color: "#10B981" }}>
+                    <div
+                      className="text-xs font-medium"
+                      style={{ color: "#10B981" }}
+                    >
                       Assign Routine
                     </div>
                     <div className="text-[10px] text-green-600/80">
@@ -275,7 +283,10 @@ export default function DayDetailsModal({
                   className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20 hover:border-purple-500/30"
                 >
                   <div className="text-center">
-                    <div className="text-xs font-medium" style={{ color: "#8B5CF6" }}>
+                    <div
+                      className="text-xs font-medium"
+                      style={{ color: "#8B5CF6" }}
+                    >
                       Assign Video
                     </div>
                     <div className="text-[10px] text-purple-600/80">
@@ -301,53 +312,53 @@ export default function DayDetailsModal({
                     {lessons.map((lesson: any, index: number) => {
                       const statusStyles = getStatusColor(lesson.status);
                       return (
-                      <div
-                        key={index}
+                        <div
+                          key={index}
                           className="p-3 rounded-lg border"
                           style={{
                             backgroundColor: statusStyles.backgroundColor,
                             color: statusStyles.color,
                             borderColor: statusStyles.borderColor,
                           }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div
-                              className="text-sm font-medium"
-                              style={{ color: COLORS.TEXT_PRIMARY }}
-                            >
-                              {formatTimeInUserTimezone(lesson.date)}
-                            </div>
-                            <div
-                              className="text-xs"
-                              style={{ color: COLORS.TEXT_SECONDARY }}
-                            >
-                              {lesson.title || "Lesson"}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="text-[10px]"
-                              style={{ color: COLORS.TEXT_MUTED }}
-                            >
-                              {lesson.status}
-                            </div>
-                            {onRemoveLesson && (
-                              <button
-                                onClick={() => handleRemoveLesson(lesson)}
-                                className="px-2 py-1 rounded text-[10px] font-medium transition-all duration-200"
-                                style={{
-                                  backgroundColor: "#EF4444",
-                                  color: "#FFFFFF",
-                                }}
-                                title="Remove Lesson"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div
+                                className="text-sm font-medium"
+                                style={{ color: COLORS.TEXT_PRIMARY }}
                               >
-                                Remove
-                              </button>
-                            )}
+                                {formatTimeInUserTimezone(lesson.date)}
+                              </div>
+                              <div
+                                className="text-xs"
+                                style={{ color: COLORS.TEXT_SECONDARY }}
+                              >
+                                {lesson.title || "Lesson"}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="text-[10px]"
+                                style={{ color: COLORS.TEXT_MUTED }}
+                              >
+                                {lesson.status}
+                              </div>
+                              {onRemoveLesson && (
+                                <button
+                                  onClick={() => handleRemoveLesson(lesson)}
+                                  className="px-2 py-1 rounded text-[10px] font-medium transition-all duration-200"
+                                  style={{
+                                    backgroundColor: "#EF4444",
+                                    color: "#FFFFFF",
+                                  }}
+                                  title="Remove Lesson"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
                       );
                     })}
                   </div>
