@@ -27,6 +27,7 @@ import MobileMessagesPage from "./MobileMessagesPage";
 import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonMessageList, SkeletonCard } from "@/components/SkeletonLoader";
 import MassMessageModal from "./MassMessageModal";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 // Removed complex SSE hooks - using simple polling instead
 
 interface MessagesPageProps {
@@ -222,16 +223,6 @@ function MessagesPage({}: MessagesPageProps) {
         // You could add a toast notification here
       },
     });
-
-  // Auto-scroll to bottom when conversation is selected
-  useEffect(() => {
-    if (selectedConversation && messages.length > 0) {
-      // Use a longer timeout to ensure messages are rendered
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 300);
-    }
-  }, [selectedConversation, messages]);
 
   // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
   useEffect(() => {
@@ -442,21 +433,24 @@ function MessagesPage({}: MessagesPageProps) {
     <Sidebar>
       <div
         className="h-screen flex flex-col overflow-hidden"
-        style={{ backgroundColor: "#2A3133" }}
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
       >
         {/* Simple Header */}
         <div
           className="px-3 py-0 border-b flex-shrink-0"
-          style={{ borderColor: "#374151" }}
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h1 className="text-lg font-bold" style={{ color: "#C3BCC2" }}>
+              <h1
+                className="text-lg font-bold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Messages
               </h1>
               <div
                 className="flex items-center gap-2 text-xs"
-                style={{ color: "#ABA4AA" }}
+                style={{ color: COLORS.TEXT_MUTED }}
               >
                 <span>
                   {conversations.length > 0
@@ -470,7 +464,10 @@ function MessagesPage({}: MessagesPageProps) {
                 {unreadCount > 0 && (
                   <>
                     <span>•</span>
-                    <span className="font-medium" style={{ color: "#4A5A70" }}>
+                    <span
+                      className="font-medium"
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                    >
                       {unreadCount} unread
                     </span>
                   </>
@@ -481,7 +478,16 @@ function MessagesPage({}: MessagesPageProps) {
               <button
                 onClick={() => setShowMassMessageModal(true)}
                 className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
-                style={{ backgroundColor: "#10B981", color: "#ffffff" }}
+                style={{
+                  backgroundColor: COLORS.BLUE_PRIMARY,
+                  color: "#ffffff",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BLUE_DARK;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BLUE_PRIMARY;
+                }}
               >
                 <Users className="h-3 w-3 inline mr-1" />
                 Mass Message
@@ -489,7 +495,16 @@ function MessagesPage({}: MessagesPageProps) {
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
-                style={{ backgroundColor: "#4A5A70", color: "#ffffff" }}
+                style={{
+                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                  color: "#ffffff",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                }}
               >
                 <Plus className="h-3 w-3 inline mr-1" />
                 New Message
@@ -502,22 +517,30 @@ function MessagesPage({}: MessagesPageProps) {
         <div
           className="flex flex-1 rounded-lg border overflow-hidden shadow-lg m-2"
           style={{
-            backgroundColor: "#1E1E1E",
-            borderColor: "#374151",
-            boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.2)",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+            boxShadow: `0 4px 12px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px ${getGoldenAccent(
+              0.1
+            )}`,
           }}
         >
           {/* Conversations Sidebar */}
           <div
             className="w-80 border-r flex flex-col min-h-0"
-            style={{ borderColor: "#374151", backgroundColor: "#1A1A1A" }}
+            style={{
+              borderColor: COLORS.BORDER_SUBTLE,
+              backgroundColor: COLORS.BACKGROUND_DARK,
+            }}
           >
             {/* Compact Header with Search */}
-            <div className="p-2 border-b" style={{ borderColor: "#374151" }}>
+            <div
+              className="p-2 border-b"
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
+            >
               <div className="mb-2">
                 <h2
                   className="text-sm font-semibold"
-                  style={{ color: "#ffffff" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Conversations
                 </h2>
@@ -525,7 +548,7 @@ function MessagesPage({}: MessagesPageProps) {
               <div className="relative">
                 <Search
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                  style={{ color: "#6b7280" }}
+                  style={{ color: COLORS.TEXT_MUTED }}
                 />
                 <input
                   type="text"
@@ -534,20 +557,23 @@ function MessagesPage({}: MessagesPageProps) {
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 rounded-md text-xs transition-all duration-200"
                   style={{
-                    backgroundColor: "#2a2a2a",
-                    borderColor: "#374151",
-                    color: "#f9fafb",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
                     border: "1px solid",
                   }}
                   onFocus={e => {
-                    e.currentTarget.style.borderColor = "#4A5A70";
-                    e.currentTarget.style.backgroundColor = "#1E1E1E";
-                    e.currentTarget.style.boxShadow =
-                      "0 0 0 2px rgba(74, 90, 112, 0.1)";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                      0.2
+                    )}`;
                   }}
                   onBlur={e => {
-                    e.currentTarget.style.borderColor = "#374151";
-                    e.currentTarget.style.backgroundColor = "#2a2a2a";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_DARK;
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 />
@@ -567,11 +593,17 @@ function MessagesPage({}: MessagesPageProps) {
                   <div className="p-4 text-center">
                     <div
                       className="h-8 w-8 mx-auto mb-2 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: "#374151", color: "#ABA4AA" }}
+                      style={{
+                        backgroundColor: getGoldenAccent(0.1),
+                        color: COLORS.GOLDEN_ACCENT,
+                      }}
                     >
                       <File className="h-4 w-4" />
                     </div>
-                    <p className="text-xs" style={{ color: "#ABA4AA" }}>
+                    <p
+                      className="text-xs"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       {searchTerm
                         ? "No conversations found"
                         : "No conversations yet"}
@@ -593,8 +625,25 @@ function MessagesPage({}: MessagesPageProps) {
                           handleConversationSelect(conversation.id)
                         }
                         className={`p-3 cursor-pointer transition-all duration-200 ${
-                          isSelected ? "bg-[#4A5A70]/20" : "hover:bg-[#2a2a2a]"
+                          isSelected ? getGoldenAccent(0.1) : ""
                         }`}
+                        style={{
+                          backgroundColor: isSelected
+                            ? getGoldenAccent(0.1)
+                            : "transparent",
+                        }}
+                        onMouseEnter={e => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                          }
+                        }}
                       >
                         <div className="flex items-center gap-2">
                           <div className="relative">
@@ -616,7 +665,7 @@ function MessagesPage({}: MessagesPageProps) {
                               <div
                                 className="absolute -top-1 -right-1 h-4 w-4 rounded-full flex items-center justify-center text-xs font-bold"
                                 style={{
-                                  backgroundColor: "#4A5A70",
+                                  backgroundColor: COLORS.GOLDEN_ACCENT,
                                   color: "#ffffff",
                                 }}
                               >
@@ -631,7 +680,9 @@ function MessagesPage({}: MessagesPageProps) {
                                   unreadCount > 0 ? "font-semibold" : ""
                                 }`}
                                 style={{
-                                  color: isSelected ? "#ffffff" : "#f9fafb",
+                                  color: isSelected
+                                    ? COLORS.GOLDEN_ACCENT
+                                    : COLORS.TEXT_PRIMARY,
                                 }}
                               >
                                 {otherUser?.name ||
@@ -641,7 +692,7 @@ function MessagesPage({}: MessagesPageProps) {
                               {lastMessage && (
                                 <span
                                   className="text-xs flex-shrink-0 ml-2"
-                                  style={{ color: "#ABA4AA" }}
+                                  style={{ color: COLORS.TEXT_MUTED }}
                                 >
                                   {formatLastMessageTime(lastMessage.createdAt)}
                                 </span>
@@ -652,7 +703,10 @@ function MessagesPage({}: MessagesPageProps) {
                                 unreadCount > 0 ? "font-medium" : ""
                               }`}
                               style={{
-                                color: unreadCount > 0 ? "#ffffff" : "#6b7280",
+                                color:
+                                  unreadCount > 0
+                                    ? COLORS.GOLDEN_ACCENT
+                                    : COLORS.TEXT_SECONDARY,
                               }}
                             >
                               {lastMessage?.content ? (
@@ -681,14 +735,14 @@ function MessagesPage({}: MessagesPageProps) {
                         onClick={loadMoreConversations}
                         disabled={isLoadingMore}
                         className="text-xs hover:underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ color: "#6b7280" }}
+                        style={{ color: COLORS.TEXT_MUTED }}
                         onMouseEnter={e => {
                           if (!isLoadingMore) {
-                            e.currentTarget.style.color = "#9ca3af";
+                            e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
                           }
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.color = "#6b7280";
+                          e.currentTarget.style.color = COLORS.TEXT_MUTED;
                         }}
                       >
                         {isLoadingMore
@@ -705,14 +759,14 @@ function MessagesPage({}: MessagesPageProps) {
           {/* Chat Area */}
           <div
             className="flex-1 flex flex-col overflow-hidden"
-            style={{ backgroundColor: "#1E1E1E" }}
+            style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
           >
             {selectedConversation ? (
               <>
                 {/* Chat Header */}
                 <div
                   className="p-6 border-b flex items-center justify-between"
-                  style={{ borderColor: "#2a2a2a" }}
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
                   <div className="flex items-center gap-4">
                     {currentConversation && (
@@ -736,7 +790,7 @@ function MessagesPage({}: MessagesPageProps) {
                         <div>
                           <p
                             className="font-bold text-lg tracking-tight"
-                            style={{ color: "#ffffff" }}
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             {getOtherUser(currentConversation)?.name ||
                               getOtherUser(currentConversation)?.email?.split(
@@ -746,7 +800,7 @@ function MessagesPage({}: MessagesPageProps) {
                           </p>
                           <p
                             className="text-sm font-medium"
-                            style={{ color: "#9ca3af" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             {getOtherUser(currentConversation)?.email ||
                               "No email"}
@@ -766,11 +820,14 @@ function MessagesPage({}: MessagesPageProps) {
                       <div className="text-center py-8">
                         <div
                           className="h-8 w-8 mx-auto mb-3 opacity-50"
-                          style={{ color: "#ABA4AA" }}
+                          style={{ color: COLORS.GOLDEN_ACCENT }}
                         >
                           <File className="h-8 w-8" />
                         </div>
-                        <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                        <p
+                          className="text-sm"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
                           No messages yet. Start the conversation!
                         </p>
                       </div>
@@ -824,15 +881,20 @@ function MessagesPage({}: MessagesPageProps) {
                               style={{
                                 backgroundColor:
                                   message.sender.id === currentUser?.id
-                                    ? "#4A5A70"
+                                    ? COLORS.GOLDEN_ACCENT
                                     : isWorkoutNote && isFromClient
-                                    ? "#1f2937"
-                                    : "#374151",
-                                color: "#f9fafb",
+                                    ? COLORS.BACKGROUND_CARD
+                                    : COLORS.BACKGROUND_CARD,
+                                color:
+                                  message.sender.id === currentUser?.id
+                                    ? "#000000"
+                                    : COLORS.TEXT_PRIMARY,
                                 border:
                                   isWorkoutNote && isFromClient
-                                    ? "1px solid #3b82f6"
-                                    : "none",
+                                    ? `1px solid ${COLORS.GOLDEN_ACCENT}`
+                                    : message.sender.id === currentUser?.id
+                                    ? `1px solid ${COLORS.GOLDEN_BORDER}`
+                                    : `1px solid ${COLORS.BORDER_SUBTLE}`,
                               }}
                             >
                               {/* Workout Note Header */}
@@ -870,7 +932,11 @@ function MessagesPage({}: MessagesPageProps) {
                                 isOwnMessage={
                                   message.sender.id === currentUser?.id
                                 }
-                                messageData={message.data as { type?: string; swapRequestId?: string } | undefined}
+                                messageData={
+                                  message.data as
+                                    | { type?: string; swapRequestId?: string }
+                                    | undefined
+                                }
                               />
 
                               {/* File Attachment */}
@@ -976,7 +1042,12 @@ function MessagesPage({}: MessagesPageProps) {
                               <div className="flex items-center justify-end gap-1 mt-1">
                                 <span
                                   className="text-xs"
-                                  style={{ color: "#ABA4AA" }}
+                                  style={{
+                                    color:
+                                      message.sender.id === currentUser?.id
+                                        ? "rgba(0, 0, 0, 0.6)"
+                                        : COLORS.TEXT_MUTED,
+                                  }}
                                 >
                                   {format(
                                     new Date(message.createdAt),
@@ -986,7 +1057,7 @@ function MessagesPage({}: MessagesPageProps) {
                                 {message.sender.id === currentUser?.id && (
                                   <CheckCheck
                                     className="h-3 w-3"
-                                    style={{ color: "#ABA4AA" }}
+                                    style={{ color: "rgba(0, 0, 0, 0.6)" }}
                                   />
                                 )}
                               </div>
@@ -1008,9 +1079,9 @@ function MessagesPage({}: MessagesPageProps) {
                                 : ""
                             }`}
                             style={{
-                              backgroundColor: "#374151",
-                              color: "#f9fafb",
-                              border: "1px solid #6b7280",
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              color: COLORS.TEXT_PRIMARY,
+                              border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                             }}
                           >
                             {pendingMessage.content && (
@@ -1056,7 +1127,7 @@ function MessagesPage({}: MessagesPageProps) {
                             <div className="flex items-center justify-end gap-1 mt-1">
                               <span
                                 className="text-xs"
-                                style={{ color: "#ABA4AA" }}
+                                style={{ color: COLORS.TEXT_MUTED }}
                               >
                                 {format(pendingMessage.timestamp, "h:mm a")}
                               </span>
@@ -1077,7 +1148,7 @@ function MessagesPage({}: MessagesPageProps) {
                                 {pendingMessage.status === "sent" && (
                                   <CheckCheck
                                     className="h-3 w-3"
-                                    style={{ color: "#ABA4AA" }}
+                                    style={{ color: COLORS.TEXT_MUTED }}
                                   />
                                 )}
                                 {pendingMessage.status === "failed" && (
@@ -1100,32 +1171,38 @@ function MessagesPage({}: MessagesPageProps) {
                 {/* Message Input */}
                 <div
                   className="p-6 border-t"
-                  style={{ borderColor: "#2a2a2a" }}
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
                   {/* Selected File Indicator */}
                   {selectedFile && (
                     <div
                       className="mb-3 p-3 rounded-lg flex items-center justify-between"
-                      style={{ backgroundColor: "#2a2a2a" }}
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         {selectedFile.file.type.startsWith("image/") ? (
                           <ImageIcon
                             className="h-4 w-4"
-                            style={{ color: "#4A5A70" }}
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
                           />
                         ) : selectedFile.file.type.startsWith("video/") ? (
                           <Video
                             className="h-4 w-4"
-                            style={{ color: "#4A5A70" }}
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
                           />
                         ) : (
                           <File
                             className="h-4 w-4"
-                            style={{ color: "#4A5A70" }}
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
                           />
                         )}
-                        <span className="text-sm" style={{ color: "#f9fafb" }}>
+                        <span
+                          className="text-sm"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
                           {selectedFile.file.name}
                         </span>
                       </div>
@@ -1133,12 +1210,15 @@ function MessagesPage({}: MessagesPageProps) {
                         type="button"
                         onClick={() => setSelectedFile(null)}
                         className="p-1 rounded transition-colors"
-                        style={{ color: "#ABA4AA" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "#3A4040";
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                         }}
                       >
                         <X className="h-3 w-3" />
@@ -1161,17 +1241,23 @@ function MessagesPage({}: MessagesPageProps) {
                 <div className="text-center">
                   <div
                     className="h-12 w-12 mx-auto mb-4 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: "#374151", color: "#ABA4AA" }}
+                    style={{
+                      backgroundColor: getGoldenAccent(0.1),
+                      color: COLORS.GOLDEN_ACCENT,
+                    }}
                   >
                     <File className="h-6 w-6" />
                   </div>
                   <h3
                     className="text-lg font-semibold mb-2"
-                    style={{ color: "#C3BCC2" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Select a conversation
                   </h3>
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                  <p
+                    className="text-sm"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Choose a conversation from the sidebar to start messaging
                   </p>
                 </div>
@@ -1183,19 +1269,22 @@ function MessagesPage({}: MessagesPageProps) {
 
       {/* Create Conversation Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div
             className="rounded-xl p-6 w-full max-w-md mx-4"
             style={{
-              backgroundColor: "#1A1A1A",
-              borderColor: "#374151",
+              backgroundColor: COLORS.BACKGROUND_DARK,
+              borderColor: COLORS.BORDER_SUBTLE,
               border: "1px solid",
+              boxShadow: `0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 0 1px ${getGoldenAccent(
+                0.1
+              )}`,
             }}
           >
             <div className="flex items-center justify-between mb-6">
               <h3
                 className="text-xl font-semibold"
-                style={{ color: "#ffffff" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Start New Conversation
               </h3>
@@ -1204,8 +1293,17 @@ function MessagesPage({}: MessagesPageProps) {
                   setShowCreateModal(false);
                   setClientSearchTerm("");
                 }}
-                className="p-2 rounded-lg transition-colors hover:bg-[#374151]"
-                style={{ color: "#ABA4AA" }}
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1214,7 +1312,7 @@ function MessagesPage({}: MessagesPageProps) {
             <div className="relative mb-6">
               <Search
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                style={{ color: "#6b7280" }}
+                style={{ color: COLORS.TEXT_MUTED }}
               />
               <input
                 type="text"
@@ -1223,20 +1321,23 @@ function MessagesPage({}: MessagesPageProps) {
                 onChange={e => setClientSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-sm transition-all duration-200"
                 style={{
-                  backgroundColor: "#2a2a2a",
-                  borderColor: "#374151",
-                  color: "#f9fafb",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
                   border: "1px solid",
                 }}
                 onFocus={e => {
-                  e.currentTarget.style.borderColor = "#4A5A70";
-                  e.currentTarget.style.backgroundColor = "#1E1E1E";
-                  e.currentTarget.style.boxShadow =
-                    "0 0 0 2px rgba(74, 90, 112, 0.1)";
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_DARK;
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                    0.2
+                  )}`;
                 }}
                 onBlur={e => {
-                  e.currentTarget.style.borderColor = "#374151";
-                  e.currentTarget.style.backgroundColor = "#2a2a2a";
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                   e.currentTarget.style.boxShadow = "none";
                 }}
               />
@@ -1245,7 +1346,10 @@ function MessagesPage({}: MessagesPageProps) {
             <div className="max-h-64 overflow-y-auto">
               {filteredClients.length === 0 ? (
                 <div className="text-center py-4">
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                  <p
+                    className="text-sm"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     {clientSearchTerm
                       ? "No clients found"
                       : "No clients available"}
@@ -1259,17 +1363,22 @@ function MessagesPage({}: MessagesPageProps) {
                     disabled={createConversationMutation.isPending}
                     className="w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      borderColor: "#606364",
-                      color: "#C3BCC2",
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
                     }}
                     onMouseEnter={e => {
                       if (!createConversationMutation.isPending) {
-                        e.currentTarget.style.backgroundColor = "#3A4040";
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }
                     }}
                     onMouseLeave={e => {
                       if (!createConversationMutation.isPending) {
                         e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.borderColor =
+                          COLORS.BORDER_SUBTLE;
                       }
                     }}
                   >
@@ -1290,17 +1399,30 @@ function MessagesPage({}: MessagesPageProps) {
                         className="flex-shrink-0"
                       />
                       <div className="text-left">
-                        <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                        <p
+                          className="font-medium"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
                           {client.name ||
                             client.email?.split("@")[0] ||
                             "Unknown"}
                         </p>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                          <p
+                            className="text-sm"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             {client.email || "No email"}
                           </p>
                           {!client.userId && (
-                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                            <span
+                              className="text-xs px-2 py-1 rounded-full"
+                              style={{
+                                backgroundColor: getGoldenAccent(0.2),
+                                color: COLORS.GOLDEN_ACCENT,
+                                border: `1px solid ${getGoldenAccent(0.3)}`,
+                              }}
+                            >
                               No Account
                             </span>
                           )}
@@ -1308,7 +1430,7 @@ function MessagesPage({}: MessagesPageProps) {
                         {(client.primaryCoach?.name || client.coach?.name) && (
                           <p
                             className="text-xs mt-1"
-                            style={{ color: "#787F82" }}
+                            style={{ color: COLORS.TEXT_MUTED }}
                           >
                             Assigned Coach:{" "}
                             {client.primaryCoach?.name || client.coach?.name}

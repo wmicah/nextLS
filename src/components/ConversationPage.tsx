@@ -27,6 +27,7 @@ import MessageFileUpload from "./MessageFileUpload";
 import MessageNotification from "./MessageNotification";
 import FormattedMessage from "./FormattedMessage";
 import { downloadVideoFromMessage } from "@/lib/download-utils";
+import { COLORS, getGoldenAccent, getRedAlert } from "@/lib/colors";
 
 interface ConversationPageProps {
   conversationId: string;
@@ -192,30 +193,33 @@ export default function ConversationPage({
   if (!conversation || !otherUser) {
     return (
       <Sidebar>
-        <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+        <div
+          className="min-h-screen"
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+        >
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <h2
                 className="text-xl font-semibold mb-2"
-                style={{ color: "#C3BCC2" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Conversation Not Found
               </h2>
-              <p className="mb-4" style={{ color: "#ABA4AA" }}>
+              <p className="mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                 The conversation you're looking for doesn't exist.
               </p>
               <button
                 onClick={() => router.push("/messages")}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
                 style={{
-                  backgroundColor: "#4A5A70",
-                  color: "#C3BCC2",
+                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                  color: "#ffffff",
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "#606364";
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "#4A5A70";
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                 }}
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -230,15 +234,24 @@ export default function ConversationPage({
 
   return (
     <Sidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
         {/* Hero Header */}
         <div className="mb-8">
-          <div className="rounded-2xl border relative overflow-hidden group">
+          <div
+            className="rounded-2xl border relative overflow-hidden group"
+            style={{ borderColor: COLORS.BORDER_SUBTLE }}
+          >
             <div
               className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
               style={{
-                background:
-                  "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
+                background: `linear-gradient(135deg, ${getGoldenAccent(
+                  0.3
+                )} 0%, ${getGoldenAccent(0.2)} 50%, ${getGoldenAccent(
+                  0.1
+                )} 100%)`,
               }}
             />
             <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
@@ -247,12 +260,19 @@ export default function ConversationPage({
                   <button
                     onClick={() => router.push("/messages")}
                     className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#374151", color: "#ffffff" }}
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "#6b7280";
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "#374151";
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                     }}
                   >
                     <ArrowLeft className="h-5 w-5" />
@@ -260,20 +280,26 @@ export default function ConversationPage({
                   <div className="flex items-center gap-3">
                     <div
                       className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-medium"
-                      style={{ backgroundColor: "#374151", color: "#ffffff" }}
+                      style={{
+                        backgroundColor: getGoldenAccent(0.2),
+                        color: COLORS.GOLDEN_ACCENT,
+                      }}
                     >
                       {otherUser.name?.[0] || otherUser.email?.[0] || "U"}
                     </div>
                     <div>
                       <h1
                         className="text-2xl font-bold mb-1"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {otherUser.name ||
                           otherUser.email?.split("@")[0] ||
                           "Unknown User"}
                       </h1>
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <p
+                        className="text-sm"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         {otherUser.email || "No email"}
                       </p>
                     </div>
@@ -286,12 +312,15 @@ export default function ConversationPage({
                         setShowConversationMenu(!showConversationMenu)
                       }
                       className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
-                      style={{ color: "#ABA4AA" }}
+                      style={{ color: COLORS.TEXT_SECONDARY }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor = "#1f2937";
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                       }}
                     >
                       <MoreVertical className="h-4 w-4" />
@@ -302,21 +331,44 @@ export default function ConversationPage({
                       <div
                         className="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg z-50"
                         style={{
-                          backgroundColor: "#353A3A",
-                          borderColor: "#606364",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
                           border: "1px solid",
+                          boxShadow: `0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 0 1px ${getGoldenAccent(
+                            0.1
+                          )}`,
                         }}
                       >
                         <button
                           className="w-full px-4 py-2 text-left flex items-center gap-2 transition-all duration-200 hover:scale-105"
-                          style={{ color: "#ABA4AA" }}
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                          }}
                         >
                           <Archive className="h-4 w-4" />
                           Archive Conversation
                         </button>
                         <button
                           className="w-full px-4 py-2 text-left flex items-center gap-2 transition-all duration-200 hover:scale-105"
-                          style={{ color: "#EF4444" }}
+                          style={{ color: COLORS.RED_ALERT }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.backgroundColor =
+                              getRedAlert(0.1);
+                            e.currentTarget.style.color = COLORS.RED_ALERT;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                            e.currentTarget.style.color = COLORS.RED_ALERT;
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                           Delete Conversation
@@ -334,9 +386,11 @@ export default function ConversationPage({
         <div
           className="flex flex-col h-[calc(100vh-200px)] rounded-2xl border overflow-hidden shadow-xl"
           style={{
-            backgroundColor: "#1E1E1E",
-            borderColor: "#374151",
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+            boxShadow: `0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 0 1px ${getGoldenAccent(
+              0.1
+            )}`,
           }}
         >
           {/* Messages */}
@@ -346,19 +400,22 @@ export default function ConversationPage({
                 <div className="text-center">
                   <div
                     className="h-20 w-20 mx-auto mb-6 opacity-50 rounded-2xl flex items-center justify-center shadow-lg"
-                    style={{ backgroundColor: "#374151", color: "#ffffff" }}
+                    style={{
+                      backgroundColor: getGoldenAccent(0.1),
+                      color: COLORS.GOLDEN_ACCENT,
+                    }}
                   >
                     <File className="h-10 w-10" />
                   </div>
                   <h3
                     className="text-2xl font-bold mb-3 tracking-tight"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     No messages yet
                   </h3>
                   <p
                     className="text-lg font-medium"
-                    style={{ color: "#9ca3af" }}
+                    style={{ color: COLORS.TEXT_SECONDARY }}
                   >
                     Start the conversation by sending a message
                   </p>
@@ -380,10 +437,14 @@ export default function ConversationPage({
                         isCurrentUser ? "rounded-br-sm" : "rounded-bl-sm"
                       }`}
                       style={{
-                        backgroundColor: isCurrentUser ? "#3B82F6" : "#374151",
-                        color: "#ffffff",
+                        backgroundColor: isCurrentUser
+                          ? COLORS.GOLDEN_ACCENT
+                          : COLORS.BACKGROUND_CARD,
+                        color: isCurrentUser ? "#000000" : COLORS.TEXT_PRIMARY,
                         border: "1px solid",
-                        borderColor: isCurrentUser ? "#2563EB" : "#4B5563",
+                        borderColor: isCurrentUser
+                          ? COLORS.GOLDEN_BORDER
+                          : COLORS.BORDER_SUBTLE,
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
                       }}
                     >
@@ -446,13 +507,15 @@ export default function ConversationPage({
                               className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
                               style={{
                                 backgroundColor: isCurrentUser
-                                  ? "#1E40AF"
-                                  : "#2A3133",
-                                color: "#ffffff",
+                                  ? COLORS.GOLDEN_DARK
+                                  : COLORS.BACKGROUND_DARK,
+                                color: isCurrentUser
+                                  ? "#ffffff"
+                                  : COLORS.TEXT_PRIMARY,
                                 border: "1px solid",
                                 borderColor: isCurrentUser
-                                  ? "#1D4ED8"
-                                  : "#606364",
+                                  ? COLORS.GOLDEN_BORDER
+                                  : COLORS.BORDER_SUBTLE,
                               }}
                             >
                               {message.attachmentType?.startsWith("audio/") ? (
@@ -478,7 +541,14 @@ export default function ConversationPage({
                       )}
 
                       <div className="flex items-center justify-end gap-1 mt-1">
-                        <span className="text-xs" style={{ color: "#ABA4AA" }}>
+                        <span
+                          className="text-xs"
+                          style={{
+                            color: isCurrentUser
+                              ? "rgba(0, 0, 0, 0.6)"
+                              : COLORS.TEXT_MUTED,
+                          }}
+                        >
                           {format(new Date(message.createdAt), "h:mm a")}
                         </span>
                         {isCurrentUser && (
@@ -486,12 +556,12 @@ export default function ConversationPage({
                             {message.isRead ? (
                               <CheckCheck
                                 className="h-3 w-3"
-                                style={{ color: "#ABA4AA" }}
+                                style={{ color: "rgba(0, 0, 0, 0.6)" }}
                               />
                             ) : (
                               <Check
                                 className="h-3 w-3"
-                                style={{ color: "#ABA4AA" }}
+                                style={{ color: "rgba(0, 0, 0, 0.6)" }}
                               />
                             )}
                           </>
@@ -507,39 +577,48 @@ export default function ConversationPage({
 
           {/* Message Input */}
           <div
-            className="p-4 border-t bg-gray-50/5"
-            style={{ borderColor: "#374151" }}
+            className="p-4 border-t"
+            style={{
+              borderColor: COLORS.BORDER_SUBTLE,
+              backgroundColor: COLORS.BACKGROUND_DARK,
+            }}
           >
             {/* Selected File Indicator */}
             {selectedFile && (
               <div
                 className="mb-3 p-3 rounded-xl flex items-center justify-between border"
                 style={{
-                  backgroundColor: "#1f2937",
-                  borderColor: "#374151",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
                 }}
               >
                 <div className="flex items-center gap-3">
                   {selectedFile.file.type.startsWith("image/") ? (
                     <ImageIcon
                       className="h-5 w-5"
-                      style={{ color: "#3B82F6" }}
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
                     />
                   ) : selectedFile.file.type.startsWith("video/") ? (
-                    <Video className="h-5 w-5" style={{ color: "#3B82F6" }} />
+                    <Video
+                      className="h-5 w-5"
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                    />
                   ) : (
-                    <File className="h-5 w-5" style={{ color: "#3B82F6" }} />
+                    <File
+                      className="h-5 w-5"
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                    />
                   )}
                   <div className="flex-1 min-w-0">
                     <span
                       className="text-sm font-medium block truncate"
-                      style={{ color: "#f9fafb" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       {selectedFile.file.name}
                     </span>
                     <span
                       className="text-xs opacity-75"
-                      style={{ color: "#9CA3AF" }}
+                      style={{ color: COLORS.TEXT_SECONDARY }}
                     >
                       Ready to send
                     </span>
@@ -548,8 +627,14 @@ export default function ConversationPage({
                 <button
                   type="button"
                   onClick={() => setSelectedFile(null)}
-                  className="p-2 rounded-lg transition-all duration-200 hover:bg-red-500/20"
-                  style={{ color: "#EF4444" }}
+                  className="p-2 rounded-lg transition-all duration-200"
+                  style={{ color: COLORS.RED_ALERT }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = getRedAlert(0.1);
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -562,8 +647,16 @@ export default function ConversationPage({
               <button
                 type="button"
                 onClick={() => setShowFileUpload(true)}
-                className="p-3 rounded-xl transition-all duration-200 hover:scale-105 hover:bg-blue-500/10"
-                style={{ color: "#6B7280" }}
+                className="p-3 rounded-xl transition-all duration-200 hover:scale-105"
+                style={{ color: COLORS.TEXT_MUTED }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = getGoldenAccent(0.1);
+                  e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                }}
                 title="Attach file"
               >
                 <Paperclip className="h-5 w-5" />
@@ -574,25 +667,31 @@ export default function ConversationPage({
                   value={messageText}
                   onChange={e => setMessageText(e.target.value)}
                   placeholder="Type a message..."
-                  className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 focus:outline-none"
                   style={{
-                    backgroundColor: "#1f2937",
-                    borderColor: "#374151",
-                    color: "#f9fafb",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
                     border: "1px solid",
                   }}
                   onFocus={e => {
-                    e.currentTarget.style.borderColor = "#3B82F6";
-                    e.currentTarget.style.backgroundColor = "#111827";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_DARK;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                      0.2
+                    )}`;
                   }}
                   onBlur={e => {
-                    e.currentTarget.style.borderColor = "#374151";
-                    e.currentTarget.style.backgroundColor = "#1f2937";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 />
                 <div
                   className="absolute bottom-1 right-2 text-xs opacity-50"
-                  style={{ color: "#9CA3AF" }}
+                  style={{ color: COLORS.TEXT_MUTED }}
                 >
                   Shift+Enter for new line
                 </div>
@@ -606,17 +705,23 @@ export default function ConversationPage({
                 className="p-3 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   backgroundColor:
-                    messageText.trim() || selectedFile ? "#3B82F6" : "#6b7280",
-                  color: "#ffffff",
+                    messageText.trim() || selectedFile
+                      ? COLORS.GOLDEN_ACCENT
+                      : COLORS.TEXT_MUTED,
+                  color:
+                    messageText.trim() || selectedFile
+                      ? "#ffffff"
+                      : COLORS.TEXT_SECONDARY,
                 }}
                 onMouseEnter={e => {
                   if (messageText.trim() || selectedFile) {
-                    e.currentTarget.style.backgroundColor = "#2563EB";
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
                   }
                 }}
                 onMouseLeave={e => {
                   if (messageText.trim() || selectedFile) {
-                    e.currentTarget.style.backgroundColor = "#3B82F6";
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.GOLDEN_ACCENT;
                   }
                 }}
                 title="Send message"
