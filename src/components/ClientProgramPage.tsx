@@ -81,6 +81,7 @@ import MobileClientProgramPage from "./MobileClientProgramPage";
 import { processVideoUrl } from "@/lib/youtube-utils";
 import { useExerciseCompletion } from "@/hooks/useExerciseCompletion";
 import PushNotificationPrompt from "@/components/PushNotificationPrompt";
+import { COLORS, getGoldenAccent, getRedAlert, getGreenPrimary } from "@/lib/colors";
 
 interface Drill {
   id: string;
@@ -960,14 +961,13 @@ function ClientProgramPage() {
     <ClientTopNav>
       <div
         className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6"
-        style={{ backgroundColor: "#2a3133" }}
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
       >
         <PushNotificationPrompt />
         {/* Header Section with Gradient Background */}
         <div className="mb-8 md:mb-12">
           <div>
             {/* Decorative background elements */}
-            <div className="absolute top-0 right-0 w-32 h-32 opacity-10"></div>
           </div>
 
           {/* Summary Box */}
@@ -975,27 +975,45 @@ function ClientProgramPage() {
             <div className="max-w-6xl mx-auto">
               {/* Upcoming Lessons - Full Width */}
               <div className="mb-4 md:mb-8">
-                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-6 shadow-2xl border bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-blue-700/10 border-blue-500/20">
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 opacity-5">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-300 rounded-full blur-2xl"></div>
-                  </div>
+                <div 
+                  className="group relative overflow-hidden rounded-3xl p-4 md:p-6 shadow-2xl border"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.GOLDEN_BORDER,
+                  }}
+                >
 
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 md:p-3 rounded-2xl shadow-lg bg-gradient-to-br from-blue-500 to-blue-600">
+                        <div 
+                          className="p-2 md:p-3 rounded-2xl shadow-lg"
+                          style={{
+                            background: `linear-gradient(135deg, ${COLORS.GOLDEN_ACCENT} 0%, ${COLORS.GOLDEN_DARK} 100%)`,
+                          }}
+                        >
                           <CalendarCheck className="h-4 w-4 md:h-5 md:w-5 text-white" />
                         </div>
-                        <h3 className="text-lg md:text-xl font-bold text-white">
+                        <h3 
+                          className="text-lg md:text-xl font-bold"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
                           Upcoming Lessons
                         </h3>
                       </div>
                       {upcomingEvents.length > 2 && (
                         <a
                           href="/client-schedule"
-                          className="text-xs md:text-sm font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-blue-500/20 text-blue-300"
+                          className="text-xs md:text-sm font-medium px-3 py-1.5 rounded-lg transition-all"
+                          style={{ 
+                            color: COLORS.GOLDEN_ACCENT,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                          }}
                         >
                           View All ({upcomingEvents.length})
                         </a>
@@ -1031,7 +1049,11 @@ function ClientProgramPage() {
                             return (
                               <div
                                 key={event.id}
-                                className="rounded-lg p-4 border shadow-lg bg-[#4A5568] border-[#606364]"
+                                className="rounded-lg p-4 border shadow-lg"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                }}
                               >
                                 {/* Date Badge */}
                                 <div className="flex items-start justify-between mb-3">
@@ -1041,9 +1063,9 @@ function ClientProgramPage() {
                                     }`}
                                     style={{
                                       backgroundColor: isToday
-                                        ? "#10b981"
-                                        : "#353A3A",
-                                      color: "#FFFFFF",
+                                        ? COLORS.GREEN_PRIMARY
+                                        : COLORS.BACKGROUND_CARD,
+                                      color: COLORS.TEXT_PRIMARY,
                                     }}
                                   >
                                     {isToday
@@ -1059,16 +1081,16 @@ function ClientProgramPage() {
                                   <div
                                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
                                     style={{
-                                      backgroundColor: "#353A3A",
+                                      backgroundColor: COLORS.BACKGROUND_CARD,
                                     }}
                                   >
                                     <Clock
                                       className="h-3.5 w-3.5"
-                                      style={{ color: "#FFFFFF" }}
+                                      style={{ color: COLORS.TEXT_PRIMARY }}
                                     />
                                     <span
                                       className="text-xs font-semibold"
-                                      style={{ color: "#FFFFFF" }}
+                                      style={{ color: COLORS.TEXT_PRIMARY }}
                                     >
                                       {eventDate.toLocaleTimeString("en-US", {
                                         hour: "numeric",
@@ -1083,7 +1105,7 @@ function ClientProgramPage() {
                                   <h4
                                     className="text-sm font-bold"
                                     style={{
-                                      color: "#FFFFFF",
+                                      color: COLORS.TEXT_PRIMARY,
                                     }}
                                   >
                                     {heading}
@@ -1092,7 +1114,7 @@ function ClientProgramPage() {
                                     <p
                                       className="text-xs line-clamp-2"
                                       style={{
-                                        color: "#ABA4AA",
+                                        color: COLORS.TEXT_SECONDARY,
                                       }}
                                     >
                                       {event.description}
@@ -1101,7 +1123,7 @@ function ClientProgramPage() {
                                     <p
                                       className="text-xs"
                                       style={{
-                                        color: "#ABA4AA",
+                                        color: COLORS.TEXT_SECONDARY,
                                       }}
                                     >
                                       Scheduled lesson
@@ -1114,11 +1136,20 @@ function ClientProgramPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8">
-                        <CalendarX className="h-12 w-12 mb-3 text-blue-400/50" />
-                        <p className="text-sm text-blue-200/60 mb-2">
+                        <CalendarX 
+                          className="h-12 w-12 mb-3" 
+                          style={{ color: COLORS.GOLDEN_ACCENT }}
+                        />
+                        <p 
+                          className="text-sm mb-2"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
                           No upcoming lessons
                         </p>
-                        <p className="text-xs text-blue-300/40">
+                        <p 
+                          className="text-xs"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        >
                           Your coach will schedule lessons with you soon
                         </p>
                       </div>
@@ -1130,29 +1161,55 @@ function ClientProgramPage() {
               {/* Coach Notes and Message Coach - Side by Side */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                 {/* Coach Feedback */}
-                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border bg-gradient-to-br from-purple-500/10 via-purple-600/5 to-purple-700/10 border-purple-500/20">
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 opacity-5">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-400 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-300 rounded-full blur-2xl"></div>
-                  </div>
+                <div 
+                  className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.GOLDEN_BORDER,
+                  }}
+                >
 
                   <div className="relative z-10">
                     <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
-                      <div className="p-2 md:p-3 rounded-xl flex items-center justify-center bg-[#1E1B4B] border border-[#312E81]">
-                        <FileText className="h-4 w-4 md:h-6 md:w-6 text-[#818CF8]" />
+                      <div 
+                        className="p-2 md:p-3 rounded-xl flex items-center justify-center border"
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.GOLDEN_BORDER,
+                        }}
+                      >
+                        <FileText 
+                          className="h-4 w-4 md:h-6 md:w-6" 
+                          style={{ color: COLORS.GOLDEN_ACCENT }}
+                        />
                       </div>
-                      <h3 className="text-lg md:text-xl font-bold text-[#E2E8F0]">
+                      <h3 
+                        className="text-lg md:text-xl font-bold"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         Coach Notes
                       </h3>
                     </div>
 
                     {coachNotes && coachNotes.length > 0 ? (
                       <div
-                        className="rounded-lg p-3 border cursor-pointer hover:border-[#6366F1]/50 transition-all bg-[#0F172A] border-[#1E293B]"
+                        className="rounded-lg p-3 border cursor-pointer transition-all"
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                        }}
                         onClick={() => setIsCoachNotesModalOpen(true)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        }}
                       >
-                        <p className="text-sm leading-relaxed line-clamp-2 mb-2 text-[#E2E8F0]">
+                        <p 
+                          className="text-sm leading-relaxed line-clamp-2 mb-2"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
                           {(() => {
                             const mostRecentNote = coachNotes[0];
                             const content = mostRecentNote?.content || "";
@@ -1162,7 +1219,10 @@ function ClientProgramPage() {
                           })()}
                         </p>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-[#94A3B8]">
+                          <span 
+                            className="text-xs"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             {new Date(
                               coachNotes[0]?.updatedAt ||
                                 coachNotes[0]?.createdAt ||
@@ -1177,7 +1237,14 @@ function ClientProgramPage() {
                               e.stopPropagation();
                               setIsCoachNotesModalOpen(true);
                             }}
-                            className="text-xs font-medium text-[#6366F1] hover:text-[#818CF8] transition-colors flex items-center gap-1"
+                            className="text-xs font-medium transition-colors flex items-center gap-1"
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                            }}
                           >
                             View
                             <ArrowRight className="w-3 h-3" />
@@ -1185,9 +1252,21 @@ function ClientProgramPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-[#0F172A] border border-[#1E293B]">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#475569]" />
-                        <p className="text-sm text-[#94A3B8]">
+                      <div 
+                        className="flex items-center gap-2 p-3 rounded-lg border"
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                        }}
+                      >
+                        <div 
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: COLORS.TEXT_MUTED }}
+                        />
+                        <p 
+                          className="text-sm"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
                           No feedback yet
                         </p>
                       </div>
@@ -1196,12 +1275,13 @@ function ClientProgramPage() {
                 </div>
 
                 {/* Message Coach Button */}
-                <div className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border bg-gradient-to-br from-green-500/10 via-green-600/5 to-green-700/10 border-green-500/20">
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 opacity-5">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-green-400 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-green-300 rounded-full blur-2xl"></div>
-                  </div>
+                <div 
+                  className="group relative overflow-hidden rounded-3xl p-4 md:p-8 shadow-2xl border"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: getGreenPrimary(0.3),
+                  }}
+                >
 
                   <div className="relative z-10 flex flex-col items-center justify-center h-full min-h-[120px] text-center">
                     <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
@@ -1213,13 +1293,25 @@ function ClientProgramPage() {
                       </h3>
                     </div>
 
-                    <p className="text-xs md:text-sm text-green-200/80 mb-4 leading-relaxed">
+                    <p 
+                      className="text-xs md:text-sm mb-4 leading-relaxed"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       Send a quick message to your coach
                     </p>
 
                     <button
                       onClick={() => setShowMessageModal(true)}
-                      className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-semibold rounded-xl hover:from-green-600 hover:to-green-700 shadow-lg"
+                      className="px-4 py-2 text-white text-sm font-semibold rounded-xl shadow-lg transition-colors"
+                      style={{
+                        background: `linear-gradient(to right, ${COLORS.GREEN_PRIMARY}, ${COLORS.GREEN_DARK})`,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = `linear-gradient(to right, ${COLORS.GREEN_DARK}, #2d6a30)`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = `linear-gradient(to right, ${COLORS.GREEN_PRIMARY}, ${COLORS.GREEN_DARK})`;
+                      }}
                     >
                       Send Message
                     </button>
@@ -1234,8 +1326,8 @@ function ClientProgramPage() {
             <div
               className="flex rounded-2xl p-1 w-full max-w-2xl"
               style={{
-                backgroundColor: "#353A3A",
-                border: "1px solid #606364",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                border: `1px solid ${COLORS.BORDER_SUBTLE}`,
               }}
             >
               {[
@@ -1261,10 +1353,20 @@ function ClientProgramPage() {
                   }`}
                   style={{
                     backgroundColor:
-                      activeTab === tab.id ? "#4A5A70" : "transparent",
+                      activeTab === tab.id ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_CARD,
                     borderColor:
-                      activeTab === tab.id ? "#4A5A70" : "transparent",
-                    color: activeTab === tab.id ? "#C3BCC2" : "#ABA4AA",
+                      activeTab === tab.id ? COLORS.GOLDEN_BORDER : COLORS.BORDER_SUBTLE,
+                    color: activeTab === tab.id ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    }
                   }}
                 >
                   {tab.icon}
@@ -1313,11 +1415,21 @@ function ClientProgramPage() {
                     className="px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl text-white font-medium text-sm md:text-base"
                     style={{
                       backgroundColor:
-                        viewMode === "week" ? "#4A5A70" : "transparent",
+                        viewMode === "week" ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_CARD,
                       border:
                         viewMode === "week"
-                          ? "2px solid #4A5A70"
-                          : "2px solid transparent",
+                          ? `2px solid ${COLORS.GOLDEN_BORDER}`
+                          : `2px solid ${COLORS.BORDER_SUBTLE}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (viewMode !== "week") {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (viewMode !== "week") {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      }
                     }}
                   >
                     <CalendarDays className="h-4 w-4 md:h-6 md:w-6 mr-1 md:mr-3" />
@@ -1330,11 +1442,21 @@ function ClientProgramPage() {
                     className="px-4 md:px-8 py-2 md:py-4 rounded-xl md:rounded-2xl text-white font-medium text-sm md:text-base"
                     style={{
                       backgroundColor:
-                        viewMode === "month" ? "#4A5A70" : "transparent",
+                        viewMode === "month" ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_CARD,
                       border:
                         viewMode === "month"
-                          ? "2px solid #4A5A70"
-                          : "2px solid transparent",
+                          ? `2px solid ${COLORS.GOLDEN_BORDER}`
+                          : `2px solid ${COLORS.BORDER_SUBTLE}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (viewMode !== "month") {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (viewMode !== "month") {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      }
                     }}
                   >
                     <Calendar className="h-4 w-4 md:h-6 md:w-6 mr-1 md:mr-3" />
@@ -1355,7 +1477,7 @@ function ClientProgramPage() {
                   <div
                     key={day}
                     className="p-2 text-center text-sm font-semibold mb-2"
-                    style={{ color: "#ABA4AA" }}
+                    style={{ color: COLORS.TEXT_SECONDARY }}
                   >
                     {day}
                   </div>
@@ -1394,13 +1516,23 @@ function ClientProgramPage() {
                       <div
                         key={index}
                         className={cn(
-                          "min-h-[80px] md:min-h-[100px] p-2 rounded-lg cursor-pointer hover:bg-white/10 border touch-manipulation",
-                          isCurrentMonth
-                            ? "bg-white/5 border-white/10 hover:border-white/20"
-                            : "bg-white/2 border-white/5",
-                          isToday &&
-                            "ring-2 ring-blue-500/50 border-blue-400/50 bg-blue-500/10"
+                          "min-h-[80px] md:min-h-[100px] p-2 rounded-lg cursor-pointer border touch-manipulation transition-colors"
                         )}
+                        style={{
+                          backgroundColor: isCurrentMonth 
+                            ? (isToday ? COLORS.BACKGROUND_CARD_HOVER : COLORS.BACKGROUND_CARD)
+                            : COLORS.BACKGROUND_DARK,
+                          borderColor: isToday ? COLORS.GOLDEN_BORDER : COLORS.BORDER_SUBTLE,
+                          boxShadow: isToday ? `0 0 0 2px ${COLORS.GOLDEN_BORDER}` : "none",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isCurrentMonth 
+                            ? (isToday ? COLORS.BACKGROUND_CARD_HOVER : COLORS.BACKGROUND_CARD)
+                            : COLORS.BACKGROUND_DARK;
+                        }}
                         onClick={() => {
                           // Allow clicking on any day to view what's scheduled
                           // Use local date format to avoid timezone issues
@@ -1486,10 +1618,17 @@ function ClientProgramPage() {
                                       .map((program, programIndex) => (
                                         <div
                                           key={`program-${programIndex}`}
-                                          className="p-1 rounded text-xs bg-blue-500/20 text-blue-300"
+                                          className="p-1 rounded text-xs"
+                                          style={{
+                                            backgroundColor: COLORS.BACKGROUND_CARD,
+                                            color: COLORS.GOLDEN_ACCENT,
+                                          }}
                                         >
                                           <div className="flex items-center gap-1">
-                                            <BookOpen className="h-3 w-3 text-blue-400 flex-shrink-0" />
+                                            <BookOpen 
+                                              className="h-3 w-3 flex-shrink-0" 
+                                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                                            />
                                             <span className="truncate">
                                               {program.programTitle}
                                             </span>
@@ -1513,10 +1652,17 @@ function ClientProgramPage() {
                                       ) => (
                                         <div
                                           key={`video-${assignmentIndex}`}
-                                          className="p-1 rounded text-xs bg-purple-500/20 text-purple-300"
+                                          className="p-1 rounded text-xs"
+                                          style={{
+                                            backgroundColor: COLORS.BACKGROUND_CARD,
+                                            color: COLORS.GOLDEN_ACCENT,
+                                          }}
                                         >
                                           <div className="flex items-center gap-1">
-                                            <Video className="h-3 w-3 text-purple-400 flex-shrink-0" />
+                                            <Video 
+                                              className="h-3 w-3 flex-shrink-0" 
+                                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                                            />
                                             <span className="truncate">
                                               {assignment.title}
                                             </span>
@@ -1539,11 +1685,15 @@ function ClientProgramPage() {
                                     .map((drill, drillIndex) => (
                                       <div
                                         key={drillIndex}
-                                        className={`p-1 rounded text-xs ${
-                                          drill.completed
-                                            ? "bg-green-500/20 text-green-400"
-                                            : "bg-gray-600/20 text-gray-300"
-                                        }`}
+                                        className="p-1 rounded text-xs"
+                                        style={{
+                                          backgroundColor: drill.completed
+                                            ? getGreenPrimary(0.2)
+                                            : COLORS.BACKGROUND_CARD,
+                                          color: drill.completed
+                                            ? COLORS.GREEN_PRIMARY
+                                            : COLORS.TEXT_SECONDARY,
+                                        }}
                                       >
                                         <div className="flex items-center gap-1">
                                           {drill.completed && (
@@ -1624,11 +1774,20 @@ function ClientProgramPage() {
                                 return (
                                   <div
                                     key={lessonIndex}
-                                    className={`p-1 rounded text-xs ${
+                                    className="p-1 rounded text-xs border"
+                                    style={
                                       isScheduleRequest
-                                        ? "bg-blue-500/20 text-blue-400"
-                                        : "bg-green-600/40 text-green-300 border border-green-400/50"
-                                    }`}
+                                        ? {
+                                            backgroundColor: COLORS.BACKGROUND_CARD,
+                                            color: COLORS.GOLDEN_ACCENT,
+                                            borderColor: COLORS.GOLDEN_BORDER,
+                                          }
+                                        : {
+                                            backgroundColor: COLORS.BACKGROUND_CARD,
+                                            color: COLORS.GREEN_PRIMARY,
+                                            borderColor: COLORS.GREEN_DARK,
+                                          }
+                                    }
                                   >
                                     <div className="font-medium">
                                       {formatTimeInUserTimezone(lesson.date)}
@@ -1656,10 +1815,17 @@ function ClientProgramPage() {
                               .map((routine: any, routineIndex: number) => (
                                 <div
                                   key={routineIndex}
-                                  className="p-1 rounded text-xs bg-green-500/20 text-green-400"
+                                  className="p-1 rounded text-xs"
+                                  style={{
+                                            backgroundColor: COLORS.BACKGROUND_CARD,
+                                    color: COLORS.GREEN_PRIMARY,
+                                  }}
                                 >
                                   <div className="flex items-center gap-1">
-                                    <Target className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                    <Target 
+                                      className="h-3 w-3 flex-shrink-0" 
+                                      style={{ color: COLORS.GREEN_PRIMARY }}
+                                    />
                                     <span className="truncate">
                                       {(routine as any).routine?.name ||
                                         "Unknown Routine"}
@@ -1703,22 +1869,22 @@ function ClientProgramPage() {
                   style={{
                     background:
                       "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                    borderColor: "#3B82F6",
+                    borderColor: COLORS.GOLDEN_BORDER,
                   }}
                 >
                   <div className="flex items-center gap-4 mb-6">
                     <div
                       className="p-3 rounded-2xl"
-                      style={{ backgroundColor: "#3B82F6" }}
+                      style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
                     >
                       <TrendingUp
                         className="h-8 w-8"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.BACKGROUND_DARK }}
                       />
                     </div>
                     <h2
                       className="text-2xl font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Speed Stats
                     </h2>
@@ -1726,12 +1892,15 @@ function ClientProgramPage() {
 
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-lg" style={{ color: "#ABA4AA" }}>
+                      <span 
+                        className="text-lg" 
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         Average Speed
                       </span>
                       <span
                         className="text-2xl font-bold"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {pitchingData?.averageSpeed
                           ? `${pitchingData.averageSpeed} mph`
@@ -1739,12 +1908,15 @@ function ClientProgramPage() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-lg" style={{ color: "#ABA4AA" }}>
+                      <span 
+                        className="text-lg" 
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         Top Speed
                       </span>
                       <span
                         className="text-2xl font-bold"
-                        style={{ color: "#10B981" }}
+                        style={{ color: COLORS.GREEN_PRIMARY }}
                       >
                         {pitchingData?.topSpeed
                           ? `${pitchingData.topSpeed} mph`
@@ -1759,19 +1931,22 @@ function ClientProgramPage() {
                   style={{
                     background:
                       "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                    borderColor: "#8B5CF6",
+                    borderColor: COLORS.GOLDEN_BORDER,
                   }}
                 >
                   <div className="flex items-center gap-4 mb-6">
                     <div
                       className="p-3 rounded-2xl"
-                      style={{ backgroundColor: "#8B5CF6" }}
+                      style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
                     >
-                      <Zap className="h-8 w-8" style={{ color: "#C3BCC2" }} />
+                      <Zap 
+                        className="h-8 w-8" 
+                        style={{ color: COLORS.BACKGROUND_DARK }}
+                      />
                     </div>
                     <h2
                       className="text-2xl font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Spin Rates
                     </h2>
@@ -1779,12 +1954,15 @@ function ClientProgramPage() {
 
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <span 
+                        className="text-sm" 
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         Drop Ball
                       </span>
                       <span
                         className="text-lg font-bold"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {pitchingData?.dropSpinRate
                           ? `${pitchingData.dropSpinRate} rpm`
@@ -1792,12 +1970,15 @@ function ClientProgramPage() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <span 
+                        className="text-sm" 
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         Changeup
                       </span>
                       <span
                         className="text-lg font-bold"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {pitchingData?.changeupSpinRate
                           ? `${pitchingData.changeupSpinRate} rpm`
@@ -1805,12 +1986,15 @@ function ClientProgramPage() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <span 
+                        className="text-sm" 
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         Rise Ball
                       </span>
                       <span
                         className="text-lg font-bold"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {pitchingData?.riseSpinRate
                           ? `${pitchingData.riseSpinRate} rpm`
@@ -1818,12 +2002,15 @@ function ClientProgramPage() {
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <span 
+                        className="text-sm" 
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         Curve Ball
                       </span>
                       <span
                         className="text-lg font-bold"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {pitchingData?.curveSpinRate
                           ? `${pitchingData.curveSpinRate} rpm`
@@ -1838,25 +2025,25 @@ function ClientProgramPage() {
               {pitchingData?.averageSpeed && pitchingData?.topSpeed && (
                 <div
                   className="rounded-3xl p-8 shadow-2xl border relative overflow-hidden"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                    borderColor: "#3B82F6",
-                  }}
-                >
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
+                      borderColor: COLORS.GOLDEN_BORDER,
+                    }}
+                  >
                   <div className="flex items-center gap-4 mb-6">
                     <div
                       className="p-3 rounded-2xl"
-                      style={{ backgroundColor: "#3B82F6" }}
+                      style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
                     >
                       <BarChart3
                         className="h-8 w-8"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.BACKGROUND_DARK }}
                       />
                     </div>
                     <h2
                       className="text-2xl font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Speed Progress
                     </h2>
@@ -1866,19 +2053,22 @@ function ClientProgramPage() {
                     {/* Average Speed Progress */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-lg" style={{ color: "#ABA4AA" }}>
+                        <span 
+                          className="text-lg" 
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
                           Average Speed
                         </span>
                         <span
                           className="text-lg font-bold"
-                          style={{ color: "#C3BCC2" }}
+                          style={{ color: COLORS.TEXT_PRIMARY }}
                         >
                           {pitchingData.averageSpeed} mph
                         </span>
                       </div>
                       <div
                         className="w-full rounded-full h-4"
-                        style={{ backgroundColor: "#606364" }}
+                        style={{ backgroundColor: COLORS.TEXT_MUTED }}
                       >
                         <div
                           className="h-4 rounded-full"
@@ -1887,8 +2077,7 @@ function ClientProgramPage() {
                               (pitchingData.averageSpeed / 80) * 100,
                               100
                             )}%`,
-                            background:
-                              "linear-gradient(to right, #3B82F6, #1D4ED8)",
+                            background: `linear-gradient(to right, ${COLORS.GOLDEN_ACCENT}, ${COLORS.GOLDEN_DARK})`,
                           }}
                         />
                       </div>
@@ -1897,19 +2086,22 @@ function ClientProgramPage() {
                     {/* Top Speed Progress */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-lg" style={{ color: "#ABA4AA" }}>
+                        <span 
+                          className="text-lg" 
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
                           Top Speed
                         </span>
                         <span
                           className="text-lg font-bold"
-                          style={{ color: "#10B981" }}
+                          style={{ color: COLORS.GREEN_PRIMARY }}
                         >
                           {pitchingData.topSpeed} mph
                         </span>
                       </div>
                       <div
                         className="w-full rounded-full h-4"
-                        style={{ backgroundColor: "#606364" }}
+                        style={{ backgroundColor: COLORS.TEXT_MUTED }}
                       >
                         <div
                           className="h-4 rounded-full"
@@ -1918,8 +2110,7 @@ function ClientProgramPage() {
                               (pitchingData.topSpeed / 85) * 100,
                               100
                             )}%`,
-                            background:
-                              "linear-gradient(to right, #10B981, #059669)",
+                            background: `linear-gradient(to right, ${COLORS.GREEN_PRIMARY}, ${COLORS.GREEN_DARK})`,
                           }}
                         />
                       </div>
@@ -1935,19 +2126,22 @@ function ClientProgramPage() {
                   style={{
                     background:
                       "linear-gradient(135deg, #353A3A 0%, #2B3038 100%)",
-                    borderColor: "#EF4444",
+                    borderColor: COLORS.RED_BORDER,
                   }}
                 >
                   <div className="flex items-center gap-4 mb-6">
                     <div
                       className="p-3 rounded-2xl"
-                      style={{ backgroundColor: "#EF4444" }}
+                      style={{ backgroundColor: COLORS.RED_ALERT }}
                     >
-                      <Video className="h-8 w-8" style={{ color: "#C3BCC2" }} />
+                      <Video 
+                        className="h-8 w-8" 
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      />
                     </div>
                     <h2
                       className="text-2xl font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       Video Assignments
                     </h2>
@@ -1958,21 +2152,24 @@ function ClientProgramPage() {
                       <div
                         key={assignment.id}
                         className="flex items-center justify-between p-4 rounded-xl"
-                        style={{ backgroundColor: "#2A2F2F" }}
+                        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                       >
                         <div className="flex items-center gap-3">
                           <Video
                             className="h-5 w-5"
-                            style={{ color: "#EF4444" }}
+                            style={{ color: COLORS.RED_ALERT }}
                           />
                           <div>
                             <p
                               className="font-medium"
-                              style={{ color: "#C3BCC2" }}
+                              style={{ color: COLORS.TEXT_PRIMARY }}
                             >
                               {assignment.video.title}
                             </p>
-                            <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                            <p 
+                              className="text-sm" 
+                              style={{ color: COLORS.TEXT_SECONDARY }}
+                            >
                               Assigned{" "}
                               {new Date(
                                 assignment.assignedAt
@@ -1984,7 +2181,7 @@ function ClientProgramPage() {
                           {assignment.completed ? (
                             <CheckCircle2
                               className="h-5 w-5"
-                              style={{ color: "#10B981" }}
+                              style={{ color: COLORS.GREEN_PRIMARY }}
                             />
                           ) : (
                             <button
@@ -1995,10 +2192,16 @@ function ClientProgramPage() {
                                 });
                                 setIsVideoSubmissionModalOpen(true);
                               }}
-                              className="px-3 py-1 rounded-lg text-xs font-medium"
+                              className="px-3 py-1 rounded-lg text-xs font-medium transition-colors"
                               style={{
-                                backgroundColor: "#EF4444",
+                                backgroundColor: COLORS.RED_ALERT,
                                 color: "#FFFFFF",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
                               }}
                             >
                               Watch & Submit
@@ -2072,15 +2275,35 @@ function ClientProgramPage() {
           {/* Video Player Modal */}
           {isVideoPlayerOpen && selectedVideo && (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-gray-900 rounded-3xl border-2 border-gray-600 w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              <div 
+                className="rounded-3xl border-2 w-full max-w-4xl max-h-[90vh] overflow-hidden"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 {/* Video Player Header */}
-                <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-white">Video Demo</h3>
+                <div 
+                  className="p-4 border-b flex items-center justify-between"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                >
+                  <h3 
+                    className="text-xl font-bold"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    Video Demo
+                  </h3>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleCloseVideo}
-                    className="text-gray-400 hover:text-white"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
                     <X className="h-6 w-6" />
                   </Button>
@@ -2119,12 +2342,18 @@ function ClientProgramPage() {
                     ) : (
                       // Fallback: show error message
                       <div className="flex items-center justify-center h-full">
-                        <div className="text-center text-white">
+                        <div className="text-center">
                           <div className="text-4xl mb-4">🎥</div>
-                          <div className="text-lg font-semibold mb-2">
+                          <div 
+                            className="text-lg font-semibold mb-2"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
                             Video Not Available
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div 
+                            className="text-sm"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             This video could not be loaded. Please check with
                             your coach.
                           </div>
@@ -2138,7 +2367,13 @@ function ClientProgramPage() {
                     <Button
                       onClick={handleCloseVideo}
                       className="px-6 py-3 rounded-xl font-semibold"
-                      style={{ backgroundColor: "#4A5A70" }}
+                      style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                      }}
                     >
                       <ArrowLeft className="h-4 w-4 mr-2" />
                       Back to Full View
@@ -2152,15 +2387,30 @@ function ClientProgramPage() {
           {/* Comment Modal */}
           {isCommentModalOpen && selectedDrillForComment && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-gray-800 rounded-3xl border-2 border-gray-600 w-full max-w-md">
+              <div 
+                className="rounded-3xl border-2 w-full max-w-md"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 {/* Comment Modal Header */}
-                <div className="p-6 border-b border-gray-700">
+                <div 
+                  className="p-6 border-b"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-white">
+                      <h3 
+                        className="text-xl font-bold"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         Add Comment
                       </h3>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p 
+                        className="text-sm mt-1"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         {selectedDrillForComment.title}
                       </p>
                     </div>
@@ -2168,7 +2418,13 @@ function ClientProgramPage() {
                       variant="ghost"
                       size="sm"
                       onClick={handleCloseCommentModal}
-                      className="text-gray-400 hover:text-white"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }}
                     >
                       <X className="h-5 w-5" />
                     </Button>
@@ -2184,7 +2440,12 @@ function ClientProgramPage() {
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                         setCommentText(e.target.value)
                       }
-                      className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 rounded-xl min-h-[120px]"
+                      className="rounded-xl min-h-[120px] border"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
                       rows={4}
                     />
 
@@ -2192,15 +2453,38 @@ function ClientProgramPage() {
                       <Button
                         variant="outline"
                         onClick={handleCloseCommentModal}
-                        className="flex-1 border-gray-500 text-gray-400 hover:bg-gray-700"
+                        className="flex-1 transition-colors"
+                        style={{
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_SECONDARY,
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        }}
                       >
                         Cancel
                       </Button>
                       <Button
                         onClick={handleSubmitComment}
                         disabled={!commentText.trim() || isSubmittingComment}
-                        className="flex-1"
-                        style={{ backgroundColor: "#10B981" }}
+                        className="flex-1 transition-colors"
+                        style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                          }
+                        }}
                       >
                         {isSubmittingComment ? (
                           <>
@@ -2236,23 +2520,51 @@ function ClientProgramPage() {
               onClick={() => setIsCoachNotesModalOpen(false)}
             >
               <div
-                className="bg-[#0F172A] rounded-xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl border border-[#1E293B] flex flex-col"
+                className="rounded-xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl border flex flex-col"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
                 onClick={e => e.stopPropagation()}
               >
                 {/* Compact Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#1E293B] bg-[#1E1B4B]">
+                <div 
+                  className="flex items-center justify-between px-4 py-3 border-b"
+                  style={{
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                  }}
+                >
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-[#818CF8]" />
-                    <h3 className="text-base font-semibold text-[#E2E8F0]">
+                    <FileText 
+                      className="h-4 w-4" 
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                    />
+                    <h3 
+                      className="text-base font-semibold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Coach Notes
                     </h3>
-                    <span className="text-xs text-[#94A3B8]">
+                    <span 
+                      className="text-xs"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       ({coachNotes?.length || 0})
                     </span>
                   </div>
                   <button
                     onClick={() => setIsCoachNotesModalOpen(false)}
-                    className="p-1.5 rounded hover:bg-[#312E81] text-[#94A3B8] hover:text-[#E2E8F0] transition-colors"
+                    className="p-1.5 rounded transition-colors"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -2260,16 +2572,28 @@ function ClientProgramPage() {
 
                 {/* Compact Notes List */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  <div className="divide-y divide-[#1E293B]">
+                  <div 
+                    className="divide-y"
+                    style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                  >
                     {coachNotes && coachNotes.length > 0 ? (
                       coachNotes.map((note, index) => (
                         <div
                           key={note.id}
-                          className="p-4 hover:bg-[#1E293B]/50 transition-colors"
+                          className="p-4 transition-colors"
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                          }}
                         >
                           {/* Compact Date */}
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xs font-medium text-[#818CF8]">
+                            <span 
+                              className="text-xs font-medium"
+                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                            >
                               {new Date(note.createdAt).toLocaleDateString(
                                 "en-US",
                                 {
@@ -2279,7 +2603,10 @@ function ClientProgramPage() {
                                 }
                               )}
                             </span>
-                            <span className="text-xs text-[#64748B]">
+                            <span 
+                              className="text-xs"
+                              style={{ color: COLORS.TEXT_MUTED }}
+                            >
                               {new Date(note.createdAt).toLocaleTimeString(
                                 "en-US",
                                 {
@@ -2291,16 +2618,28 @@ function ClientProgramPage() {
                           </div>
 
                           {/* Compact Content */}
-                          <p className="text-sm text-[#E2E8F0] leading-relaxed whitespace-pre-wrap mb-3">
+                          <p 
+                            className="text-sm leading-relaxed whitespace-pre-wrap mb-3"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
                             {note.content}
                           </p>
 
                           {/* Compact Attachments */}
                           {note.attachments && note.attachments.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-[#1E293B]">
+                            <div 
+                              className="mt-3 pt-3 border-t"
+                              style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                            >
                               <div className="flex items-center gap-2 mb-2">
-                                <Paperclip className="w-3 h-3 text-[#818CF8]" />
-                                <span className="text-xs font-medium text-[#818CF8]">
+                                <Paperclip 
+                                  className="w-3 h-3" 
+                                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                                />
+                                <span 
+                                  className="text-xs font-medium"
+                                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                                >
                                   {note.attachments.length} attachment
                                   {note.attachments.length !== 1 ? "s" : ""}
                                 </span>
@@ -2312,23 +2651,50 @@ function ClientProgramPage() {
                                     href={attachment.fileUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-[#1E293B] border border-[#334155] hover:bg-[#312E81] hover:border-[#6366F1] transition-colors group"
+                                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border transition-colors group"
+                                    style={{
+                                      backgroundColor: COLORS.BACKGROUND_CARD,
+                                      borderColor: COLORS.BORDER_SUBTLE,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                      e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                    }}
                                   >
                                     {attachment.fileType.startsWith(
                                       "image/"
                                     ) ? (
-                                      <Image className="w-3.5 h-3.5 text-[#818CF8]" />
+                                      <Image 
+                                        className="w-3.5 h-3.5" 
+                                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                                      />
                                     ) : attachment.fileType.startsWith(
                                         "video/"
                                       ) ? (
-                                      <Video className="w-3.5 h-3.5 text-[#818CF8]" />
+                                      <Video 
+                                        className="w-3.5 h-3.5" 
+                                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                                      />
                                     ) : (
-                                      <FileText className="w-3.5 h-3.5 text-[#818CF8]" />
+                                      <FileText 
+                                        className="w-3.5 h-3.5" 
+                                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                                      />
                                     )}
-                                    <span className="text-xs text-[#E2E8F0] truncate max-w-[120px]">
+                                    <span 
+                                      className="text-xs truncate max-w-[120px]"
+                                      style={{ color: COLORS.TEXT_PRIMARY }}
+                                    >
                                       {attachment.fileName}
                                     </span>
-                                    <span className="text-xs text-[#64748B]">
+                                    <span 
+                                      className="text-xs"
+                                      style={{ color: COLORS.TEXT_MUTED }}
+                                    >
                                       (
                                       {(
                                         attachment.fileSize /
@@ -2346,8 +2712,14 @@ function ClientProgramPage() {
                       ))
                     ) : (
                       <div className="text-center py-12 px-4">
-                        <FileText className="h-8 w-8 mx-auto mb-3 text-[#475569]" />
-                        <p className="text-sm text-[#94A3B8]">
+                        <FileText 
+                          className="h-8 w-8 mx-auto mb-3" 
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        />
+                        <p 
+                          className="text-sm"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
                           No notes from your coach yet
                         </p>
                       </div>
@@ -2434,22 +2806,29 @@ function QuickMessageModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div
-        className="relative w-full max-w-md rounded-3xl p-6 shadow-2xl border bg-gradient-to-br from-green-500/10 via-green-600/5 to-green-700/10 border-green-500/20"
+        className="relative w-full max-w-md rounded-3xl p-6 shadow-2xl border"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: getGreenPrimary(0.3),
+        }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-5 rounded-3xl overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-green-400 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-green-300 rounded-full blur-2xl"></div>
-        </div>
 
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+              <div 
+                className="p-2 rounded-2xl shadow-lg"
+                style={{
+                  background: `linear-gradient(135deg, ${COLORS.GREEN_PRIMARY} 0%, ${COLORS.GREEN_DARK} 100%)`,
+                }}
+              >
                 <MessageSquare className="h-5 w-5 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-white">
+              <h3 
+                className="text-lg font-bold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Message Your Coach
               </h3>
             </div>
@@ -2479,14 +2858,41 @@ function QuickMessageModal({
                   }
                 }}
                 placeholder="Type your message here..."
-                className="w-full min-h-[120px] mb-4 bg-[#2A3133] border border-green-500/20 text-[#C3BCC2] resize-none rounded-xl focus:border-green-500/40 focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                className="w-full min-h-[120px] mb-4 resize-none rounded-xl focus:outline-none focus:ring-2"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  border: `1px solid ${COLORS.GREEN_DARK}`,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.GREEN_DARK}`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.GREEN_DARK;
+                  e.currentTarget.style.boxShadow = "none";
+                }}
                 disabled={sendMessageMutation.isPending}
               />
               <div className="flex items-center justify-end gap-2">
                 <button
                   onClick={onClose}
                   disabled={sendMessageMutation.isPending}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-[#353A3A] text-[#C3BCC2] hover:bg-[#404545] disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    }
+                  }}
                 >
                   Cancel
                 </button>

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Upload, Check, AlertCircle } from "lucide-react";
 import { UploadButton } from "@uploadthing/react";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
+import { COLORS } from "@/lib/colors";
 
 interface ClientVideoSubmissionModalProps {
   isOpen: boolean;
@@ -98,19 +99,28 @@ export default function ClientVideoSubmissionModal({
       <div
         className="rounded-2xl border w-[500px] max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/50"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header */}
-        <div className="p-6 border-b" style={{ borderColor: "#606364" }}>
+        <div 
+          className="p-6 border-b" 
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
+              <h2 
+                className="text-xl font-bold" 
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Record Video
               </h2>
               {drillTitle && (
-                <p className="text-sm mt-1" style={{ color: "#ABA4AA" }}>
+                <p 
+                  className="text-sm mt-1" 
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
                   For: {drillTitle}
                 </p>
               )}
@@ -118,14 +128,14 @@ export default function ClientVideoSubmissionModal({
             <button
               onClick={handleClose}
               className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
-              style={{ color: "#ABA4AA" }}
+              style={{ color: COLORS.TEXT_SECONDARY }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = "#606364";
-                e.currentTarget.style.color = "#C3BCC2";
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = "#ABA4AA";
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               }}
             >
               <X className="h-5 w-5" />
@@ -138,15 +148,20 @@ export default function ClientVideoSubmissionModal({
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div
-                className="flex items-center gap-2 p-3 rounded-lg"
+                className="flex items-center gap-2 p-3 rounded-lg border"
                 style={{
-                  backgroundColor: "rgba(239, 68, 68, 0.1)",
-                  borderColor: "rgba(239, 68, 68, 0.3)",
-                  border: "1px solid",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.RED_BORDER,
                 }}
               >
-                <AlertCircle className="h-4 w-4" style={{ color: "#EF4444" }} />
-                <span className="text-sm" style={{ color: "#EF4444" }}>
+                <AlertCircle 
+                  className="h-4 w-4" 
+                  style={{ color: COLORS.RED_ALERT }} 
+                />
+                <span 
+                  className="text-sm" 
+                  style={{ color: COLORS.RED_ALERT }}
+                >
                   {error}
                 </span>
               </div>
@@ -156,14 +171,14 @@ export default function ClientVideoSubmissionModal({
             <div className="space-y-3">
               <label
                 className="text-sm font-medium"
-                style={{ color: "#C3BCC2" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Upload Video *
               </label>
               {!videoUrl ? (
                 <div
                   className="border-2 border-dashed rounded-lg p-8 text-center"
-                  style={{ borderColor: "#606364" }}
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
                   <UploadButton<OurFileRouter, "videoUploader">
                     endpoint="videoUploader"
@@ -194,20 +209,29 @@ export default function ClientVideoSubmissionModal({
               ) : (
                 <div
                   className="rounded-lg p-4"
-                  style={{ backgroundColor: "#2A3133" }}
+                  style={{ backgroundColor: COLORS.BACKGROUND_CARD }}
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className="w-12 h-12 rounded flex items-center justify-center"
-                      style={{ backgroundColor: "rgba(16, 185, 129, 0.2)" }}
+                      style={{ backgroundColor: COLORS.BACKGROUND_CARD }}
                     >
-                      <Check className="h-6 w-6" style={{ color: "#10B981" }} />
+                      <Check 
+                        className="h-6 w-6" 
+                        style={{ color: COLORS.GREEN_PRIMARY }} 
+                      />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium" style={{ color: "#C3BCC2" }}>
+                      <p 
+                        className="font-medium" 
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         Video uploaded successfully
                       </p>
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <p 
+                        className="text-sm" 
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         Ready to send
                       </p>
                     </div>
@@ -215,9 +239,9 @@ export default function ClientVideoSubmissionModal({
                       type="button"
                       onClick={() => setVideoUrl("")}
                       className="p-2 rounded-lg transition-colors"
-                      style={{ color: "#EF4444" }}
+                      style={{ color: COLORS.RED_ALERT }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor = "#606364";
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.backgroundColor = "transparent";
@@ -234,7 +258,7 @@ export default function ClientVideoSubmissionModal({
             <div className="space-y-3">
               <label
                 className="text-sm font-medium"
-                style={{ color: "#C3BCC2" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Message (Optional)
               </label>
@@ -244,9 +268,9 @@ export default function ClientVideoSubmissionModal({
                 placeholder="Add any notes or questions for your coach..."
                 className="border rounded-lg resize-none"
                 style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
                 }}
                 rows={4}
               />
@@ -257,7 +281,7 @@ export default function ClientVideoSubmissionModal({
               type="submit"
               className="w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{
-                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
+                background: `linear-gradient(135deg, ${COLORS.GOLDEN_DARK} 0%, ${COLORS.GOLDEN_ACCENT} 100%)`,
                 color: "#FFFFFF",
               }}
               disabled={isSubmitting || !videoUrl}

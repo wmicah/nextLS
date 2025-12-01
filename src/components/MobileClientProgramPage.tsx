@@ -62,6 +62,7 @@ import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 import ClientProgramDayModal from "./ClientProgramDayModal";
 import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
 import { useExerciseCompletion } from "@/hooks/useExerciseCompletion";
+import { COLORS } from "@/lib/colors";
 import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 
 interface Drill {
@@ -1452,9 +1453,21 @@ export default function MobileClientProgramPage() {
       {/* Video Player Modal */}
       {isVideoPlayerOpen && selectedVideo && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl max-h-[90vh] bg-[#1F2426] rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-[#606364]">
-              <h3 className="text-lg font-semibold text-white">
+          <div 
+            className="w-full max-w-4xl max-h-[90vh] rounded-lg overflow-hidden border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_DARK,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
+            <div 
+              className="flex items-center justify-between p-4 border-b"
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
+            >
+              <h3 
+                className="text-lg font-semibold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 {selectedVideo.title}
               </h3>
               <button
@@ -1462,7 +1475,14 @@ export default function MobileClientProgramPage() {
                   setIsVideoPlayerOpen(false);
                   setSelectedVideo(null);
                 }}
-                className="text-[#ABA4AA] hover:text-white"
+                className="transition-colors"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -1499,29 +1519,63 @@ export default function MobileClientProgramPage() {
       {/* Comment Modal */}
       {isCommentModalOpen && selectedDrillForComment && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-[#1F2426] rounded-lg border-2 border-[#4A5A70] p-6 w-full max-w-md">
+          <div 
+            className="rounded-lg border-2 p-6 w-full max-w-md"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_DARK,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">Add Comment</h3>
+              <h3 
+                className="text-lg font-bold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Add Comment
+              </h3>
               <button
                 onClick={() => {
                   setIsCommentModalOpen(false);
                   setSelectedDrillForComment(null);
                   setCommentText("");
                 }}
-                className="text-[#ABA4AA] hover:text-white"
+                className="transition-colors"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#C3BCC2] mb-2">
+                <label 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   Comment for {selectedDrillForComment.title}
                 </label>
                 <textarea
                   value={commentText}
                   onChange={e => setCommentText(e.target.value)}
-                  className="w-full p-3 bg-[#353A3A] border border-[#606364] text-[#C3BCC2] rounded-lg focus:ring-2 focus:ring-[#4A5A70] focus:border-transparent"
+                  className="w-full p-3 border rounded-lg focus:ring-2 focus:outline-none transition-colors"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.GOLDEN_BORDER}`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                   rows={4}
                   placeholder="Add your comment..."
                 />
@@ -1534,14 +1588,38 @@ export default function MobileClientProgramPage() {
                     setCommentText("");
                   }}
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 transition-colors"
+                  style={{
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_SECONDARY,
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSubmitComment}
                   disabled={!commentText.trim() || isSubmittingComment}
-                  className="flex-1 bg-[#4A5A70] hover:bg-[#606364] text-white"
+                  className="flex-1 transition-colors"
+                  style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                    }
+                  }}
                 >
                   {isSubmittingComment ? "Submitting..." : "Submit"}
                 </Button>
@@ -1558,23 +1636,51 @@ export default function MobileClientProgramPage() {
           onClick={() => setIsCoachNotesModalOpen(false)}
         >
           <div
-            className="bg-[#0F172A] rounded-xl w-full max-h-[85vh] overflow-hidden shadow-2xl border border-[#1E293B] flex flex-col"
+            className="rounded-xl w-full max-h-[85vh] overflow-hidden shadow-2xl border flex flex-col"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_DARK,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
             onClick={e => e.stopPropagation()}
           >
             {/* Compact Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#1E293B] bg-[#1E1B4B]">
+            <div 
+              className="flex items-center justify-between px-4 py-3 border-b"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                backgroundColor: COLORS.BACKGROUND_CARD,
+              }}
+            >
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-[#818CF8]" />
-                <h3 className="text-base font-semibold text-[#E2E8F0]">
+                <FileText 
+                  className="h-4 w-4" 
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
+                <h3 
+                  className="text-base font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   Coach Notes
                 </h3>
-                <span className="text-xs text-[#94A3B8]">
+                <span 
+                  className="text-xs"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
                   ({coachNotes?.length || 0})
                 </span>
               </div>
               <button
                 onClick={() => setIsCoachNotesModalOpen(false)}
-                className="p-1.5 rounded hover:bg-[#312E81] text-[#94A3B8] hover:text-[#E2E8F0] transition-colors"
+                className="p-1.5 rounded transition-colors"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1582,16 +1688,28 @@ export default function MobileClientProgramPage() {
 
             {/* Compact Notes List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-              <div className="divide-y divide-[#1E293B]">
+              <div 
+                className="divide-y"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
                 {coachNotes && coachNotes.length > 0 ? (
                   coachNotes.map((note, index) => (
                     <div
                       key={note.id}
-                      className="p-4 hover:bg-[#1E293B]/50 transition-colors"
+                      className="p-4 transition-colors"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                      }}
                     >
                       {/* Compact Date */}
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-[#818CF8]">
+                        <span 
+                          className="text-xs font-medium"
+                          style={{ color: COLORS.GOLDEN_ACCENT }}
+                        >
                           {new Date(note.createdAt).toLocaleDateString(
                             "en-US",
                             {
@@ -1601,7 +1719,10 @@ export default function MobileClientProgramPage() {
                             }
                           )}
                         </span>
-                        <span className="text-xs text-[#64748B]">
+                        <span 
+                          className="text-xs"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        >
                           {new Date(note.createdAt).toLocaleTimeString(
                             "en-US",
                             {
@@ -1613,16 +1734,28 @@ export default function MobileClientProgramPage() {
                       </div>
 
                       {/* Compact Content */}
-                      <p className="text-sm text-[#E2E8F0] leading-relaxed whitespace-pre-wrap mb-3">
+                      <p 
+                        className="text-sm leading-relaxed whitespace-pre-wrap mb-3"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         {note.content}
                       </p>
 
                       {/* Compact Attachments */}
                       {note.attachments && note.attachments.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-[#1E293B]">
+                        <div 
+                          className="mt-3 pt-3 border-t"
+                          style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                        >
                           <div className="flex items-center gap-2 mb-2">
-                            <Paperclip className="w-3 h-3 text-[#818CF8]" />
-                            <span className="text-xs font-medium text-[#818CF8]">
+                            <Paperclip 
+                              className="w-3 h-3" 
+                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                            />
+                            <span 
+                              className="text-xs font-medium"
+                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                            >
                               {note.attachments.length} attachment
                               {note.attachments.length !== 1 ? "s" : ""}
                             </span>
@@ -1634,19 +1767,46 @@ export default function MobileClientProgramPage() {
                                 href={attachment.fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-[#1E293B] border border-[#334155] hover:bg-[#312E81] hover:border-[#6366F1] transition-colors group"
+                                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border transition-colors group"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                  e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                }}
                               >
                                 {attachment.fileType.startsWith("image/") ? (
-                                  <Image className="w-3.5 h-3.5 text-[#818CF8]" />
+                                  <Image 
+                                    className="w-3.5 h-3.5" 
+                                    style={{ color: COLORS.GOLDEN_ACCENT }}
+                                  />
                                 ) : attachment.fileType.startsWith("video/") ? (
-                                  <Video className="w-3.5 h-3.5 text-[#818CF8]" />
+                                  <Video 
+                                    className="w-3.5 h-3.5" 
+                                    style={{ color: COLORS.GOLDEN_ACCENT }}
+                                  />
                                 ) : (
-                                  <FileText className="w-3.5 h-3.5 text-[#818CF8]" />
+                                  <FileText 
+                                    className="w-3.5 h-3.5" 
+                                    style={{ color: COLORS.GOLDEN_ACCENT }}
+                                  />
                                 )}
-                                <span className="text-xs text-[#E2E8F0] truncate max-w-[120px]">
+                                <span 
+                                  className="text-xs truncate max-w-[120px]"
+                                  style={{ color: COLORS.TEXT_PRIMARY }}
+                                >
                                   {attachment.fileName}
                                 </span>
-                                <span className="text-xs text-[#64748B]">
+                                <span 
+                                  className="text-xs"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                >
                                   (
                                   {(attachment.fileSize / 1024 / 1024).toFixed(
                                     1
@@ -1662,8 +1822,14 @@ export default function MobileClientProgramPage() {
                   ))
                 ) : (
                   <div className="text-center py-12 px-4">
-                    <FileText className="h-8 w-8 mx-auto mb-3 text-[#475569]" />
-                    <p className="text-sm text-[#94A3B8]">
+                    <FileText 
+                      className="h-8 w-8 mx-auto mb-3" 
+                      style={{ color: COLORS.TEXT_MUTED }}
+                    />
+                    <p 
+                      className="text-sm"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       No notes from your coach yet
                     </p>
                   </div>

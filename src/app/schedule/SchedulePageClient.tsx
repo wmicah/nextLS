@@ -857,11 +857,48 @@ function SchedulePageClient() {
                           "MMM d, yyyy 'at' h:mm a"
                         )}
                       </div>
-                      {request.description && (
-                        <div className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
-                          Reason: {request.description}
-                        </div>
-                      )}
+                      {request.description && (() => {
+                        // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                        let cleanDescription = request.description;
+                        let previousLength = 0;
+                        while (cleanDescription.length !== previousLength) {
+                          previousLength = cleanDescription.length;
+                          cleanDescription = cleanDescription.replace(
+                            /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                            ""
+                          );
+                        }
+                        // Remove any leftover JSON fragments (including escaped quotes)
+                        cleanDescription = cleanDescription.replace(
+                          /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.replace(
+                          /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.replace(
+                          /\[\/OLD_LESSON_DATA\]/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.replace(
+                          /\\*["\s]*}$/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.replace(
+                          /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.trim();
+                        if (!cleanDescription || cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)) {
+                          return null;
+                        }
+                        return (
+                          <div className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
+                            Reason: {cleanDescription}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1856,6 +1893,155 @@ function SchedulePageClient() {
                   })()}
                 </div>
 
+                {/* Pending Schedule Requests for this day */}
+                {(() => {
+                  const dayPendingRequests = pendingRequests.filter(
+                    (request: { date: string }) => {
+                      const requestDate = new Date(request.date);
+                      return isSameDay(requestDate, selectedDate);
+                    }
+                  );
+
+                  return dayPendingRequests.length > 0 ? (
+                    <div className="mb-6">
+                      <div className="mb-4 flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                        <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                          Pending Requests ({dayPendingRequests.length})
+                        </h3>
+                      </div>
+                      <div className="space-y-3">
+                        {dayPendingRequests.map((request: any) => {
+                          const requestDate = new Date(request.date);
+                          // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                          let cleanDescription = request.description || "";
+                          let previousLength = 0;
+                          while (cleanDescription.length !== previousLength) {
+                            previousLength = cleanDescription.length;
+                            cleanDescription = cleanDescription.replace(
+                              /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                              ""
+                            );
+                          }
+                          // Remove any leftover JSON fragments (including escaped quotes)
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\[\/OLD_LESSON_DATA\]/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*}$/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.trim();
+                          if (!cleanDescription || cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)) {
+                            cleanDescription = "";
+                          }
+
+                          return (
+                            <div
+                              key={request.id}
+                              className="flex items-center justify-between p-4 rounded-lg border"
+                              style={{
+                                backgroundColor: getGoldenAccent(0.1),
+                                borderColor: COLORS.GOLDEN_BORDER,
+                              }}
+                            >
+                              <div className="flex-1">
+                                <div className="font-medium" style={{ color: COLORS.GOLDEN_ACCENT }}>
+                                  {format(requestDate, "h:mm a")}
+                                </div>
+                                <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                  {request.client?.name ||
+                                    request.client?.email ||
+                                    "Client"}
+                                </div>
+                                {cleanDescription && (
+                                  <div className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
+                                    Reason: {cleanDescription}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    approveScheduleRequestMutation.mutate({ eventId: request.id });
+                                  }}
+                                  disabled={approveScheduleRequestMutation.isPending}
+                                  className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                  style={{
+                                    backgroundColor: COLORS.GREEN_PRIMARY,
+                                    color: COLORS.BACKGROUND_DARK,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!e.currentTarget.disabled) {
+                                      e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!e.currentTarget.disabled) {
+                                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                                    }
+                                  }}
+                                >
+                                  {approveScheduleRequestMutation.isPending ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                      Approving...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4" />
+                                      Approve
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequestToReject(request);
+                                    setShowRejectModal(true);
+                                  }}
+                                  disabled={rejectScheduleRequestMutation.isPending}
+                                  className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                  style={{
+                                    backgroundColor: COLORS.BACKGROUND_CARD,
+                                    color: COLORS.RED_ALERT,
+                                    border: `1px solid ${COLORS.RED_BORDER}`,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!e.currentTarget.disabled) {
+                                      e.currentTarget.style.backgroundColor = getRedAlert(0.1);
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!e.currentTarget.disabled) {
+                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Reject
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
                 {/* Available Time Slots */}
                 <div>
                   <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
@@ -2740,12 +2926,52 @@ function SchedulePageClient() {
                       "MMM d, yyyy 'at' h:mm a"
                     )}
                   </div>
-                  {selectedRequestToReject.description && (
-                    <div className="text-sm text-gray-300 mb-4">
-                      <strong>Client&apos;s Reason:</strong>{" "}
-                      {selectedRequestToReject.description}
-                    </div>
-                  )}
+                  {selectedRequestToReject.description && (() => {
+                    // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                    let cleanDescription = selectedRequestToReject.description;
+                    let previousLength = 0;
+                    // Keep removing until no more matches (handles nested patterns)
+                    while (cleanDescription.length !== previousLength) {
+                      previousLength = cleanDescription.length;
+                      cleanDescription = cleanDescription.replace(
+                        /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                        ""
+                      );
+                    }
+                    // Remove any leftover JSON fragments (including escaped quotes)
+                    cleanDescription = cleanDescription.replace(
+                      /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
+                      ""
+                    );
+                    cleanDescription = cleanDescription.replace(
+                      /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
+                      ""
+                    );
+                    cleanDescription = cleanDescription.replace(
+                      /\[\/OLD_LESSON_DATA\]/g,
+                      ""
+                    );
+                    // Remove any trailing escaped quotes and JSON fragments
+                    cleanDescription = cleanDescription.replace(
+                      /\\*["\s]*}$/g,
+                      ""
+                    );
+                    cleanDescription = cleanDescription.replace(
+                      /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
+                      ""
+                    );
+                    cleanDescription = cleanDescription.trim();
+                    // If the description is just leftover JSON fragments or empty, don't show it
+                    if (!cleanDescription || cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)) {
+                      return null;
+                    }
+                    return (
+                      <div className="text-sm text-gray-300 mb-4">
+                        <strong>Client&apos;s Reason:</strong>{" "}
+                        {cleanDescription}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="space-y-4">
@@ -2879,11 +3105,18 @@ function SchedulePageClient() {
                                     request.client?.email ||
                                     "Client"}
                                 </div>
-                                {request.description && (
-                                  <div className="text-xs text-orange-100 mt-1">
-                                    Reason: {request.description}
-                                  </div>
-                                )}
+                                {request.description && (() => {
+                                  // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                                  const cleanDescription = request.description.replace(
+                                    /\[OLD_LESSON_DATA\].*?\[\/OLD_LESSON_DATA\]/s,
+                                    ""
+                                  ).trim();
+                                  return cleanDescription ? (
+                                    <div className="text-xs text-orange-100 mt-1">
+                                      Reason: {cleanDescription}
+                                    </div>
+                                  ) : null;
+                                })()}
                               </div>
                               <div className="flex items-center gap-2">
                                 <button

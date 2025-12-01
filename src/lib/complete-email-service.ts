@@ -129,6 +129,67 @@ export class CompleteEmailService {
   }
 
   // 3. LESSON & SCHEDULE NOTIFICATIONS
+  async sendScheduleExchangeRequest(
+    coachEmail: string,
+    coachName: string,
+    clientName: string,
+    oldLessonDate: string,
+    oldLessonTime: string,
+    newRequestedDate: string,
+    newRequestedTime: string,
+    reason: string | undefined,
+    coachUserId?: string
+  ): Promise<boolean> {
+    try {
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("❌ RESEND_API_KEY not configured - cannot send email");
+        return false;
+      }
+
+      // Check if coach has email notifications enabled
+      if (coachUserId) {
+        const emailEnabled = await this.checkEmailNotificationsEnabled(
+          coachUserId
+        );
+        if (!emailEnabled) {
+          console.log(
+            `📧 Email notifications disabled for coach ${coachUserId}, skipping schedule exchange request email`
+          );
+          return false;
+        }
+      }
+
+      const template = completeEmailTemplates.scheduleExchangeRequest(
+        coachName,
+        clientName,
+        oldLessonDate,
+        oldLessonTime,
+        newRequestedDate,
+        newRequestedTime,
+        reason
+      );
+
+      const result = await resend.emails.send({
+        from: this.fromEmail,
+        to: [coachEmail],
+        subject: template.subject,
+        html: template.html,
+      });
+
+      if (result.error) {
+        console.error("❌ Failed to send schedule exchange request email:", result.error);
+        return false;
+      }
+
+      console.log("✅ Schedule exchange request email sent successfully:", result.data?.id);
+      return true;
+    } catch (error) {
+      console.error("❌ Failed to send schedule exchange request email:", error);
+      return false;
+    }
+  }
+
   async sendLessonReminder(
     clientEmail: string,
     clientName: string,

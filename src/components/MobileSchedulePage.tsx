@@ -504,11 +504,48 @@ export default function MobileSchedulePage() {
                           "MMM d, yyyy 'at' h:mm a"
                         )}
                       </div>
-                      {request.description && (
-                        <div className="text-xs text-orange-100 mt-1">
-                          Reason: {request.description}
-                        </div>
-                      )}
+                      {request.description && (() => {
+                        // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                        let cleanDescription = request.description;
+                        let previousLength = 0;
+                        while (cleanDescription.length !== previousLength) {
+                          previousLength = cleanDescription.length;
+                          cleanDescription = cleanDescription.replace(
+                            /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                            ""
+                          );
+                        }
+                        // Remove any leftover JSON fragments (including escaped quotes)
+                        cleanDescription = cleanDescription.replace(
+                          /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.replace(
+                          /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.replace(
+                          /\[\/OLD_LESSON_DATA\]/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.replace(
+                          /\\*["\s]*}$/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.replace(
+                          /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
+                          ""
+                        );
+                        cleanDescription = cleanDescription.trim();
+                        if (!cleanDescription || cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)) {
+                          return null;
+                        }
+                        return (
+                          <div className="text-xs text-orange-100 mt-1">
+                            Reason: {cleanDescription}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -762,14 +799,35 @@ export default function MobileSchedulePage() {
 
         {/* Day Overview Modal */}
         {showDayOverviewModal && selectedDate && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            style={{ pointerEvents: "auto" }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowDayOverviewModal(false);
+                setSelectedDate(null);
+                setSelectedTimeSlot("");
+                setClientSearch("");
+                setScheduleForm({ clientId: "", time: "", date: "" });
+              }
+            }}
+          >
             <div
               className="rounded-2xl shadow-xl border w-full max-w-md max-h-[85vh] overflow-y-auto"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+              style={{ 
+                backgroundColor: "#353A3A", 
+                borderColor: "#606364", 
+                pointerEvents: "auto",
+                position: "relative",
+                zIndex: 51
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
             >
               <div
                 className="sticky top-0 border-b px-4 py-4 flex items-center justify-between z-10"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                style={{ backgroundColor: "#353A3A", borderColor: "#606364", pointerEvents: "auto" }}
               >
                 <div>
                   <h2 className="text-xl font-bold text-white">
@@ -816,9 +874,9 @@ export default function MobileSchedulePage() {
                   <X className="h-6 w-6" />
                 </button>
               </div>
-              <div className="p-4">
+              <div className="p-4" style={{ pointerEvents: "auto", position: "relative" }}>
                 {/* Existing Lessons */}
-                <div className="mb-6">
+                <div className="mb-6" style={{ pointerEvents: "auto" }}>
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-white">
                       Scheduled Lessons
@@ -898,8 +956,132 @@ export default function MobileSchedulePage() {
                   })()}
                 </div>
 
+                {/* Pending Schedule Requests for this day */}
+                {(() => {
+                  const dayPendingRequests = pendingRequests.filter(
+                    (request: { date: string }) => {
+                      const requestDate = new Date(request.date);
+                      return isSameDay(requestDate, selectedDate);
+                    }
+                  );
+
+                  return dayPendingRequests.length > 0 ? (
+                    <div className="mb-6" style={{ pointerEvents: "auto", position: "relative", zIndex: 1 }}>
+                      <div className="mb-4 flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-orange-400" />
+                        <h3 className="text-lg font-semibold text-white">
+                          Pending Requests ({dayPendingRequests.length})
+                        </h3>
+                      </div>
+                      <div className="space-y-3">
+                        {dayPendingRequests.map((request: any) => {
+                          const requestDate = new Date(request.date);
+                          // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                          let cleanDescription = request.description || "";
+                          let previousLength = 0;
+                          while (cleanDescription.length !== previousLength) {
+                            previousLength = cleanDescription.length;
+                            cleanDescription = cleanDescription.replace(
+                              /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                              ""
+                            );
+                          }
+                          // Remove any leftover JSON fragments (including escaped quotes)
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\[\/OLD_LESSON_DATA\]/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*}$/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.trim();
+                          if (!cleanDescription || cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)) {
+                            cleanDescription = "";
+                          }
+
+                          return (
+                            <div
+                              key={request.id}
+                              className="flex flex-col gap-3 p-3 rounded-lg border border-orange-500/20 bg-orange-500/10"
+                            >
+                              <div className="flex-1">
+                                <div className="font-medium text-orange-300">
+                                  {formatTimeInUserTimezone(request.date)}
+                                </div>
+                                <div className="text-sm text-orange-200">
+                                  {request.client?.name ||
+                                    request.client?.email ||
+                                    "Client"}
+                                </div>
+                                {cleanDescription && (
+                                  <div className="text-xs text-orange-100 mt-1">
+                                    Reason: {cleanDescription}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    approveScheduleRequestMutation.mutate({ eventId: request.id });
+                                  }}
+                                  disabled={approveScheduleRequestMutation.isPending}
+                                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-emerald-500 text-white"
+                                >
+                                  {approveScheduleRequestMutation.isPending ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                      Approving...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4" />
+                                      Approve
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    rejectScheduleRequestMutation.mutate({ eventId: request.id });
+                                  }}
+                                  disabled={rejectScheduleRequestMutation.isPending}
+                                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-red-500/20 text-red-400 border border-red-500/30"
+                                >
+                                  {rejectScheduleRequestMutation.isPending ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                      Rejecting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XCircle className="h-4 w-4" />
+                                      Reject
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
                 {/* Available Time Slots */}
-                <div>
+                <div style={{ position: "relative", zIndex: 5, pointerEvents: "auto" }}>
                   <h3 className="text-lg font-semibold text-white mb-4">
                     Available Time Slots
                   </h3>
@@ -1086,15 +1268,47 @@ export default function MobileSchedulePage() {
 
                     return availableSlots.length > 0 ? (
                       <>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div 
+                          className="grid grid-cols-3 gap-2" 
+                          style={{ 
+                            pointerEvents: "auto", 
+                            position: "relative", 
+                            zIndex: 20,
+                            isolation: "isolate",
+                            touchAction: "manipulation"
+                          }}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onTouchEnd={(e) => e.stopPropagation()}
+                        >
                           {availableSlots.map((slot: any, index) => (
-                            <button
-                              key={index}
-                              onClick={() => setSelectedTimeSlot(slot.time)}
-                              className={`p-2.5 rounded-lg border text-center transition-all duration-200 text-sm ${
+                            <div
+                              key={`time-slot-${index}-${slot.time}`}
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedTimeSlot(slot.time);
+                              }}
+                              onTouchStart={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedTimeSlot(slot.time);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  setSelectedTimeSlot(slot.time);
+                                }
+                              }}
+                              className={`p-2.5 rounded-lg border text-center transition-all duration-200 text-sm touch-manipulation select-none ${
                                 selectedTimeSlot === slot.time
                                   ? "bg-sky-500 border-sky-400 text-white"
-                                  : "hover:bg-sky-500/10 hover:border-sky-500/30"
+                                  : "hover:bg-sky-500/10 hover:border-sky-500/30 active:bg-sky-500/20"
                               }`}
                               style={{
                                 backgroundColor:
@@ -1107,6 +1321,17 @@ export default function MobileSchedulePage() {
                                   ? "#0EA5E9"
                                   : "#606364",
                                 color: slot.isBlocked ? "#EF4444" : "#FFFFFF",
+                                pointerEvents: "auto",
+                                cursor: "pointer",
+                                WebkitTapHighlightColor: "rgba(14, 165, 233, 0.3)",
+                                touchAction: "manipulation",
+                                userSelect: "none",
+                                WebkitUserSelect: "none",
+                                position: "relative",
+                                zIndex: 25,
+                                minHeight: "44px",
+                                minWidth: "44px",
+                                isolation: "isolate",
                               }}
                               title={
                                 slot.isBlocked
@@ -1115,7 +1340,7 @@ export default function MobileSchedulePage() {
                               }
                             >
                               {slot.time}
-                            </button>
+                            </div>
                           ))}
                         </div>
 
