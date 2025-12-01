@@ -649,28 +649,42 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                                 className === "compact" ? "px-1.5 py-1 text-[10px]" : "px-2 py-1.5 text-xs"
                               }`}
                               style={{
-                                borderColor: COLORS.GOLDEN_BORDER,
+                                borderColor: isReminder
+                                  ? getGoldenAccent(0.4)
+                                  : COLORS.GOLDEN_BORDER,
                                 backgroundColor: isReminder
-                                  ? "#F59E0B"
-                                  : "#4A5A70",
+                                  ? getGoldenAccent(0.15)
+                                  : "#2A2F2F",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isReminder) {
+                                  e.currentTarget.style.backgroundColor = "#353A3A";
+                                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isReminder) {
+                                  e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                  e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                                }
                               }}
                             >
                               <div className="flex items-center gap-1">
                                 {isReminder ? (
                                   <Bell
                                     className={`${className === "compact" ? "h-2 w-2" : "h-2.5 w-2.5"} flex-shrink-0`}
-                                    style={{ color: "#FFFFFF" }}
+                                    style={{ color: COLORS.GOLDEN_ACCENT }}
                                   />
                                 ) : (
                                   <Clock
                                     className={`${className === "compact" ? "h-2 w-2" : "h-2.5 w-2.5"} flex-shrink-0`}
-                                    style={{ color: "#E5E7EB" }}
+                                    style={{ color: getGoldenAccent(0.8) }}
                                   />
                                 )}
                                 {isLesson && event.client && (
                                   <span
                                     className={`${className === "compact" ? "text-[10px]" : "text-xs"} truncate`}
-                                    style={{ color: "#D1D5DB" }}
+                                    style={{ color: COLORS.TEXT_PRIMARY }}
                                     title={event.client.name}
                                   >
                                     {(() => {
@@ -690,7 +704,7 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                                 {isReminder && (
                                   <span
                                     className={`${className === "compact" ? "text-[10px]" : "text-xs"} truncate`}
-                                    style={{ color: "#FFFFFF" }}
+                                    style={{ color: COLORS.GOLDEN_ACCENT }}
                                     title={event.title}
                                   >
                                     {event.title.length > (className === "compact" ? 6 : 8)
@@ -699,9 +713,9 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                                   </span>
                                 )}
                                 <span
-                                  className={`${className === "compact" ? "text-[10px]" : "text-xs"} ml-auto`}
+                                  className={`${className === "compact" ? "text-[10px]" : "text-xs"} ml-auto font-medium`}
                                   style={{
-                                    color: isReminder ? "#FFFFFF" : "#E5E7EB",
+                                    color: isReminder ? COLORS.GOLDEN_ACCENT : getGoldenAccent(0.9),
                                   }}
                                   title={`${format(
                                     new Date(event.date),
