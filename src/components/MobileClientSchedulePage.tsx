@@ -48,6 +48,8 @@ export default function MobileClientSchedulePage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [requestReason, setRequestReason] = useState("");
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
+  const [showExchangeOptions, setShowExchangeOptions] = useState(false);
+  const [selectedLessonToExchange, setSelectedLessonToExchange] = useState<any>(null);
 
   // Fetch all schedule data for current and adjacent months
   const { data: coachSchedule = [] } =
@@ -277,6 +279,8 @@ export default function MobileClientSchedulePage() {
         setRequestReason("");
         setSelectedDate(null);
         setShowDayOverviewModal(false);
+        setShowExchangeOptions(false);
+        setSelectedLessonToExchange(null);
         // Refetch data
         utils.clientRouter.getCoachScheduleForClient.refetch();
         utils.clientRouter.getClientLessons.refetch();
@@ -286,6 +290,24 @@ export default function MobileClientSchedulePage() {
         alert(error.message || "Failed to send lesson request");
       },
     });
+
+  // Exchange lesson mutation
+  const exchangeLessonMutation = trpc.clientRouter.exchangeLesson.useMutation({
+    onSuccess: () => {
+      setShowExchangeOptions(false);
+      setSelectedLessonToExchange(null);
+      setSelectedTimeSlot(null);
+      setShowDayOverviewModal(false);
+      setSelectedDate(null);
+      setRequestReason("");
+      utils.clientRouter.getCoachScheduleForClient.refetch();
+      utils.clientRouter.getClientLessons.refetch();
+      alert("Exchange request sent! Your old lesson has been removed. If the coach rejects the new time, your old lesson will be restored.");
+    },
+    onError: (error: any) => {
+      alert(`Error: ${error.message}`);
+    },
+  });
 
   const utils = trpc.useUtils();
 
@@ -1216,25 +1238,232 @@ export default function MobileClientSchedulePage() {
                           ))}
                         </div>
                       )}
-                      <div className="grid grid-cols-3 gap-2">
+                      <div 
+                        className="grid grid-cols-3 gap-2"
+                        style={{ 
+                          pointerEvents: "auto", 
+                          position: "relative", 
+                          zIndex: 20,
+                          touchAction: "manipulation"
+                        }}
+                      >
                         {availableSlots.map((slot, index) => (
-                          <button
-                            key={index}
-                            onClick={() => {
+                          <div
+                            key={`time-slot-${index}-${slot}`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setSelectedTimeSlot(slot);
-                              setShowRequestModal(true);
                             }}
-                            className="p-2 rounded-lg border text-center transition-all duration-200 text-xs hover:bg-blue-500/20 hover:border-blue-400"
+                            onTouchStart={(e) => {
+                              e.stopPropagation();
+                            }}
+                            onTouchEnd={(e) => {
+                              e.stopPropagation();
+                              setSelectedTimeSlot(slot);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                              setSelectedTimeSlot(slot);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg border text-center transition-all duration-200 text-xs touch-manipulation select-none ${
+                              selectedTimeSlot === slot
+                                ? "bg-blue-500 border-blue-400 text-white"
+                                : "hover:bg-blue-500/20 hover:border-blue-400 active:bg-blue-500/30"
+                            }`}
                             style={{
-                              backgroundColor: "#2A2F2F",
-                              borderColor: "#606364",
+                              backgroundColor: selectedTimeSlot === slot ? "#3B82F6" : "#2A2F2F",
+                              borderColor: selectedTimeSlot === slot ? "#60A5FA" : "#606364",
                               color: "#FFFFFF",
+                              pointerEvents: "auto",
+                              cursor: "pointer",
+                              WebkitTapHighlightColor: "rgba(59, 130, 246, 0.3)",
+                              touchAction: "manipulation",
+                              userSelect: "none",
+                              WebkitUserSelect: "none",
+                              position: "relative",
+                              zIndex: 25,
                             }}
                           >
                             {slot}
-                          </button>
+                          </div>
                         ))}
                       </div>
+                      
+                      {/* Request/Exchange Options - Show when time slot is selected */}
+                      {selectedTimeSlot && (
+                        <div className="mt-4 space-y-3">
+                          {!showExchangeOptions ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  if (!selectedDate || !selectedTimeSlot) return;
+                                  
+                                  // Time slot is already in "h:mm AM/PM" format, use it directly
+                                  const timeString = selectedTimeSlot;
+                                  
+                                  const timeZone = getUserTimezone();
+                                  
+                                  requestScheduleChangeMutation.mutate({
+                                    requestedDate: format(selectedDate, "yyyy-MM-dd"),
+                                    requestedTime: timeString,
+                                    reason: requestReason || "Client requested time change",
+                                    timeZone: timeZone,
+                                  });
+                                }}
+                                disabled={requestScheduleChangeMutation.isPending}
+                                className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                                style={{
+                                  backgroundColor: "#2A2F2F",
+                                  borderColor: "#606364",
+                                  color: "#FFFFFF",
+                                  border: "1px solid #606364",
+                                }}
+                              >
+                                {requestScheduleChangeMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    Sending...
+                                  </>
+                                ) : (
+                                  "Request"
+                                )}
+                              </button>
+                              
+                              {allClientLessons.filter((lesson: any) => {
+                                const lessonDate = new Date(lesson.date);
+                                return lessonDate > new Date() && lesson.status === "CONFIRMED";
+                              }).length > 0 && (
+                                <button
+                                  onClick={() => setShowExchangeOptions(true)}
+                                  className="w-full px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                                  style={{ 
+                                    backgroundColor: "#D4AF37",
+                                    color: "#000",
+                                  }}
+                                >
+                                  <ArrowRightLeft className="h-5 w-5" />
+                                  Exchange
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {/* Lesson Selection for Exchange */}
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                <p className="text-sm font-medium text-gray-300 mb-2">
+                                  Select a lesson to exchange:
+                                </p>
+                                {allClientLessons
+                                  .filter((lesson: any) => {
+                                    const lessonDate = new Date(lesson.date);
+                                    return lessonDate > new Date() && lesson.status === "CONFIRMED";
+                                  })
+                                  .map((lesson: any) => {
+                                    const lessonDate = new Date(lesson.date);
+                                    return (
+                                      <button
+                                        key={lesson.id}
+                                        onClick={() => setSelectedLessonToExchange(lesson)}
+                                        className="w-full p-3 rounded-lg border text-left transition-colors"
+                                        style={{
+                                          backgroundColor: selectedLessonToExchange?.id === lesson.id
+                                            ? "rgba(212, 175, 55, 0.1)"
+                                            : "#2A2F2F",
+                                          borderColor: selectedLessonToExchange?.id === lesson.id
+                                            ? "#D4AF37"
+                                            : "#606364",
+                                          color: "#FFFFFF",
+                                        }}
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <p className="font-medium">{lesson.title}</p>
+                                            <p className="text-sm text-gray-400">
+                                              {format(lessonDate, "EEEE, MMMM d")} at {format(lessonDate, "h:mm a")}
+                                            </p>
+                                          </div>
+                                          {selectedLessonToExchange?.id === lesson.id && (
+                                            <CheckCircle className="h-5 w-5" style={{ color: "#D4AF37" }} />
+                                          )}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                              </div>
+                              
+                              {selectedLessonToExchange ? (
+                                <button
+                                  onClick={() => {
+                                    if (!selectedDate || !selectedTimeSlot || !selectedLessonToExchange) return;
+                                    
+                                    // Time slot is already in "h:mm AM/PM" format, use it directly
+                                    const timeString = selectedTimeSlot;
+                                    
+                                    const timeZone = getUserTimezone();
+                                    
+                                    exchangeLessonMutation.mutate({
+                                      oldLessonId: selectedLessonToExchange.id,
+                                      requestedDate: format(selectedDate, "yyyy-MM-dd"),
+                                      requestedTime: timeString,
+                                      reason: requestReason || "Client requested to exchange lesson time",
+                                      timeZone: timeZone,
+                                    });
+                                  }}
+                                  disabled={exchangeLessonMutation.isPending}
+                                  className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                                  style={{ 
+                                    backgroundColor: "#D4AF37",
+                                    color: "#000",
+                                  }}
+                                >
+                                  {exchangeLessonMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="h-5 w-5 animate-spin" />
+                                      Exchanging...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ArrowRightLeft className="h-5 w-5" />
+                                      Request Exchange
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <div className="p-3 rounded-lg border text-sm text-center"
+                                  style={{
+                                    backgroundColor: "#2A2F2F",
+                                    borderColor: "#606364",
+                                    color: "#9CA3AF",
+                                  }}
+                                >
+                                  Select a lesson above to exchange
+                                </div>
+                              )}
+                              
+                              <button
+                                onClick={() => {
+                                  setShowExchangeOptions(false);
+                                  setSelectedLessonToExchange(null);
+                                }}
+                                className="w-full px-4 py-3 rounded-lg font-medium transition-colors"
+                                style={{
+                                  backgroundColor: "#2A2F2F",
+                                  borderColor: "#606364",
+                                  color: "#9CA3AF",
+                                  border: "1px solid #606364",
+                                }}
+                              >
+                                Back
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-6 bg-gray-800/30 rounded-lg">

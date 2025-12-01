@@ -189,6 +189,109 @@ export const completeEmailTemplates = {
   }),
 
   // 3. LESSON & SCHEDULE NOTIFICATIONS
+  scheduleExchangeRequest: (
+    coachName: string,
+    clientName: string,
+    oldLessonDate: string,
+    oldLessonTime: string,
+    newRequestedDate: string,
+    newRequestedTime: string,
+    reason?: string
+  ) => ({
+    subject: `Lesson Exchange Request: ${clientName} wants to reschedule`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f5f5f5;">
+        <div style="${baseEmailStyles}">
+          <div style="background: ${headerGradient}; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold; letter-spacing: -0.5px;">
+              Lesson Exchange Request
+            </h1>
+            <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.95;">
+              NextLevel Coaching Platform
+            </p>
+          </div>
+          
+          <div style="padding: 40px 30px; background: #ffffff;">
+            <h2 style="color: ${COLORS.TEXT_PRIMARY}; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
+              Hi ${coachName}!
+            </h2>
+            
+            <p style="color: ${COLORS.TEXT_PRIMARY}; line-height: 1.7; margin: 0 0 20px 0; font-size: 16px;">
+              <strong style="color: ${COLORS.GOLDEN_DARK};">${clientName}</strong> has requested to exchange their lesson time.
+            </p>
+            
+            <div style="background: #f9fafb; border: 1px solid ${COLORS.BORDER_SUBTLE}; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: ${COLORS.TEXT_PRIMARY}; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+                Exchange Details:
+              </h3>
+              <div style="margin-bottom: 15px;">
+                <p style="color: ${COLORS.TEXT_SECONDARY}; margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">
+                  Current Lesson:
+                </p>
+                <p style="color: ${COLORS.TEXT_PRIMARY}; margin: 0; font-size: 16px;">
+                  ${oldLessonDate} at ${oldLessonTime}
+                </p>
+              </div>
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid ${COLORS.BORDER_SUBTLE};">
+                <p style="color: ${COLORS.TEXT_SECONDARY}; margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">
+                  Requested New Time:
+                </p>
+                <p style="color: ${COLORS.GOLDEN_DARK}; margin: 0; font-size: 16px; font-weight: 600;">
+                  ${newRequestedDate} at ${newRequestedTime}
+                </p>
+              </div>
+              ${reason ? `
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid ${COLORS.BORDER_SUBTLE};">
+                <p style="color: ${COLORS.TEXT_SECONDARY}; margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">
+                  Reason:
+                </p>
+                <p style="color: ${COLORS.TEXT_PRIMARY}; margin: 0; font-size: 16px; line-height: 1.6;">
+                  ${reason}
+                </p>
+              </div>
+              ` : ''}
+            </div>
+            
+            <p style="color: ${COLORS.TEXT_PRIMARY}; line-height: 1.7; margin: 20px 0; font-size: 16px;">
+              <strong>Note:</strong> The client's current lesson has been removed. If you reject this request, their original lesson will be automatically restored.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://nxlvlcoach.com/schedule" 
+                 style="background: ${COLORS.GOLDEN_ACCENT}; color: #ffffff; padding: 16px 32px; text-decoration: none; 
+                        border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; 
+                        box-shadow: 0 4px 6px rgba(229, 178, 50, 0.3);">
+                Review Schedule Request
+              </a>
+            </div>
+            
+            <p style="color: ${COLORS.TEXT_SECONDARY}; font-size: 14px; margin: 30px 0 0 0; line-height: 1.6;">
+              You can approve or reject this exchange request from your schedule page.
+            </p>
+            
+            <p style="color: ${COLORS.TEXT_SECONDARY}; font-size: 14px; margin: 10px 0 0 0;">
+              Best regards,<br>
+              <strong style="color: ${COLORS.TEXT_PRIMARY};">The NextLevel Coaching Team</strong>
+            </p>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid ${COLORS.BORDER_SUBTLE}; border-radius: 0 0 8px 8px;">
+            <p style="color: ${COLORS.TEXT_MUTED}; font-size: 12px; margin: 0;">
+              © 2025 NextLevel Coaching. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }),
+
   lessonReminder: (
     clientName: string,
     coachName: string,

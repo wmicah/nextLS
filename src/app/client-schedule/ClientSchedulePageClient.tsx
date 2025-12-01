@@ -15,6 +15,7 @@ import {
   AlertCircle,
   ArrowRightLeft,
   Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import {
   format,
@@ -39,6 +40,7 @@ import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientSchedulePage from "@/components/MobileClientSchedulePage";
 import TimeSwap from "@/components/TimeSwap";
 import SwapRequests from "@/components/SwapRequests";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 function ClientSchedulePageClient() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -56,6 +58,11 @@ function ClientSchedulePageClient() {
   const [showDaySwapModal, setShowDaySwapModal] = useState(false);
   const [daySwapDate, setDaySwapDate] = useState<Date | null>(null);
   const selectedSwitchLessonRef = useRef<any>(null);
+  const [lessonToReschedule, setLessonToReschedule] = useState<any>(null);
+  const [showRequestExchangeModal, setShowRequestExchangeModal] = useState(false);
+  const [selectedTimeSlotForExchange, setSelectedTimeSlotForExchange] = useState<{date: Date, time: string} | null>(null);
+  const [showExchangeOptionsInDayModal, setShowExchangeOptionsInDayModal] = useState(false);
+  const [selectedLessonToExchangeInDayModal, setSelectedLessonToExchangeInDayModal] = useState<any>(null);
   const [requestForm, setRequestForm] = useState({
     date: "",
     time: "",
@@ -515,6 +522,23 @@ function ClientSchedulePageClient() {
         request.status === "PENDING"
     );
   };
+  // Exchange mutation for day modal
+  const exchangeLessonMutationInDayModal = trpc.clientRouter.exchangeLesson.useMutation({
+    onSuccess: () => {
+      utils.clientRouter.getCoachScheduleForClient.invalidate();
+      utils.clientRouter.getClientLessons.invalidate();
+      utils.clientRouter.getClientUpcomingLessons.invalidate();
+      setShowDayOverviewModal(false);
+      setSelectedTimeSlot("");
+      setShowExchangeOptionsInDayModal(false);
+      setSelectedLessonToExchangeInDayModal(null);
+      alert("Exchange request sent! Your old lesson has been removed. If the coach rejects the new time, your old lesson will be restored.");
+    },
+    onError: (error) => {
+      alert(`Error: ${error.message}`);
+    },
+  });
+
   const requestScheduleChangeMutation =
     trpc.clientRouter.requestScheduleChange.useMutation({
       onSuccess: data => {
@@ -923,7 +947,9 @@ function ClientSchedulePageClient() {
       });
 
       if (!isBlocked && !isBooked) {
-        slots.push(formatTimeInUserTimezone(currentTime.toISOString()));
+        // Return time in "HH:mm" format for consistency
+        const timeString = `${slotHour.toString().padStart(2, "0")}:${slotMinute.toString().padStart(2, "0")}`;
+        slots.push(timeString);
       }
     }
 
@@ -1734,6 +1760,7 @@ function ClientSchedulePageClient() {
                                 <button
                                   key={index}
                                   onClick={() => {
+                                    // Just select the time slot in the day overview modal
                                     setSelectedTimeSlot(slot);
                                     setRequestForm({
                                       ...requestForm,
@@ -1830,40 +1857,207 @@ function ClientSchedulePageClient() {
                                 </div>
                               )}
 
-                              <div className="flex gap-3 pt-2">
-                                <button
-                                  onClick={() => {
-                                    setSelectedTimeSlot("");
-                                    setRequestForm({
-                                      ...requestForm,
-                                      time: "",
-                                    });
-                                  }}
-                                  className="flex-1 px-4 py-3 rounded-xl bg-[#2A3133] border border-[#404545] text-gray-300 font-medium hover:bg-[#353A3A] hover:border-[#505555] transition-all"
-                                >
-                                  Clear
-                                </button>
-                                <button
-                                  onClick={handleRequestScheduleChange}
-                                  disabled={
-                                    !selectedTimeSlot ||
-                                    requestScheduleChangeMutation.isPending
-                                  }
-                                  className="flex-1 px-4 py-3 rounded-lg bg-[#3A4143] text-white font-medium hover:bg-[#4A5153] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 border border-[#4A5153]"
-                                >
-                                  {requestScheduleChangeMutation.isPending ? (
-                                    <>
-                                      <Loader2 className="h-5 w-5 animate-spin" />
-                                      Sending...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Calendar className="h-5 w-5" />
-                                      Confirm Request
-                                    </>
-                                  )}
-                                </button>
-                              </div>
+                              {/* Request/Exchange Options */}
+                              {selectedTimeSlot && (() => {
+                                // Get all future lessons (any day that hasn't passed)
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const allFutureLessons = (allClientLessons || []).filter((lesson: any) => {
+                                  if (!lesson.date) return false;
+                                  const lessonDate = new Date(lesson.date);
+                                  lessonDate.setHours(0, 0, 0, 0);
+                                  return lessonDate >= today;
+                                });
+                                const hasFutureLessons = allFutureLessons.length > 0;
+
+                                return (
+                                  <div className="space-y-3 pt-2">
+                                    {!showExchangeOptionsInDayModal ? (
+                                      <>
+                                        <button
+                                          onClick={handleRequestScheduleChange}
+                                          disabled={
+                                            !selectedTimeSlot ||
+                                            requestScheduleChangeMutation.isPending
+                                          }
+                                          className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                                          style={{
+                                            backgroundColor: COLORS.BACKGROUND_CARD,
+                                            borderColor: COLORS.BORDER_SUBTLE,
+                                            color: COLORS.TEXT_PRIMARY,
+                                            border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            if (!e.currentTarget.disabled) {
+                                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                            }
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            if (!e.currentTarget.disabled) {
+                                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                            }
+                                          }}
+                                        >
+                                          {requestScheduleChangeMutation.isPending ? (
+                                            <>
+                                              <Loader2 className="h-5 w-5 animate-spin" />
+                                              Sending...
+                                            </>
+                                          ) : (
+                                            "Request"
+                                          )}
+                                        </button>
+                                        {hasFutureLessons && (
+                                          <button
+                                            onClick={() => setShowExchangeOptionsInDayModal(true)}
+                                            className="w-full px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                                            style={{ 
+                                              backgroundColor: COLORS.GOLDEN_ACCENT,
+                                              color: "#000",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                                            }}
+                                          >
+                                            <ArrowRightLeft className="h-5 w-5" />
+                                            Exchange
+                                          </button>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        {/* Lesson Selection for Exchange - Show ALL future lessons */}
+                                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                                          {allFutureLessons.length > 0 ? (
+                                            allFutureLessons.map((lesson: any) => {
+                                              const lessonDate = new Date(lesson.date);
+                                              return (
+                                                <button
+                                                  key={lesson.id}
+                                                  onClick={() => setSelectedLessonToExchangeInDayModal(lesson)}
+                                                  className="w-full p-3 rounded-lg border text-left transition-colors"
+                                                  style={{
+                                                    backgroundColor: selectedLessonToExchangeInDayModal?.id === lesson.id
+                                                      ? getGoldenAccent(0.1)
+                                                      : COLORS.BACKGROUND_CARD,
+                                                    borderColor: selectedLessonToExchangeInDayModal?.id === lesson.id
+                                                      ? COLORS.GOLDEN_BORDER
+                                                      : COLORS.BORDER_SUBTLE,
+                                                    color: COLORS.TEXT_PRIMARY,
+                                                  }}
+                                                >
+                                                  <div className="flex items-center justify-between">
+                                                    <div>
+                                                      <p className="font-medium">{lesson.title}</p>
+                                                      <p 
+                                                        className="text-sm"
+                                                        style={{ color: COLORS.TEXT_SECONDARY }}
+                                                      >
+                                                        {format(lessonDate, "EEEE, MMMM d")} at {format(lessonDate, "h:mm a")}
+                                                      </p>
+                                                    </div>
+                                                    {selectedLessonToExchangeInDayModal?.id === lesson.id && (
+                                                      <CheckCircle2 
+                                                        className="h-5 w-5" 
+                                                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                                                      />
+                                                    )}
+                                                  </div>
+                                                </button>
+                                              );
+                                            })
+                                          ) : (
+                                            <div 
+                                              className="p-3 rounded-lg border text-center"
+                                              style={{
+                                                backgroundColor: COLORS.BACKGROUND_CARD,
+                                                borderColor: COLORS.BORDER_SUBTLE,
+                                                color: COLORS.TEXT_SECONDARY,
+                                              }}
+                                            >
+                                              <p>No future lessons available to exchange</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                        {selectedLessonToExchangeInDayModal && (
+                                          <button
+                                            onClick={() => {
+                                              // Handle exchange
+                                              const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+                                              const [hours, minutes] = selectedTimeSlot.split(":").map(Number);
+                                              const date = new Date();
+                                              date.setHours(hours, minutes, 0, 0);
+                                              const timeString = format(date, "h:mm a");
+                                              
+                                              exchangeLessonMutationInDayModal.mutate({
+                                                oldLessonId: selectedLessonToExchangeInDayModal.id,
+                                                requestedDate: format(selectedDate!, "yyyy-MM-dd"),
+                                                requestedTime: timeString,
+                                                reason: requestForm.reason || "Client requested to exchange lesson time",
+                                                timeZone: timeZone,
+                                              });
+                                            }}
+                                            disabled={exchangeLessonMutationInDayModal.isPending}
+                                            className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                                            style={{ 
+                                              backgroundColor: COLORS.GOLDEN_ACCENT,
+                                              color: "#000",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              if (!e.currentTarget.disabled) {
+                                                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                                              }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              if (!e.currentTarget.disabled) {
+                                                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                                              }
+                                            }}
+                                          >
+                                            {exchangeLessonMutationInDayModal.isPending ? (
+                                              <>
+                                                <Loader2 className="h-5 w-5 animate-spin" />
+                                                Exchanging...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <ArrowRightLeft className="h-5 w-5" />
+                                                Request Exchange
+                                              </>
+                                            )}
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={() => {
+                                            setShowExchangeOptionsInDayModal(false);
+                                            setSelectedLessonToExchangeInDayModal(null);
+                                          }}
+                                          className="w-full px-4 py-3 rounded-lg font-medium transition-colors"
+                                          style={{
+                                            backgroundColor: COLORS.BACKGROUND_CARD,
+                                            borderColor: COLORS.BORDER_SUBTLE,
+                                            color: COLORS.TEXT_SECONDARY,
+                                            border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                                          }}
+                                        >
+                                          Back
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1926,6 +2120,7 @@ function ClientSchedulePageClient() {
               }}
             />
           )}
+
 
           {/* Time Swap Modal (old - can be removed later) */}
           {showSwapModal && (
@@ -2856,14 +3051,24 @@ function RequestTimeChangeModal({
       return;
     }
 
+    // Convert time from "HH:mm" format to "h:mm AM/PM" format
+    const [hours, minutes] = selectedTime.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    const timeString = format(date, "h:mm a");
+
+    const timeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+
     requestScheduleChangeMutation.mutate({
       requestedDate: format(selectedDate, "yyyy-MM-dd"),
-      requestedTime: selectedTime,
+      requestedTime: timeString,
       reason: reason || "Client requested time change for existing lesson",
+      timeZone: timeZone,
     });
   };
 
-  // Generate available time slots for selected date
+  // Generate available time slots for selected date (only unoccupied slots)
   const generateAvailableTimeSlots = (date: Date) => {
     if (!coachProfile?.workingHours) return [];
 
@@ -2876,13 +3081,63 @@ function RequestTimeChangeModal({
 
     const startHour = parseInt(workingHours[0] || "9");
     const endHour = parseInt(workingHoursEnd[0] || "17");
+    const interval = coachProfile.workingHours.timeSlotInterval || 60;
     const slots: string[] = [];
 
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeString = `${hour.toString().padStart(2, "0")}:${minute
-          .toString()
-          .padStart(2, "0")}`;
+    // Get all lessons for the selected date from coach schedule
+    const dateString = format(date, "yyyy-MM-dd");
+    const occupiedLessons = (coachSchedule || []).filter((lesson: any) => {
+      const lessonDate = new Date(lesson.date);
+      const lessonDateString = format(lessonDate, "yyyy-MM-dd");
+      return lessonDateString === dateString;
+    });
+
+    // Generate time slots based on interval
+    const parseTimeString = (timeString: string) => {
+      const match = timeString.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!match) {
+        return { hour: 0, minute: 0 };
+      }
+      let hour = parseInt(match[1], 10);
+      const minute = parseInt(match[2], 10);
+      const period = match[3].toUpperCase();
+      if (period === "PM" && hour !== 12) hour += 12;
+      if (period === "AM" && hour === 12) hour = 0;
+      return { hour, minute };
+    };
+
+    const { hour: startHour24, minute: startMinute } = parseTimeString(
+      coachProfile.workingHours.startTime || "9:00 AM"
+    );
+    const { hour: endHour24, minute: endMinute } = parseTimeString(
+      coachProfile.workingHours.endTime || "5:00 PM"
+    );
+
+    const startTotalMinutes = startHour24 * 60 + startMinute;
+    const endTotalMinutes = endHour24 * 60 + endMinute;
+
+    // Generate slots based on interval
+    for (
+      let totalMinutes = startTotalMinutes;
+      totalMinutes < endTotalMinutes;
+      totalMinutes += interval
+    ) {
+      const hour24 = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
+      const timeString = `${hour24.toString().padStart(2, "0")}:${minute
+        .toString()
+        .padStart(2, "0")}`;
+
+      // Check if this time slot is occupied
+      const isOccupied = occupiedLessons.some((lesson: any) => {
+        const lessonDate = new Date(lesson.date);
+        const lessonHour = lessonDate.getHours();
+        const lessonMinute = lessonDate.getMinutes();
+        return lessonHour === hour24 && lessonMinute === minute;
+      });
+
+      // Only add unoccupied slots
+      if (!isOccupied) {
         slots.push(timeString);
       }
     }
@@ -2895,46 +3150,83 @@ function RequestTimeChangeModal({
     : [];
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+    <div 
+      className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.7)" }}
+    >
       <div
-        className="relative w-full max-w-md bg-gradient-to-br from-[#1F2937] via-[#2A3133] to-[#1F2937] border-2 border-yellow-500/30 rounded-xl sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
+        className="relative w-full max-w-md rounded-lg border max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-yellow-500/20 via-yellow-600/15 to-yellow-500/20 border-b border-yellow-500/30 px-4 sm:px-6 py-3 sm:py-5 rounded-t-xl sm:rounded-t-2xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 rounded-t-2xl"></div>
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 shadow-lg ring-2 ring-yellow-400/20">
-                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold text-white">
-                Request Time Change
-              </h3>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+        <div 
+          className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
+        >
+          <h3 
+            className="text-lg sm:text-xl font-semibold"
+            style={{ color: COLORS.TEXT_PRIMARY }}
+          >
+            Request Time Change
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4">
           {/* Current Lesson */}
-          <div className="p-4 rounded-xl bg-[#1F2937] border border-[#404545]">
-            <p className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">
+          <div 
+            className="p-4 rounded-lg border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
+            <p 
+              className="text-xs font-medium mb-3 uppercase tracking-wide"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
               Current Lesson
             </p>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-yellow-500/10">
-                <Clock className="h-5 w-5 text-yellow-400" />
+              <div 
+                className="p-2 rounded-lg"
+                style={{ backgroundColor: getGoldenAccent(0.1) }}
+              >
+                <Clock 
+                  className="h-5 w-5" 
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
               </div>
               <div className="flex-1">
-                <p className="text-white font-semibold">{lesson.title}</p>
-                <p className="text-sm text-gray-400 mt-0.5">
+                <p 
+                  className="font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  {lesson.title}
+                </p>
+                <p 
+                  className="text-sm mt-0.5"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
                   {format(new Date(lesson.date), "EEEE, MMMM d, yyyy")} at{" "}
                   {format(new Date(lesson.date), "h:mm a")}
                 </p>
@@ -2944,7 +3236,10 @@ function RequestTimeChangeModal({
 
           {/* New Date Selection */}
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
+            <label 
+              className="block text-xs font-medium mb-2 uppercase tracking-wide"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
               Select New Date
             </label>
             <input
@@ -2957,57 +3252,137 @@ function RequestTimeChangeModal({
                 }
               }}
               min={format(new Date(), "yyyy-MM-dd")}
-              className="w-full px-4 py-3 rounded-xl bg-[#1F2937] border border-[#404545] text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/30 focus:border-yellow-500/50 transition-all"
+              className="w-full px-4 py-3 rounded-lg border focus:outline-none transition-all"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.boxShadow = "none";
+              }}
             />
           </div>
 
           {/* Time Selection */}
           {selectedDate && (
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
-                Select Time
-              </label>
-              <select
-                value={selectedTime}
-                onChange={e => setSelectedTime(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-[#1F2937] border border-[#404545] text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/30 focus:border-yellow-500/50 transition-all"
+              <label 
+                className="block text-xs font-medium mb-2 uppercase tracking-wide"
+                style={{ color: COLORS.TEXT_MUTED }}
               >
-                <option value="">Select a time</option>
-                {availableTimeSlots.map(slot => {
-                  const [hours, minutes] = slot.split(":").map(Number);
-                  const timeString = format(
-                    new Date().setHours(hours, minutes),
-                    "h:mm a"
-                  );
-                  return (
-                    <option key={slot} value={slot}>
-                      {timeString}
-                    </option>
-                  );
-                })}
-              </select>
+                Select Available Time
+              </label>
+              {availableTimeSlots.length === 0 ? (
+                <div 
+                  className="p-4 rounded-lg border"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.RED_BORDER,
+                  }}
+                >
+                  <p 
+                    className="text-sm text-center"
+                    style={{ color: COLORS.RED_ALERT }}
+                  >
+                    No available time slots for this date. All slots are occupied.
+                  </p>
+                </div>
+              ) : (
+                <select
+                  value={selectedTime}
+                  onChange={e => setSelectedTime(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none transition-all"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <option value="">Select an available time</option>
+                  {availableTimeSlots.map(slot => {
+                    const [hours, minutes] = slot.split(":").map(Number);
+                    const date = new Date();
+                    date.setHours(hours, minutes, 0, 0);
+                    const timeString = format(date, "h:mm a");
+                    return (
+                      <option key={slot} value={slot}>
+                        {timeString} - Available
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
             </div>
           )}
 
           {/* Reason (Optional) */}
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
+            <label 
+              className="block text-xs font-medium mb-2 uppercase tracking-wide"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
               Reason (Optional)
             </label>
             <textarea
               value={reason}
               onChange={e => setReason(e.target.value)}
               placeholder="Let your coach know why you need a different time..."
-              className="w-full px-4 py-3 rounded-xl bg-[#1F2937] border border-[#404545] text-white min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500/30 focus:border-yellow-500/50 transition-all placeholder:text-gray-500"
+              className="w-full px-4 py-3 rounded-lg border min-h-[100px] resize-none focus:outline-none transition-all"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.boxShadow = "none";
+              }}
             />
           </div>
         </div>
 
         {/* Actions */}
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 flex gap-2 sm:gap-3 border-t border-yellow-500/30 bg-[#1F2937]">
+        <div 
+          className="px-4 sm:px-6 pb-4 sm:pb-6 flex gap-2 sm:gap-3 border-t"
+          style={{ 
+            borderColor: COLORS.BORDER_SUBTLE,
+            backgroundColor: COLORS.BACKGROUND_DARK,
+          }}
+        >
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-3 rounded-xl bg-[#2A3133] border border-[#404545] text-gray-300 font-medium hover:bg-[#353A3A] hover:border-[#505555] transition-all"
+            className="flex-1 px-4 py-3 rounded-lg border font-medium transition-colors"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+              color: COLORS.TEXT_SECONDARY,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
             Cancel
           </button>
@@ -3018,7 +3393,21 @@ function RequestTimeChangeModal({
               !selectedTime ||
               requestScheduleChangeMutation.isPending
             }
-            className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/30"
+            className="flex-1 px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            style={{ 
+              backgroundColor: COLORS.GOLDEN_ACCENT,
+              color: "#000",
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }
+            }}
           >
             {requestScheduleChangeMutation.isPending ? (
               <>
@@ -3032,6 +3421,407 @@ function RequestTimeChangeModal({
               </>
             )}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Request/Exchange Modal - Choose between Request or Exchange
+function RequestExchangeModal({
+  selectedDate,
+  selectedTime,
+  clientLessons,
+  onClose,
+  onRequest,
+}: {
+  selectedDate: Date;
+  selectedTime: string;
+  clientLessons: any[];
+  onClose: () => void;
+  onRequest: () => void;
+}) {
+  const [selectedLessonToExchange, setSelectedLessonToExchange] = useState<any>(null);
+  const [reason, setReason] = useState<string>("");
+  const [isExchanging, setIsExchanging] = useState(false);
+  const [showExchangeOptions, setShowExchangeOptions] = useState(false);
+
+  const utils = trpc.useUtils();
+  const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
+
+  // Exchange mutation - removes old lesson and creates new request
+  const exchangeLessonMutation = trpc.clientRouter.exchangeLesson.useMutation({
+    onSuccess: () => {
+      utils.clientRouter.getCoachScheduleForClient.invalidate();
+      utils.clientRouter.getClientLessons.invalidate();
+      utils.clientRouter.getClientUpcomingLessons.invalidate();
+      onClose();
+      alert("Exchange request sent! Your old lesson has been removed. If the coach rejects the new time, your old lesson will be restored.");
+    },
+    onError: (error) => {
+      alert(`Error: ${error.message}`);
+      setIsExchanging(false);
+    },
+  });
+
+  // Request mutation - just requests new time
+  const requestScheduleChangeMutation =
+    trpc.clientRouter.requestScheduleChange.useMutation({
+      onSuccess: () => {
+        utils.clientRouter.getCoachScheduleForClient.invalidate();
+        utils.clientRouter.getClientLessons.invalidate();
+        utils.clientRouter.getClientUpcomingLessons.invalidate();
+        onClose();
+        alert("Request sent successfully!");
+      },
+      onError: (error) => {
+        alert(`Error: ${error.message}`);
+      },
+    });
+
+  const handleExchange = () => {
+    if (!selectedLessonToExchange) {
+      alert("Please select a lesson to exchange");
+      return;
+    }
+
+    setIsExchanging(true);
+
+    // Convert time from "HH:mm" format to "h:mm AM/PM" format
+    const [hours, minutes] = selectedTime.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    const timeString = format(date, "h:mm a");
+
+    const timeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+
+    exchangeLessonMutation.mutate({
+      oldLessonId: selectedLessonToExchange.id,
+      requestedDate: format(selectedDate, "yyyy-MM-dd"),
+      requestedTime: timeString,
+      reason: reason || "Client requested to exchange lesson time",
+      timeZone: timeZone,
+    });
+  };
+
+  const handleRequest = () => {
+    // Convert time from "HH:mm" format to "h:mm AM/PM" format
+    const [hours, minutes] = selectedTime.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    const timeString = format(date, "h:mm a");
+
+    const timeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+
+    requestScheduleChangeMutation.mutate({
+      requestedDate: format(selectedDate, "yyyy-MM-dd"),
+      requestedTime: timeString,
+      reason: reason || "Client requested time change",
+      timeZone: timeZone,
+    });
+  };
+
+  const [hours, minutes] = selectedTime.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  const timeString = format(date, "h:mm a");
+
+  return (
+    <div 
+      className="fixed inset-0 flex items-center justify-center z-[60] p-2 sm:p-4"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.7)" }}
+    >
+      <div
+        className="relative w-full max-w-md rounded-lg border max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div 
+          className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
+        >
+          <h3 
+            className="text-lg sm:text-xl font-semibold"
+            style={{ color: COLORS.TEXT_PRIMARY }}
+          >
+            Request or Exchange
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
+          {/* Selected Time Info */}
+          <div 
+            className="p-4 rounded-lg border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
+            <p 
+              className="text-xs font-medium mb-2 uppercase tracking-wide"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
+              Selected Time
+            </p>
+            <p 
+              className="font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              {format(selectedDate, "EEEE, MMMM d, yyyy")} at {timeString}
+            </p>
+          </div>
+
+          {/* Lesson Selection for Exchange - Only show if Exchange was clicked */}
+          {showExchangeOptions && clientLessons.length > 0 && (
+            <div>
+              <label 
+                className="block text-xs font-medium mb-2 uppercase tracking-wide"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
+                Select Lesson to Exchange
+              </label>
+              <div className="space-y-2">
+                {clientLessons.map((lesson) => {
+                  const lessonDate = new Date(lesson.date);
+                  return (
+                    <button
+                      key={lesson.id}
+                      onClick={() => setSelectedLessonToExchange(lesson)}
+                      className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                        selectedLessonToExchange?.id === lesson.id
+                          ? ""
+                          : ""
+                      }`}
+                      style={{
+                        backgroundColor: selectedLessonToExchange?.id === lesson.id
+                          ? getGoldenAccent(0.1)
+                          : COLORS.BACKGROUND_CARD,
+                        borderColor: selectedLessonToExchange?.id === lesson.id
+                          ? COLORS.GOLDEN_BORDER
+                          : COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{lesson.title}</p>
+                          <p 
+                            className="text-sm"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            {format(lessonDate, "EEEE, MMMM d")} at {format(lessonDate, "h:mm a")}
+                          </p>
+                        </div>
+                        {selectedLessonToExchange?.id === lesson.id && (
+                          <CheckCircle2 
+                            className="h-5 w-5" 
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
+                          />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Reason */}
+          <div>
+            <label 
+              className="block text-xs font-medium mb-2 uppercase tracking-wide"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
+              Reason (Optional)
+            </label>
+            <textarea
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="Let your coach know why..."
+              className="w-full px-4 py-3 rounded-lg border min-h-[80px] resize-none focus:outline-none transition-all"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-3 pt-2">
+            {!showExchangeOptions ? (
+              /* Initial Options: Request or Exchange */
+              <>
+                <button
+                  onClick={handleRequest}
+                  disabled={requestScheduleChangeMutation.isPending}
+                  className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                    border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    }
+                  }}
+                >
+                  {requestScheduleChangeMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Request"
+                  )}
+                </button>
+
+                {clientLessons.length > 0 && (
+                  <button
+                    onClick={() => setShowExchangeOptions(true)}
+                    className="w-full px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                    style={{ 
+                      backgroundColor: COLORS.GOLDEN_ACCENT,
+                      color: "#000",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                  >
+                    <ArrowRightLeft className="h-5 w-5" />
+                    Exchange
+                  </button>
+                )}
+              </>
+            ) : (
+              /* Exchange Flow: Show lesson selection and Request Exchange button */
+              <>
+                {!selectedLessonToExchange ? (
+                  <div 
+                    className="p-3 rounded-lg border text-sm text-center"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_SECONDARY,
+                    }}
+                  >
+                    <p>Select a lesson above to exchange</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleExchange}
+                    disabled={isExchanging || exchangeLessonMutation.isPending}
+                    className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    style={{ 
+                      backgroundColor: COLORS.GOLDEN_ACCENT,
+                      color: "#000",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                      }
+                    }}
+                  >
+                    {isExchanging || exchangeLessonMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Exchanging...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRightLeft className="h-5 w-5" />
+                        Request Exchange
+                      </>
+                    )}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowExchangeOptions(false);
+                    setSelectedLessonToExchange(null);
+                  }}
+                  className="w-full px-4 py-3 rounded-lg font-medium transition-colors"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_SECONDARY,
+                    border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
+                >
+                  Back
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Exchange Info */}
+          {selectedLessonToExchange && (
+            <div 
+              className="p-3 rounded-lg border text-sm"
+              style={{
+                backgroundColor: getGoldenAccent(0.05),
+                borderColor: COLORS.GOLDEN_BORDER,
+                color: COLORS.TEXT_SECONDARY,
+              }}
+            >
+              <p>
+                <strong style={{ color: COLORS.TEXT_PRIMARY }}>Exchange:</strong> Your current lesson will be removed immediately. If the coach rejects the new time, your old lesson will be automatically restored.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

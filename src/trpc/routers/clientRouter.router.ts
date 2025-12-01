@@ -4013,7 +4013,7 @@ export const clientRouterRouter = router({
       return updatedEvent;
     }),
 
-  // Reject a schedule request (COACH ONLY)
+  // Reject a schedule request (COACH ONLY) - restores old lesson if it was an exchange
   rejectScheduleRequest: publicProcedure
     .input(
       z.object({
@@ -4064,6 +4064,61 @@ export const clientRouterRouter = router({
         });
       }
 
+      // Check if this was an exchange (old lesson data stored in description)
+      const reasonText = event.description || "";
+      
+      // Extract the outermost [OLD_LESSON_DATA] tag (handle nested patterns)
+      // Find the first [OLD_LESSON_DATA] and match to the last [/OLD_LESSON_DATA] to get outermost
+      const firstIndex = reasonText.indexOf("[OLD_LESSON_DATA]");
+      const lastIndex = reasonText.lastIndexOf("[/OLD_LESSON_DATA]");
+      
+      let restoredLesson = null;
+      if (firstIndex !== -1 && lastIndex !== -1 && lastIndex > firstIndex) {
+        try {
+          // Extract the content between first [OLD_LESSON_DATA] and last [/OLD_LESSON_DATA]
+          const dataStart = firstIndex + "[OLD_LESSON_DATA]".length;
+          const dataEnd = lastIndex;
+          let extractedData = reasonText.substring(dataStart, dataEnd);
+          
+          // Remove any nested [OLD_LESSON_DATA] tags from the extracted data
+          let cleanedData = extractedData;
+          let dataPreviousLength = 0;
+          while (cleanedData.length !== dataPreviousLength) {
+            dataPreviousLength = cleanedData.length;
+            cleanedData = cleanedData.replace(/\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g, "");
+          }
+          
+          const oldLessonData = JSON.parse(cleanedData);
+          
+          // Clean the description field if it contains nested tags
+          let cleanDescription = oldLessonData.description || "";
+          if (cleanDescription) {
+            let descPreviousLength = 0;
+            while (cleanDescription.length !== descPreviousLength) {
+              descPreviousLength = cleanDescription.length;
+              cleanDescription = cleanDescription.replace(/\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g, "");
+            }
+            cleanDescription = cleanDescription.trim();
+          }
+          
+          // Restore the old lesson
+          restoredLesson = await db.event.create({
+            data: {
+              coachId: event.coachId,
+              clientId: event.clientId,
+              date: new Date(oldLessonData.date),
+              title: oldLessonData.title,
+              description: cleanDescription,
+              status: oldLessonData.status === "CONFIRMED" ? "CONFIRMED" : "PENDING",
+            },
+          });
+        } catch (error) {
+          console.error("Error restoring old lesson:", error);
+          console.error("Failed to parse old lesson data. First index:", firstIndex, "Last index:", lastIndex);
+          // Continue with rejection even if restoration fails
+        }
+      }
+
       // Delete the declined event to free up the time slot
       const deletedEvent = await db.event.delete({
         where: { id: input.eventId },
@@ -4071,29 +4126,39 @@ export const clientRouterRouter = router({
 
       // Create notification for the client
       if (event.client?.userId) {
-        await db.notification.create({
-          data: {
-            userId: event.client.userId,
-            type: "LESSON_CANCELLED",
-            title: "Schedule Request Declined",
-            message: `Your schedule request for ${format(
+        const message = restoredLesson
+          ? `Your schedule request for ${format(
+              new Date(event.date),
+              "MMM d, yyyy 'at' h:mm a"
+            )} has been declined. Your original lesson has been restored.${
+              input.reason ? ` Reason: ${input.reason}` : ""
+            }`
+          : `Your schedule request for ${format(
               new Date(event.date),
               "MMM d, yyyy 'at' h:mm a"
             )} has been declined and the time slot is now available.${
               input.reason ? ` Reason: ${input.reason}` : ""
-            }`,
+            }`;
+
+        await db.notification.create({
+          data: {
+            userId: event.client.userId,
+            type: restoredLesson ? "LESSON_RESTORED" : "LESSON_CANCELLED",
+            title: restoredLesson ? "Schedule Request Declined - Lesson Restored" : "Schedule Request Declined",
+            message: message,
             data: {
               eventId: event.id,
               clientId: event.clientId,
               coachId: ensureUserId(user.id),
               coachName: coach.name,
               reason: input.reason,
+              restoredLessonId: restoredLesson?.id,
             },
           },
         });
       }
 
-      return deletedEvent;
+      return { deletedEvent, restoredLesson };
     }),
 
   // Request a schedule change
@@ -4405,6 +4470,236 @@ export const clientRouterRouter = router({
           },
         },
       });
+
+      return scheduleRequest;
+    }),
+
+  // Exchange lesson - removes old lesson and creates new request (can restore if rejected)
+  exchangeLesson: publicProcedure
+    .input(
+      z.object({
+        oldLessonId: z.string(),
+        requestedDate: z.string(),
+        requestedTime: z.string(),
+        reason: z.string().optional(),
+        timeZone: z.string().optional(),
+        coachId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a CLIENT
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can exchange lessons",
+        });
+      }
+
+      // Get client record
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+        include: {
+          coach: {
+            include: {
+              coachOrganizations: {
+                where: { isActive: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      // Get the old lesson
+      const oldLesson = await db.event.findFirst({
+        where: {
+          id: input.oldLessonId,
+          clientId: client.id,
+        },
+        include: {
+          client: true,
+        },
+      });
+
+      if (!oldLesson) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lesson not found",
+        });
+      }
+
+      // Determine which coach to send the request to
+      let targetCoachId = input.coachId || client.coachId;
+
+      if (!targetCoachId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No coach specified",
+        });
+      }
+
+      // Parse the requested date and time
+      const dateStr = input.requestedDate;
+      const timeStr = input.requestedTime;
+
+      // Parse the time string (e.g., "2:00 PM")
+      const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeMatch) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid time format",
+        });
+      }
+
+      const [_, hour, minute, period] = timeMatch;
+      let hour24 = parseInt(hour);
+
+      // Convert to 24-hour format
+      if (period.toUpperCase() === "PM" && hour24 !== 12) {
+        hour24 += 12;
+      } else if (period.toUpperCase() === "AM" && hour24 === 12) {
+        hour24 = 0;
+      }
+
+      // Create the full date string in local time
+      const fullDateStr = `${dateStr}T${hour24
+        .toString()
+        .padStart(2, "0")}:${minute}:00`;
+
+      // Convert local time to UTC using the user's timezone
+      const timeZone = input.timeZone || "America/New_York";
+      const { fromZonedTime } = await import("date-fns-tz");
+      const utcDateTime = fromZonedTime(fullDateStr, timeZone);
+
+      // Validate the date
+      if (isNaN(utcDateTime.getTime())) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid date/time combination",
+        });
+      }
+
+      // Check if the requested time is in the past
+      const now = new Date();
+      if (utcDateTime <= now) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot request lessons in the past",
+        });
+      }
+
+      // Get coach name for the title
+      const targetCoach = await db.user.findFirst({
+        where: { id: targetCoachId },
+        select: { name: true },
+      });
+
+      // Store old lesson data in the description field (we'll use a special format)
+      const oldLessonData = JSON.stringify({
+        id: oldLesson.id,
+        date: oldLesson.date.toISOString(),
+        title: oldLesson.title,
+        description: oldLesson.description,
+        status: oldLesson.status,
+      });
+
+      // Delete the old lesson
+      await db.event.delete({
+        where: { id: input.oldLessonId },
+      });
+
+      // Create new schedule request (as Event) with old lesson data stored in description
+      const scheduleRequest = await db.event.create({
+        data: {
+          title: `Schedule Request - ${client.name}${
+            input.coachId && input.coachId !== client.coachId
+              ? ` (requesting ${targetCoach?.name || "Coach"})`
+              : ""
+          }`,
+          description: `${input.reason || "Client requested to exchange lesson time"}\n\n[OLD_LESSON_DATA]${oldLessonData}[/OLD_LESSON_DATA]`,
+          date: utcDateTime,
+          clientId: client.id,
+          coachId: targetCoachId,
+          status: "PENDING",
+        },
+      });
+
+      // Format dates in UTC for notification/email
+      const { formatInTimeZone } = await import("date-fns-tz");
+      const utcTimeZone = "UTC";
+      
+      // Format dates explicitly in UTC timezone
+      const oldLessonDate = formatInTimeZone(oldLesson.date, utcTimeZone, "MMM d, yyyy 'at' h:mm a");
+      const newRequestedDate = formatInTimeZone(utcDateTime, utcTimeZone, "MMM d, yyyy 'at' h:mm a");
+
+      // Create notification for the coach
+      await db.notification.create({
+        data: {
+          userId: targetCoachId,
+          type: "SCHEDULE_REQUEST",
+          title: "Lesson Exchange Request",
+          message: `${client.name} wants to exchange their lesson on ${oldLessonDate} UTC for ${newRequestedDate} UTC${input.reason ? `: ${input.reason}` : ""}`,
+          data: {
+            eventId: scheduleRequest.id,
+            clientId: client.id,
+            clientName: client.name,
+            clientUserId: client.userId,
+            requestedDate: utcDateTime,
+            reason: input.reason,
+            coachId: targetCoachId,
+            oldLessonId: oldLesson.id,
+            oldLessonDate: oldLesson.date.toISOString(),
+            isExchange: true,
+          },
+        },
+      });
+
+      // Send email notification to coach
+      const { CompleteEmailService } = await import("@/lib/complete-email-service");
+      const emailService = CompleteEmailService.getInstance();
+      
+      // Get coach user record for email
+      const coachUser = await db.user.findFirst({
+        where: { id: targetCoachId },
+        select: { email: true, name: true },
+      });
+
+      if (coachUser?.email) {
+        // Format dates in UTC for email
+        const oldLessonDateFormatted = formatInTimeZone(oldLesson.date, utcTimeZone, "MMM d, yyyy");
+        const oldLessonTimeFormatted = formatInTimeZone(oldLesson.date, utcTimeZone, "h:mm a");
+        const newDateFormatted = formatInTimeZone(utcDateTime, utcTimeZone, "MMM d, yyyy");
+        const newTimeFormatted = formatInTimeZone(utcDateTime, utcTimeZone, "h:mm a");
+
+        await emailService.sendScheduleExchangeRequest(
+          coachUser.email,
+          coachUser.name || "Coach",
+          client.name,
+          oldLessonDateFormatted,
+          oldLessonTimeFormatted,
+          newDateFormatted,
+          newTimeFormatted,
+          input.reason,
+          targetCoachId
+        ).catch((error) => {
+          console.error("Failed to send exchange request email to coach:", error);
+          // Don't throw - email failure shouldn't break the exchange
+        });
+      }
 
       return scheduleRequest;
     }),
