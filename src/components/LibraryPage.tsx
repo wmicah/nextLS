@@ -138,17 +138,17 @@ function LibraryPage() {
     isFetching: masterFetching,
   } = trpc.admin.getMasterLibrary.useQuery(
     {
-      search: debouncedSearchTerm || undefined,
+      search: debouncedSearchTerm.trim() || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
       page: masterCurrentPage,
       limit: 24, // Load 24 items per page
     },
     {
       enabled: activeTab === "master", // Only fetch when master tab is active
-      staleTime: 0, // Always consider data stale to force refetch on mount
+      staleTime: 0, // Always refetch when search/filter changes
       gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
-      refetchOnMount: true, // Always refetch when component mounts
+      refetchOnMount: true, // Refetch on mount to ensure fresh data
     }
   );
 
@@ -160,17 +160,17 @@ function LibraryPage() {
     isFetching: localFetching,
   } = trpc.library.list.useQuery(
     {
-      search: debouncedSearchTerm || undefined,
+      search: debouncedSearchTerm.trim() || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
       page: localCurrentPage,
       limit: 24, // Load 24 items per page
     },
     {
       enabled: activeTab === "local", // Only fetch when local tab is active
-      staleTime: 0, // Always consider data stale to force refetch on mount
+      staleTime: 0, // Always refetch when search/filter changes
       gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
-      refetchOnMount: true, // Always refetch when component mounts
+      refetchOnMount: true, // Refetch on mount to ensure fresh data
     }
   );
 
@@ -178,8 +178,9 @@ function LibraryPage() {
   useEffect(() => {
     // Only update when we have data and we're not currently fetching
     if (masterLibraryItems && !masterFetching) {
-      if (masterLibraryItems.items && masterLibraryItems.items.length > 0) {
+      if (masterLibraryItems.items) {
         if (masterCurrentPage === 1) {
+          // Always set items on page 1, even if empty array
           setMasterItems(masterLibraryItems.items);
         } else {
           setMasterItems(prev => {
@@ -193,10 +194,6 @@ function LibraryPage() {
         }
         const hasNextPage = masterLibraryItems.pagination?.hasNextPage || false;
         setMasterHasMore(hasNextPage);
-      } else if (masterCurrentPage === 1) {
-        // Empty result on first page
-        setMasterItems([]);
-        setMasterHasMore(false);
       }
     }
   }, [masterLibraryItems, masterCurrentPage, masterFetching]);
@@ -206,8 +203,9 @@ function LibraryPage() {
   useEffect(() => {
     // Only update when we have data and we're not currently fetching
     if (localLibraryItems && !localFetching) {
-      if (localLibraryItems.items && localLibraryItems.items.length > 0) {
+      if (localLibraryItems.items) {
         if (localCurrentPage === 1) {
+          // Always set items on page 1, even if empty array
           setLocalItems(localLibraryItems.items);
         } else {
           setLocalItems(prev => {
@@ -221,33 +219,22 @@ function LibraryPage() {
         }
         const hasNextPage = localLibraryItems.pagination?.hasNextPage || false;
         setLocalHasMore(hasNextPage);
-      } else if (localCurrentPage === 1) {
-        // Empty result on first page
-        setLocalItems([]);
-        setLocalHasMore(false);
       }
     }
   }, [localLibraryItems, localCurrentPage, localFetching]);
 
-  // Ensure state syncs when queries return data on mount
-  // This handles the case where component remounts and queries return cached data
+  // Ensure state syncs when queries return data - handles search/filter changes
   useEffect(() => {
-    if (
-      activeTab === "master" &&
-      masterLibraryItems?.items &&
-      masterCurrentPage === 1 &&
-      !masterFetching
-    ) {
-      setMasterItems(masterLibraryItems.items);
-      setMasterHasMore(masterLibraryItems.pagination?.hasNextPage || false);
-    } else if (
-      activeTab === "local" &&
-      localLibraryItems?.items &&
-      localCurrentPage === 1 &&
-      !localFetching
-    ) {
-      setLocalItems(localLibraryItems.items);
-      setLocalHasMore(localLibraryItems.pagination?.hasNextPage || false);
+    if (activeTab === "master" && masterLibraryItems && !masterFetching) {
+      if (masterCurrentPage === 1 && masterLibraryItems.items) {
+        setMasterItems(masterLibraryItems.items);
+        setMasterHasMore(masterLibraryItems.pagination?.hasNextPage || false);
+      }
+    } else if (activeTab === "local" && localLibraryItems && !localFetching) {
+      if (localCurrentPage === 1 && localLibraryItems.items) {
+        setLocalItems(localLibraryItems.items);
+        setLocalHasMore(localLibraryItems.pagination?.hasNextPage || false);
+      }
     }
   }, [
     activeTab,
@@ -257,6 +244,8 @@ function LibraryPage() {
     localCurrentPage,
     masterFetching,
     localFetching,
+    debouncedSearchTerm,
+    selectedCategory,
   ]);
 
   // Reset pagination state on mount to ensure fresh start
@@ -292,8 +281,16 @@ function LibraryPage() {
   const error = activeTab === "master" ? masterError : localError;
   const hasMore = activeTab === "master" ? masterHasMore : localHasMore;
 
-  // Show loading when switching tabs and no items are loaded yet
-  const isInitialLoading = isLoading && libraryItems.length === 0;
+  // Track if this is the very first mount (not a search/filter change)
+  const isFirstMount = useRef(true);
+  useEffect(() => {
+    if (libraryItems.length > 0) {
+      isFirstMount.current = false;
+    }
+  }, [libraryItems.length]);
+
+  // Only show full page loading on very first mount with no data
+  const isInitialLoading = isFirstMount.current && isLoading && libraryItems.length === 0;
 
   // Reset loading more state when new data arrives
   useEffect(() => {
@@ -374,31 +371,8 @@ function LibraryPage() {
     refetchStats(); // Refresh stats
   };
 
-  if (isInitialLoading) {
-    return (
-      <Sidebar>
-        <div className="flex items-center justify-center h-64">
-          <LoadingState
-            isLoading={true}
-            skeleton={<SkeletonVideoGrid />}
-            className="p-8"
-          >
-            <div />
-          </LoadingState>
-        </div>
-      </Sidebar>
-    );
-  }
-
-  if (error) {
-    return (
-      <Sidebar>
-        <div className="flex items-center justify-center h-64">
-          <p style={{ color: COLORS.RED_ALERT }}>Error loading library: {error.message}</p>
-        </div>
-      </Sidebar>
-    );
-  }
+  // Show error inline, not blocking the entire page
+  const showError = error && libraryItems.length === 0 && !isLoading;
 
   return (
     <Sidebar>
@@ -451,6 +425,12 @@ function LibraryPage() {
               placeholder="Search resources..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
+              onKeyDown={e => {
+                // Prevent form submission on Enter key
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                }
+              }}
               className="w-full pl-9 pr-3 py-1.5 rounded-md border text-xs focus:outline-none transition-all duration-300"
               style={{
                 backgroundColor: COLORS.BACKGROUND_DARK,
@@ -686,8 +666,8 @@ function LibraryPage() {
         </div>
       )}
 
-      {/* Empty State */}
-      {libraryItems.length === 0 && (
+      {/* Empty State - Show when not loading and no items (regardless of search/filter) */}
+      {!isLoading && libraryItems.length === 0 && !showError && (
         <div
           className="flex flex-col items-center justify-center h-64 rounded-lg shadow-lg border relative overflow-hidden"
           style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
@@ -789,9 +769,47 @@ function LibraryPage() {
         </div>
       )}
 
+      {/* Error Display - Inline */}
+      {showError && (
+        <div className="mb-4 p-4 rounded-lg border" style={{ 
+          backgroundColor: COLORS.BACKGROUND_CARD, 
+          borderColor: COLORS.RED_ALERT 
+        }}>
+          <p style={{ color: COLORS.RED_ALERT }}>
+            Error loading library: {error?.message || "Unknown error"}
+          </p>
+        </div>
+      )}
+
       {/* Enhanced Library Grid/List */}
-      {libraryItems.length > 0 && (
+      {isLoading && libraryItems.length === 0 && !isInitialLoading ? (
+        // Show skeleton when loading and no items
         <div className="w-full">
+          {viewMode === "grid" ? (
+            <SkeletonVideoGrid />
+          ) : (
+            <div className="space-y-2.5">
+              {[...Array(6)].map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : libraryItems.length > 0 ? (
+        // Show items when we have them
+        <div className="w-full">
+          {/* Show loading overlay when searching with existing items */}
+          {isLoading && (
+            <div className="mb-4 p-3 rounded-lg border flex items-center gap-2" style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.GOLDEN_BORDER,
+            }}>
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ color: COLORS.GOLDEN_ACCENT }}></div>
+              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                Searching...
+              </span>
+            </div>
+          )}
           {viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 w-full">
               {libraryItems.map((item: any, index: number) => (
@@ -1097,7 +1115,7 @@ function LibraryPage() {
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* Client Video Submissions Section - Temporarily disabled */}
       {/* {clientVideoSubmissions.length > 0 && (
