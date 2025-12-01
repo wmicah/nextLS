@@ -368,7 +368,25 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
               <p className="text-xs text-gray-400">Chat with clients</p>
             </div>
           </div>
-          <MobileNavigation currentPage="messages" />
+          <div className="flex items-center gap-2">
+            {otherClients.length > 0 && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-105 touch-manipulation active:scale-95"
+                style={{
+                  backgroundColor: "#D4AF37",
+                  color: "#000",
+                  minWidth: "44px",
+                  minHeight: "44px",
+                  padding: "0.5rem",
+                }}
+                title="New Message"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            )}
+            <MobileNavigation currentPage="messages" />
+          </div>
         </div>
       </div>
 
