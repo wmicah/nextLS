@@ -729,7 +729,7 @@ export const schedulingRouter = router({
           "MMM d, yyyy"
         )}`;
 
-        await db.notification.create({
+        const notification = await db.notification.create({
           data: {
             userId: client.userId,
             type: "LESSON_SCHEDULED",
@@ -737,6 +737,22 @@ export const schedulingRouter = router({
             message,
           },
         });
+
+        // Send push notification
+        try {
+          const { sendNotificationPush } = await import(
+            "@/lib/pushNotificationService"
+          );
+          await sendNotificationPush(
+            client.userId,
+            "LESSON_SCHEDULED",
+            notification.title,
+            notification.message,
+            notification.data as any
+          );
+        } catch (error) {
+          console.error("Failed to send push notification for recurring lessons:", error);
+        }
       }
 
       // TODO: Send email notification if requested
