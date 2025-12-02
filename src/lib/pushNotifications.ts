@@ -71,11 +71,19 @@ export class PushNotificationService {
       // Check service worker state and handle accordingly
       console.log("📱 Checking service worker state...");
       
+      // Ensure registration exists
+      if (!registration) {
+        throw new Error("Service worker registration failed");
+      }
+      
       // If service worker is already active, we can proceed immediately
       if (registration.active && registration.active.state === "activated") {
         console.log("✅ Service worker is already active and activated");
-        // Use the active service worker directly
-        registration = await navigator.serviceWorker.getRegistration();
+        // Re-fetch registration to ensure we have the latest
+        const latestRegistration = await navigator.serviceWorker.getRegistration();
+        if (latestRegistration) {
+          registration = latestRegistration;
+        }
       } else {
         // Check what state it's in
         if (registration.installing) {
@@ -128,6 +136,10 @@ export class PushNotificationService {
       }
 
       // Check if already subscribed
+      if (!registration) {
+        throw new Error("Service worker registration is not available");
+      }
+      
       const existingSubscription = await registration.pushManager.getSubscription();
       if (existingSubscription) {
         console.log("📱 Already subscribed, updating server...");
