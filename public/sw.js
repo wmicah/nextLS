@@ -14,10 +14,41 @@ const urlsToCache = [
 
 // Install event - cache resources
 self.addEventListener("install", event => {
+  console.log("📦 Service worker installing...");
+  // Skip waiting to activate immediately
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       console.log("Opened cache");
-      return cache.addAll(urlsToCache);
+      // Don't fail installation if some resources can't be cached
+      return cache.addAll(urlsToCache).catch(err => {
+        console.warn("Some resources failed to cache:", err);
+        // Return empty array to continue installation
+        return [];
+      });
+    })
+  );
+});
+
+// Activate event - clean up old caches
+self.addEventListener("activate", event => {
+  console.log("✅ Service worker activating...");
+  // Take control of all pages immediately
+  event.waitUntil(
+    self.clients.claim().then(() => {
+      console.log("✅ Service worker activated and controlling clients");
+      // Clean up old caches
+      return caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME) {
+              console.log("Deleting old cache:", cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      });
     })
   );
 });
