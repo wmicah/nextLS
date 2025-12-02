@@ -223,6 +223,23 @@ export const clientsRouter = router({
               },
             },
           },
+          routineAssignments: {
+            select: {
+              id: true,
+              routineId: true,
+              clientId: true,
+              assignedAt: true,
+              startDate: true,
+              progress: true,
+              completedAt: true,
+              routine: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { name: "asc" },
       });
