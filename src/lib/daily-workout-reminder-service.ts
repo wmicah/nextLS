@@ -206,6 +206,31 @@ class DailyWorkoutReminderService {
               clientWorkouts.workouts
             );
 
+            // Send push notification for daily workouts
+            if (client.userId) {
+              try {
+                const { sendPushNotification } = await import(
+                  "@/lib/pushNotificationService"
+                );
+                const workoutCount = clientWorkouts.workouts.length;
+                const workoutText = workoutCount === 1 ? "workout" : "workouts";
+                await sendPushNotification(
+                  client.userId,
+                  `You have ${workoutCount} ${workoutText} today! 💪`,
+                  `${workoutCount} ${workoutText} scheduled for today. Check your dashboard to get started!`,
+                  {
+                    type: "daily_workout_reminder",
+                    workoutCount,
+                    url: "/dashboard",
+                    requireInteraction: false,
+                  }
+                );
+                console.log(`📱 Sent push notification to ${clientWorkouts.clientName} for ${workoutCount} workouts`);
+              } catch (error) {
+                console.error(`❌ Failed to send push notification to ${clientWorkouts.clientName}:`, error);
+              }
+            }
+
             emailsSent++;
             console.log(`✅ Sent daily workout reminder to ${clientWorkouts.clientName} (${clientWorkouts.workouts.length} workouts)`);
           }

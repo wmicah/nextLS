@@ -405,3 +405,117 @@ export async function sendGeneralNotification(
     url: data?.url || `/dashboard`,
   });
 }
+
+/**
+ * Send push notification based on notification type and data
+ * This is a helper to convert in-app notifications to push notifications
+ * Uses the same routing logic as getNotificationRoute for consistency
+ */
+export async function sendNotificationPush(
+  userId: string,
+  type: string,
+  title: string,
+  message: string,
+  data?: any
+) {
+  try {
+    // Determine URL based on notification type (matching notification-routing.ts logic)
+    let url = "/dashboard";
+    
+    switch (type) {
+      case "MESSAGE":
+        // If we have a conversationId, go to that specific conversation
+        if (data?.conversationId) {
+          url = `/messages?conversation=${data.conversationId}`;
+        } else if (data?.messageId) {
+          // If we have a messageId, try to find the conversation
+          url = `/messages?message=${data.messageId}`;
+        } else {
+          url = "/messages";
+        }
+        break;
+      
+      case "LESSON_SCHEDULED":
+      case "LESSON_CANCELLED":
+      case "LESSON_RESTORED":
+      case "SCHEDULE_REQUEST":
+        // If we have a specific event, go to that event's details
+        if (data?.eventId) {
+          url = `/schedule?event=${data.eventId}`;
+        } else {
+          url = "/schedule";
+        }
+        break;
+      
+      case "CLIENT_JOIN_REQUEST":
+        // If we have a specific client, go to that client's page
+        if (data?.clientId) {
+          url = `/clients?client=${data.clientId}`;
+        } else if (data?.clientUserId) {
+          url = `/clients?user=${data.clientUserId}`;
+        } else {
+          url = "/clients";
+        }
+        break;
+      
+      case "WORKOUT_ASSIGNED":
+      case "PROGRAM_ASSIGNED":
+      case "WORKOUT_COMPLETED":
+        // If we have a specific program, go to that program
+        if (data?.programId) {
+          url = `/programs?program=${data.programId}`;
+        } else if (data?.drillId) {
+          // If we have a specific drill, go to that drill
+          url = `/programs?drill=${data.drillId}`;
+        } else {
+          url = "/programs";
+        }
+        break;
+      
+      case "PROGRESS_UPDATE":
+        // If we have a specific program, go to that program's progress
+        if (data?.programId) {
+          url = `/programs?program=${data.programId}&tab=progress`;
+        } else {
+          url = "/programs";
+        }
+        break;
+      
+      case "VIDEO_SUBMISSION":
+        // If we have a specific video submission, go to that video
+        if (data?.videoSubmissionId) {
+          url = `/videos?submission=${data.videoSubmissionId}`;
+        } else {
+          url = "/videos";
+        }
+        break;
+      
+      case "TIME_SWAP_REQUEST":
+        // If we have a swap request, go to the time swap page
+        if (data?.swapRequestId) {
+          url = `/time-swap?request=${data.swapRequestId}`;
+        } else {
+          url = "/time-swap";
+        }
+        break;
+      
+      case "daily_workout_reminder":
+        // Daily workout reminders go to dashboard
+        url = "/dashboard";
+        break;
+      
+      default:
+        // Use provided URL or default to dashboard
+        url = data?.url || "/dashboard";
+    }
+
+    return await sendPushNotification(userId, title, message, {
+      type: type.toLowerCase(),
+      ...data,
+      url,
+    });
+  } catch (error) {
+    console.error(`❌ Error sending push notification for type ${type}:`, error);
+    return false;
+  }
+}

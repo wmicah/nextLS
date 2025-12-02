@@ -126,7 +126,8 @@ self.addEventListener("push", event => {
 
 // Notification click event
 self.addEventListener("notificationclick", event => {
-  console.log("Notification click received:", event);
+  console.log("📱 Notification click received:", event);
+  console.log("📱 Notification data:", event.notification.data);
 
   event.notification.close();
 
@@ -135,20 +136,125 @@ self.addEventListener("notificationclick", event => {
   let url = "/";
 
   // Determine navigation based on notification type
-  if (data.type === "message" && data.conversationId) {
-    url = `/messages?conversationId=${data.conversationId}`;
-  } else if (data.type === "lesson" && data.lessonId) {
-    url = `/schedule`;
-  } else if (data.type === "client" && data.clientId) {
-    url = `/clients/${data.clientId}`;
-  } else if (data.type === "program" && data.programId) {
-    url = `/programs/${data.programId}`;
-  } else if (data.url) {
-    url = data.url;
+  // Use the URL from data if provided (most reliable)
+  if (data.url) {
+    url = data.url.startsWith("/") ? data.url : `/${data.url}`;
   } else {
-    // Default to dashboard
-    url = "/dashboard";
+    // Fallback routing based on type (matching notification-routing.ts logic)
+    switch (data.type) {
+      case "message":
+      case "MESSAGE":
+        if (data.conversationId) {
+          url = `/messages?conversation=${data.conversationId}`;
+        } else if (data.messageId) {
+          url = `/messages?message=${data.messageId}`;
+        } else {
+          url = "/messages";
+        }
+        break;
+      
+      case "lesson_scheduled":
+      case "LESSON_SCHEDULED":
+      case "lesson_cancelled":
+      case "LESSON_CANCELLED":
+      case "lesson_restored":
+      case "LESSON_RESTORED":
+      case "schedule_request":
+      case "SCHEDULE_REQUEST":
+        if (data.eventId) {
+          url = `/schedule?event=${data.eventId}`;
+        } else {
+          url = "/schedule";
+        }
+        break;
+      
+      case "lesson":
+      case "lesson_reminder":
+        if (data.eventId) {
+          url = `/schedule?event=${data.eventId}`;
+        } else {
+          url = "/schedule";
+        }
+        break;
+      
+      case "client_join_request":
+      case "CLIENT_JOIN_REQUEST":
+      case "client_join":
+        if (data.clientId) {
+          url = `/clients?client=${data.clientId}`;
+        } else if (data.clientUserId) {
+          url = `/clients?user=${data.clientUserId}`;
+        } else {
+          url = "/clients";
+        }
+        break;
+      
+      case "client":
+        if (data.clientId) {
+          url = `/clients/${data.clientId}`;
+        } else {
+          url = "/clients";
+        }
+        break;
+      
+      case "workout_assigned":
+      case "WORKOUT_ASSIGNED":
+      case "program_assigned":
+      case "PROGRAM_ASSIGNED":
+      case "workout_completed":
+      case "WORKOUT_COMPLETED":
+        if (data.programId) {
+          url = `/programs?program=${data.programId}`;
+        } else if (data.drillId) {
+          url = `/programs?drill=${data.drillId}`;
+        } else {
+          url = "/programs";
+        }
+        break;
+      
+      case "progress_update":
+      case "PROGRESS_UPDATE":
+        if (data.programId) {
+          url = `/programs?program=${data.programId}&tab=progress`;
+        } else {
+          url = "/programs";
+        }
+        break;
+      
+      case "program":
+      case "program_assignment":
+      case "routine_assignment":
+      case "video_assignment":
+      case "daily_workout_reminder":
+        url = "/dashboard";
+        break;
+      
+      case "video_submission":
+      case "VIDEO_SUBMISSION":
+        if (data.videoSubmissionId) {
+          url = `/videos?submission=${data.videoSubmissionId}`;
+        } else {
+          url = "/videos";
+        }
+        break;
+      
+      case "time_swap_request":
+      case "TIME_SWAP_REQUEST":
+      case "swap_request":
+      case "swap_approval":
+        if (data.swapRequestId) {
+          url = `/time-swap?request=${data.swapRequestId}`;
+        } else {
+          url = "/time-swap";
+        }
+        break;
+      
+      default:
+        url = "/dashboard";
+    }
   }
+
+  console.log("📱 Navigating to:", url);
 
   event.waitUntil(
     clients
@@ -156,18 +262,130 @@ self.addEventListener("notificationclick", event => {
         type: "window",
         includeUncontrolled: true,
       })
-      .then(clientList => {
-        // Check if there's already a window/tab open with the target URL
-        for (let i = 0; i < clientList.length; i++) {
-          const client = clientList[i];
-          if (client.url === url && "focus" in client) {
-            return client.focus();
+      .then(async clientList => {
+        // Get the origin to construct absolute URLs
+        // Try to get origin from existing client, or use registration scope
+        let origin = "";
+        if (clientList.length > 0) {
+          try {
+            const clientUrl = new URL(clientList[0].url);
+            origin = clientUrl.origin;
+          } catch (e) {
+            console.warn("⚠️ Could not parse client URL:", e);
           }
         }
-        // If no existing window, open a new one
-        if (clients.openWindow) {
-          return clients.openWindow(url);
+        
+        // Fallback: try to get from registration scope or self.location
+        if (!origin) {
+          try {
+            origin = self.location.origin;
+          } catch (e) {
+            // If self.location is not available, try registration scope
+            const registration = await self.registration;
+            if (registration && registration.scope) {
+              const scopeUrl = new URL(registration.scope);
+              origin = scopeUrl.origin;
+            }
+          }
         }
+        
+        // If still no origin, use a relative URL (will work if app is already open)
+        const absoluteUrl = url.startsWith("http") 
+          ? url 
+          : origin 
+            ? `${origin}${url}` 
+            : url;
+        
+        console.log("📱 Origin:", origin);
+        console.log("📱 Absolute URL:", absoluteUrl);
+        console.log("📱 Found clients:", clientList.length);
+
+        // Check if there's already a window/tab open with matching path
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          try {
+            const clientUrl = new URL(client.url);
+            const targetUrl = new URL(absoluteUrl);
+            
+            // Compare paths and query strings (ignore hash and protocol)
+            const clientPath = clientUrl.pathname + clientUrl.search;
+            const targetPath = targetUrl.pathname + targetUrl.search;
+            
+            if (clientPath === targetPath && "focus" in client) {
+              console.log("📱 Focusing existing window:", client.url);
+              await client.focus();
+              // Also navigate to ensure we're on the right page
+              if ("navigate" in client && typeof client.navigate === "function") {
+                await client.navigate(absoluteUrl);
+              }
+              return;
+            }
+          } catch (urlError) {
+            console.warn("⚠️ Error parsing client URL:", urlError);
+          }
+        }
+        
+        // If we have any open window, focus it and navigate
+        if (clientList.length > 0) {
+          const client = clientList[0];
+          console.log("📱 Focusing and navigating existing window to:", absoluteUrl);
+          try {
+            // Focus the window first
+            if ("focus" in client) {
+              await client.focus();
+            }
+            
+            // Post message to navigate (the app will handle this)
+            client.postMessage({
+              type: "NAVIGATE",
+              url: absoluteUrl,
+            });
+            
+            // Also try direct navigation if supported
+            if ("navigate" in client && typeof client.navigate === "function") {
+              await client.navigate(absoluteUrl);
+            }
+            return;
+          } catch (navError) {
+            console.warn("⚠️ Error navigating existing window:", navError);
+          }
+        }
+        
+        // If no existing window, try to open a new one
+        console.log("📱 Opening new window:", absoluteUrl);
+        try {
+          if (clients.openWindow) {
+            const newWindow = await clients.openWindow(absoluteUrl);
+            if (newWindow) {
+              console.log("✅ Opened new window");
+              return;
+            } else {
+              // openWindow returned null - might need user gesture
+              console.warn("⚠️ openWindow returned null - may need user gesture");
+              // Fallback: try to focus any existing window and navigate
+              if (clientList.length > 0 && "focus" in clientList[0]) {
+                await clientList[0].focus();
+                clientList[0].postMessage({
+                  type: "NAVIGATE",
+                  url: absoluteUrl,
+                });
+              }
+            }
+          }
+        } catch (openError) {
+          console.error("❌ Error opening window:", openError);
+          // Last resort: try to focus any existing window and navigate
+          if (clientList.length > 0 && "focus" in clientList[0]) {
+            await clientList[0].focus();
+            clientList[0].postMessage({
+              type: "NAVIGATE",
+              url: absoluteUrl,
+            });
+          }
+        }
+      })
+      .catch(error => {
+        console.error("❌ Error handling notification click:", error);
       })
   );
 });

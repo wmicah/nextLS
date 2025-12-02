@@ -1298,6 +1298,22 @@ export const userRouter = router({
           },
         });
 
+        // Send push notification
+        try {
+          const { sendNotificationPush } = await import(
+            "@/lib/pushNotificationService"
+          );
+          await sendNotificationPush(
+            coachId,
+            "CLIENT_JOIN_REQUEST",
+            notification.title,
+            notification.message,
+            notification.data as any
+          );
+        } catch (error) {
+          console.error("Failed to send push notification for client join request:", error);
+        }
+
         console.log("✅ Notification created successfully:", {
           notificationId: notification.id,
           userId: notification.userId,

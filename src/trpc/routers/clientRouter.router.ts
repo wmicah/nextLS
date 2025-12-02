@@ -3991,7 +3991,7 @@ export const clientRouterRouter = router({
 
       // Create notification for the client
       if (event.client?.userId) {
-        await db.notification.create({
+        const notification = await db.notification.create({
           data: {
             userId: event.client.userId,
             type: "LESSON_SCHEDULED",
@@ -4008,6 +4008,22 @@ export const clientRouterRouter = router({
             },
           },
         });
+
+        // Send push notification
+        try {
+          const { sendNotificationPush } = await import(
+            "@/lib/pushNotificationService"
+          );
+          await sendNotificationPush(
+            event.client.userId,
+            "LESSON_SCHEDULED",
+            notification.title,
+            notification.message,
+            notification.data as any
+          );
+        } catch (error) {
+          console.error("Failed to send push notification for schedule request approved:", error);
+        }
       }
 
       return updatedEvent;
@@ -4140,7 +4156,7 @@ export const clientRouterRouter = router({
               input.reason ? ` Reason: ${input.reason}` : ""
             }`;
 
-        await db.notification.create({
+        const notification = await db.notification.create({
           data: {
             userId: event.client.userId,
             type: restoredLesson ? "LESSON_RESTORED" : "LESSON_CANCELLED",
@@ -4156,6 +4172,22 @@ export const clientRouterRouter = router({
             },
           },
         });
+
+        // Send push notification
+        try {
+          const { sendNotificationPush } = await import(
+            "@/lib/pushNotificationService"
+          );
+          await sendNotificationPush(
+            event.client.userId,
+            restoredLesson ? "LESSON_RESTORED" : "LESSON_CANCELLED",
+            notification.title,
+            notification.message,
+            notification.data as any
+          );
+        } catch (error) {
+          console.error("Failed to send push notification for schedule request declined:", error);
+        }
       }
 
       return { deletedEvent, restoredLesson };
@@ -4450,7 +4482,7 @@ export const clientRouterRouter = router({
       });
 
       // Create notification for the coach
-      await db.notification.create({
+      const notification = await db.notification.create({
         data: {
           userId: targetCoachId,
           type: "SCHEDULE_REQUEST",
@@ -4470,6 +4502,22 @@ export const clientRouterRouter = router({
           },
         },
       });
+
+      // Send push notification
+      try {
+        const { sendNotificationPush } = await import(
+          "@/lib/pushNotificationService"
+        );
+        await sendNotificationPush(
+          targetCoachId,
+          "SCHEDULE_REQUEST",
+          notification.title,
+          notification.message,
+          notification.data as any
+        );
+      } catch (error) {
+        console.error("Failed to send push notification for schedule request:", error);
+      }
 
       return scheduleRequest;
     }),
@@ -4647,7 +4695,7 @@ export const clientRouterRouter = router({
       const newRequestedDate = formatInTimeZone(utcDateTime, utcTimeZone, "MMM d, yyyy 'at' h:mm a");
 
       // Create notification for the coach
-      await db.notification.create({
+      const notification = await db.notification.create({
         data: {
           userId: targetCoachId,
           type: "SCHEDULE_REQUEST",
@@ -4667,6 +4715,22 @@ export const clientRouterRouter = router({
           },
         },
       });
+
+      // Send push notification
+      try {
+        const { sendNotificationPush } = await import(
+          "@/lib/pushNotificationService"
+        );
+        await sendNotificationPush(
+          targetCoachId,
+          "SCHEDULE_REQUEST",
+          notification.title,
+          notification.message,
+          notification.data as any
+        );
+      } catch (error) {
+        console.error("Failed to send push notification for lesson exchange request:", error);
+      }
 
       // Send email notification to coach
       const { CompleteEmailService } = await import("@/lib/complete-email-service");
