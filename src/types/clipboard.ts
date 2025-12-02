@@ -7,13 +7,15 @@ export interface ClipboardData {
   sourceDate: string; // ISO date string (YYYY-MM-DD) - first day for single day, or first day for multi-day
   sourceDates?: string[]; // Array of source dates for multi-day copy (in order)
   isMultiDay?: boolean; // Flag to indicate if this is a multi-day copy
+  allInSameWeek?: boolean; // Flag to indicate if all copied days are in the same week (for smart paste mode)
   assignments: {
     routines: ClipboardRoutineAssignment[];
     programs: ClipboardProgramAssignment[];
     videos: ClipboardVideoAssignment[];
   };
   multiDayAssignments?: Array<{ // Array of assignments for each day (in order)
-    dayOffset: number; // Days offset from first day (0, 1, 2, etc.)
+    dayOffset: number; // Days offset from first day (0, 1, 2, etc.) - used for sequential paste
+    dayOfWeek?: number; // Day of week (0 = Sunday, 1 = Monday, etc.) - used for day-of-week matching paste
     assignments: {
       routines: ClipboardRoutineAssignment[];
       programs: ClipboardProgramAssignment[];

@@ -1659,6 +1659,17 @@ function ClientDetailPage({
       const sourceDates = daysArray.map(day => day.toISOString().split("T")[0]);
       const firstDay = daysArray[0];
 
+      // Check if all days are in the same week (for smart paste mode)
+      const firstDayOfWeek = new Date(daysArray[0]);
+      firstDayOfWeek.setDate(firstDayOfWeek.getDate() - firstDayOfWeek.getDay()); // Start of week (Sunday)
+      
+      const lastDayOfWeek = new Date(firstDayOfWeek);
+      lastDayOfWeek.setDate(lastDayOfWeek.getDate() + 6); // End of week (Saturday)
+      
+      const allInSameWeek = daysArray.every(day => {
+        return day >= firstDayOfWeek && day <= lastDayOfWeek;
+      });
+
       // Collect assignments for each day separately (including blank days)
       const multiDayAssignments = daysArray.map((day, index) => {
         const routinesForDate = getRoutineAssignmentsForDate(day);
@@ -1666,7 +1677,8 @@ function ClientDetailPage({
         const videosForDate = getVideosForDate(day);
 
         return {
-          dayOffset: index,
+          dayOffset: index, // Keep for backward compatibility
+          dayOfWeek: day.getDay(), // Store day of week (0 = Sunday, 1 = Monday, etc.)
           assignments: {
             routines: routinesForDate.map((routine: any) => ({
               id: routine.id,
@@ -1764,6 +1776,7 @@ function ClientDetailPage({
         sourceDate: firstDay.toISOString().split("T")[0],
         sourceDates: sourceDates,
         isMultiDay: true,
+        allInSameWeek: allInSameWeek, // Flag to indicate if days are in same week
         sourceClientId: clientId,
         assignments: {
           routines: [],
@@ -1968,14 +1981,39 @@ function ClientDetailPage({
     if (!clipboardData) return;
 
     try {
-      // If multi-day copy, paste each day sequentially
+      // If multi-day copy, paste each day intelligently
       if (clipboardData.isMultiDay && clipboardData.multiDayAssignments) {
         let totalSuccessCount = 0;
         let totalErrorCount = 0;
 
+        // Smart detection: if all copied days were in the same week, use day-of-week matching
+        // Otherwise, use sequential paste (old behavior)
+        const useDayOfWeekMatching = clipboardData.allInSameWeek === true;
+
         for (let i = 0; i < clipboardData.multiDayAssignments.length; i++) {
           const dayData = clipboardData.multiDayAssignments[i];
-          const pasteDate = addDays(targetDate, dayData.dayOffset);
+          
+          // Calculate paste date based on smart detection
+          let pasteDate: Date;
+          if (useDayOfWeekMatching && dayData.dayOfWeek !== undefined) {
+            // Day-of-week matching: paste to matching day of week
+            // Example: Copy Mon, Wed, Fri → Paste on Mon → Mon→Mon, Wed→Wed, Fri→Fri
+            const targetDayOfWeek = targetDate.getDay();
+            const copiedDayOfWeek = dayData.dayOfWeek;
+            
+            // Calculate days to add to reach the matching day of week
+            let daysToAdd = copiedDayOfWeek - targetDayOfWeek;
+            if (daysToAdd < 0) {
+              daysToAdd += 7; // Wrap to next week
+            }
+            
+            pasteDate = addDays(targetDate, daysToAdd);
+          } else {
+            // Sequential paste: paste in order starting from target date
+            // Example: Copy Mon, Wed, Fri → Paste on Mon → Mon→Mon, Wed→Tue, Fri→Wed
+            pasteDate = addDays(targetDate, dayData.dayOffset);
+          }
+          
           const pasteDateStr = pasteDate.toISOString().split("T")[0];
 
           // Validate paste date
