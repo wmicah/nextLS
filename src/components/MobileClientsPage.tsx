@@ -109,6 +109,18 @@ interface Client {
       duration: number;
     };
   }[];
+  routineAssignments?: {
+    id: string;
+    routineId: string;
+    assignedAt: string;
+    startDate: string | null;
+    progress: number;
+    completedAt: string | null;
+    routine: {
+      id: string;
+      name: string;
+    };
+  }[];
 }
 
 // Mobile Invite Code Button Component
@@ -729,109 +741,113 @@ export default function MobileClientsPage() {
           bValue = b.name.toLowerCase();
           break;
         case "dueDate": {
-          // Calculate the latest program end date for each client
-          // Handles multiple programs by finding the latest end date (when program sequence ends)
-          const getClosestProgramEndDate = (
+          // Calculate the NEAREST due date for each client across ALL assignments (programs and routines)
+          // For "nearest due date", we want the closest upcoming date (or most recent overdue date)
+          const getClosestDueDate = (
             client: Client
           ): {
             overdue: Date | null;
             upcoming: Date | null;
-            latest: Date | null;
+            nearest: Date | null;
           } | null => {
-            if (
-              !client.programAssignments ||
-              client.programAssignments.length === 0
-            ) {
-              return { overdue: null, upcoming: null, latest: null };
-            }
-
             const nowNormalized = new Date(
               now.getFullYear(),
               now.getMonth(),
               now.getDate()
             );
-            let latestEndDate: Date | null = null; // Track the LATEST end date across ALL programs
+            let nearestUpcoming: Date | null = null; // Track the NEAREST upcoming due date
+            let mostRecentOverdue: Date | null = null; // Track the MOST RECENT overdue date (closest to today)
 
             // Process all active, non-completed program assignments
-            for (const assignment of client.programAssignments) {
-              // Skip completed assignments
-              if (assignment.completed) continue;
+            if (client.programAssignments && client.programAssignments.length > 0) {
+              for (const assignment of client.programAssignments) {
+                // Skip completed assignments
+                if (assignment.completed) continue;
 
-              // Use startDate if available, otherwise use assignedAt
-              const startDate = assignment.startDate
-                ? new Date(assignment.startDate)
-                : new Date(assignment.assignedAt);
+                // Use startDate if available, otherwise use assignedAt
+                const startDate = assignment.startDate
+                  ? new Date(assignment.startDate)
+                  : new Date(assignment.assignedAt);
 
-              // Calculate end date: startDate + (duration * 7 days)
-              const endDate = new Date(startDate);
-              endDate.setDate(
-                endDate.getDate() + assignment.program.duration * 7
-              );
+                // Calculate end date: startDate + (duration * 7 days)
+                const endDate = new Date(startDate);
+                endDate.setDate(
+                  endDate.getDate() + assignment.program.duration * 7
+                );
 
-              // Normalize to start of day (midnight) for consistent comparison
-              const endDateNormalized = new Date(
-                endDate.getFullYear(),
-                endDate.getMonth(),
-                endDate.getDate()
-              );
+                // Normalize to start of day (midnight) for consistent comparison
+                const endDateNormalized = new Date(
+                  endDate.getFullYear(),
+                  endDate.getMonth(),
+                  endDate.getDate()
+                );
 
-              // Track the LATEST end date across all assignments (when the entire program sequence ends)
-              if (!latestEndDate || endDateNormalized > latestEndDate) {
-                latestEndDate = endDateNormalized;
+                if (endDateNormalized < nowNormalized) {
+                  // Overdue - track the most recent (closest to today)
+                  if (!mostRecentOverdue || endDateNormalized > mostRecentOverdue) {
+                    mostRecentOverdue = endDateNormalized;
+                  }
+                } else {
+                  // Upcoming - track the nearest (earliest upcoming)
+                  if (!nearestUpcoming || endDateNormalized < nearestUpcoming) {
+                    nearestUpcoming = endDateNormalized;
+                  }
+                }
               }
             }
 
-            // Use the LATEST end date as the client's due date
-            // Determine if it's overdue or upcoming based on the latest date
-            let overdue: Date | null = null;
-            let upcoming: Date | null = null;
+            // Process all active, non-completed routine assignments
+            // For routines, they are ongoing assignments - only consider them if they're already active (startDate is today or in the past)
+            // Future routine startDates should NOT be considered for sorting (routines don't have a true "due date")
+            if (client.routineAssignments && client.routineAssignments.length > 0) {
+              for (const assignment of client.routineAssignments) {
+                // Skip completed assignments
+                if (assignment.completedAt) continue;
 
-            if (latestEndDate) {
-              if (latestEndDate < nowNormalized) {
-                // Latest end date is in the past - client is overdue
-                overdue = latestEndDate;
-              } else {
-                // Latest end date is in the future - client has upcoming programs
-                upcoming = latestEndDate;
+                // Use startDate if available, otherwise use assignedAt
+                const startDate = assignment.startDate
+                  ? new Date(assignment.startDate)
+                  : new Date(assignment.assignedAt);
+
+                // Normalize to start of day (midnight) for consistent comparison
+                const startDateNormalized = new Date(
+                  startDate.getFullYear(),
+                  startDate.getMonth(),
+                  startDate.getDate()
+                );
+
+                // Only consider routines that are already active (startDate is today or in the past)
+                // Routines with future startDates should not affect sorting (they're not "due" yet)
+                if (startDateNormalized <= nowNormalized) {
+                  // Routine is active - treat as overdue (since routines are ongoing, active ones are "due")
+                  // Track the most recent active start date (closest to today)
+                  if (!mostRecentOverdue || startDateNormalized > mostRecentOverdue) {
+                    mostRecentOverdue = startDateNormalized;
+                  }
+                }
+                // If startDate is in the future, ignore it for sorting purposes
               }
+            }
+
+            // If no assignments found, return null
+            if (!nearestUpcoming && !mostRecentOverdue) {
+              return { overdue: null, upcoming: null, nearest: null };
             }
 
             return {
-              overdue, // Latest end date if overdue
-              upcoming, // Latest end date if upcoming
-              latest: latestEndDate, // Latest end date overall
+              overdue: mostRecentOverdue, // Most recent overdue date (closest to today)
+              upcoming: nearestUpcoming, // Nearest upcoming date (earliest future date)
+              nearest: nearestUpcoming || mostRecentOverdue, // Nearest date overall (prefer upcoming)
             };
           };
 
-          const aDates = getClosestProgramEndDate(a);
-          const bDates = getClosestProgramEndDate(b);
+          const aDates = getClosestDueDate(a);
+          const bDates = getClosestDueDate(b);
 
           // Prioritize overdue programs: they should always appear first
-          // Among overdue, most overdue (earliest date) comes first
-          // Among upcoming, closest (earliest date) comes first
-          // (now is declared at the top of the sort function)
-
-          // The latest end date across all assignments is used as the client's due date
-          // If the latest date is in the past, the client is overdue
-          // If the latest date is in the future, the client has upcoming programs
+          // Among overdue, most recent (closest to today) comes first
+          // Among upcoming, nearest (earliest date) comes first
           const FAR_FUTURE_DATE = new Date("9999-12-31");
-
-          // Get the date to use for sorting - use the latest end date (which is already in overdue or upcoming)
-          const getSortDate = (
-            dates: {
-              overdue: Date | null;
-              upcoming: Date | null;
-              latest: Date | null;
-            } | null
-          ): Date | null => {
-            if (!dates) return null;
-            // The latest end date is already categorized as overdue or upcoming
-            // Use whichever one exists (they're mutually exclusive)
-            return dates.upcoming || dates.overdue || dates.latest;
-          };
-
-          const aSortDate = getSortDate(aDates);
-          const bSortDate = getSortDate(bDates);
 
           // Determine if clients have active programs (upcoming or overdue)
           const aHasActivePrograms = aDates?.upcoming || aDates?.overdue;
@@ -856,25 +872,25 @@ export default function MobileClientsPage() {
             return 1;
           } else if (aDates?.overdue && !bDates?.overdue) {
             // Client A has overdue programs, B doesn't - A should come first (most urgent)
-            aValue = aDates.overdue;
-            bValue = bDates?.upcoming || FAR_FUTURE_DATE;
+            return -1;
           } else if (!aDates?.overdue && bDates?.overdue) {
             // Client B has overdue programs, A doesn't - B should come first
-            aValue = aDates?.upcoming || FAR_FUTURE_DATE;
-            bValue = bDates.overdue;
+            return 1;
           } else if (aDates?.overdue && bDates?.overdue) {
-            // Both have overdue programs - compare by most overdue (earliest past date)
-            // Most overdue (earliest date) should come first
-            aValue = aDates.overdue;
-            bValue = bDates.overdue;
+            // Both have overdue programs - compare by most recent (closest to today, latest past date)
+            // Most recent overdue (latest past date) should come first
+            aValue = aDates.overdue.getTime();
+            bValue = bDates.overdue.getTime();
           } else if (aDates?.upcoming && bDates?.upcoming) {
             // Both have upcoming programs (and no overdue) - compare by nearest upcoming date
-            aValue = aDates.upcoming;
-            bValue = bDates.upcoming;
+            aValue = aDates.upcoming.getTime();
+            bValue = bDates.upcoming.getTime();
           } else {
             // Fallback case (shouldn't happen, but just in case)
-            aValue = aSortDate || FAR_FUTURE_DATE;
-            bValue = bSortDate || FAR_FUTURE_DATE;
+            const aNearest = aDates?.nearest?.getTime() || FAR_FUTURE_DATE.getTime();
+            const bNearest = bDates?.nearest?.getTime() || FAR_FUTURE_DATE.getTime();
+            aValue = aNearest;
+            bValue = bNearest;
           }
           // For all other cases, continue to final comparison
           break;
