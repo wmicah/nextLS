@@ -46,6 +46,20 @@ export default function PushNotificationSetup() {
     if (!isSupported) return;
 
     setIsLoading(true);
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    // Add a safety timeout to prevent infinite loading
+    timeoutId = setTimeout(() => {
+      setIsLoading(false);
+      alert("Subscription is taking too long. Please check your browser console for errors and try again.");
+      console.error("❌ Subscription timeout - taking too long");
+      console.error("   This usually means:");
+      console.error("   1. Service worker is stuck installing");
+      console.error("   2. VAPID key is invalid");
+      console.error("   3. Network issue preventing subscription");
+      console.error("   Try: Refresh the page and try again");
+    }, 30000); // 30 second max
+    
     try {
       console.log("🚀 Starting push notification subscription...");
       
@@ -54,6 +68,10 @@ export default function PushNotificationSetup() {
         const newPermission = await Notification.requestPermission();
         setPermission(newPermission);
         if (newPermission !== "granted") {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
           alert("Push notifications require browser permission. Please enable notifications in your browser settings.");
           setIsLoading(false);
           return;
@@ -61,6 +79,12 @@ export default function PushNotificationSetup() {
       }
       
       const subscription = await pushNotificationService.subscribeToPush();
+      
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      
       if (subscription) {
         setIsSubscribed(true);
         setPermission(Notification.permission);
@@ -74,7 +98,16 @@ export default function PushNotificationSetup() {
         alert("Failed to enable push notifications. Please try again.");
       }
     } catch (error: any) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
       console.error("❌ Error subscribing to push notifications:", error);
+      console.error("   Full error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
       setIsSubscribed(false);
       setPermission(Notification.permission);
       alert(
@@ -82,6 +115,9 @@ export default function PushNotificationSetup() {
           "Failed to enable push notifications. Please check your browser settings."
       );
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       setIsLoading(false);
     }
   };
