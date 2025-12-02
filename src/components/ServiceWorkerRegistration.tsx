@@ -74,6 +74,8 @@ export default function ServiceWorkerRegistration() {
         navigator.serviceWorker.removeEventListener("message", handleMessage);
       };
     }
+    // Return undefined if condition is false (no cleanup needed)
+    return undefined;
   }, [router]);
 
   return null; // This component doesn't render anything
