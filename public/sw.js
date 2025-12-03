@@ -144,7 +144,12 @@ self.addEventListener("notificationclick", event => {
     switch (data.type) {
       case "message":
       case "MESSAGE":
-        if (data.conversationId) {
+        // Use the URL from data if provided (most reliable - includes role-based routing)
+        if (data.url) {
+          url = data.url.startsWith("/") ? data.url : `/${data.url}`;
+        } else if (data.conversationId) {
+          // Fallback: try coach route first, but this should rarely be used
+          // since we now send the correct URL in the push notification
           url = `/messages?conversation=${data.conversationId}`;
         } else if (data.messageId) {
           url = `/messages?message=${data.messageId}`;

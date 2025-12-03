@@ -161,6 +161,18 @@ export async function sendMessageNotification(
     console.log(`   Sender: ${senderName}`);
     console.log(`   Message preview: ${messageContent.substring(0, 50)}...`);
     
+    // Get user's role to determine the correct message route
+    const recipientUser = await db.user.findUnique({
+      where: { id: recipientId },
+      select: { role: true },
+    });
+
+    // Determine the correct URL based on user role
+    // Clients go to /client-messages, coaches go to /messages
+    const messageUrl = recipientUser?.role === "CLIENT"
+      ? `/client-messages?conversation=${conversationId}`
+      : `/messages?conversation=${conversationId}`;
+    
     // Check if user has message notifications enabled
     const userSettings = await db.userSettings.findUnique({
       where: { userId: recipientId },
@@ -173,6 +185,8 @@ export async function sendMessageNotification(
     console.log(`📨 User settings for ${recipientId}:`, {
       pushNotifications: userSettings?.pushNotifications,
       messageNotifications: userSettings?.messageNotifications,
+      role: recipientUser?.role,
+      messageUrl,
     });
 
     // Check both pushNotifications and messageNotifications settings
@@ -205,6 +219,7 @@ export async function sendMessageNotification(
       `📨 Sending message notification to user ${recipientId} from ${senderName}`
     );
     console.log(`📨 Message preview: "${cleanContent.substring(0, 50)}..."`);
+    console.log(`📨 Message URL: ${messageUrl}`);
 
     const result = await sendPushNotification(
       recipientId,
@@ -216,7 +231,7 @@ export async function sendMessageNotification(
         type: "message",
         conversationId,
         senderName,
-        url: `/messages?conversation=${conversationId}`,
+        url: messageUrl,
       }
     );
 
