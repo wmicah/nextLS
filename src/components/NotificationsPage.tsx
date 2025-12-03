@@ -67,13 +67,14 @@ export default function NotificationsPage({}: NotificationsPageProps) {
       }
     );
 
-  // Get unread count
+  // Get unread count (no polling - will add WebSocket support later)
   const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
+      refetchInterval: false, // NO POLLING
+      refetchOnWindowFocus: true, // Only refetch when user returns to tab
       refetchOnReconnect: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     }
   );
 

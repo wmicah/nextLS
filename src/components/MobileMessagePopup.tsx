@@ -36,7 +36,7 @@ export default function MobileMessagePopup({
   const { data: conversationsData, refetch: refetchConversations } =
     trpc.messaging.getConversations.useQuery(undefined, {
       enabled: isOpen,
-      refetchInterval: 5000, // Refresh every 5 seconds
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
     });
 
   const conversations = conversationsData?.conversations || [];
@@ -45,7 +45,7 @@ export default function MobileMessagePopup({
   const { data: unreadCounts = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
       enabled: isOpen,
-      refetchInterval: 5000, // Refresh every 5 seconds
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
     });
 
   const { data: messages = [], refetch: refetchMessages } =
@@ -53,7 +53,7 @@ export default function MobileMessagePopup({
       { conversationId: selectedConversation! },
       {
         enabled: !!selectedConversation && isOpen,
-        refetchInterval: 3000,
+        refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       }
     );
 

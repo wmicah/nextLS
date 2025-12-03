@@ -160,6 +160,23 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
+  
+  const utils = trpc.useUtils();
+  const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
+    onSuccess: () => {
+      // Invalidate all queries that depend on unread counts
+      utils.messaging.getMessages.invalidate();
+      utils.messaging.getConversations.invalidate();
+      utils.messaging.getUnreadCount.invalidate();
+      utils.messaging.getConversationUnreadCounts.invalidate();
+      utils.sidebar.getSidebarData.invalidate(); // This updates the Sidebar badge!
+      
+      // Force immediate refetch
+      utils.messaging.getConversationUnreadCounts.refetch();
+      utils.messaging.getUnreadCount.refetch();
+      utils.sidebar.getSidebarData.refetch();
+    },
+  });
 
   // Helper function to get the other user from a conversation
   const getOtherUser = (conversation: any, currentUserId: string) => {
@@ -459,7 +476,11 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                           borderColor: "#606364",
                           minHeight: "72px",
                         }}
-                        onClick={() => setSelectedConversation(conversation.id)}
+                        onClick={() => {
+                          setSelectedConversation(conversation.id);
+                          // Mark messages as read when conversation is opened
+                          markAsReadMutation.mutate({ conversationId: conversation.id });
+                        }}
                       >
                         <div className="flex items-center gap-4">
                           <ProfilePictureUploader

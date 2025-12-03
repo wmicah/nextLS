@@ -258,8 +258,29 @@ export const messagingRouter = router({
         data: { updatedAt: new Date() },
       });
 
-      // Trigger SSE updates
+      // Broadcast via Socket.io/WebSocket and SSE
       try {
+        // Try Socket.io first (if available) - dynamic import to avoid SSR issues
+        try {
+          // Only import on server side
+          if (typeof window === "undefined") {
+            const socketModule = await import("@/lib/socket-server");
+            const socketServer = socketModule.getSocketServer();
+            
+            if (socketServer) {
+              // Broadcast to conversation room
+              socketModule.emitToConversation(input.conversationId, "new_message", {
+                message,
+                conversationId: input.conversationId,
+              });
+            }
+          }
+        } catch (socketError) {
+          // Socket.io not available, fall back to SSE
+          // Silently fail - SSE will handle it
+        }
+
+        // Also use SSE as fallback/backup
         const { sendToUser } = await import("@/app/api/sse/messages/route");
         const { sendMessageNotification } = await import(
           "@/lib/pushNotificationService"
@@ -312,7 +333,35 @@ export const messagingRouter = router({
           if (!recipient) {
             console.warn(`⚠️ Recipient ${recipientId} not found, skipping notifications`);
           } else {
-            // Send SSE update
+            // Broadcast via Socket.io (if available) - dynamic import to avoid SSR issues
+            try {
+              // Only import on server side
+              if (typeof window === "undefined") {
+                const socketModule = await import("@/lib/socket-server");
+                const socketServer = socketModule.getSocketServer();
+                
+                if (socketServer) {
+                  // Broadcast to conversation room (all participants)
+                  socketModule.emitToConversation(input.conversationId, "new_message", {
+                    message,
+                    conversationId: input.conversationId,
+                  });
+                  
+                  // Also send to recipient's personal room
+                  socketModule.emitToUser(recipientId, "new_message", {
+                    message,
+                    conversationId: input.conversationId,
+                  });
+                  
+                  console.log(`✅ Socket.io broadcast sent for conversation ${input.conversationId}`);
+                }
+              }
+            } catch (socketError) {
+              // Socket.io not available, that's okay - fall back to SSE
+              // Silently fail - SSE will handle it
+            }
+
+            // Send SSE update (fallback/backup)
             try {
               sendToUser(recipientId, {
                 type: "new_message",

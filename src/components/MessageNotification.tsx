@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Bell, X, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/app/_trpc/client";
-// Removed complex SSE hooks - using simple polling instead
+import { useMessagingService } from "./MessagingServiceProvider";
 
 interface MessageNotificationProps {
   // Add any props if needed
@@ -21,13 +21,15 @@ export default function MessageNotification({}: MessageNotificationProps) {
   // Get user settings to check sound preferences
   const { data: userSettings } = trpc.settings.getSettings.useQuery();
 
-  // Simple polling for unread count
+  // Get unread count - updates via Supabase Realtime
+  const { isConnected: realtimeConnected } = useMessagingService();
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000, // Poll every 10 seconds
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
+      staleTime: 0, // Always refetch when invalidated
     }
   );
 

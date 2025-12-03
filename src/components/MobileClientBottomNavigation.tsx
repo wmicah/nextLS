@@ -8,19 +8,22 @@ import BugReportModalMobile from "./BugReportModalMobile";
 export default function MobileClientBottomNavigation() {
   const [showBugReport, setShowBugReport] = useState(false);
 
-  // Get unread counts
+  // Get unread counts - will update via Supabase Realtime
   const { data: unreadMessages = 0, isLoading: messagesLoading } =
     trpc.messaging.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 30000,
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
+      staleTime: 0, // Always refetch when invalidated (for real-time updates)
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     });
 
   const { data: unreadNotifications = 0, isLoading: notificationsLoading } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 30000,
+      refetchInterval: false, // NO POLLING - will add WebSocket support later
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
   return (

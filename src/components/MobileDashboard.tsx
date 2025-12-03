@@ -256,13 +256,14 @@ function RecentNotificationsSection() {
       unreadOnly: false,
     });
 
-  // Simple polling for notification count
+  // Get notification count (no polling - will add WebSocket support later)
   const { data: unreadCount = 0 } = trpc.notifications.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 120000, // Poll every 2 minutes
-      refetchOnWindowFocus: false,
+      refetchInterval: false, // NO POLLING
+      refetchOnWindowFocus: true, // Only refetch when user returns to tab
       refetchOnReconnect: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     }
   );
 

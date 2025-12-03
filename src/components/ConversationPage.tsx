@@ -60,7 +60,7 @@ export default function ConversationPage({
   const { data: conversation, error: conversationError } =
     trpc.messaging.getConversation.useQuery(
       { conversationId },
-      { refetchInterval: 5000 }
+      { refetchInterval: false } // NO POLLING - updates via Supabase Realtime
     );
 
   // Debug logging
@@ -77,7 +77,7 @@ export default function ConversationPage({
   const { data: messages = [], refetch: refetchMessages } =
     trpc.messaging.getMessages.useQuery(
       { conversationId },
-      { refetchInterval: 3000 }
+      { refetchInterval: false } // NO POLLING - updates via Supabase Realtime
     ) as { data: any[]; refetch: any };
 
   // Mutations
@@ -93,8 +93,20 @@ export default function ConversationPage({
     },
   }) as any;
 
+  const utils = trpc.useUtils();
   const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
     onSuccess: () => {
+      // Invalidate all queries that depend on unread counts
+      utils.messaging.getMessages.invalidate();
+      utils.messaging.getConversations.invalidate();
+      utils.messaging.getUnreadCount.invalidate();
+      utils.messaging.getConversationUnreadCounts.invalidate();
+      utils.sidebar.getSidebarData.invalidate(); // This updates the Sidebar badge!
+      
+      // Force immediate refetch
+      utils.messaging.getConversationUnreadCounts.refetch();
+      utils.messaging.getUnreadCount.refetch();
+      utils.sidebar.getSidebarData.refetch();
       refetchMessages();
     },
   });

@@ -43,6 +43,7 @@ import MessagePopup from "./MessagePopup";
 import NotificationPopup from "./NotificationPopup";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import ClientSearchModal from "./ClientSearchModal";
+import { useMessagingService } from "@/components/MessagingServiceProvider";
 
 // navLinks will be defined inside the component to access unreadCount
 
@@ -458,20 +459,31 @@ export default function Sidebar({ user, children }: SidebarProps) {
       },
     });
 
+  // Use MessagingService to check if Realtime is connected
+  const { isConnected: realtimeConnected } = useMessagingService();
+
   // Batched sidebar data query - gets all data in one call
+  // Only poll if Realtime is NOT connected
   const { data: sidebarData, refetch: refetchSidebarData } =
     trpc.sidebar.getSidebarData.useQuery(undefined, {
-      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-      refetchInterval: false, // No automatic polling
-      refetchOnWindowFocus: false, // Don't refetch on focus
-      refetchOnReconnect: true, // Only refetch on reconnect
+      staleTime: 0, // Always refetch when invalidated (for real-time updates)
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      refetchInterval: !realtimeConnected ? 30000 : false, // Only poll if Realtime not connected
+      refetchOnWindowFocus: true, // Refetch when user returns to tab
+      refetchOnReconnect: true,
     });
 
   // Extract data from batched query
   const unreadCountsObj = sidebarData?.unreadCountsObj || {};
   const unreadCount = sidebarData?.totalUnreadCount || 0;
   const unreadNotificationCount = sidebarData?.unreadNotificationCount || 0;
+
+  // Debug: Log when sidebar data changes
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("📊 Sidebar unreadCount updated:", unreadCount, "from sidebarData:", sidebarData);
+    }
+  }, [unreadCount, sidebarData]);
 
   // Get recent conversations when needed (separate query for performance)
   const { data: conversations = [], refetch: refetchConversations } =
@@ -490,13 +502,32 @@ export default function Sidebar({ user, children }: SidebarProps) {
       { conversationId: selectedConversationId! },
       {
         enabled: !!selectedConversationId && showRecentMessages,
-        refetchInterval: 3000, // Poll every 3 seconds when in conversation
+        refetchInterval: !realtimeConnected ? 3000 : false, // Only poll if Realtime not connected
       }
     );
 
   // Send message mutation
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
   const utils = trpc.useUtils();
+
+  // Mark as read mutation
+  const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
+    onSuccess: () => {
+      // Invalidate all queries that depend on unread counts
+      utils.messaging.getMessages.invalidate();
+      utils.messaging.getConversations.invalidate();
+      utils.messaging.getUnreadCount.invalidate();
+      utils.messaging.getConversationUnreadCounts.invalidate();
+      utils.sidebar.getSidebarData.invalidate(); // This updates the Sidebar badge!
+      utils.sidebar.getRecentConversations.invalidate();
+      
+      // Force immediate refetch
+      utils.messaging.getConversationUnreadCounts.refetch();
+      utils.messaging.getUnreadCount.refetch();
+      utils.sidebar.getSidebarData.refetch();
+      refetchConversations();
+    },
+  });
 
   // Handle sending message
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -812,7 +843,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
       {/* Mobile hamburger button - improved positioning and design */}
       <button
         onClick={toggleMobileSidebar}
-        className="fixed top-4 left-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl bg-gradient-to-br from-[#4A5A70] to-[#353A3A] text-white border border-[#606364] backdrop-blur-sm"
+        className={`fixed top-4 left-4 ${showRecentMessages ? 'z-40' : 'z-50'} md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl bg-gradient-to-br from-[#4A5A70] to-[#353A3A] text-white border border-[#606364] backdrop-blur-sm`}
         aria-label={isMobileOpen ? "Close sidebar" : "Open sidebar"}
         style={{
           boxShadow:
@@ -1168,7 +1199,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
               {/* Recent Messages Popup with Animation */}
               {showRecentMessages && (
                 <div
-                  className={`absolute bottom-full mb-2 w-96 h-[500px] max-h-[80vh] rounded-xl shadow-2xl border backdrop-blur-sm ${
+                  className={`absolute bottom-full mb-2 w-96 h-[500px] max-h-[80vh] rounded-xl shadow-2xl border backdrop-blur-sm z-[100] ${
                     isOpen ? "left-0" : "left-12"
                   } ${
                     isAnimating && !showRecentMessages
@@ -1557,6 +1588,8 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                       setSelectedConversationId(
                                         conversation.id
                                       );
+                                      // Mark messages as read when conversation is opened
+                                      markAsReadMutation.mutate({ conversationId: conversation.id });
                                     }}
                                     type="button"
                                     className="flex items-center gap-3 px-4 py-3 border-b transition-all duration-200 relative animate-[messageSlideIn_0.3s_ease-out] w-full text-left"

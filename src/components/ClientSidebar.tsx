@@ -124,20 +124,21 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
   const { data: conversationsData, refetch: refetchConversations } =
     trpc.messaging.getConversations.useQuery(undefined, {
       enabled: showRecentMessages,
-      refetchInterval: 60000, // Poll every minute
+      refetchInterval: false, // NO POLLING - updates via WebSocket
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      staleTime: 0, // Don't cache - always get fresh data
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     });
 
   const conversations = conversationsData?.conversations || [];
 
   const { data: unreadNotificationCount = 0 } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 60000, // Poll every 60 seconds (reduced from 10 seconds)
-      refetchOnWindowFocus: false, // Disabled to reduce unnecessary calls
+      refetchInterval: false, // NO POLLING - will add WebSocket support later
+      refetchOnWindowFocus: true, // Only refetch when user returns to tab
       refetchOnReconnect: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
   // Get user settings for avatar
