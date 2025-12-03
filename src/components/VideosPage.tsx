@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import Sidebar from "./Sidebar";
 import { SkeletonVideoGrid, SkeletonCard } from "@/components/SkeletonLoader";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 function VideosPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -166,7 +167,7 @@ function VideosPage() {
   if (videosLoading || clientSubmissionsLoading) {
     return (
       <Sidebar>
-        <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+        <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
           <div className="p-6">
             <SkeletonVideoGrid items={8} />
           </div>
@@ -181,17 +182,17 @@ function VideosPage() {
       <Sidebar>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ backgroundColor: "#2A3133" }}
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
           <div className="text-center max-w-md mx-auto p-6">
             <AlertCircle
               className="w-16 h-16 mx-auto mb-4"
-              style={{ color: "#ef4444" }}
+              style={{ color: COLORS.RED_ALERT }}
             />
-            <h3 className="text-xl font-bold mb-2" style={{ color: "#C3BCC2" }}>
+            <h3 className="text-xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
               Something went wrong
             </h3>
-            <p className="text-sm mb-4" style={{ color: "#ABA4AA" }}>
+            <p className="text-sm mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
               {activeTab === "coach"
                 ? "Unable to load coach videos. Please try refreshing the page."
                 : "Unable to load client submissions. Please try refreshing the page."}
@@ -199,7 +200,17 @@ function VideosPage() {
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 rounded-lg text-sm transition-all duration-200 hover:scale-105"
-              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+              style={{ 
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_PRIMARY,
+                border: `1px solid ${COLORS.BORDER_SUBTLE}`
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              }}
             >
               Refresh Page
             </button>
@@ -211,17 +222,17 @@ function VideosPage() {
 
   return (
     <Sidebar>
-      <div className="min-h-screen p-6" style={{ backgroundColor: "#2A3133" }}>
+      <div className="min-h-screen p-6" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
         {/* Compact Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1
               className="text-2xl font-bold mb-1"
-              style={{ color: "#C3BCC2" }}
+              style={{ color: COLORS.TEXT_PRIMARY }}
             >
               Video Feedback
             </h1>
-            <p className="text-sm" style={{ color: "#ABA4AA" }}>
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
               {activeTab === "coach"
                 ? "Review and manage your video library"
                 : "Review client video submissions and provide feedback"}
@@ -229,10 +240,11 @@ function VideosPage() {
           </div>
           <div className="flex items-center gap-3">
             <span
-              className="px-3 py-1 rounded-full text-sm font-medium"
+              className="px-3 py-1 rounded-full text-sm font-medium border"
               style={{
-                backgroundColor: "#4A5A70",
-                color: "#C3BCC2",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_PRIMARY,
+                borderColor: COLORS.BORDER_SUBTLE,
               }}
             >
               {activeTab === "coach"
@@ -242,16 +254,40 @@ function VideosPage() {
             <div className="flex items-center gap-2">
               <Link
                 href="/videos/compare"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm"
-                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm border"
+                style={{ 
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  color: COLORS.TEXT_PRIMARY,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
               >
                 <Video className="w-4 h-4" />
                 <span className="hidden sm:inline">Compare</span>
               </Link>
               <Link
                 href="/videos/upload"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm"
-                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm border"
+                style={{ 
+                  backgroundColor: getGoldenAccent(0.2),
+                  color: COLORS.TEXT_PRIMARY,
+                  borderColor: getGoldenAccent(0.4),
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = getGoldenAccent(0.3);
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.5);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = getGoldenAccent(0.2);
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.4);
+                }}
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Upload</span>
@@ -264,30 +300,36 @@ function VideosPage() {
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setActiveTab("coach")}
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm border ${
               activeTab === "coach"
                 ? "text-white"
                 : "text-gray-300 hover:text-white"
             }`}
             style={{
-              backgroundColor: activeTab === "coach" ? "#4A5A70" : "#353A3A",
-              borderColor: "#606364",
-              border: "1px solid",
+              backgroundColor: activeTab === "coach" 
+                ? getGoldenAccent(0.2) 
+                : COLORS.BACKGROUND_CARD,
+              borderColor: activeTab === "coach"
+                ? getGoldenAccent(0.4)
+                : COLORS.BORDER_SUBTLE,
             }}
           >
             Coach Videos ({videos.length})
           </button>
           <button
             onClick={() => setActiveTab("client")}
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm border ${
               activeTab === "client"
                 ? "text-white"
                 : "text-gray-300 hover:text-white"
             }`}
             style={{
-              backgroundColor: activeTab === "client" ? "#4A5A70" : "#353A3A",
-              borderColor: "#606364",
-              border: "1px solid",
+              backgroundColor: activeTab === "client" 
+                ? getGoldenAccent(0.2) 
+                : COLORS.BACKGROUND_CARD,
+              borderColor: activeTab === "client"
+                ? getGoldenAccent(0.4)
+                : COLORS.BORDER_SUBTLE,
             }}
           >
             Client Submissions ({clientSubmissions.length})
@@ -299,7 +341,7 @@ function VideosPage() {
           <div className="relative flex-1">
             <Search
               className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
-              style={{ color: "#ABA4AA" }}
+              style={{ color: COLORS.TEXT_SECONDARY }}
             />
             <input
               type="text"
@@ -310,12 +352,19 @@ function VideosPage() {
               }
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full pl-10 pr-4 py-2 rounded-lg text-sm transition-all duration-200 focus:outline-none focus:ring-2 border"
               style={{
-                backgroundColor: "#353A3A",
-                borderColor: "#606364",
-                color: "#C3BCC2",
-                border: "1px solid",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = getGoldenAccent(0.5);
+                e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.boxShadow = "none";
               }}
             />
           </div>
@@ -324,21 +373,28 @@ function VideosPage() {
             <div className="relative">
               <Filter
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
-                style={{ color: "#ABA4AA" }}
+                style={{ color: COLORS.TEXT_SECONDARY }}
               />
               <select
                 value={selectedCategory}
                 onChange={e => setSelectedCategory(e.target.value)}
-                className="pl-10 pr-8 py-2 rounded-lg text-sm transition-all duration-200 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="pl-10 pr-8 py-2 rounded-lg text-sm transition-all duration-200 appearance-none focus:outline-none focus:ring-2 border"
                 style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                  border: "1px solid",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.5);
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
                 {categories.map(category => (
-                  <option key={category.value} value={category.value}>
+                  <option key={category.value} value={category.value} style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
                     {category.label}
                   </option>
                 ))}
@@ -354,29 +410,43 @@ function VideosPage() {
                   onChange={e =>
                     setSortBy(e.target.value as "date" | "client" | "title")
                   }
-                  className="pl-4 pr-8 py-2 rounded-lg text-sm transition-all duration-200 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="pl-4 pr-8 py-2 rounded-lg text-sm transition-all duration-200 appearance-none focus:outline-none focus:ring-2 border"
                   style={{
-                    backgroundColor: "#353A3A",
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
-                    border: "1px solid",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = getGoldenAccent(0.5);
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  <option value="date">Sort by Date</option>
-                  <option value="client">Sort by Client</option>
-                  <option value="title">Sort by Title</option>
+                  <option value="date" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Sort by Date</option>
+                  <option value="client" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Sort by Client</option>
+                  <option value="title" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Sort by Title</option>
                 </select>
               </div>
               <button
                 onClick={() =>
                   setSortOrder(sortOrder === "asc" ? "desc" : "asc")
                 }
-                className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 border"
                 style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                  border: "1px solid",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                 }}
               >
                 {sortOrder === "asc" ? (
@@ -395,20 +465,23 @@ function VideosPage() {
           filteredVideos.length === 0 ? (
             <div className="text-center py-12">
               <div
-                className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                style={{ backgroundColor: "#353A3A" }}
+                className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center border"
+                style={{ 
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
               >
-                <Video className="w-8 h-8" style={{ color: "#ABA4AA" }} />
+                <Video className="w-8 h-8" style={{ color: COLORS.TEXT_SECONDARY }} />
               </div>
               <h3
                 className="text-xl font-bold mb-2"
-                style={{ color: "#C3BCC2" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 {searchQuery || selectedCategory !== "all"
                   ? "No videos found"
                   : "No videos yet"}
               </h3>
-              <p className="text-sm mb-6" style={{ color: "#ABA4AA" }}>
+              <p className="text-sm mb-6" style={{ color: COLORS.TEXT_SECONDARY }}>
                 {searchQuery || selectedCategory !== "all"
                   ? "Try adjusting your search or filters"
                   : "Upload your first video to get started"}
@@ -416,8 +489,20 @@ function VideosPage() {
               {!searchQuery && selectedCategory === "all" && (
                 <Link
                   href="/videos/upload"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm"
-                  style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm border"
+                  style={{ 
+                    backgroundColor: getGoldenAccent(0.2),
+                    color: COLORS.TEXT_PRIMARY,
+                    borderColor: getGoldenAccent(0.4),
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = getGoldenAccent(0.3);
+                    e.currentTarget.style.borderColor = getGoldenAccent(0.5);
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = getGoldenAccent(0.2);
+                    e.currentTarget.style.borderColor = getGoldenAccent(0.4);
+                  }}
                 >
                   <Plus className="w-4 h-4" />
                   <span>Upload First Video</span>
@@ -427,24 +512,27 @@ function VideosPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {filteredVideos.map(video => (
-                <div
+                <Link
                   key={video.id}
-                  className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border"
-                  style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                  href={`/videos/${video.id}`}
+                  className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border block"
+                  style={{ 
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = "#4A5A70";
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(74, 90, 112, 0.2)";
+                    e.currentTarget.style.borderColor = getGoldenAccent(0.4);
+                    e.currentTarget.style.boxShadow = `0 4px 12px ${getGoldenAccent(0.2)}`;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = "#606364";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   {/* Video Thumbnail */}
                   <div
                     className="relative aspect-video overflow-hidden"
-                    style={{ backgroundColor: "#2A3133" }}
+                    style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                   >
                     {video.thumbnail ? (
                       <img
@@ -456,7 +544,7 @@ function VideosPage() {
                       <div className="w-full h-full flex items-center justify-center">
                         <Video
                           className="w-6 h-6"
-                          style={{ color: "#ABA4AA" }}
+                          style={{ color: COLORS.TEXT_SECONDARY }}
                         />
                       </div>
                     )}
@@ -467,12 +555,12 @@ function VideosPage() {
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center"
                           style={{
-                            backgroundColor: "rgba(255, 255, 255, 0.9)",
+                            backgroundColor: getGoldenAccent(0.9),
                           }}
                         >
                           <Play
                             className="w-4 h-4 ml-0.5"
-                            style={{ color: "#2A3133" }}
+                            style={{ color: COLORS.BACKGROUND_DARK }}
                           />
                         </div>
                       </div>
@@ -481,8 +569,12 @@ function VideosPage() {
                     {/* Category Badge */}
                     <div className="absolute top-2 left-2">
                       <span
-                        className="px-1.5 py-0.5 text-[10px] font-medium rounded-full"
-                        style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                        className="px-1.5 py-0.5 text-[10px] font-medium rounded-full border"
+                        style={{ 
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                          color: COLORS.TEXT_PRIMARY,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                        }}
                       >
                         {video.category}
                       </span>
@@ -495,7 +587,7 @@ function VideosPage() {
                           className="px-1.5 py-0.5 text-[10px] font-medium rounded"
                           style={{
                             backgroundColor: "rgba(0, 0, 0, 0.8)",
-                            color: "#C3BCC2",
+                            color: COLORS.TEXT_PRIMARY,
                           }}
                         >
                           {formatDuration(video.duration)}
@@ -509,7 +601,7 @@ function VideosPage() {
                     {/* Title */}
                     <h3
                       className="font-medium text-xs line-clamp-2 leading-tight mb-1"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       {video.title}
                     </h3>
@@ -517,7 +609,7 @@ function VideosPage() {
                     {/* Meta Info */}
                     <div
                       className="flex items-center justify-between text-[10px]"
-                      style={{ color: "#ABA4AA" }}
+                      style={{ color: COLORS.TEXT_SECONDARY }}
                     >
                       <div className="flex items-center gap-1">
                         <User className="w-2.5 h-2.5" />
@@ -532,14 +624,14 @@ function VideosPage() {
                     {video.feedback && video.feedback.length > 0 && (
                       <div
                         className="flex items-center gap-1 text-[10px] mt-1"
-                        style={{ color: "#ABA4AA" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         <MessageSquare className="w-2.5 h-2.5" />
                         <span>{video.feedback.length}</span>
                       </div>
                     )}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )
@@ -551,44 +643,53 @@ function VideosPage() {
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <div
                   className="flex-shrink-0 w-24 rounded-lg border p-2 transition-all duration-200 hover:scale-105"
-                  style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                  style={{ 
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                 >
                   <div className="text-center">
                     <div
                       className="text-lg font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       {clientSubmissions.length}
                     </div>
-                    <div className="text-xs" style={{ color: "#ABA4AA" }}>
+                    <div className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                       Total
                     </div>
                   </div>
                 </div>
                 <div
                   className="flex-shrink-0 w-24 rounded-lg border p-2 transition-all duration-200 hover:scale-105"
-                  style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                  style={{ 
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                 >
                   <div className="text-center">
                     <div
                       className="text-lg font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       {new Set(clientSubmissions.map(s => s.clientId)).size}
                     </div>
-                    <div className="text-xs" style={{ color: "#ABA4AA" }}>
+                    <div className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                       Clients
                     </div>
                   </div>
                 </div>
                 <div
                   className="flex-shrink-0 w-24 rounded-lg border p-2 transition-all duration-200 hover:scale-105"
-                  style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                  style={{ 
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                 >
                   <div className="text-center">
                     <div
                       className="text-lg font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       {
                         clientSubmissions.filter(s => {
@@ -598,7 +699,7 @@ function VideosPage() {
                         }).length
                       }
                     </div>
-                    <div className="text-xs" style={{ color: "#ABA4AA" }}>
+                    <div className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                       This Week
                     </div>
                   </div>
@@ -610,22 +711,31 @@ function VideosPage() {
             <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div
                 className="p-4 rounded-xl border transition-all duration-200 hover:scale-105"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                style={{ 
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className="p-2 rounded-lg"
-                    style={{ backgroundColor: "#4A5A70" }}
+                    style={{ backgroundColor: getGoldenAccent(0.2) }}
                   >
-                    <Video className="w-5 h-5" style={{ color: "#C3BCC2" }} />
+                    <Video className="w-5 h-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                       Total Submissions
                     </p>
                     <p
                       className="text-2xl font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       {clientSubmissions.length}
                     </p>
@@ -634,22 +744,31 @@ function VideosPage() {
               </div>
               <div
                 className="p-4 rounded-xl border transition-all duration-200 hover:scale-105"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                style={{ 
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className="p-2 rounded-lg"
-                    style={{ backgroundColor: "#10B981" }}
+                    style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
                   >
-                    <User className="w-5 h-5" style={{ color: "#ffffff" }} />
+                    <User className="w-5 h-5" style={{ color: COLORS.TEXT_PRIMARY }} />
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                       Active Clients
                     </p>
                     <p
                       className="text-2xl font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       {new Set(clientSubmissions.map(s => s.clientId)).size}
                     </p>
@@ -658,22 +777,31 @@ function VideosPage() {
               </div>
               <div
                 className="p-4 rounded-xl border transition-all duration-200 hover:scale-105"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                style={{ 
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                }}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className="p-2 rounded-lg"
-                    style={{ backgroundColor: "#F59E0B" }}
+                    style={{ backgroundColor: getGoldenAccent(0.3) }}
                   >
-                    <Clock className="w-5 h-5" style={{ color: "#ffffff" }} />
+                    <Clock className="w-5 h-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
                   </div>
                   <div>
-                    <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                       This Week
                     </p>
                     <p
                       className="text-2xl font-bold"
-                      style={{ color: "#C3BCC2" }}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
                     >
                       {
                         clientSubmissions.filter(s => {
@@ -692,20 +820,23 @@ function VideosPage() {
             {filteredClientSubmissions.length === 0 ? (
               <div className="text-center py-12">
                 <div
-                  className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                  style={{ backgroundColor: "#353A3A" }}
+                  className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center border"
+                  style={{ 
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                 >
-                  <Video className="w-8 h-8" style={{ color: "#ABA4AA" }} />
+                  <Video className="w-8 h-8" style={{ color: COLORS.TEXT_SECONDARY }} />
                 </div>
                 <h3
                   className="text-xl font-bold mb-2"
-                  style={{ color: "#C3BCC2" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   {searchQuery
                     ? "No client submissions found"
                     : "No client submissions yet"}
                 </h3>
-                <p className="text-sm mb-6" style={{ color: "#ABA4AA" }}>
+                <p className="text-sm mb-6" style={{ color: COLORS.TEXT_SECONDARY }}>
                   {searchQuery
                     ? "Try adjusting your search criteria"
                     : "Client video submissions will appear here once they start submitting"}
@@ -714,27 +845,27 @@ function VideosPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {filteredClientSubmissions.map(submission => (
-                  <div
+                  <Link
                     key={submission.id}
-                    className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border"
+                    href={`/videos/${submission.id}`}
+                    className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border block"
                     style={{
-                      backgroundColor: "#353A3A",
-                      borderColor: "#606364",
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = "#4A5A70";
-                      e.currentTarget.style.boxShadow =
-                        "0 4px 12px rgba(74, 90, 112, 0.2)";
+                      e.currentTarget.style.borderColor = getGoldenAccent(0.4);
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${getGoldenAccent(0.2)}`;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = "#606364";
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                       e.currentTarget.style.boxShadow = "none";
                     }}
                   >
                     {/* Video Thumbnail */}
                     <div
                       className="relative aspect-video overflow-hidden"
-                      style={{ backgroundColor: "#2A3133" }}
+                      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                     >
                       {submission.thumbnail ? (
                         <img
@@ -746,7 +877,7 @@ function VideosPage() {
                         <div className="w-full h-full flex items-center justify-center">
                           <Video
                             className="w-6 h-6"
-                            style={{ color: "#ABA4AA" }}
+                            style={{ color: COLORS.TEXT_SECONDARY }}
                           />
                         </div>
                       )}
@@ -757,12 +888,12 @@ function VideosPage() {
                           <div
                             className="w-8 h-8 rounded-full flex items-center justify-center"
                             style={{
-                              backgroundColor: "rgba(255, 255, 255, 0.9)",
+                              backgroundColor: getGoldenAccent(0.9),
                             }}
                           >
                             <Play
                               className="w-4 h-4 ml-0.5"
-                              style={{ color: "#2A3133" }}
+                              style={{ color: COLORS.BACKGROUND_DARK }}
                             />
                           </div>
                         </div>
@@ -771,10 +902,11 @@ function VideosPage() {
                       {/* Client Badge */}
                       <div className="absolute top-2 left-2">
                         <span
-                          className="px-1.5 py-0.5 text-[10px] font-medium rounded-full"
+                          className="px-1.5 py-0.5 text-[10px] font-medium rounded-full border"
                           style={{
-                            backgroundColor: "#10B981",
-                            color: "#ffffff",
+                            backgroundColor: COLORS.GREEN_PRIMARY,
+                            color: COLORS.TEXT_PRIMARY,
+                            borderColor: COLORS.BORDER_SUBTLE,
                           }}
                         >
                           Client
@@ -787,7 +919,7 @@ function VideosPage() {
                           className="px-1.5 py-0.5 text-[10px] font-medium rounded"
                           style={{
                             backgroundColor: "rgba(0, 0, 0, 0.8)",
-                            color: "#C3BCC2",
+                            color: COLORS.TEXT_PRIMARY,
                           }}
                         >
                           New
@@ -800,7 +932,7 @@ function VideosPage() {
                       {/* Title */}
                       <h3
                         className="font-medium text-xs line-clamp-2 leading-tight mb-1"
-                        style={{ color: "#C3BCC2" }}
+                        style={{ color: COLORS.TEXT_PRIMARY }}
                       >
                         {submission.title}
                       </h3>
@@ -808,7 +940,7 @@ function VideosPage() {
                       {/* Meta Info */}
                       <div
                         className="flex items-center justify-between text-[10px]"
-                        style={{ color: "#ABA4AA" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         <div className="flex items-center gap-1">
                           <User className="w-2.5 h-2.5" />
@@ -821,7 +953,7 @@ function VideosPage() {
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

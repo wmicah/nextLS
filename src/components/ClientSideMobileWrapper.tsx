@@ -21,6 +21,7 @@ import NotificationsPage from "./NotificationsPage";
 import MobileNotificationsPage from "./MobileNotificationsPage";
 import MessagesPage from "./MessagesPage";
 import MobileMessagesPage from "./MobileMessagesPage";
+import VideosPage from "./VideosPage";
 // Client components
 import ClientProgramPage from "./ClientProgramPage";
 import MobileClientProgramPage from "./MobileClientProgramPage";
@@ -103,6 +104,14 @@ export default function ClientSideMobileWrapper({
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
         {isMobile ? <MobileMessagesPage /> : <MessagesPage />}
+      </ErrorBoundary>
+    );
+  }
+
+  if (pathname === "/videos") {
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        <VideosPage />
       </ErrorBoundary>
     );
   }
