@@ -57,11 +57,11 @@ export default function MessagingServiceProvider({
       ]).then((results) => {
         if (process.env.NODE_ENV === "development") {
           console.log("✅ All queries refetched:", {
-            conversationUnreadCounts: results[0]?.data,
-            unreadCount: results[1]?.data,
-            sidebarData: results[2]?.data ? {
-              totalUnreadCount: results[2].data.totalUnreadCount,
-              unreadCountsObj: results[2].data.unreadCountsObj,
+            conversationUnreadCounts: (results[0] as any)?.data,
+            unreadCount: (results[1] as any)?.data,
+            sidebarData: (results[2] as any)?.data ? {
+              totalUnreadCount: (results[2] as any).data.totalUnreadCount,
+              unreadCountsObj: (results[2] as any).data.unreadCountsObj,
             } : null,
           });
         }

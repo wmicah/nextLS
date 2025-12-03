@@ -23,6 +23,7 @@ import MessageAcknowledgment from "./MessageAcknowledgment";
 import SwitchRequestMessage from "./SwapRequestMessage";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
+import { useMessagingService } from "./MessagingServiceProvider";
 
 export default function MobileClientMessagesPage() {
   const searchParams = useSearchParams();
