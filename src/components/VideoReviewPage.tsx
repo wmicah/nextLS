@@ -7,6 +7,7 @@ import Link from "next/link";
 import Sidebar from "./Sidebar";
 import { trpc } from "@/app/_trpc/client";
 import { useState, useEffect } from "react";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface VideoReviewPageProps {
   videoId: string;
@@ -57,14 +58,14 @@ export default function VideoReviewPage({ videoId }: VideoReviewPageProps) {
       <Sidebar>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ backgroundColor: "#2A3133" }}
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
           <div className="text-center">
             <div
               className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
-              style={{ borderColor: "#4A5A70" }}
+              style={{ borderColor: COLORS.GOLDEN_ACCENT }}
             />
-            <p style={{ color: "#C3BCC2" }}>Loading video...</p>
+            <p style={{ color: COLORS.TEXT_PRIMARY }}>Loading video...</p>
           </div>
         </div>
       </Sidebar>
@@ -76,25 +77,37 @@ export default function VideoReviewPage({ videoId }: VideoReviewPageProps) {
       <Sidebar>
         <div
           className="min-h-screen p-6"
-          style={{ backgroundColor: "#2A3133" }}
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
           {/* Compact Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1
                 className="text-2xl font-bold mb-1"
-                style={{ color: "#C3BCC2" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Video Not Found
               </h1>
-              <p className="text-sm" style={{ color: "#ABA4AA" }}>
+              <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                 The video you're looking for doesn't exist or has been removed.
               </p>
             </div>
             <Link
               href="/videos"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm"
-              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm border"
+              style={{ 
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_PRIMARY,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+              }}
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Videos</span>
@@ -104,12 +117,15 @@ export default function VideoReviewPage({ videoId }: VideoReviewPageProps) {
           {/* Not Found Message */}
           <div className="text-center py-12">
             <div
-              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ backgroundColor: "#353A3A" }}
+              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center border"
+              style={{ 
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
             >
               <svg
                 className="w-8 h-8"
-                style={{ color: "#ABA4AA" }}
+                style={{ color: COLORS.TEXT_SECONDARY }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -122,10 +138,10 @@ export default function VideoReviewPage({ videoId }: VideoReviewPageProps) {
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-bold mb-2" style={{ color: "#C3BCC2" }}>
+            <h3 className="text-xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
               Video not found
             </h3>
-            <p className="text-sm mb-6" style={{ color: "#ABA4AA" }}>
+            <p className="text-sm mb-6" style={{ color: COLORS.TEXT_SECONDARY }}>
               Video ID: {videoId}
             </p>
           </div>
@@ -136,45 +152,42 @@ export default function VideoReviewPage({ videoId }: VideoReviewPageProps) {
 
   return (
     <Sidebar>
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-        {/* Hero Header */}
-        <div className="mb-8">
-          <div className="rounded-2xl border relative overflow-hidden group">
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background:
-                  "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-              }}
-            />
-            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Link
-                    href="/videos"
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back to Videos</span>
-                  </Link>
-                  <div>
-                    <h1
-                      className="text-4xl font-bold mb-2"
-                      style={{ color: "#C3BCC2" }}
-                    >
-                      Video Review
-                    </h1>
-                    <p className="text-lg" style={{ color: "#ABA4AA" }}>
-                      {videoType === "client"
-                        ? "Review client video submission"
-                        : "Analyze and provide feedback on video content"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div className="min-h-screen p-6" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+        {/* Compact Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1
+              className="text-2xl font-bold mb-1"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Video Review
+            </h1>
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+              {videoType === "client"
+                ? "Review client video submission"
+                : "Analyze and provide feedback on video content"}
+            </p>
           </div>
+          <Link
+            href="/videos"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm border"
+            style={{ 
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              color: COLORS.TEXT_PRIMARY,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+            }}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Videos</span>
+          </Link>
         </div>
 
         {/* Video Review Component */}

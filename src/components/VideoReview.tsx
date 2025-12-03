@@ -32,6 +32,7 @@ import ScreenRecording from "./ScreenRecording";
 import ErrorBoundary from "./ErrorBoundary";
 import LoadingSpinner from "./LoadingSpinner";
 import { Skeleton } from "./SkeletonLoader";
+import { COLORS, getGoldenAccent, getRedAlert } from "@/lib/colors";
 
 interface VideoReviewProps {
   videoId: string;
@@ -426,8 +427,8 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "#1a1a1a" }}>
-        <div className="p-6 border-b" style={{ borderColor: "#2a2a2a" }}>
+      <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+        <div className="p-6 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
           <div className="max-w-7xl mx-auto">
             <Skeleton className="h-8 w-full mb-4" />
             <Skeleton className="h-4 w-1/2" />
@@ -442,8 +443,11 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="p-6 rounded-2xl"
-                  style={{ backgroundColor: "#2a2a2a" }}
+                  className="p-6 rounded-2xl border"
+                  style={{ 
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                 >
                   <Skeleton className="h-6 w-full mb-4" />
                   <div className="space-y-2">
@@ -463,8 +467,8 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
   if (!currentVideo) {
     return (
       <div className="text-center py-8">
-        <p style={{ color: "#9ca3af" }}>Video not found</p>
-        <p style={{ color: "#9ca3af" }}>Video ID: {videoId}</p>
+        <p style={{ color: COLORS.TEXT_SECONDARY }}>Video not found</p>
+        <p style={{ color: COLORS.TEXT_SECONDARY }}>Video ID: {videoId}</p>
       </div>
     );
   }
@@ -475,39 +479,31 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
   console.log("Video URL starts with:", currentVideo?.url?.substring(0, 20));
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: "#2A3133" }}>
+    <div className="min-h-screen p-6" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
       {/* Compact Header */}
       <div className="mb-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold" style={{ color: "#C3BCC2" }}>
-            {currentVideo.title}
-          </h1>
-          {currentVideo.description && (
-            <p className="text-sm" style={{ color: "#ABA4AA" }}>
-              {currentVideo.description}
-            </p>
-          )}
-          <div
-            className="flex items-center gap-4 text-xs"
-            style={{ color: "#ABA4AA" }}
-          >
-            <div className="flex items-center gap-1">
-              <span>Uploaded by {currentVideo.uploader.name}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span>
-                {new Date(currentVideo.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
+        <h1 className="text-2xl font-bold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
+          {currentVideo.title}
+        </h1>
+        <div className="flex items-center gap-3 text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+          <span>Uploaded by {currentVideo.uploader.name}</span>
+          <span>•</span>
+          <span>{new Date(currentVideo.createdAt).toLocaleDateString()}</span>
+          {currentVideo.category && (
+            <>
+              <span>•</span>
               <span
-                className="px-2 py-1 rounded-full text-xs"
-                style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                className="px-2 py-0.5 rounded-full border"
+                style={{ 
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  color: COLORS.TEXT_PRIMARY,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
               >
                 {currentVideo.category}
               </span>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -517,14 +513,14 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
           {/* Video Player */}
           <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
             {videoError ? (
-              <div className="flex items-center justify-center h-96 bg-gray-900">
+              <div className="flex items-center justify-center h-96" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
                 <div className="text-center p-8">
-                  <div className="text-red-500 text-6xl mb-4">⚠️</div>
-                  <h3 className="text-xl font-bold text-white mb-2">
+                  <div className="text-6xl mb-4" style={{ color: COLORS.RED_ALERT }}>⚠️</div>
+                  <h3 className="text-xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Video Error
                   </h3>
-                  <p className="text-gray-400 mb-4">{videoError}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>{videoError}</p>
+                  <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
                     Video URL: {currentVideo.url}
                   </p>
                   <button
@@ -534,7 +530,20 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                         videoRef.current.load();
                       }
                     }}
-                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="mt-4 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 border"
+                    style={{ 
+                      backgroundColor: getGoldenAccent(0.2),
+                      color: COLORS.TEXT_PRIMARY,
+                      borderColor: getGoldenAccent(0.4),
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = getGoldenAccent(0.3);
+                      e.currentTarget.style.borderColor = getGoldenAccent(0.5);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = getGoldenAccent(0.2);
+                      e.currentTarget.style.borderColor = getGoldenAccent(0.4);
+                    }}
                   >
                     Retry
                   </button>
@@ -569,13 +578,13 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                 value={currentTime}
                 onChange={handleSeek}
                 onInput={handleSeek}
-                className="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer slider mb-4"
+                className="w-full h-2 rounded-full appearance-none cursor-pointer slider mb-4"
                 style={{
-                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${
+                  background: `linear-gradient(to right, ${COLORS.GOLDEN_ACCENT} 0%, ${COLORS.GOLDEN_ACCENT} ${
                     (currentTime / (duration || 1)) * 100
-                  }%, #4b5563 ${
+                  }%, ${COLORS.BACKGROUND_CARD} ${
                     (currentTime / (duration || 1)) * 100
-                  }%, #4b5563 100%)`,
+                  }%, ${COLORS.BACKGROUND_CARD} 100%)`,
                   zIndex: 20,
                 }}
               />
@@ -712,10 +721,10 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
             {/* Annotation Toolbar */}
             {showAnnotations && (
               <div
-                className="absolute top-0 left-0 right-0 flex items-center gap-3 p-4 backdrop-blur-md"
+                className="absolute top-0 left-0 right-0 flex items-center gap-3 p-4 backdrop-blur-md border-b"
                 style={{
-                  backgroundColor: "rgba(26, 26, 26, 0.9)",
-                  borderBottom: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: "rgba(21, 25, 26, 0.95)",
+                  borderColor: COLORS.BORDER_SUBTLE,
                   zIndex: 40,
                 }}
               >
@@ -724,89 +733,110 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                   onClick={() => setCurrentTool("pen")}
                   className={`p-3 rounded-xl transition-all duration-200 ${
                     currentTool === "pen"
-                      ? "bg-blue-600 shadow-lg"
+                      ? "shadow-lg"
                       : "hover:bg-white/10"
                   }`}
+                  style={{
+                    backgroundColor: currentTool === "pen" ? getGoldenAccent(0.3) : "transparent",
+                  }}
                   title="Pen"
                 >
-                  <Pen className="w-5 h-5" style={{ color: "#ffffff" }} />
+                  <Pen className="w-5 h-5" style={{ color: COLORS.TEXT_PRIMARY }} />
                 </button>
                 <button
                   onClick={() => setCurrentTool("highlight")}
                   className={`p-3 rounded-xl transition-all duration-200 ${
                     currentTool === "highlight"
-                      ? "bg-blue-600 shadow-lg"
+                      ? "shadow-lg"
                       : "hover:bg-white/10"
                   }`}
+                  style={{
+                    backgroundColor: currentTool === "highlight" ? getGoldenAccent(0.3) : "transparent",
+                  }}
                   title="Highlight"
                 >
                   <Highlighter
                     className="w-5 h-5"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   />
                 </button>
                 <button
                   onClick={() => setCurrentTool("arrow")}
                   className={`p-3 rounded-xl transition-all duration-200 ${
                     currentTool === "arrow"
-                      ? "bg-blue-600 shadow-lg"
+                      ? "shadow-lg"
                       : "hover:bg-white/10"
                   }`}
+                  style={{
+                    backgroundColor: currentTool === "arrow" ? getGoldenAccent(0.3) : "transparent",
+                  }}
                   title="Arrow"
                 >
                   <ArrowRight
                     className="w-5 h-5"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   />
                 </button>
                 <button
                   onClick={() => setCurrentTool("circle")}
                   className={`p-3 rounded-xl transition-all duration-200 ${
                     currentTool === "circle"
-                      ? "bg-blue-600 shadow-lg"
+                      ? "shadow-lg"
                       : "hover:bg-white/10"
                   }`}
+                  style={{
+                    backgroundColor: currentTool === "circle" ? getGoldenAccent(0.3) : "transparent",
+                  }}
                   title="Circle"
                 >
-                  <Circle className="w-5 h-5" style={{ color: "#ffffff" }} />
+                  <Circle className="w-5 h-5" style={{ color: COLORS.TEXT_PRIMARY }} />
                 </button>
                 <button
                   onClick={() => setCurrentTool("erase")}
                   className={`p-3 rounded-xl transition-all duration-200 ${
                     currentTool === "erase"
-                      ? "bg-red-600 shadow-lg"
+                      ? "shadow-lg"
                       : "hover:bg-white/10"
                   }`}
+                  style={{
+                    backgroundColor: currentTool === "erase" ? getRedAlert(0.3) : "transparent",
+                  }}
                   title="Erase"
                 >
-                  <Eraser className="w-5 h-5" style={{ color: "#ffffff" }} />
+                  <Eraser className="w-5 h-5" style={{ color: COLORS.TEXT_PRIMARY }} />
                 </button>
                 <button
                   onClick={() => setCurrentTool("angle")}
                   className={`p-3 rounded-xl transition-all duration-200 ${
                     currentTool === "angle"
-                      ? "bg-blue-600 shadow-lg"
+                      ? "shadow-lg"
                       : "hover:bg-white/10"
                   }`}
+                  style={{
+                    backgroundColor: currentTool === "angle" ? getGoldenAccent(0.3) : "transparent",
+                  }}
                   title="Angle Finder"
                 >
-                  <Triangle className="w-5 h-5" style={{ color: "#ffffff" }} />
+                  <Triangle className="w-5 h-5" style={{ color: COLORS.TEXT_PRIMARY }} />
                 </button>
                 <button
                   onClick={() => setCurrentTool("right-angle")}
                   className={`p-3 rounded-xl transition-all duration-200 ${
                     currentTool === "right-angle"
-                      ? "bg-blue-600 shadow-lg"
+                      ? "shadow-lg"
                       : "hover:bg-white/10"
                   }`}
+                  style={{
+                    backgroundColor: currentTool === "right-angle" ? getGoldenAccent(0.3) : "transparent",
+                  }}
                   title="90° Angle"
                 >
-                  <Square className="w-5 h-5" style={{ color: "#ffffff" }} />
+                  <Square className="w-5 h-5" style={{ color: COLORS.TEXT_PRIMARY }} />
                 </button>
 
                 <div
                   className="w-px h-8"
-                  style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                  style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                 />
 
                 {/* Color picker */}
@@ -825,22 +855,27 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                       onClick={() => setCurrentColor(color)}
                       className={`w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
                         currentColor === color
-                          ? "border-white shadow-lg"
-                          : "border-gray-600"
+                          ? "shadow-lg"
+                          : ""
                       }`}
-                      style={{ backgroundColor: color }}
+                      style={{ 
+                        backgroundColor: color,
+                        borderColor: currentColor === color
+                          ? COLORS.TEXT_PRIMARY
+                          : COLORS.BORDER_SUBTLE,
+                      }}
                     />
                   ))}
                 </div>
 
                 <div
                   className="w-px h-8"
-                  style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                  style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                 />
 
                 {/* Width slider */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: "#9ca3af" }}>
+                  <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Width
                   </span>
                   <input
@@ -849,13 +884,16 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                     max="10"
                     value={currentWidth}
                     onChange={e => setCurrentWidth(Number(e.target.value))}
-                    className="w-16 h-1 bg-gray-600 rounded-full appearance-none cursor-pointer slider"
+                    className="w-16 h-1 rounded-full appearance-none cursor-pointer slider"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                    }}
                   />
                 </div>
 
                 <div
                   className="w-px h-8"
-                  style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                  style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                 />
 
                 {/* Undo/Redo/Save */}
@@ -878,9 +916,21 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                 <button
                   onClick={handleSaveAnnotation}
                   disabled={paths.length === 0 || isSaving}
-                  className="p-3 rounded-xl transition-all duration-200 hover:bg-green-600 disabled:opacity-50"
+                  className="p-3 rounded-xl transition-all duration-200 disabled:opacity-50"
                   style={{
-                    backgroundColor: paths.length === 0 ? "#374151" : "#059669",
+                    backgroundColor: paths.length === 0 
+                      ? COLORS.BACKGROUND_CARD 
+                      : COLORS.GREEN_PRIMARY,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled && paths.length > 0) {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled && paths.length > 0) {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                    }
                   }}
                   title={isSaving ? "Saving..." : "Save Annotation"}
                 >
@@ -891,7 +941,7 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                       className="text-white"
                     />
                   ) : (
-                    <Save className="w-5 h-5" style={{ color: "#ffffff" }} />
+                    <Save className="w-5 h-5" style={{ color: COLORS.TEXT_PRIMARY }} />
                   )}
                 </button>
               </div>
@@ -904,35 +954,53 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
         {/* Annotation Tools */}
         <div
-          className="p-6 rounded-2xl"
+          className="p-6 rounded-2xl border"
           style={{
-            backgroundColor: "#2a2a2a",
-            border: "1px solid rgba(255,255,255,0.1)",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Settings className="w-5 h-5" style={{ color: "#3b82f6" }} />
+              <Settings className="w-5 h-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
               <h3
                 className="text-lg font-semibold"
-                style={{ color: "#ffffff" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Annotation Tools
               </h3>
             </div>
             <button
               onClick={() => setShowAnnotations(!showAnnotations)}
-              className={`px-3 py-1 rounded-lg text-sm transition-all duration-200 ${
+              className={`px-3 py-1 rounded-lg text-sm transition-all duration-200 border ${
                 showAnnotations
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-600 text-gray-300"
+                  ? "text-white"
+                  : "text-gray-300"
               }`}
+              style={{
+                backgroundColor: showAnnotations 
+                  ? getGoldenAccent(0.3)
+                  : COLORS.BACKGROUND_CARD,
+                borderColor: showAnnotations
+                  ? getGoldenAccent(0.5)
+                  : COLORS.BORDER_SUBTLE,
+              }}
+              onMouseEnter={(e) => {
+                if (!showAnnotations) {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showAnnotations) {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                }
+              }}
             >
               {showAnnotations ? "Hide" : "Show"}
             </button>
           </div>
           {showAnnotations && (
-            <p className="text-sm" style={{ color: "#9ca3af" }}>
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
               Use the drawing tools to annotate directly on the video. Click and
               drag to draw.
             </p>
@@ -941,29 +1009,47 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
 
         {/* Voice Notes */}
         <div
-          className="p-6 rounded-2xl"
+          className="p-6 rounded-2xl border"
           style={{
-            backgroundColor: "#2a2a2a",
-            border: "1px solid rgba(255,255,255,0.1)",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Mic className="w-5 h-5" style={{ color: "#10b981" }} />
+              <Mic className="w-5 h-5" style={{ color: COLORS.GREEN_PRIMARY }} />
               <h3
                 className="text-lg font-semibold"
-                style={{ color: "#ffffff" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Voice Notes
               </h3>
             </div>
             <button
               onClick={() => setShowAudioRecorder(!showAudioRecorder)}
-              className={`px-3 py-1 rounded-lg text-sm transition-all duration-200 ${
+              className={`px-3 py-1 rounded-lg text-sm transition-all duration-200 border ${
                 showAudioRecorder
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-600 text-gray-300"
+                  ? "text-white"
+                  : "text-gray-300"
               }`}
+              style={{
+                backgroundColor: showAudioRecorder 
+                  ? COLORS.GREEN_PRIMARY
+                  : COLORS.BACKGROUND_CARD,
+                borderColor: showAudioRecorder
+                  ? COLORS.BORDER_SUBTLE
+                  : COLORS.BORDER_SUBTLE,
+              }}
+              onMouseEnter={(e) => {
+                if (!showAudioRecorder) {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showAudioRecorder) {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                }
+              }}
             >
               {showAudioRecorder ? "Hide" : "Show"}
             </button>
@@ -988,29 +1074,47 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
 
         {/* Screen Recording */}
         <div
-          className="p-6 rounded-2xl"
+          className="p-6 rounded-2xl border"
           style={{
-            backgroundColor: "#2a2a2a",
-            border: "1px solid rgba(255,255,255,0.1)",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Video className="w-5 h-5" style={{ color: "#f59e0b" }} />
+              <Video className="w-5 h-5" style={{ color: getGoldenAccent(0.8) }} />
               <h3
                 className="text-lg font-semibold"
-                style={{ color: "#ffffff" }}
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
                 Screen Recording
               </h3>
             </div>
             <button
               onClick={() => setShowScreenRecording(!showScreenRecording)}
-              className={`px-3 py-1 rounded-lg text-sm transition-all duration-200 ${
+              className={`px-3 py-1 rounded-lg text-sm transition-all duration-200 border ${
                 showScreenRecording
-                  ? "bg-yellow-600 text-white"
-                  : "bg-gray-600 text-gray-300"
+                  ? "text-white"
+                  : "text-gray-300"
               }`}
+              style={{
+                backgroundColor: showScreenRecording 
+                  ? getGoldenAccent(0.3)
+                  : COLORS.BACKGROUND_CARD,
+                borderColor: showScreenRecording
+                  ? getGoldenAccent(0.5)
+                  : COLORS.BORDER_SUBTLE,
+              }}
+              onMouseEnter={(e) => {
+                if (!showScreenRecording) {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showScreenRecording) {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                }
+              }}
             >
               {showScreenRecording ? "Hide" : "Show"}
             </button>
@@ -1042,15 +1146,15 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
 
         {/* Text Feedback */}
         <div
-          className="p-6 rounded-2xl"
+          className="p-6 rounded-2xl border"
           style={{
-            backgroundColor: "#2a2a2a",
-            border: "1px solid rgba(255,255,255,0.1)",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
           <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="w-5 h-5" style={{ color: "#8b5cf6" }} />
-            <h3 className="text-lg font-semibold" style={{ color: "#ffffff" }}>
+            <MessageSquare className="w-5 h-5" style={{ color: getGoldenAccent(0.8) }} />
+            <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
               Text Feedback
             </h3>
           </div>
@@ -1058,7 +1162,7 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
             <div>
               <label
                 className="block text-sm font-medium mb-2"
-                style={{ color: "#9ca3af" }}
+                style={{ color: COLORS.TEXT_SECONDARY }}
               >
                 Rating (Optional)
               </label>
@@ -1071,9 +1175,14 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                     }
                     className={`text-2xl transition-all duration-200 hover:scale-110 ${
                       rating && rating >= star
-                        ? "text-yellow-400"
-                        : "text-gray-400"
+                        ? ""
+                        : ""
                     }`}
+                    style={{
+                      color: rating && rating >= star
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.TEXT_MUTED,
+                    }}
                   >
                     ★
                   </button>
@@ -1084,7 +1193,7 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
             <div>
               <label
                 className="block text-sm font-medium mb-2"
-                style={{ color: "#9ca3af" }}
+                style={{ color: COLORS.TEXT_SECONDARY }}
               >
                 Feedback
               </label>
@@ -1093,12 +1202,19 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                 onChange={e => setFeedback(e.target.value)}
                 placeholder="Add your feedback here..."
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 resize-none"
+                className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 resize-none border"
                 style={{
-                  backgroundColor: "#374151",
-                  borderColor: "#606364",
-                  color: "#ffffff",
-                  border: "1px solid",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.5);
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               />
             </div>
@@ -1106,8 +1222,28 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
             <button
               onClick={handleSaveFeedback}
               disabled={!feedback.trim() || createFeedbackMutation.isPending}
-              className="w-full px-6 py-3 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{ backgroundColor: "#8b5cf6", color: "#ffffff" }}
+              className="w-full px-6 py-3 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 flex items-center justify-center gap-2 border"
+              style={{ 
+                backgroundColor: !feedback.trim() || createFeedbackMutation.isPending
+                  ? COLORS.BACKGROUND_CARD
+                  : getGoldenAccent(0.2),
+                color: COLORS.TEXT_PRIMARY,
+                borderColor: !feedback.trim() || createFeedbackMutation.isPending
+                  ? COLORS.BORDER_SUBTLE
+                  : getGoldenAccent(0.4),
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled && feedback.trim()) {
+                  e.currentTarget.style.backgroundColor = getGoldenAccent(0.3);
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.5);
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget.disabled && feedback.trim()) {
+                  e.currentTarget.style.backgroundColor = getGoldenAccent(0.2);
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.4);
+                }
+              }}
             >
               {createFeedbackMutation.isPending ? (
                 <>
@@ -1129,46 +1265,56 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
       {/* Saved Content Sections - Below Tools */}
       {savedScreenRecordings && savedScreenRecordings.length > 0 && (
         <div className="space-y-4 mt-8">
-          <h3 className="text-xl font-semibold" style={{ color: "#ffffff" }}>
+          <h3 className="text-xl font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
             Screen Recordings
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {savedScreenRecordings.map(recording => (
               <div
                 key={recording.id}
-                className="p-4 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                className="p-4 rounded-xl transition-all duration-200 hover:scale-[1.02] border"
                 style={{
-                  backgroundColor: "#2a2a2a",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                 }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span
                     className="text-sm font-medium"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {recording.title}
                   </span>
-                  <span className="text-xs" style={{ color: "#6b7280" }}>
+                  <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     {new Date(recording.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 {recording.description && (
-                  <p className="text-sm mb-3" style={{ color: "#9ca3af" }}>
+                  <p className="text-sm mb-3" style={{ color: COLORS.TEXT_SECONDARY }}>
                     {recording.description}
                   </p>
                 )}
                 <div
                   className="flex items-center gap-4 text-sm mb-3"
-                  style={{ color: "#9ca3af" }}
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
                   <span>Coach: {recording.coach.name}</span>
                   <span>•</span>
                   <span>{formatDuration(recording.duration)}</span>
                   <span>•</span>
                   <span
-                    className="px-2 py-1 rounded-full text-xs"
-                    style={{ backgroundColor: "#374151" }}
+                    className="px-2 py-1 rounded-full text-xs border"
+                    style={{ 
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                   >
                     {recording.status}
                   </span>
@@ -1176,20 +1322,38 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => window.open(recording.videoUrl, "_blank")}
-                    className="flex-1 px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105"
+                    className="flex-1 px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105 border"
                     style={{
-                      backgroundColor: "#374151",
-                      color: "#ffffff",
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      color: COLORS.TEXT_PRIMARY,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     }}
                   >
                     Watch Recording
                   </button>
                   <button
                     onClick={() => window.open(recording.audioUrl, "_blank")}
-                    className="flex-1 px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105"
+                    className="flex-1 px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105 border"
                     style={{
-                      backgroundColor: "#374151",
-                      color: "#ffffff",
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      color: COLORS.TEXT_PRIMARY,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     }}
                   >
                     Audio Only
@@ -1197,8 +1361,18 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                   {isCoach && (
                     <button
                       onClick={() => handleDeleteScreenRecording(recording.id)}
-                      className="px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105"
-                      style={{ backgroundColor: "#dc2626", color: "#ffffff" }}
+                      className="px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105 border"
+                      style={{ 
+                        backgroundColor: COLORS.RED_ALERT,
+                        color: COLORS.TEXT_PRIMARY,
+                        borderColor: COLORS.RED_BORDER,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                      }}
                       title="Delete recording"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1213,37 +1387,47 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
 
       {savedAnnotations && savedAnnotations.length > 0 && (
         <div className="space-y-4 mt-8">
-          <h3 className="text-xl font-semibold" style={{ color: "#ffffff" }}>
+          <h3 className="text-xl font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
             Saved Annotations
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {savedAnnotations.map(annotation => (
               <div
                 key={annotation.id}
-                className="p-4 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                className="p-4 rounded-xl transition-all duration-200 hover:scale-[1.02] border"
                 style={{
-                  backgroundColor: "#2a2a2a",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                 }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span
                     className="text-sm font-medium"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {annotation.coach.name}
                   </span>
-                  <span className="text-xs" style={{ color: "#6b7280" }}>
+                  <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     {new Date(annotation.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 <div
                   className="flex items-center gap-4 text-sm mb-3"
-                  style={{ color: "#9ca3af" }}
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
                   <span
-                    className="px-2 py-1 rounded-full text-xs"
-                    style={{ backgroundColor: "#374151" }}
+                    className="px-2 py-1 rounded-full text-xs border"
+                    style={{ 
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                   >
                     {annotation.type}
                   </span>
@@ -1262,16 +1446,38 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                         );
                       }
                     }}
-                    className="flex-1 px-4 py-2 text-sm rounded-lg transition-all duration-200 hover:scale-105"
-                    style={{ backgroundColor: "#374151", color: "#ffffff" }}
+                    className="flex-1 px-4 py-2 text-sm rounded-lg transition-all duration-200 hover:scale-105 border"
+                    style={{ 
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      color: COLORS.TEXT_PRIMARY,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                   >
                     Load Annotation
                   </button>
                   {isCoach && (
                     <button
                       onClick={() => handleDeleteAnnotation(annotation.id)}
-                      className="px-3 py-2 text-sm rounded-lg transition-all duration-200 hover:scale-105"
-                      style={{ backgroundColor: "#dc2626", color: "#ffffff" }}
+                      className="px-3 py-2 text-sm rounded-lg transition-all duration-200 hover:scale-105 border"
+                      style={{ 
+                        backgroundColor: COLORS.RED_ALERT,
+                        color: COLORS.TEXT_PRIMARY,
+                        borderColor: COLORS.RED_BORDER,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                      }}
                       title="Delete annotation"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1287,33 +1493,39 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
       {/* Saved Audio Notes */}
       {currentVideo.audioNotes && currentVideo.audioNotes.length > 0 && (
         <div className="space-y-4 mt-8">
-          <h3 className="text-xl font-semibold" style={{ color: "#ffffff" }}>
+          <h3 className="text-xl font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
             Voice Notes
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currentVideo.audioNotes.map(audioNote => (
               <div
                 key={audioNote.id}
-                className="p-4 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                className="p-4 rounded-xl transition-all duration-200 hover:scale-[1.02] border"
                 style={{
-                  backgroundColor: "#2a2a2a",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                 }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span
                     className="text-sm font-medium"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {audioNote.title || "Voice Note"}
                   </span>
-                  <span className="text-xs" style={{ color: "#6b7280" }}>
+                  <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     {new Date(audioNote.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 <div
                   className="flex items-center gap-4 text-sm mb-3"
-                  style={{ color: "#9ca3af" }}
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
                   <span>Coach: {audioNote.coach.name}</span>
                   <span>•</span>
@@ -1324,10 +1536,19 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => window.open(audioNote.url, "_blank")}
-                    className="flex-1 px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105"
+                    className="flex-1 px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105 border"
                     style={{
-                      backgroundColor: "#374151",
-                      color: "#ffffff",
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      color: COLORS.TEXT_PRIMARY,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     }}
                   >
                     Play Audio
@@ -1335,8 +1556,18 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                   {isCoach && (
                     <button
                       onClick={() => handleDeleteAudioNote(audioNote.id)}
-                      className="px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105"
-                      style={{ backgroundColor: "#dc2626", color: "#ffffff" }}
+                      className="px-3 py-2 text-xs rounded-lg transition-all duration-200 hover:scale-105 border"
+                      style={{ 
+                        backgroundColor: COLORS.RED_ALERT,
+                        color: COLORS.TEXT_PRIMARY,
+                        borderColor: COLORS.RED_BORDER,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                      }}
                       title="Delete audio note"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1352,31 +1583,37 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
       {/* Existing Feedback Display */}
       {currentVideo.feedback && currentVideo.feedback.length > 0 && (
         <div className="mt-12 space-y-6">
-          <h3 className="text-2xl font-semibold" style={{ color: "#ffffff" }}>
+          <h3 className="text-2xl font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
             Previous Feedback
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentVideo.feedback.map(fb => (
               <div
                 key={fb.id}
-                className="p-6 rounded-2xl transition-all duration-200 hover:scale-[1.02]"
+                className="p-6 rounded-2xl transition-all duration-200 hover:scale-[1.02] border"
                 style={{
-                  backgroundColor: "#2a2a2a",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                 }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span
                     className="text-sm font-medium"
-                    style={{ color: "#ffffff" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {fb.coach.name}
                   </span>
-                  <span className="text-xs" style={{ color: "#6b7280" }}>
+                  <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     {new Date(fb.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="text-sm mb-3" style={{ color: "#9ca3af" }}>
+                <p className="text-sm mb-3" style={{ color: COLORS.TEXT_SECONDARY }}>
                   {fb.feedback}
                 </p>
                 <div className="flex items-center justify-between">
@@ -1385,11 +1622,12 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                       {[1, 2, 3, 4, 5].map(star => (
                         <span
                           key={star}
-                          className={`text-sm ${
-                            fb.rating && fb.rating >= star
-                              ? "text-yellow-400"
-                              : "text-gray-400"
-                          }`}
+                          className="text-sm"
+                          style={{
+                            color: fb.rating && fb.rating >= star
+                              ? COLORS.GOLDEN_ACCENT
+                              : COLORS.TEXT_MUTED,
+                          }}
                         >
                           ★
                         </span>
@@ -1400,7 +1638,13 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                     <button
                       onClick={() => handleDeleteFeedback(fb.id)}
                       className="p-1 rounded transition-all duration-200 hover:scale-110"
-                      style={{ color: "#dc2626" }}
+                      style={{ color: COLORS.RED_ALERT }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = COLORS.RED_DARK;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = COLORS.RED_ALERT;
+                      }}
                       title="Delete feedback"
                     >
                       <Trash2 className="w-4 h-4" />
