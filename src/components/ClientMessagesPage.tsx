@@ -23,7 +23,8 @@ import MessageAcknowledgment from "./MessageAcknowledgment";
 import SwitchRequestMessage from "./SwapRequestMessage";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientMessagesPage from "./MobileClientMessagesPage";
-// Removed complex SSE hooks - using simple polling instead
+import { useSocket } from "@/hooks/useSocket";
+import { useMessagingService } from "./MessagingServiceProvider";
 
 interface ClientMessagesPageProps {
   // Add props here if needed in the future
@@ -61,16 +62,29 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   const { data: currentUser } = trpc.user.getProfile.useQuery();
   const utils = trpc.useUtils();
 
-  // Get conversations with pagination
+  // Use Socket.io for real-time updates instead of polling
+  const { isConnected } = useSocket({
+    enabled: !!currentUser?.id,
+    conversationId: selectedConversation,
+    onNewMessage: () => {
+      utils.messaging.getMessages.invalidate();
+      utils.messaging.getConversations.invalidate();
+    },
+    onConversationUpdate: () => {
+      utils.messaging.getConversations.invalidate();
+    },
+  });
+
+  // Get conversations with pagination (no polling - updates via WebSocket)
   const { data: conversationsData, refetch: refetchConversations } =
     trpc.messaging.getConversations.useQuery(
       { limit: 8, offset: conversationsOffset },
       {
-        refetchInterval: 60000, // Poll every minute
-        refetchOnWindowFocus: true,
+        refetchInterval: false, // NO POLLING - updates via WebSocket
+        refetchOnWindowFocus: false,
         refetchOnReconnect: true,
-        staleTime: 30 * 1000, // Cache for 30 seconds
-        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
       }
     );
 
@@ -132,11 +146,11 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
     }
   }, [conversationsData]);
 
-  // Get unread counts separately for better performance
+  // Get unread counts (no polling - updates via WebSocket)
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
+      refetchInterval: false, // NO POLLING - updates via WebSocket
+      refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       staleTime: 10 * 1000, // Cache for 10 seconds
     });
@@ -154,13 +168,15 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
       }
     );
 
-  // Simple polling for unread count
+  // Get unread count - updates via Supabase Realtime
+  const { isConnected: realtimeConnected } = useMessagingService();
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000, // Poll every 10 seconds
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
+      staleTime: 0, // Always refetch when invalidated
     }
   );
 
@@ -169,6 +185,20 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
+  
+  const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
+    onSuccess: () => {
+      // Invalidate all queries that depend on unread counts
+      utils.messaging.getMessages.invalidate();
+      utils.messaging.getConversations.invalidate();
+      utils.messaging.getUnreadCount.invalidate();
+      utils.messaging.getConversationUnreadCounts.invalidate();
+      
+      // Force immediate refetch
+      utils.messaging.getConversationUnreadCounts.refetch();
+      utils.messaging.getUnreadCount.refetch();
+    },
+  });
 
   // Helper function to get the other user from a conversation with privacy controls
   const getOtherUser = (conversation: any, currentUserId: string) => {
@@ -207,12 +237,17 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
   // Handle conversation selection
   const handleConversationSelect = (conversationId: string) => {
     setSelectedConversation(conversationId);
+    // Mark messages as read when conversation is opened
+    markAsReadMutation.mutate({ conversationId });
   };
 
   // Auto-select first conversation if none selected
   useEffect(() => {
     if (!selectedConversation && conversations.length > 0) {
-      setSelectedConversation(conversations[0].id);
+      const firstConversationId = conversations[0].id;
+      setSelectedConversation(firstConversationId);
+      // Mark messages as read when auto-selecting conversation
+      markAsReadMutation.mutate({ conversationId: firstConversationId });
     }
   }, [conversations, selectedConversation]);
 

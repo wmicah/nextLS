@@ -48,6 +48,9 @@ export default function MobileClientMessagesPage() {
   const { data: currentUser } = trpc.user.getProfile.useQuery();
   const utils = trpc.useUtils();
 
+  // Get Realtime connection status
+  const { isConnected: realtimeConnected } = useMessagingService();
+
   // Get conversations
   const {
     data: conversationsData,
@@ -55,7 +58,7 @@ export default function MobileClientMessagesPage() {
     isLoading: conversationsLoading,
     error: conversationsError,
   } = trpc.messaging.getConversations.useQuery(undefined, {
-    refetchInterval: 60000,
+    refetchInterval: false, // NO POLLING - updates via Supabase Realtime
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 30 * 1000,
@@ -81,10 +84,10 @@ export default function MobileClientMessagesPage() {
   // Get unread counts
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: 10000,
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      staleTime: 10 * 1000,
+      staleTime: 0, // Always refetch when invalidated
     });
 
   // Get messages for selected conversation
@@ -104,9 +107,10 @@ export default function MobileClientMessagesPage() {
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000,
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
+      staleTime: 0, // Always refetch when invalidated
     }
   );
 
@@ -126,6 +130,15 @@ export default function MobileClientMessagesPage() {
   // Mark message as read mutation
   const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
     onSuccess: () => {
+      // Invalidate all queries that depend on unread counts
+      utils.messaging.getMessages.invalidate();
+      utils.messaging.getConversations.invalidate();
+      utils.messaging.getUnreadCount.invalidate();
+      utils.messaging.getConversationUnreadCounts.invalidate();
+      
+      // Force immediate refetch
+      utils.messaging.getConversationUnreadCounts.refetch();
+      utils.messaging.getUnreadCount.refetch();
       refetchMessages();
       refetchConversations();
     },
@@ -327,7 +340,11 @@ export default function MobileClientMessagesPage() {
                     return (
                       <div
                         key={conversation.id}
-                        onClick={() => setSelectedConversation(conversation.id)}
+                        onClick={() => {
+                          setSelectedConversation(conversation.id);
+                          // Mark messages as read when conversation is opened
+                          markAsReadMutation.mutate({ conversationId: conversation.id });
+                        }}
                         className={`p-4 rounded-lg cursor-pointer transition-colors ${
                           isActive
                             ? "bg-[#4A5A70] text-white"

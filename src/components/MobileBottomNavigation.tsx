@@ -12,18 +12,21 @@ export default function MobileBottomNavigation() {
   const { setIsOpen } = useChatbot();
   const [showBugReport, setShowBugReport] = useState(false);
 
-  // Get unread counts with polling
+  // Get unread counts - will update via Supabase Realtime
   const { data: unreadMessages = 0, isLoading: messagesLoading } =
     trpc.messaging.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 30000, // Poll every 30 seconds for faster updates
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
+      staleTime: 0, // Always refetch when invalidated (for real-time updates)
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     });
   const { data: unreadNotifications = 0, isLoading: notificationsLoading } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 30000, // Poll every 30 seconds for faster updates
-      refetchOnWindowFocus: true,
+      refetchInterval: false, // NO POLLING - will add WebSocket support later
+      refetchOnWindowFocus: true, // Only refetch when user returns to tab
       refetchOnReconnect: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
   // Debug logging

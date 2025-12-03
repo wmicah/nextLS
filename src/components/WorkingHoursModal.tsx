@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { Save, X } from "lucide-react";
 import CustomSelect from "./ui/CustomSelect";
-import { COLORS, getGreenPrimary, getRedAlert } from "@/lib/colors";
 
 interface WorkingHoursModalProps {
   isOpen: boolean;
@@ -67,8 +66,7 @@ export default function WorkingHoursModal({
             : enabledSet.has(day);
         acc[day] = {
           enabled,
-          startTime:
-            (existingConfig as any).startTime || baseStart,
+          startTime: (existingConfig as any).startTime || baseStart,
           endTime: (existingConfig as any).endTime || baseEnd,
         };
       } else {
@@ -122,19 +120,15 @@ export default function WorkingHoursModal({
   const [customWorkingHours, setCustomWorkingHours] = useState<
     Record<string, CustomDayConfig>
   >(() =>
-    createCustomHoursState(
-      defaultStartTime,
-      defaultEndTime,
-      [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ]
-    )
+    createCustomHoursState(defaultStartTime, defaultEndTime, [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ])
   );
 
   const syncWorkingDaysWithCustom = (
@@ -204,12 +198,15 @@ export default function WorkingHoursModal({
       } = coachProfile.workingHours as any;
 
       const existingCustom =
-        workingHoursCustom ||
-        (coachProfile as any)?.customWorkingHours ||
-        null;
+        workingHoursCustom || (coachProfile as any)?.customWorkingHours || null;
 
       const normalizedCustom = existingCustom
-        ? createCustomHoursState(startTime, endTime, workingDays, existingCustom)
+        ? createCustomHoursState(
+            startTime,
+            endTime,
+            workingDays,
+            existingCustom
+          )
         : createCustomHoursState(startTime, endTime, workingDays);
 
       const derivedWorkingDays = existingCustom
@@ -233,7 +230,7 @@ export default function WorkingHoursModal({
       utils.user.getProfile.invalidate();
       onClose();
     },
-    onError: error => {
+    onError: (error: { message: string }) => {
       alert(`Error updating working hours: ${error.message}`);
     },
   });
@@ -295,23 +292,17 @@ export default function WorkingHoursModal({
       : workingHours.workingDays;
 
     const customWorkingHoursPayload = useCustomHours
-      ? dayOrder.reduce(
-          (acc, day) => {
-            const config = customWorkingHours[day];
-            if (!config) return acc;
-            acc[day] = {
-              enabled: config.enabled,
-              ...(config.enabled
-                ? { startTime: config.startTime, endTime: config.endTime }
-                : {}),
-            };
-            return acc;
-          },
-          {} as Record<
-            string,
-            { enabled: boolean; startTime?: string; endTime?: string }
-          >
-        )
+      ? dayOrder.reduce((acc, day) => {
+          const config = customWorkingHours[day];
+          if (!config) return acc;
+          acc[day] = {
+            enabled: config.enabled,
+            ...(config.enabled
+              ? { startTime: config.startTime, endTime: config.endTime }
+              : {}),
+          };
+          return acc;
+        }, {} as Record<string, { enabled: boolean; startTime?: string; endTime?: string }>)
       : undefined;
 
     updateWorkingHoursMutation.mutate({
@@ -430,37 +421,27 @@ export default function WorkingHoursModal({
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-md"
-      style={{ backgroundColor: "rgba(21, 25, 26, 0.75)" }}
-    >
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
         className="rounded-2xl shadow-xl border w-full max-w-4xl max-h-[90vh] overflow-y-auto"
         style={{
-          backgroundColor: COLORS.BACKGROUND_CARD,
-          borderColor: COLORS.BORDER_SUBTLE,
+          backgroundColor: "#353A3A",
+          borderColor: "#606364",
         }}
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
+              <h2 className="text-2xl font-bold text-white mb-1">
                 Working Hours
               </h2>
-              <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+              <p className="text-sm text-gray-400">
                 Configure your availability for scheduling lessons
               </p>
             </div>
             <button
               onClick={onClose}
-              className="transition-colors p-2 -m-2"
-              style={{ color: COLORS.TEXT_SECONDARY }}
-              onMouseEnter={e => {
-                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-              }}
+              className="text-gray-400 hover:text-white transition-colors p-2 -m-2"
             >
               <X className="h-6 w-6" />
             </button>
@@ -470,12 +451,12 @@ export default function WorkingHoursModal({
             {/* Left Column - Time Settings */}
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <h3 className="text-lg font-semibold text-white mb-4">
                   Time Range
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <label className="block text-sm font-medium text-white mb-2">
                       Start Time
                     </label>
                     <CustomSelect
@@ -499,14 +480,14 @@ export default function WorkingHoursModal({
                       options={timeOptions}
                       placeholder="Select start time"
                       style={{
-                        backgroundColor: COLORS.BACKGROUND_DARK,
-                        borderColor: COLORS.BORDER_SUBTLE,
+                        backgroundColor: "#2A2F2F",
+                        borderColor: "#606364",
                       }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <label className="block text-sm font-medium text-white mb-2">
                       End Time
                     </label>
                     <CustomSelect
@@ -530,14 +511,14 @@ export default function WorkingHoursModal({
                       options={timeOptions}
                       placeholder="Select end time"
                       style={{
-                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        backgroundColor: "#2A2F2F",
                         borderColor: isTimeConfigurationValid()
-                          ? COLORS.BORDER_SUBTLE
-                          : COLORS.RED_ALERT,
+                          ? "#606364"
+                          : "#EF4444",
                       }}
                     />
                     {!isTimeConfigurationValid() && (
-                      <p className="text-xs mt-1" style={{ color: COLORS.RED_ALERT }}>
+                      <p className="text-xs text-red-400 mt-1">
                         End time must be after start time
                       </p>
                     )}
@@ -546,11 +527,11 @@ export default function WorkingHoursModal({
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <h3 className="text-lg font-semibold text-white mb-4">
                   Time Slot Settings
                 </h3>
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                  <label className="block text-sm font-medium text-white mb-2">
                     Time Slot Interval
                   </label>
                   <CustomSelect
@@ -564,11 +545,11 @@ export default function WorkingHoursModal({
                     options={intervalOptions}
                     placeholder="Select interval"
                     style={{
-                      backgroundColor: COLORS.BACKGROUND_DARK,
-                      borderColor: COLORS.BORDER_SUBTLE,
+                      backgroundColor: "#2A2F2F",
+                      borderColor: "#606364",
                     }}
                   />
-                  <p className="text-xs mt-2" style={{ color: COLORS.TEXT_MUTED }}>
+                  <p className="text-xs text-gray-400 mt-2">
                     Choose how often you want time slots to be available for
                     booking
                   </p>
@@ -578,28 +559,25 @@ export default function WorkingHoursModal({
 
             {/* Right Column - Working Days */}
             <div>
-              <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
+              <h3 className="text-lg font-semibold text-white mb-4">
                 Working Days
               </h3>
               <div
                 className="flex items-center justify-between rounded-lg border px-4 py-3"
-                style={{ 
-                  borderColor: COLORS.BORDER_SUBTLE, 
-                  backgroundColor: COLORS.BACKGROUND_DARK,
-                }}
+                style={{ borderColor: "#4A5A70", backgroundColor: "#1F2426" }}
               >
                 <div>
-                  <p className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
+                  <p className="text-sm font-medium text-white">
                     Customize hours per day
                   </p>
-                  <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                  <p className="text-xs text-gray-400">
                     Enable to set unique start/end times for each day.
                   </p>
                 </div>
                 <label className="flex items-center gap-2">
                   <span
                     className="text-xs font-semibold"
-                    style={{ color: useCustomHours ? COLORS.GREEN_PRIMARY : COLORS.TEXT_MUTED }}
+                    style={{ color: useCustomHours ? "#34D399" : "#9CA3AF" }}
                   >
                     {useCustomHours ? "On" : "Off"}
                   </span>
@@ -609,11 +587,7 @@ export default function WorkingHoursModal({
                     onChange={event =>
                       handleCustomHoursToggle(event.target.checked)
                     }
-                    className="h-5 w-5 rounded border bg-transparent focus:ring-0"
-                    style={{
-                      borderColor: COLORS.BORDER_SUBTLE,
-                      accentColor: COLORS.GREEN_PRIMARY,
-                    }}
+                    className="h-5 w-5 rounded border border-gray-600 bg-transparent text-sky-500 focus:ring-0"
                   />
                 </label>
               </div>
@@ -628,14 +602,12 @@ export default function WorkingHoursModal({
                         key={day}
                         className="rounded-lg border p-4 transition-colors"
                         style={{
-                          borderColor: enabled ? COLORS.GREEN_PRIMARY : COLORS.BORDER_SUBTLE,
-                          backgroundColor: enabled
-                            ? getGreenPrimary(0.1)
-                            : COLORS.BACKGROUND_DARK,
+                          borderColor: enabled ? "#10B98180" : "#4A5A70",
+                          backgroundColor: enabled ? "#10B98114" : "#1F2426",
                         }}
                       >
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                          <span className="font-semibold text-white">
                             {day}
                           </span>
                           <button
@@ -646,35 +618,24 @@ export default function WorkingHoursModal({
                                 enabled: !current.enabled,
                               }))
                             }
-                            className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
-                            style={{
-                              backgroundColor: enabled ? COLORS.GREEN_PRIMARY : COLORS.BACKGROUND_CARD,
-                              color: enabled ? COLORS.BACKGROUND_DARK : COLORS.TEXT_SECONDARY,
-                              border: enabled ? "none" : `1px solid ${COLORS.BORDER_SUBTLE}`,
-                            }}
-                            onMouseEnter={e => {
-                              if (!enabled) {
-                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                              }
-                            }}
-                            onMouseLeave={e => {
-                              if (!enabled) {
-                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
-                                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                              }
-                            }}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                              enabled
+                                ? "bg-emerald-500 text-white"
+                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            }`}
                           >
                             {enabled ? "Enabled" : "Disabled"}
                           </button>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+                            <label className="block text-xs font-medium text-gray-300 mb-1">
                               Start Time
                             </label>
                             <CustomSelect
-                              value={config?.startTime || workingHours.startTime}
+                              value={
+                                config?.startTime || workingHours.startTime
+                              }
                               onChange={value =>
                                 updateCustomWorkingHours(day, current => ({
                                   ...current,
@@ -685,13 +646,13 @@ export default function WorkingHoursModal({
                               placeholder="Select start time"
                               disabled={!enabled}
                               style={{
-                                backgroundColor: COLORS.BACKGROUND_DARK,
-                                borderColor: COLORS.BORDER_SUBTLE,
+                                backgroundColor: "#2A2F2F",
+                                borderColor: "#606364",
                               }}
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+                            <label className="block text-xs font-medium text-gray-300 mb-1">
                               End Time
                             </label>
                             <CustomSelect
@@ -706,8 +667,8 @@ export default function WorkingHoursModal({
                               placeholder="Select end time"
                               disabled={!enabled}
                               style={{
-                                backgroundColor: COLORS.BACKGROUND_DARK,
-                                borderColor: COLORS.BORDER_SUBTLE,
+                                backgroundColor: "#2A2F2F",
+                                borderColor: "#606364",
                               }}
                             />
                           </div>
@@ -718,56 +679,42 @@ export default function WorkingHoursModal({
                 </div>
               ) : (
                 <div className="space-y-3 mt-4">
-                  {dayOrder.map(day => {
-                    const isEnabled = workingHours.workingDays.includes(day);
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => toggleWorkingDay(day)}
-                        className="w-full p-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between border"
-                        style={{
-                          backgroundColor: isEnabled
-                            ? COLORS.BACKGROUND_CARD
-                            : COLORS.BACKGROUND_DARK,
-                          borderColor: isEnabled
-                            ? COLORS.GREEN_PRIMARY
-                            : COLORS.BORDER_SUBTLE,
-                          color: isEnabled
-                            ? COLORS.TEXT_PRIMARY
-                            : COLORS.TEXT_SECONDARY,
-                        }}
-                        onMouseEnter={e => {
-                          if (!isEnabled) {
-                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (!isEnabled) {
-                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
-                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                          }
-                        }}
+                  {dayOrder.map(day => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleWorkingDay(day)}
+                      className={`w-full p-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between ${
+                        workingHours.workingDays.includes(day)
+                          ? "text-white shadow-lg"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600"
+                      }`}
+                      style={{
+                        backgroundColor: workingHours.workingDays.includes(day)
+                          ? "#4A5A70"
+                          : undefined,
+                      }}
+                    >
+                      <span className="font-medium">{day}</span>
+                      <div
+                        className={`w-4 h-4 rounded-full border-2 ${
+                          workingHours.workingDays.includes(day)
+                            ? "bg-white border-white"
+                            : "border-gray-400"
+                        }`}
                       >
-                        <span className="font-medium">{day}</span>
-                        <div
-                          className="w-4 h-4 rounded-full border-2"
-                          style={{
-                            borderColor: isEnabled
-                              ? COLORS.GREEN_PRIMARY
-                              : COLORS.BORDER_SUBTLE,
-                            backgroundColor: isEnabled
-                              ? COLORS.GREEN_PRIMARY
-                              : "transparent",
-                          }}
-                        />
-                      </button>
-                    );
-                  })}
+                        {workingHours.workingDays.includes(day) && (
+                          <div
+                            className="w-full h-full rounded-full"
+                            style={{ backgroundColor: "#10B981" }}
+                          />
+                        )}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
-              <p className="text-xs mt-3" style={{ color: COLORS.TEXT_MUTED }}>
+              <p className="text-xs text-gray-400 mt-3">
                 Select the days you're available for lessons. When custom hours
                 are enabled, clients can only book during the specific times set
                 for each day.
@@ -778,30 +725,29 @@ export default function WorkingHoursModal({
           {/* Preview Section */}
           <div
             className="mt-8 p-4 rounded-lg border"
-            style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }}
+            style={{ backgroundColor: "#2A2F2F", borderColor: "#606364" }}
           >
-            <h3 className="text-lg font-semibold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>Preview</h3>
+            <h3 className="text-lg font-semibold text-white mb-3">Preview</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <span style={{ color: COLORS.TEXT_SECONDARY }}>Working Hours:</span>
-                <span className="ml-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <span className="text-gray-400">Working Hours:</span>
+                <span className="text-white ml-2">
                   {workingHours.startTime} - {workingHours.endTime}
                 </span>
               </div>
               <div>
-                <span style={{ color: COLORS.TEXT_SECONDARY }}>Time Slots:</span>
-                <span className="ml-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <span className="text-gray-400">Time Slots:</span>
+                <span className="text-white ml-2">
                   Every {workingHours.timeSlotInterval} minutes
                 </span>
               </div>
               <div className="sm:col-span-2">
-                <span style={{ color: COLORS.TEXT_SECONDARY }}>Available Days:</span>
-                <span className="ml-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <span className="text-gray-400">Available Days:</span>
+                <span className="text-white ml-2">
                   {workingHours.workingDays.length > 0
                     ? workingHours.workingDays
                         .sort(
-                          (a, b) =>
-                            dayOrder.indexOf(a) - dayOrder.indexOf(b)
+                          (a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b)
                         )
                         .join(", ")
                     : "No days selected"}
@@ -809,7 +755,7 @@ export default function WorkingHoursModal({
               </div>
               {useCustomHours && (
                 <div className="sm:col-span-2">
-                  <span style={{ color: COLORS.TEXT_SECONDARY }}>Daily Schedule:</span>
+                  <span className="text-gray-400">Daily Schedule:</span>
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {dayOrder.map(day => {
                       const config = customWorkingHours[day];
@@ -817,18 +763,11 @@ export default function WorkingHoursModal({
                       return (
                         <div
                           key={day}
-                          className="flex items-center justify-between rounded-lg border px-3 py-2 text-xs"
-                          style={{
-                            borderColor: enabled
-                              ? COLORS.GREEN_PRIMARY
-                              : COLORS.BORDER_SUBTLE,
-                            backgroundColor: enabled
-                              ? getGreenPrimary(0.1)
-                              : COLORS.BACKGROUND_DARK,
-                            color: enabled
-                              ? COLORS.TEXT_PRIMARY
-                              : COLORS.TEXT_MUTED,
-                          }}
+                          className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
+                            enabled
+                              ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-100"
+                              : "border-gray-700 bg-gray-800/60 text-gray-400"
+                          }`}
                         >
                           <span className="font-semibold">{day}</span>
                           <span className="font-medium">
@@ -851,16 +790,8 @@ export default function WorkingHoursModal({
               className="flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 border"
               style={{
                 backgroundColor: "transparent",
-                borderColor: COLORS.BORDER_SUBTLE,
-                color: COLORS.TEXT_SECONDARY,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                borderColor: "#606364",
+                color: "#FFFFFF",
               }}
             >
               Cancel
@@ -873,23 +804,19 @@ export default function WorkingHoursModal({
               }
               className="flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
-                backgroundColor: COLORS.GREEN_PRIMARY,
-                color: COLORS.BACKGROUND_DARK,
+                backgroundColor: "#10B981",
+                color: "#FFFFFF",
               }}
               onMouseEnter={e => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
-                }
+                e.currentTarget.style.backgroundColor = "#059669";
               }}
               onMouseLeave={e => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
-                }
+                e.currentTarget.style.backgroundColor = "#10B981";
               }}
             >
               {updateWorkingHoursMutation.isPending ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: COLORS.BACKGROUND_DARK }} />
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                   Saving...
                 </>
               ) : (

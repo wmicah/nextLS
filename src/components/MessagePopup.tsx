@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import FormattedMessage from "./FormattedMessage";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
+import { useMessagingService } from "./MessagingServiceProvider";
 
 interface MessagePopupProps {
   isOpen: boolean;
@@ -28,11 +29,14 @@ export default function MessagePopup({
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Get Realtime connection status
+  const { isConnected: realtimeConnected } = useMessagingService();
+
   // Get conversations
   const { data: conversationsData, refetch: refetchConversations } =
     trpc.messaging.getConversations.useQuery(undefined, {
       enabled: isOpen,
-      refetchInterval: 60000, // Poll every minute
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       staleTime: 0, // Don't cache - always get fresh data
@@ -44,10 +48,10 @@ export default function MessagePopup({
   // Get unread counts
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: 60000, // Poll every 60 seconds
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      staleTime: 30 * 1000,
+      staleTime: 0, // Always refetch when invalidated
       gcTime: 5 * 60 * 1000,
     });
 
@@ -62,7 +66,8 @@ export default function MessagePopup({
       { conversationId: selectedConversationId! },
       {
         enabled: !!selectedConversationId && isOpen,
-        refetchInterval: 3000, // Poll every 3 seconds when in conversation
+        refetchInterval: false, // NO POLLING - updates via Supabase Realtime
+        staleTime: 0, // Always refetch when invalidated
       }
     );
 
@@ -205,7 +210,7 @@ export default function MessagePopup({
       `}</style>
       <div
         data-message-popup
-        className={`fixed w-96 h-[500px] max-w-[90vw] max-h-[80vh] rounded-xl shadow-2xl border z-50 backdrop-blur-sm ${
+        className={`fixed w-96 h-[500px] max-w-[90vw] max-h-[80vh] rounded-xl shadow-2xl border z-[100] backdrop-blur-sm ${
           isAnimating && !isOpen
             ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
             : isAnimating

@@ -39,16 +39,20 @@ function ClientTopNav({ children }: ClientTopNavProps) {
   const { data: authData } = trpc.authCallback.useQuery();
   const { data: userSettings } = trpc.settings.getSettings.useQuery();
 
-  // Get unread counts with polling for real-time updates
+  // Get unread counts - will update via Supabase Realtime
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: 30000, // Poll every 30 seconds
-      refetchOnWindowFocus: true,
+      refetchInterval: false, // NO POLLING - updates via Supabase Realtime
+      refetchOnWindowFocus: true, // Only refetch when user returns to tab
+      refetchOnReconnect: true,
+      staleTime: 0, // Always refetch when invalidated (for real-time updates)
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     });
   const { data: unreadNotifications = 0 } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval: 30000, // Poll every 30 seconds
+      refetchInterval: false, // NO POLLING - will add WebSocket support later
       refetchOnWindowFocus: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
   // Calculate total unread messages across all conversations

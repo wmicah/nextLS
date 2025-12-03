@@ -15,22 +15,23 @@ export function useOptimizedNotifications() {
 
   const { data: unreadCount = 0, error } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {
-      refetchInterval: interval,
-      refetchOnWindowFocus: false,
+      refetchInterval: false, // NO POLLING - will add WebSocket support later
+      refetchOnWindowFocus: true, // Only refetch when user returns to tab
       refetchOnReconnect: true,
       enabled: isActive,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
   const { data: notifications = [] } =
     trpc.notifications.getNotifications.useQuery(
       { limit: 5, unreadOnly: false },
       {
-        refetchInterval: interval * 2, // Poll less frequently for full notifications
+        refetchInterval: false, // NO POLLING - will add WebSocket support later
         refetchOnWindowFocus: true,
         refetchOnReconnect: true,
         enabled: isActive,
-        staleTime: 30000, // Cache for 30 seconds
-        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
       }
     );
 

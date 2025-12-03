@@ -28,7 +28,7 @@ import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonMessageList, SkeletonCard } from "@/components/SkeletonLoader";
 import MassMessageModal from "./MassMessageModal";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
-// Removed complex SSE hooks - using simple polling instead
+import { useSupabaseRealtime } from "@/hooks/useSupabaseRealtime";
 
 interface MessagesPageProps {
   // Add props here if needed in the future
@@ -90,18 +90,36 @@ function MessagesPage({}: MessagesPageProps) {
 
   // Get current user info
   const { data: currentUser } = trpc.user.getProfile.useQuery();
+  const utils = trpc.useUtils();
 
-  // Simple polling for unread count
+  // Use Supabase Realtime for real-time updates instead of polling
+  const { isConnected } = useSupabaseRealtime({
+    enabled: !!currentUser?.id,
+    userId: currentUser?.id || null,
+    conversationId: selectedConversation,
+    onNewMessage: (data) => {
+      // Invalidate queries to refresh UI when new message arrives
+      utils.messaging.getMessages.invalidate();
+      utils.messaging.getConversations.invalidate();
+      utils.messaging.getUnreadCount.invalidate();
+    },
+    onConversationUpdate: () => {
+      utils.messaging.getConversations.invalidate();
+    },
+  });
+
+  // Get unread count - polls as fallback if Supabase Realtime not connected
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true,
+      staleTime: 30 * 1000, // Cache for 30 seconds
+      refetchInterval: !isConnected ? 30000 : false, // Poll every 30s if Realtime not connected
+      refetchOnWindowFocus: true, // Refetch when user returns to tab
       refetchOnReconnect: true,
     }
   );
 
-  // Get conversations with pagination
+  // Get conversations with pagination (no polling - updates via WebSocket)
   const {
     data: conversationsData,
     refetch: refetchConversations,
@@ -109,11 +127,11 @@ function MessagesPage({}: MessagesPageProps) {
   } = trpc.messaging.getConversations.useQuery(
     { limit: 8, offset: conversationsOffset },
     {
-      staleTime: 30 * 1000, // Cache for 30 seconds
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true, // Refetch on focus
-      refetchOnReconnect: true, // Refetch on reconnect
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // NO POLLING - updates via WebSocket
+      refetchOnWindowFocus: false, // No refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     }
   );
 
@@ -175,16 +193,17 @@ function MessagesPage({}: MessagesPageProps) {
     }
   }, [conversationsData]);
 
-  // Get unread counts with real-time updates
+  // Get unread counts (no polling - updates via WebSocket)
   const { data: unreadCountsObj = {} } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      staleTime: 30 * 1000, // Cache for 30 seconds
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-      refetchInterval: 10000, // Poll every 10 seconds
-      refetchOnWindowFocus: true, // Refetch on focus
-      refetchOnReconnect: true, // Refetch on reconnect
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // NO POLLING - updates via WebSocket
+      refetchOnWindowFocus: false, // No refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     });
 
+  // Get messages (no polling - updates via WebSocket)
   const {
     data: messages = [],
     refetch: refetchMessages,
@@ -193,11 +212,11 @@ function MessagesPage({}: MessagesPageProps) {
     { conversationId: selectedConversation! },
     {
       enabled: !!selectedConversation,
-      staleTime: 30 * 1000, // Cache for 30 seconds
-      gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
-      refetchInterval: 5000, // Poll every 5 seconds
-      refetchOnWindowFocus: true, // Refetch on focus
-      refetchOnReconnect: true, // Refetch on reconnect
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchInterval: false, // NO POLLING - updates via WebSocket
+      refetchOnWindowFocus: false, // No refetch on focus
+      refetchOnReconnect: true, // Only refetch on reconnect
     }
   );
 
@@ -209,6 +228,22 @@ function MessagesPage({}: MessagesPageProps) {
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
+
+  const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
+    onSuccess: () => {
+      // Invalidate all queries that depend on unread counts
+      utils.messaging.getMessages.invalidate();
+      utils.messaging.getConversations.invalidate();
+      utils.messaging.getUnreadCount.invalidate();
+      utils.messaging.getConversationUnreadCounts.invalidate();
+      utils.sidebar.getSidebarData.invalidate(); // This updates the Sidebar badge!
+      
+      // Force immediate refetch
+      utils.messaging.getConversationUnreadCounts.refetch();
+      utils.messaging.getUnreadCount.refetch();
+      utils.sidebar.getSidebarData.refetch();
+    },
+  });
 
   const createConversationMutation =
     trpc.messaging.createConversationWithClient.useMutation({
@@ -257,6 +292,8 @@ function MessagesPage({}: MessagesPageProps) {
   // Handle conversation selection
   const handleConversationSelect = (conversationId: string) => {
     setSelectedConversation(conversationId);
+    // Mark messages as read when conversation is opened
+    markAsReadMutation.mutate({ conversationId });
   };
 
   // Handle sending message
