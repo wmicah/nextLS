@@ -31,6 +31,7 @@ import type { OurFileRouter } from "@/app/api/uploadthing/core";
 import { Youtube } from "lucide-react";
 import { isYouTubeUrl } from "@/lib/youtube-utils";
 import { extractYouTubeVideoId, getYouTubeThumbnail } from "@/lib/youtube";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 // Component for sending bug report announcement
 function SendBugReportAnnouncementButton() {
@@ -138,11 +139,33 @@ export default function AdminDashboard() {
   const { data: stats } = trpc.admin.getStats.useQuery();
   const { data: deletionAnalytics } =
     trpc.user.getAccountDeletionAnalytics.useQuery();
+  const [showArchivedBugReports, setShowArchivedBugReports] = useState(false);
   const { data: bugReportsData, refetch: refetchBugReports } =
-    trpc.bugReports.list.useQuery({});
+    trpc.bugReports.list.useQuery({
+      includeArchived: false,
+    });
+  const { data: allBugReportsData, refetch: refetchAllBugReports } =
+    trpc.bugReports.list.useQuery({
+      includeArchived: true,
+    });
+  
+  // Filter archived reports from all reports
+  const archivedBugReportsData = allBugReportsData ? {
+    ...allBugReportsData,
+    bugReports: allBugReportsData.bugReports?.filter((b: any) => b.isArchived) || [],
+    total: allBugReportsData.bugReports?.filter((b: any) => b.isArchived).length || 0,
+  } : undefined;
+  
   const updateBugStatusMutation = trpc.bugReports.updateStatus.useMutation({
     onSuccess: () => {
       refetchBugReports();
+      refetchAllBugReports();
+    },
+  });
+  const archiveBugReportMutation = trpc.bugReports.archive.useMutation({
+    onSuccess: () => {
+      refetchBugReports();
+      refetchAllBugReports();
     },
   });
 
@@ -212,11 +235,11 @@ export default function AdminDashboard() {
 
   if (!authData?.user || !authData.user.isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#2A3133]">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
         <div className="text-center">
-          <Shield className="w-16 h-16 mx-auto mb-4 text-red-500" />
-          <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-          <p className="text-gray-400">
+          <Shield className="w-16 h-16 mx-auto mb-4" style={{ color: COLORS.RED_ALERT }} />
+          <h1 className="text-2xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>Access Denied</h1>
+          <p style={{ color: COLORS.TEXT_SECONDARY }}>
             You don't have permission to access this page.
           </p>
         </div>
@@ -245,26 +268,26 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#2A3133] text-white">
+    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>
       {/* Mobile Header */}
-      <div className="md:hidden bg-[#1A1D1E] border-b border-[#4A5A70] p-4">
+      <div className="md:hidden border-b p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#4A5A70] flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+              <Shield className="w-5 h-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
             </div>
             <div>
-              <h1 className="text-lg font-bold">Admin</h1>
-              <p className="text-xs text-gray-400">
+              <h1 className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Admin</h1>
+              <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                 {authData.user.name || authData.user.email}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#4A5A70] text-white">
+            <span className="px-2 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY, borderColor: COLORS.BORDER_SUBTLE }}>
               {authData.user.role}
             </span>
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-600 text-white">
+            <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: getGoldenAccent(0.2), color: COLORS.TEXT_PRIMARY }}>
               Admin
             </span>
           </div>
@@ -272,26 +295,26 @@ export default function AdminDashboard() {
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:block bg-[#1A1D1E] border-b border-[#4A5A70] p-6">
+      <div className="hidden md:block border-b p-6" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#4A5A70] flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+                <Shield className="w-6 h-6" style={{ color: COLORS.GOLDEN_ACCENT }} />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                <p className="text-gray-400">
+                <h1 className="text-3xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Admin Dashboard</h1>
+                <p style={{ color: COLORS.TEXT_SECONDARY }}>
                   Welcome back, {authData.user.name || authData.user.email}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-sm font-medium bg-[#4A5A70] text-white">
+                <span className="px-3 py-1 rounded-full text-sm font-medium border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY, borderColor: COLORS.BORDER_SUBTLE }}>
                   {authData.user.role}
                 </span>
-                <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-600 text-white">
+                <span className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: getGoldenAccent(0.2), color: COLORS.TEXT_PRIMARY }}>
                   Admin
                 </span>
               </div>
@@ -305,10 +328,25 @@ export default function AdminDashboard() {
         <div className="md:hidden mb-4">
           <button
             onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-white hover:bg-[#2D3748] rounded-lg transition-all duration-200"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 border text-sm"
+            style={{ 
+              color: COLORS.TEXT_SECONDARY, 
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+            }}
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back</span>
+            <span>Back</span>
           </button>
         </div>
 
@@ -316,7 +354,22 @@ export default function AdminDashboard() {
         <div className="hidden md:block mb-6">
           <button
             onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-[#2D3748] rounded-lg transition-all duration-200"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 border"
+            style={{ 
+              color: COLORS.TEXT_SECONDARY, 
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+            }}
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
@@ -325,18 +378,31 @@ export default function AdminDashboard() {
 
         {/* Mobile Navigation Tabs */}
         <div className="md:hidden mb-4">
-          <div className="flex space-x-1 bg-[#1A1D1E] rounded-lg p-1 overflow-x-auto">
+          <div className="flex space-x-1 rounded-lg p-1 overflow-x-auto border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-md transition-all duration-200 whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "bg-[#4A5A70] text-white"
-                      : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
-                  }`}
+                  className="flex items-center gap-1 px-3 py-2 rounded-md transition-all duration-200 whitespace-nowrap border"
+                  style={{
+                    backgroundColor: activeTab === tab.id ? getGoldenAccent(0.2) : "transparent",
+                    color: activeTab === tab.id ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                    borderColor: activeTab === tab.id ? getGoldenAccent(0.4) : "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
                 >
                   <Icon className="w-4 h-4" />
                   <span className="text-xs">{tab.label}</span>
@@ -347,18 +413,31 @@ export default function AdminDashboard() {
         </div>
 
         {/* Desktop Navigation Tabs */}
-        <div className="hidden md:flex space-x-1 bg-[#1A1D1E] rounded-lg p-1 mb-8">
+        <div className="hidden md:flex space-x-1 rounded-lg p-1 mb-8 border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-[#4A5A70] text-white"
-                    : "text-gray-400 hover:text-white hover:bg-[#2D3748]"
-                }`}
+                className="flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 border"
+                style={{
+                  backgroundColor: activeTab === tab.id ? getGoldenAccent(0.2) : "transparent",
+                  color: activeTab === tab.id ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  borderColor: activeTab === tab.id ? getGoldenAccent(0.4) : "transparent",
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }
+                }}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -771,62 +850,62 @@ export default function AdminDashboard() {
         {activeTab === "bug-reports" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Bug Reports</h2>
-              <p className="text-gray-400">
+              <h2 className="text-2xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>Bug Reports</h2>
+              <p style={{ color: COLORS.TEXT_SECONDARY }}>
                 Review and manage bug reports submitted by users
               </p>
             </div>
 
             {/* Bug Reports Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-[#1A1D1E] rounded-xl p-4 border border-[#4A5A70]">
+              <div className="rounded-xl p-4 border transition-all duration-200 hover:scale-105" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-400 text-sm">Total Reports</p>
-                    <p className="text-2xl font-bold text-white">
+                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>Total Reports</p>
+                    <p className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                       {bugReportsData?.total || 0}
                     </p>
                   </div>
-                  <Bug className="w-8 h-8 text-[#4A5A70]" />
+                  <Bug className="w-8 h-8" style={{ color: COLORS.TEXT_MUTED }} />
                 </div>
               </div>
-              <div className="bg-[#1A1D1E] rounded-xl p-4 border border-[#4A5A70]">
+              <div className="rounded-xl p-4 border transition-all duration-200 hover:scale-105" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-400 text-sm">Open</p>
-                    <p className="text-2xl font-bold text-yellow-500">
+                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>Open</p>
+                    <p className="text-2xl font-bold" style={{ color: COLORS.GOLDEN_ACCENT }}>
                       {bugReportsData?.bugReports?.filter(
                         (b: any) => b.status === "OPEN"
                       ).length || 0}
                     </p>
                   </div>
-                  <Clock className="w-8 h-8 text-yellow-500" />
+                  <Clock className="w-8 h-8" style={{ color: COLORS.GOLDEN_ACCENT }} />
                 </div>
               </div>
-              <div className="bg-[#1A1D1E] rounded-xl p-4 border border-[#4A5A70]">
+              <div className="rounded-xl p-4 border transition-all duration-200 hover:scale-105" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-400 text-sm">In Progress</p>
-                    <p className="text-2xl font-bold text-blue-500">
+                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>In Progress</p>
+                    <p className="text-2xl font-bold" style={{ color: COLORS.BLUE_PRIMARY }}>
                       {bugReportsData?.bugReports?.filter(
                         (b: any) => b.status === "IN_PROGRESS"
                       ).length || 0}
                     </p>
                   </div>
-                  <Clock className="w-8 h-8 text-blue-500" />
+                  <Clock className="w-8 h-8" style={{ color: COLORS.BLUE_PRIMARY }} />
                 </div>
               </div>
-              <div className="bg-[#1A1D1E] rounded-xl p-4 border border-[#4A5A70]">
+              <div className="rounded-xl p-4 border transition-all duration-200 hover:scale-105" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-400 text-sm">Resolved</p>
-                    <p className="text-2xl font-bold text-green-500">
+                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>Resolved</p>
+                    <p className="text-2xl font-bold" style={{ color: COLORS.GREEN_PRIMARY }}>
                       {bugReportsData?.bugReports?.filter(
                         (b: any) => b.status === "RESOLVED"
                       ).length || 0}
                     </p>
                   </div>
-                  <CheckCircle2 className="w-8 h-8 text-green-500" />
+                  <CheckCircle2 className="w-8 h-8" style={{ color: COLORS.GREEN_PRIMARY }} />
                 </div>
               </div>
             </div>
@@ -834,11 +913,32 @@ export default function AdminDashboard() {
             {/* Bug Reports List */}
             <div className="bg-[#1A1D1E] rounded-xl border border-[#4A5A70]">
               <div className="p-6">
-                <h3 className="text-xl font-bold mb-4">All Bug Reports</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold">Active Bug Reports</h3>
+                  <button
+                    onClick={() => setShowArchivedBugReports(!showArchivedBugReports)}
+                    className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm flex items-center gap-2 border"
+                    style={{ 
+                      backgroundColor: COLORS.BACKGROUND_CARD,
+                      color: COLORS.TEXT_PRIMARY,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
+                  >
+                    {showArchivedBugReports ? "Hide" : "Show"} Archived ({archivedBugReportsData?.bugReports?.filter((b: any) => b.isArchived).length || 0})
+                  </button>
+                </div>
                 {bugReportsData?.bugReports &&
-                bugReportsData.bugReports.length > 0 ? (
+                bugReportsData.bugReports.filter((b: any) => !b.isArchived).length > 0 ? (
                   <div className="space-y-4">
-                    {bugReportsData.bugReports.map((report: any) => {
+                    {bugReportsData.bugReports.filter((b: any) => !b.isArchived).map((report: any) => {
                       const priorityColors: Record<string, string> = {
                         CRITICAL: "bg-red-500",
                         HIGH: "bg-orange-500",
@@ -979,6 +1079,18 @@ export default function AdminDashboard() {
                             >
                               Close
                             </button>
+                            <button
+                              onClick={() => {
+                                archiveBugReportMutation.mutate({
+                                  id: report.id,
+                                  isArchived: true,
+                                });
+                              }}
+                              disabled={archiveBugReportMutation.isPending}
+                              className="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
+                            >
+                              Archive
+                            </button>
                           </div>
                         </div>
                       );
@@ -992,6 +1104,145 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
+
+            {/* Archived Bug Reports Section */}
+            {showArchivedBugReports && (
+              <div className="bg-[#1A1D1E] rounded-xl border border-[#4A5A70] mt-6">
+                <div className="p-6">
+                  <h3 className="text-xl font-bold mb-4 text-gray-400">Archived Bug Reports</h3>
+                  {archivedBugReportsData?.bugReports &&
+                  archivedBugReportsData.bugReports.filter((b: any) => b.isArchived).length > 0 ? (
+                    <div className="space-y-4">
+                      {archivedBugReportsData.bugReports.filter((b: any) => b.isArchived).map((report: any) => {
+                        const priorityColors: Record<string, string> = {
+                          CRITICAL: "bg-red-500",
+                          HIGH: "bg-orange-500",
+                          MEDIUM: "bg-yellow-500",
+                          LOW: "bg-green-500",
+                        };
+                        const statusColors: Record<string, string> = {
+                          OPEN: "bg-yellow-500",
+                          IN_PROGRESS: "bg-blue-500",
+                          RESOLVED: "bg-green-500",
+                          CLOSED: "bg-gray-500",
+                          DUPLICATE: "bg-purple-500",
+                        };
+
+                        return (
+                          <div
+                            key={report.id}
+                            className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70] opacity-75"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h4 className="text-lg font-bold text-white">
+                                    {report.title}
+                                  </h4>
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                                      priorityColors[report.priority] ||
+                                      "bg-gray-500"
+                                    }`}
+                                  >
+                                    {report.priority}
+                                  </span>
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                                      statusColors[report.status] || "bg-gray-500"
+                                    }`}
+                                  >
+                                    {report.status}
+                                  </span>
+                                  <span className="px-2 py-1 rounded-full text-xs font-medium text-white bg-purple-600">
+                                    ARCHIVED
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-400 mb-2">
+                                  Page:{" "}
+                                  <span className="text-white">
+                                    {report.page}
+                                  </span>
+                                </p>
+                                <p className="text-sm text-gray-400 mb-2">
+                                  Device:{" "}
+                                  <span className="text-white">
+                                    {report.device || "Not specified"}
+                                  </span>
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Reported by:{" "}
+                                  <span className="text-white">
+                                    {report.user?.name || report.user?.email} (
+                                    {report.userRole})
+                                  </span>
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-gray-400">
+                                  {new Date(
+                                    report.createdAt
+                                  ).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="mb-3">
+                              <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                                {report.description}
+                              </p>
+                            </div>
+
+                            {report.imageUrl && (
+                              <div className="mb-3">
+                                <img
+                                  src={report.imageUrl}
+                                  alt="Bug screenshot"
+                                  className="max-w-md rounded-lg border border-[#4A5A70]"
+                                />
+                              </div>
+                            )}
+
+                            {report.videoUrl && (
+                              <div className="mb-3">
+                                <a
+                                  href={report.videoUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-400 hover:underline text-sm"
+                                >
+                                  View Video →
+                                </a>
+                              </div>
+                            )}
+
+                            <div className="flex gap-2 mt-4">
+                              <button
+                                onClick={() => {
+                                  archiveBugReportMutation.mutate({
+                                    id: report.id,
+                                    isArchived: false,
+                                  });
+                                }}
+                                disabled={archiveBugReportMutation.isPending}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+                              >
+                                Unarchive
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Bug className="w-16 h-16 mx-auto mb-4 text-gray-500 opacity-50" />
+                      <p className="text-gray-400">No archived bug reports</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

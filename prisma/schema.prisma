@@ -1365,6 +1365,7 @@ model BugReport {
   resolvedAt  DateTime?
   resolvedBy  String?
   resolution  String?
+  isArchived  Boolean       @default(false) @map("is_archived")
   
   user        User          @relation("UserBugReports", fields: [userId], references: [id], onDelete: Cascade)
   resolver    User?         @relation("ResolvedBugReports", fields: [resolvedBy], references: [id])
@@ -1373,6 +1374,7 @@ model BugReport {
   @@index([status])
   @@index([priority])
   @@index([createdAt])
+  @@index([isArchived])
   @@map("bug_reports")
 }
 

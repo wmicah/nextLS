@@ -24,6 +24,270 @@ import Link from "next/link";
 import Sidebar from "./Sidebar";
 import { SkeletonVideoGrid, SkeletonCard } from "@/components/SkeletonLoader";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
+import { ErrorBoundary } from "./ErrorBoundary";
+
+// Video Card Component with error handling
+function VideoCard({ video, formatDuration }: { video: any; formatDuration: (seconds: number | null) => string }) {
+  const [thumbnailError, setThumbnailError] = useState(false);
+
+  // Skip videos that are missing critical data
+  if (!video || !video.id || !video.title) {
+    return null;
+  }
+
+  return (
+    <Link
+      href={`/videos/${video.id}`}
+      className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border block"
+      style={{ 
+        backgroundColor: COLORS.BACKGROUND_CARD,
+        borderColor: COLORS.BORDER_SUBTLE,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = getGoldenAccent(0.4);
+        e.currentTarget.style.boxShadow = `0 4px 12px ${getGoldenAccent(0.2)}`;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+        e.currentTarget.style.boxShadow = "none";
+      }}
+    >
+      {/* Video Thumbnail */}
+      <div
+        className="relative aspect-video overflow-hidden"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
+        {video.thumbnail && !thumbnailError ? (
+          <img
+            src={video.thumbnail}
+            alt={video.title || "Video thumbnail"}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            onError={() => setThumbnailError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Video
+              className="w-6 h-6"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+            />
+          </div>
+        )}
+
+        {/* Play Overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{
+                backgroundColor: getGoldenAccent(0.9),
+              }}
+            >
+              <Play
+                className="w-4 h-4 ml-0.5"
+                style={{ color: COLORS.BACKGROUND_DARK }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Category Badge */}
+        {video.category && (
+          <div className="absolute top-2 left-2">
+            <span
+              className="px-1.5 py-0.5 text-[10px] font-medium rounded-full border"
+              style={{ 
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_PRIMARY,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
+              {video.category}
+            </span>
+          </div>
+        )}
+
+        {/* Duration */}
+        {video.duration && (
+          <div className="absolute bottom-2 right-2">
+            <span
+              className="px-1.5 py-0.5 text-[10px] font-medium rounded"
+              style={{
+                backgroundColor: "rgba(0, 0, 0, 0.8)",
+                color: COLORS.TEXT_PRIMARY,
+              }}
+            >
+              {formatDuration(video.duration)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="p-2">
+        {/* Title */}
+        <h3
+          className="font-medium text-xs line-clamp-2 leading-tight mb-1"
+          style={{ color: COLORS.TEXT_PRIMARY }}
+        >
+          {video.title || "Untitled Video"}
+        </h3>
+
+        {/* Meta Info */}
+        <div
+          className="flex items-center justify-between text-[10px]"
+          style={{ color: COLORS.TEXT_SECONDARY }}
+        >
+          <div className="flex items-center gap-1">
+            <User className="w-2.5 h-2.5" />
+            <span className="truncate">
+              {video.uploader?.name || video.client?.name || "Unknown"}
+            </span>
+          </div>
+          <span className="text-[9px]">
+            {video.createdAt 
+              ? new Date(video.createdAt).toLocaleDateString()
+              : "Unknown date"}
+          </span>
+        </div>
+
+        {/* Stats */}
+        {video.feedback && Array.isArray(video.feedback) && video.feedback.length > 0 && (
+          <div
+            className="flex items-center gap-1 text-[10px] mt-1"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+          >
+            <MessageSquare className="w-2.5 h-2.5" />
+            <span>{video.feedback.length}</span>
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+// Client Submission Card Component with error handling
+function ClientSubmissionCard({ submission, getTimeAgo }: { submission: any; getTimeAgo: (date: string | Date) => string }) {
+  const [thumbnailError, setThumbnailError] = useState(false);
+
+  // Skip submissions that are missing critical data
+  if (!submission || !submission.id || !submission.title) {
+    return null;
+  }
+
+  return (
+    <Link
+      href={`/videos/${submission.id}`}
+      className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border block"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_CARD,
+        borderColor: COLORS.BORDER_SUBTLE,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = getGoldenAccent(0.4);
+        e.currentTarget.style.boxShadow = `0 4px 12px ${getGoldenAccent(0.2)}`;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+        e.currentTarget.style.boxShadow = "none";
+      }}
+    >
+      {/* Video Thumbnail */}
+      <div
+        className="relative aspect-video overflow-hidden"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
+        {submission.thumbnail && !thumbnailError ? (
+          <img
+            src={submission.thumbnail}
+            alt={submission.title || "Submission thumbnail"}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            onError={() => setThumbnailError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Video
+              className="w-6 h-6"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+            />
+          </div>
+        )}
+
+        {/* Play Overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{
+                backgroundColor: getGoldenAccent(0.9),
+              }}
+            >
+              <Play
+                className="w-4 h-4 ml-0.5"
+                style={{ color: COLORS.BACKGROUND_DARK }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Client Badge */}
+        <div className="absolute top-2 left-2">
+          <span
+            className="px-1.5 py-0.5 text-[10px] font-medium rounded-full border"
+            style={{
+              backgroundColor: COLORS.GREEN_PRIMARY,
+              color: COLORS.TEXT_PRIMARY,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
+            Client
+          </span>
+        </div>
+
+        {/* Status Badge */}
+        <div className="absolute bottom-2 right-2">
+          <span
+            className="px-1.5 py-0.5 text-[10px] font-medium rounded"
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              color: COLORS.TEXT_PRIMARY,
+            }}
+          >
+            New
+          </span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-2">
+        {/* Title */}
+        <h3
+          className="font-medium text-xs line-clamp-2 leading-tight mb-1"
+          style={{ color: COLORS.TEXT_PRIMARY }}
+        >
+          {submission.title || "Untitled Submission"}
+        </h3>
+
+        {/* Meta Info */}
+        <div
+          className="flex items-center justify-between text-[10px]"
+          style={{ color: COLORS.TEXT_SECONDARY }}
+        >
+          <div className="flex items-center gap-1">
+            <User className="w-2.5 h-2.5" />
+            <span className="truncate">
+              {submission.client?.name || "Unknown Client"}
+            </span>
+          </div>
+          <span className="text-[9px]">
+            {submission.createdAt 
+              ? getTimeAgo(submission.createdAt)
+              : "Unknown date"}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 function VideosPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,6 +335,12 @@ function VideosPage() {
   // Memoized filtered and sorted data
   const filteredVideos = useMemo(() => {
     return videos.filter(video => {
+      // Skip videos with missing critical data
+      if (!video || !video.id || !video.title) {
+        console.warn("Skipping video with missing data:", video);
+        return false;
+      }
+      
       const matchesSearch =
         video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         video.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -82,13 +352,24 @@ function VideosPage() {
 
   const filteredClientSubmissions = useMemo(() => {
     const filtered = clientSubmissions.filter(submission => {
+      // Skip submissions with missing critical data
+      if (!submission || !submission.id || !submission.title) {
+        console.warn("Skipping submission with missing data:", submission);
+        return false;
+      }
+      
+      // Handle missing client gracefully
+      if (!submission.client) {
+        console.warn("Submission missing client:", submission.id);
+      }
+      
       const matchesSearch =
         submission.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         submission.description
           ?.toLowerCase()
           .includes(searchQuery.toLowerCase()) ||
-        submission.client.name
-          .toLowerCase()
+        submission.client?.name
+          ?.toLowerCase()
           .includes(searchQuery.toLowerCase());
       return matchesSearch;
     });
@@ -512,126 +793,9 @@ function VideosPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {filteredVideos.map(video => (
-                <Link
-                  key={video.id}
-                  href={`/videos/${video.id}`}
-                  className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border block"
-                  style={{ 
-                    backgroundColor: COLORS.BACKGROUND_CARD,
-                    borderColor: COLORS.BORDER_SUBTLE,
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = getGoldenAccent(0.4);
-                    e.currentTarget.style.boxShadow = `0 4px 12px ${getGoldenAccent(0.2)}`;
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                >
-                  {/* Video Thumbnail */}
-                  <div
-                    className="relative aspect-video overflow-hidden"
-                    style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-                  >
-                    {video.thumbnail ? (
-                      <img
-                        src={video.thumbnail}
-                        alt={video.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Video
-                          className="w-6 h-6"
-                          style={{ color: COLORS.TEXT_SECONDARY }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Play Overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center"
-                          style={{
-                            backgroundColor: getGoldenAccent(0.9),
-                          }}
-                        >
-                          <Play
-                            className="w-4 h-4 ml-0.5"
-                            style={{ color: COLORS.BACKGROUND_DARK }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Category Badge */}
-                    <div className="absolute top-2 left-2">
-                      <span
-                        className="px-1.5 py-0.5 text-[10px] font-medium rounded-full border"
-                        style={{ 
-                          backgroundColor: COLORS.BACKGROUND_CARD,
-                          color: COLORS.TEXT_PRIMARY,
-                          borderColor: COLORS.BORDER_SUBTLE,
-                        }}
-                      >
-                        {video.category}
-                      </span>
-                    </div>
-
-                    {/* Duration */}
-                    {video.duration && (
-                      <div className="absolute bottom-2 right-2">
-                        <span
-                          className="px-1.5 py-0.5 text-[10px] font-medium rounded"
-                          style={{
-                            backgroundColor: "rgba(0, 0, 0, 0.8)",
-                            color: COLORS.TEXT_PRIMARY,
-                          }}
-                        >
-                          {formatDuration(video.duration)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-2">
-                    {/* Title */}
-                    <h3
-                      className="font-medium text-xs line-clamp-2 leading-tight mb-1"
-                      style={{ color: COLORS.TEXT_PRIMARY }}
-                    >
-                      {video.title}
-                    </h3>
-
-                    {/* Meta Info */}
-                    <div
-                      className="flex items-center justify-between text-[10px]"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <User className="w-2.5 h-2.5" />
-                        <span className="truncate">{video.uploader.name}</span>
-                      </div>
-                      <span className="text-[9px]">
-                        {new Date(video.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-
-                    {/* Stats */}
-                    {video.feedback && video.feedback.length > 0 && (
-                      <div
-                        className="flex items-center gap-1 text-[10px] mt-1"
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                      >
-                        <MessageSquare className="w-2.5 h-2.5" />
-                        <span>{video.feedback.length}</span>
-                      </div>
-                    )}
-                  </div>
-                </Link>
+                <ErrorBoundary key={video.id} fallback={<div />}>
+                  <VideoCard video={video} formatDuration={formatDuration} />
+                </ErrorBoundary>
               ))}
             </div>
           )
@@ -845,115 +1009,12 @@ function VideosPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {filteredClientSubmissions.map(submission => (
-                  <Link
-                    key={submission.id}
-                    href={`/videos/${submission.id}`}
-                    className="group relative rounded-lg overflow-hidden transition-all duration-200 hover:scale-105 cursor-pointer border block"
-                    style={{
-                      backgroundColor: COLORS.BACKGROUND_CARD,
-                      borderColor: COLORS.BORDER_SUBTLE,
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = getGoldenAccent(0.4);
-                      e.currentTarget.style.boxShadow = `0 4px 12px ${getGoldenAccent(0.2)}`;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    {/* Video Thumbnail */}
-                    <div
-                      className="relative aspect-video overflow-hidden"
-                      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-                    >
-                      {submission.thumbnail ? (
-                        <img
-                          src={submission.thumbnail}
-                          alt={submission.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Video
-                            className="w-6 h-6"
-                            style={{ color: COLORS.TEXT_SECONDARY }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Play Overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center"
-                            style={{
-                              backgroundColor: getGoldenAccent(0.9),
-                            }}
-                          >
-                            <Play
-                              className="w-4 h-4 ml-0.5"
-                              style={{ color: COLORS.BACKGROUND_DARK }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Client Badge */}
-                      <div className="absolute top-2 left-2">
-                        <span
-                          className="px-1.5 py-0.5 text-[10px] font-medium rounded-full border"
-                          style={{
-                            backgroundColor: COLORS.GREEN_PRIMARY,
-                            color: COLORS.TEXT_PRIMARY,
-                            borderColor: COLORS.BORDER_SUBTLE,
-                          }}
-                        >
-                          Client
-                        </span>
-                      </div>
-
-                      {/* Status Badge */}
-                      <div className="absolute bottom-2 right-2">
-                        <span
-                          className="px-1.5 py-0.5 text-[10px] font-medium rounded"
-                          style={{
-                            backgroundColor: "rgba(0, 0, 0, 0.8)",
-                            color: COLORS.TEXT_PRIMARY,
-                          }}
-                        >
-                          New
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-2">
-                      {/* Title */}
-                      <h3
-                        className="font-medium text-xs line-clamp-2 leading-tight mb-1"
-                        style={{ color: COLORS.TEXT_PRIMARY }}
-                      >
-                        {submission.title}
-                      </h3>
-
-                      {/* Meta Info */}
-                      <div
-                        className="flex items-center justify-between text-[10px]"
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                      >
-                        <div className="flex items-center gap-1">
-                          <User className="w-2.5 h-2.5" />
-                          <span className="truncate">
-                            {submission.client.name}
-                          </span>
-                        </div>
-                        <span className="text-[9px]">
-                          {getTimeAgo(submission.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
+                  <ErrorBoundary key={submission.id} fallback={<div />}>
+                    <ClientSubmissionCard 
+                      submission={submission} 
+                      getTimeAgo={getTimeAgo} 
+                    />
+                  </ErrorBoundary>
                 ))}
               </div>
             )}
