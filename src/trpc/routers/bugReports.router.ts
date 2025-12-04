@@ -254,6 +254,7 @@ export const bugReportsRouter = router({
             .enum(["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "DUPLICATE"])
             .optional(),
           priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
+          includeArchived: z.boolean().optional().default(false),
           limit: z.number().min(1).max(100).default(50),
           offset: z.number().min(0).default(0),
         })
@@ -286,6 +287,10 @@ export const bugReportsRouter = router({
       }
       if (input?.priority) {
         where.priority = input.priority;
+      }
+      // Filter out archived items by default
+      if (!input?.includeArchived) {
+        where.isArchived = false;
       }
 
       const [bugReports, total] = await Promise.all([
@@ -393,9 +398,63 @@ export const bugReportsRouter = router({
         }
       }
 
+      // Auto-archive when closing
+      if (input.status === "CLOSED") {
+        updateData.isArchived = true;
+      }
+
       const bugReport = await db.bugReport.update({
         where: { id: input.id },
         data: updateData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return bugReport;
+    }),
+
+  // Archive or unarchive a bug report (admin only)
+  archive: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        isArchived: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      // Check if user is admin
+      const dbUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: { isAdmin: true },
+      });
+
+      if (!dbUser?.isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can archive bug reports",
+        });
+      }
+
+      const bugReport = await db.bugReport.update({
+        where: { id: input.id },
+        data: {
+          isArchived: input.isArchived,
+          updatedAt: new Date(),
+        },
         include: {
           user: {
             select: {
