@@ -26,6 +26,9 @@ import RichMessageInput from "./RichMessageInput";
 import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
 import { downloadVideoFromMessage } from "@/lib/download-utils";
+import MassMessageModal from "./MassMessageModal";
+import { Users } from "lucide-react";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface MobileMessagesPageProps {
   // Add props here if needed in the future
@@ -40,6 +43,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   const [messageText, setMessageText] = useState("");
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showMassMessageModal, setShowMassMessageModal] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [selectedFile, setSelectedFile] = useState<{
     file: File;
@@ -74,6 +78,8 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
     }>
   >([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const conversationsListRef = useRef<HTMLDivElement>(null);
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
   // Handle mobile keyboard and viewport changes
   useEffect(() => {
@@ -91,17 +97,45 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   // Get current user info
   const { data: currentUser } = trpc.user.getProfile.useQuery();
 
-  // Get conversations with optimized caching
-  const { data: conversationsData, refetch: refetchConversations } =
-    trpc.messaging.getConversations.useQuery(undefined, {
-      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-      refetchInterval: false, // No automatic polling
-      refetchOnWindowFocus: false, // Don't refetch on focus
-      refetchOnReconnect: true, // Only refetch on reconnect
-    });
+  // Pagination state
+  const [conversationsOffset, setConversationsOffset] = useState(0);
+  const CONVERSATIONS_PER_PAGE = 20;
+  const [allConversations, setAllConversations] = useState<any[]>([]);
 
-  const conversations = conversationsData?.conversations || [];
+  // Get conversations with pagination
+  const {
+    data: conversationsData,
+    refetch: refetchConversations,
+    isLoading: isLoadingConversations,
+  } = trpc.messaging.getConversations.useQuery(
+    { limit: CONVERSATIONS_PER_PAGE, offset: conversationsOffset },
+    {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchInterval: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    }
+  );
+
+  // Update conversations list when data changes
+  useEffect(() => {
+    if (conversationsData) {
+      if (conversationsOffset === 0) {
+        // First page - replace all
+        setAllConversations(conversationsData.conversations);
+      } else {
+        // Subsequent pages - append
+        setAllConversations(prev => [
+          ...prev,
+          ...conversationsData.conversations,
+        ]);
+      }
+    }
+  }, [conversationsData, conversationsOffset]);
+
+  const conversations = allConversations;
+  const hasMore = conversationsData?.hasMore || false;
 
   // Handle URL parameters for conversation and message
   useEffect(() => {
@@ -160,7 +194,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
-  
+
   const utils = trpc.useUtils();
   const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
     onSuccess: () => {
@@ -170,7 +204,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
       utils.messaging.getUnreadCount.invalidate();
       utils.messaging.getConversationUnreadCounts.invalidate();
       utils.sidebar.getSidebarData.invalidate(); // This updates the Sidebar badge!
-      
+
       // Force immediate refetch
       utils.messaging.getConversationUnreadCounts.refetch();
       utils.messaging.getUnreadCount.refetch();
@@ -231,12 +265,26 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      }, 100);
+    }
   }, [messages]);
 
   // Auto-scroll when pending messages are added
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      }, 100);
+    }
   }, [pendingMessages]);
 
   const handleSendMessage = (e?: React.FormEvent) => {
@@ -344,6 +392,40 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
     createConversationMutation.mutate({ clientId });
   };
 
+  // Reset pagination when search term changes
+  useEffect(() => {
+    setConversationsOffset(0);
+    setAllConversations([]);
+  }, [searchTerm]);
+
+  // Infinite scroll - load more when reaching bottom
+  useEffect(() => {
+    const triggerElement = loadMoreTriggerRef.current;
+    if (!triggerElement || !hasMore || isLoadingConversations) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const firstEntry = entries[0];
+        if (firstEntry?.isIntersecting && hasMore && !isLoadingConversations) {
+          setConversationsOffset(prev => prev + CONVERSATIONS_PER_PAGE);
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(triggerElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, isLoadingConversations, conversations.length]);
+
   const filteredConversations = conversations.filter((conversation: any) => {
     if (!searchTerm) return true;
 
@@ -366,41 +448,77 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   });
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+    >
       {/* Mobile Header */}
-      <div 
-        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
-        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+      <div
+        className="sticky top-0 z-50 border-b px-4 pb-3"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+          paddingTop: `calc(0.75rem + env(safe-area-inset-top))`,
+        }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
+          <div>
+            <h1
+              className="text-lg font-bold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
             >
-              <MessageCircle className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Messages</h1>
-              <p className="text-xs text-gray-400">Chat with clients</p>
-            </div>
+              Messages
+            </h1>
+            <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+              Chat with clients
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {otherClients.length > 0 && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-105 touch-manipulation active:scale-95"
-                style={{
-                  backgroundColor: "#D4AF37",
-                  color: "#000",
-                  minWidth: "44px",
-                  minHeight: "44px",
-                  padding: "0.5rem",
-                }}
-                title="New Message"
-              >
-                <Plus className="h-5 w-5" />
-              </button>
+              <>
+                <button
+                  onClick={() => setShowMassMessageModal(true)}
+                  className="flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-105 touch-manipulation active:scale-95"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                    color: "#000000",
+                    minWidth: "44px",
+                    minHeight: "44px",
+                    padding: "0.5rem",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.GOLDEN_ACCENT;
+                  }}
+                  title="Mass Message"
+                >
+                  <Users className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center justify-center rounded-lg transition-all duration-200 hover:scale-105 touch-manipulation active:scale-95"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                    color: "#000",
+                    minWidth: "44px",
+                    minHeight: "44px",
+                    padding: "0.5rem",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.GOLDEN_ACCENT;
+                  }}
+                  title="New Message"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </>
             )}
             <MobileNavigation currentPage="messages" />
           </div>
@@ -417,7 +535,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
               <div className="relative">
                 <Search
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
-                  style={{ color: "#ABA4AA" }}
+                  style={{ color: COLORS.TEXT_MUTED }}
                 />
                 <input
                   type="text"
@@ -426,30 +544,49 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 rounded-2xl border-0 focus:outline-none focus:ring-2 transition-all duration-200 text-base"
                   style={{
-                    backgroundColor: "#353A3A",
-                    color: "#C3BCC2",
-                    borderColor: "#606364",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    color: COLORS.TEXT_PRIMARY,
+                    borderColor: COLORS.BORDER_SUBTLE,
                     minHeight: "48px",
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
                   }}
                 />
               </div>
             </div>
 
             {/* Conversations */}
-            <div className="flex-1 px-4 pb-4 overflow-y-auto">
+            <div
+              ref={conversationsListRef}
+              className="flex-1 px-4 pb-4 overflow-y-auto"
+            >
               <div className="space-y-1">
                 {filteredConversations.length === 0 ? (
                   <div className="text-center py-12">
                     <File
                       className="h-16 w-16 mx-auto mb-4 opacity-50"
-                      style={{ color: "#ABA4AA" }}
+                      style={{ color: COLORS.TEXT_MUTED }}
                     />
-                    <p className="text-base" style={{ color: "#ABA4AA" }}>
+                    <p
+                      className="text-base"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       {searchTerm
                         ? "No conversations found"
                         : "No conversations yet"}
                     </p>
-                    <p className="text-sm mt-2" style={{ color: "#ABA4AA" }}>
+                    <p
+                      className="text-sm mt-2"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                    >
                       Tap the + button to start a new conversation
                     </p>
                   </div>
@@ -459,10 +596,6 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                       conversation,
                       currentUser?.id || ""
                     );
-                    const conversationType =
-                      conversation.type === "CLIENT_CLIENT"
-                        ? "Client"
-                        : "Coach";
 
                     const lastMessage = conversation.messages[0];
                     const unreadCount = unreadCountsObj[conversation.id] || 0;
@@ -470,19 +603,33 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                     return (
                       <div
                         key={conversation.id}
-                        className="p-4 cursor-pointer transition-all duration-200 rounded-2xl border touch-manipulation active:scale-[0.98]"
+                        className="p-3 cursor-pointer transition-all duration-200 rounded-xl border touch-manipulation active:scale-[0.98]"
                         style={{
-                          backgroundColor: "#353A3A",
-                          borderColor: "#606364",
-                          minHeight: "72px",
+                          backgroundColor: COLORS.BACKGROUND_CARD,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          minHeight: "56px",
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.borderColor =
+                            getGoldenAccent(0.2);
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.BACKGROUND_CARD;
+                          e.currentTarget.style.borderColor =
+                            COLORS.BORDER_SUBTLE;
                         }}
                         onClick={() => {
                           setSelectedConversation(conversation.id);
                           // Mark messages as read when conversation is opened
-                          markAsReadMutation.mutate({ conversationId: conversation.id });
+                          markAsReadMutation.mutate({
+                            conversationId: conversation.id,
+                          });
                         }}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <ProfilePictureUploader
                             currentAvatarUrl={
                               otherParticipant?.settings?.avatarUrl ||
@@ -494,15 +641,15 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                               "User"
                             }
                             onAvatarChange={() => {}}
-                            size="lg"
+                            size="sm"
                             readOnly={true}
                             className="flex-shrink-0"
                           />
                           <div className="flex-1 min-w-0 max-w-full">
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center justify-between mb-0.5">
                               <p
-                                className="font-semibold truncate text-base"
-                                style={{ color: "#C3BCC2" }}
+                                className="font-semibold truncate text-sm"
+                                style={{ color: COLORS.TEXT_PRIMARY }}
                               >
                                 {otherParticipant?.name ||
                                   otherParticipant?.email?.split("@")[0] ||
@@ -511,7 +658,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                               {lastMessage && (
                                 <span
                                   className="text-xs flex-shrink-0 ml-2"
-                                  style={{ color: "#ABA4AA" }}
+                                  style={{ color: COLORS.TEXT_MUTED }}
                                 >
                                   {format(
                                     new Date(lastMessage.createdAt),
@@ -522,37 +669,28 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                             </div>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <span
-                                  className="text-xs px-2 py-1 rounded-full flex-shrink-0"
-                                  style={{
-                                    backgroundColor:
-                                      conversation.type === "CLIENT_CLIENT"
-                                        ? "#4A5A70"
-                                        : "#E0E0E0",
-                                    color:
-                                      conversation.type === "CLIENT_CLIENT"
-                                        ? "#C3BCC2"
-                                        : "#000000",
-                                  }}
-                                >
-                                  {conversationType}
-                                </span>
                                 {lastMessage && (
                                   <p
-                                    className="text-sm truncate flex-1"
-                                    style={{ color: "#ABA4AA" }}
+                                    className="text-xs truncate flex-1"
+                                    style={{ color: COLORS.TEXT_SECONDARY }}
                                   >
-                                    {lastMessage.content.length > 20
+                                    {lastMessage.content.length > 30
                                       ? `${lastMessage.content.substring(
                                           0,
-                                          20
+                                          30
                                         )}...`
                                       : lastMessage.content}
                                   </p>
                                 )}
                               </div>
                               {unreadCount > 0 && (
-                                <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[24px] text-center flex-shrink-0 ml-2">
+                                <span
+                                  className="text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center flex-shrink-0 ml-2"
+                                  style={{
+                                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                                    color: "#000000",
+                                  }}
+                                >
                                   {unreadCount}
                                 </span>
                               )}
@@ -562,6 +700,43 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                       </div>
                     );
                   })
+                )}
+
+                {/* Infinite scroll trigger - visible loading indicator at bottom */}
+                {hasMore && (
+                  <div
+                    ref={loadMoreTriggerRef}
+                    className="h-24 flex items-center justify-center py-4"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      {isLoadingConversations ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="animate-spin rounded-full h-4 w-4 border-b-2"
+                              style={{
+                                borderColor: `${COLORS.GOLDEN_ACCENT}40`,
+                                borderTopColor: COLORS.GOLDEN_ACCENT,
+                              }}
+                            />
+                            <span
+                              className="text-sm font-medium"
+                              style={{ color: COLORS.TEXT_SECONDARY }}
+                            >
+                              Loading more conversations...
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <span
+                          className="text-xs"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        >
+                          Scroll for more
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -573,16 +748,33 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Fixed Chat Header - Below Main Header */}
             <div
-              className="fixed top-16 left-0 right-0 px-4 py-2 border-b flex items-center justify-between z-40"
-              style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
+              className="fixed left-0 right-0 px-4 py-3 border-b flex items-center justify-between z-40"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                top: "calc(4rem + env(safe-area-inset-top))", // Below main header
+              }}
             >
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="p-1.5 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95"
-                  style={{ minWidth: "36px", minHeight: "36px" }}
+                  className="p-1.5 rounded-full transition-all duration-200 touch-manipulation active:scale-95"
+                  style={{
+                    minWidth: "36px",
+                    minHeight: "36px",
+                    color: COLORS.TEXT_SECONDARY,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
                 >
-                  <ArrowLeft className="h-4 w-4" style={{ color: "#C3BCC2" }} />
+                  <ArrowLeft className="h-4 w-4" />
                 </button>
                 <ProfilePictureUploader
                   currentAvatarUrl={(() => {
@@ -621,7 +813,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                 <div className="flex-1 min-w-0">
                   <h3
                     className="font-semibold text-sm truncate"
-                    style={{ color: "#C3BCC2" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {(() => {
                       const conversation = conversations.find(
@@ -641,29 +833,34 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                       return "Unknown";
                     })()}
                   </h3>
-                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
-                    {(() => {
-                      const conversation = conversations.find(
-                        (c: { id: string; type: string }) =>
-                          c.id === selectedConversation
-                      );
-                      return conversation?.type === "CLIENT_CLIENT"
-                        ? "Client"
-                        : "Coach";
-                    })()}
-                  </p>
                 </div>
               </div>
-              <button className="p-1.5 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95">
-                <MoreVertical
-                  className="h-4 w-4"
-                  style={{ color: "#ABA4AA" }}
-                />
+              <button
+                className="p-1.5 rounded-full transition-all duration-200 touch-manipulation active:scale-95"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                }}
+              >
+                <MoreVertical className="h-4 w-4" />
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 pt-20 pb-24 space-y-3">
+            <div
+              className="flex-1 overflow-y-auto px-4 space-y-3"
+              style={{
+                paddingTop: "calc(8rem + env(safe-area-inset-top))", // Main header (4rem) + Chat header (4rem)
+                paddingBottom:
+                  "calc(6rem + 5.5rem + env(safe-area-inset-bottom))", // Space for input (6rem) + bottom nav (5.5rem) + safe area
+              }}
+            >
               {messages.map((message: any) => {
                 const isCurrentUser = message.sender.id === currentUser?.id;
                 // Check if this is a workout note message
@@ -677,11 +874,23 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                     {/* Workout Note Header for client messages */}
                     {isWorkoutNote && isFromClient && (
                       <div className="w-full">
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-400/20">
-                          <span className="text-blue-400 font-medium text-sm">
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+                          style={{
+                            backgroundColor: getGoldenAccent(0.1),
+                            borderColor: getGoldenAccent(0.2),
+                          }}
+                        >
+                          <span
+                            className="font-medium text-sm"
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
+                          >
                             📝 Workout Note
                           </span>
-                          <span className="text-gray-400 text-xs">
+                          <span
+                            className="text-xs"
+                            style={{ color: COLORS.TEXT_MUTED }}
+                          >
                             from client
                           </span>
                         </div>
@@ -696,11 +905,23 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                       <div
                         className={`max-w-[80%] px-4 py-3 rounded-2xl ${
                           isCurrentUser
-                            ? "bg-blue-500 text-white rounded-br-md"
+                            ? "rounded-br-md"
                             : isWorkoutNote && isFromClient
-                            ? "bg-gray-700 text-gray-100 rounded-bl-md border border-blue-400"
-                            : "bg-gray-700 text-gray-100 rounded-bl-md"
+                            ? "rounded-bl-md border"
+                            : "rounded-bl-md"
                         }`}
+                        style={{
+                          backgroundColor: isCurrentUser
+                            ? COLORS.GOLDEN_ACCENT
+                            : COLORS.BACKGROUND_CARD,
+                          color: isCurrentUser
+                            ? "#000000"
+                            : COLORS.TEXT_PRIMARY,
+                          ...(isWorkoutNote &&
+                            isFromClient && {
+                              borderColor: getGoldenAccent(0.3),
+                            }),
+                        }}
                       >
                         <div className="text-sm">
                           <FormattedMessage content={message.content} />
@@ -719,7 +940,11 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                               : null
                           }
                           isOwnMessage={isCurrentUser}
-                          messageData={message.data as { type?: string; swapRequestId?: string } | undefined}
+                          messageData={
+                            message.data as
+                              | { type?: string; swapRequestId?: string }
+                              | undefined
+                          }
                         />
 
                         {message.attachmentUrl && (
@@ -769,7 +994,19 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                                       fileSize: message.attachmentSize || 0,
                                     });
                                   }}
-                                  className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                  className="w-full px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+                                  style={{
+                                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                                    color: "#000000",
+                                  }}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.backgroundColor =
+                                      COLORS.GOLDEN_HOVER;
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.backgroundColor =
+                                      COLORS.GOLDEN_ACCENT;
+                                  }}
                                 >
                                   <svg
                                     className="w-3 h-3"
@@ -808,19 +1045,23 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                         )}
                         <div className="flex items-center justify-end gap-1 mt-2">
                           <span
-                            className={`text-xs ${
-                              isCurrentUser ? "text-blue-100" : "text-gray-400"
-                            }`}
+                            className="text-xs"
+                            style={{
+                              color: isCurrentUser
+                                ? "rgba(0, 0, 0, 0.7)"
+                                : COLORS.TEXT_MUTED,
+                            }}
                           >
                             {format(new Date(message.createdAt), "h:mm a")}
                           </span>
                           {isCurrentUser && (
                             <CheckCheck
-                              className={`h-3 w-3 ${
-                                message.isRead
-                                  ? "text-blue-300"
-                                  : "text-gray-400"
-                              }`}
+                              className="h-3 w-3"
+                              style={{
+                                color: message.isRead
+                                  ? "rgba(0, 0, 0, 0.6)"
+                                  : "rgba(0, 0, 0, 0.4)",
+                              }}
                             />
                           )}
                         </div>
@@ -834,9 +1075,13 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
               {pendingMessages.map(pendingMessage => (
                 <div key={pendingMessage.id} className="flex justify-end">
                   <div
-                    className={`max-w-[85%] px-4 py-3 rounded-2xl bg-blue-500 text-white ${
+                    className={`max-w-[85%] px-4 py-3 rounded-2xl rounded-br-md ${
                       pendingMessage.status === "failed" ? "opacity-60" : ""
                     }`}
+                    style={{
+                      backgroundColor: COLORS.GOLDEN_ACCENT,
+                      color: "#000000",
+                    }}
                   >
                     <div className="text-sm">
                       <FormattedMessage content={pendingMessage.content} />
@@ -872,29 +1117,52 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                       </div>
                     )}
                     <div className="flex items-center justify-end gap-1 mt-2">
-                      <span className="text-xs text-blue-100">
+                      <span
+                        className="text-xs"
+                        style={{ color: "rgba(0, 0, 0, 0.7)" }}
+                      >
                         {format(pendingMessage.timestamp, "h:mm a")}
                       </span>
                       <div className="flex items-center">
                         {pendingMessage.status === "sending" && (
                           <div className="flex items-center gap-1">
-                            <div className="w-1 h-1 bg-blue-200 rounded-full animate-pulse" />
                             <div
-                              className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
-                              style={{ animationDelay: "0.2s" }}
+                              className="w-1 h-1 rounded-full animate-pulse"
+                              style={{
+                                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                              }}
                             />
                             <div
-                              className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
-                              style={{ animationDelay: "0.4s" }}
+                              className="w-1 h-1 rounded-full animate-pulse"
+                              style={{
+                                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                                animationDelay: "0.2s",
+                              }}
+                            />
+                            <div
+                              className="w-1 h-1 rounded-full animate-pulse"
+                              style={{
+                                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                                animationDelay: "0.4s",
+                              }}
                             />
                           </div>
                         )}
                         {pendingMessage.status === "sent" && (
-                          <CheckCheck className="h-3 w-3 text-blue-200" />
+                          <CheckCheck
+                            className="h-3 w-3"
+                            style={{ color: "rgba(0, 0, 0, 0.6)" }}
+                          />
                         )}
                         {pendingMessage.status === "failed" && (
-                          <div className="w-3 h-3 bg-red-400 rounded-full flex items-center justify-center">
-                            <span className="text-xs text-red-800 font-bold">
+                          <div
+                            className="w-3 h-3 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: COLORS.RED_ALERT }}
+                          >
+                            <span
+                              className="text-xs font-bold"
+                              style={{ color: "#ffffff" }}
+                            >
                               !
                             </span>
                           </div>
@@ -911,8 +1179,14 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
             {/* Message Input */}
             {/* Fixed Message Input - iOS Style */}
             <div
-              className="fixed bottom-20 left-0 right-0 px-4 py-3 border-t flex-shrink-0 z-40"
-              style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
+              className="fixed left-0 right-0 px-4 py-3 flex-shrink-0 z-50"
+              style={{
+                borderTop: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                backgroundColor: COLORS.BACKGROUND_DARK, // Use design system background
+                bottom: "calc(5rem + env(safe-area-inset-bottom))", // Position exactly above bottom navigation
+                borderBottom: "none", // Remove bottom border for seamless connection
+                boxShadow: "none", // Remove any shadow that might create separation
+              }}
             >
               <RichMessageInput
                 value={messageText}
@@ -929,26 +1203,44 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
 
         {/* Create Conversation Modal */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div
-              className="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+              className="rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden border"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                borderColor: COLORS.BORDER_SUBTLE,
+                boxShadow: `0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 0 1px ${getGoldenAccent(
+                  0.1
+                )}`,
+              }}
             >
-              <div className="p-6 border-b" style={{ borderColor: "#606364" }}>
+              <div
+                className="p-6 border-b"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
                 <div className="flex items-center justify-between">
                   <h3
                     className="text-xl font-semibold"
-                    style={{ color: "#C3BCC2" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Start New Conversation
                   </h3>
                   <button
                     onClick={() => setShowCreateModal(false)}
-                    className="p-2 rounded-lg hover:bg-gray-700 transition-colors touch-manipulation"
+                    className="p-2 rounded-lg transition-all duration-200 touch-manipulation"
                     style={{
-                      color: "#ABA4AA",
+                      color: COLORS.TEXT_SECONDARY,
                       minWidth: "44px",
                       minHeight: "44px",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     }}
                   >
                     <X className="h-5 w-5" />
@@ -961,7 +1253,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                   <div className="relative">
                     <Search
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                      style={{ color: "#ABA4AA" }}
+                      style={{ color: COLORS.TEXT_MUTED }}
                     />
                     <input
                       type="text"
@@ -970,9 +1262,21 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                       onChange={e => setClientSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 rounded-xl border-0 focus:outline-none focus:ring-2 transition-all duration-200"
                       style={{
-                        backgroundColor: "#2A3133",
-                        color: "#C3BCC2",
-                        borderColor: "#606364",
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        color: COLORS.TEXT_PRIMARY,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                      }}
+                      onFocus={e => {
+                        e.currentTarget.style.borderColor =
+                          getGoldenAccent(0.3);
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                      }}
+                      onBlur={e => {
+                        e.currentTarget.style.borderColor =
+                          COLORS.BORDER_SUBTLE;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD;
                       }}
                     />
                   </div>
@@ -981,7 +1285,10 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                 <div className="max-h-64 overflow-y-auto">
                   {filteredClients.length === 0 ? (
                     <div className="text-center py-4">
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                      <p
+                        className="text-sm"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         {clientSearchTerm
                           ? "No clients found"
                           : "No clients available"}
@@ -995,9 +1302,22 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                         disabled={createConversationMutation.isPending}
                         className="w-full p-3 border-b cursor-pointer transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                         style={{
-                          borderColor: "#606364",
-                          color: "#C3BCC2",
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                           minHeight: "44px",
+                        }}
+                        onMouseEnter={e => {
+                          if (!createConversationMutation.isPending) {
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.borderColor =
+                              getGoldenAccent(0.2);
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.borderColor =
+                            COLORS.BORDER_SUBTLE;
                         }}
                       >
                         {createConversationMutation.isPending && (
@@ -1019,7 +1339,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                           <div className="text-left">
                             <p
                               className="font-medium"
-                              style={{ color: "#C3BCC2" }}
+                              style={{ color: COLORS.TEXT_PRIMARY }}
                             >
                               {client.name ||
                                 client.email?.split("@")[0] ||
@@ -1028,12 +1348,19 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                             <div className="flex items-center gap-2">
                               <p
                                 className="text-sm"
-                                style={{ color: "#ABA4AA" }}
+                                style={{ color: COLORS.TEXT_SECONDARY }}
                               >
                                 {client.email || "No email"}
                               </p>
                               {!client.userId && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                                <span
+                                  className="text-xs px-2 py-1 rounded-full border"
+                                  style={{
+                                    backgroundColor: getGoldenAccent(0.2),
+                                    color: COLORS.GOLDEN_ACCENT,
+                                    borderColor: getGoldenAccent(0.3),
+                                  }}
+                                >
                                   No Account
                                 </span>
                               )}
@@ -1042,7 +1369,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                               client.coach?.name) && (
                               <p
                                 className="text-xs mt-1"
-                                style={{ color: "#787F82" }}
+                                style={{ color: COLORS.TEXT_MUTED }}
                               >
                                 Assigned Coach:{" "}
                                 {client.primaryCoach?.name ||
@@ -1067,6 +1394,16 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
             onClose={() => setShowFileUpload(false)}
           />
         )}
+
+        {/* Mass Message Modal */}
+        <MassMessageModal
+          isOpen={showMassMessageModal}
+          onClose={() => {
+            setShowMassMessageModal(false);
+            // Trigger refresh of conversations and unread counts
+            refetchConversations();
+          }}
+        />
       </div>
       <MobileBottomNavigation />
     </div>
