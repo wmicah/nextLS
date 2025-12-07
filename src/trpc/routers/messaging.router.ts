@@ -801,6 +801,10 @@ export const messagingRouter = router({
           .string()
           .min(1)
           .max(1000, "Message must be less than 1000 characters"),
+        attachmentUrl: z.string().optional(),
+        attachmentType: z.string().optional(),
+        attachmentName: z.string().optional(),
+        attachmentSize: z.number().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -963,6 +967,12 @@ export const messagingRouter = router({
               conversationId: conversation.id,
               senderId: user.id,
               content: input.content,
+              ...(input.attachmentUrl && {
+                attachmentUrl: input.attachmentUrl,
+                attachmentType: input.attachmentType,
+                attachmentName: input.attachmentName,
+                attachmentSize: input.attachmentSize,
+              }),
             },
             include: {
               sender: { select: { id: true, name: true, email: true } },

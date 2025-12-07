@@ -13,6 +13,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import FormattedMessage from "./FormattedMessage";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface RichMessageInputProps {
   value: string;
@@ -123,8 +124,8 @@ export default function RichMessageInput({
         <div
           className="mb-3 p-3 rounded-lg border"
           style={{
-            backgroundColor: "#1f2937",
-            borderColor: "#374151",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
           <div className="flex items-center justify-between">
@@ -145,15 +146,29 @@ export default function RichMessageInput({
                   muted
                 />
               ) : (
-                <div className="w-12 h-12 rounded-lg bg-gray-600 flex items-center justify-center">
-                  <Paperclip className="h-6 w-6 text-gray-300" />
+                <div 
+                  className="w-12 h-12 rounded-lg flex items-center justify-center"
+                  style={{ 
+                    backgroundColor: COLORS.BACKGROUND_CARD_HOVER,
+                  }}
+                >
+                  <Paperclip 
+                    className="h-6 w-6" 
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white truncate">
+                <div 
+                  className="text-sm font-medium truncate"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   {selectedFile.uploadData.attachmentName}
                 </div>
-                <div className="text-xs text-gray-400">
+                <div 
+                  className="text-xs"
+                  style={{ color: COLORS.TEXT_MUTED }}
+                >
                   {selectedFile.uploadData.attachmentType} • Ready to send
                 </div>
               </div>
@@ -162,7 +177,18 @@ export default function RichMessageInput({
               <button
                 type="button"
                 onClick={onRemoveFile}
-                className="p-1 rounded-lg transition-all duration-200 hover:bg-red-500/20 text-gray-400 hover:text-red-400"
+                className="p-1 rounded-lg transition-all duration-200"
+                style={{
+                  color: COLORS.TEXT_MUTED,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
+                  e.currentTarget.style.color = COLORS.RED_ALERT;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                }}
                 title="Remove file"
               >
                 <svg
@@ -190,7 +216,16 @@ export default function RichMessageInput({
           <button
             type="button"
             onClick={onFileUpload}
-            className="p-2 rounded-lg transition-all duration-200 hover:scale-105 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
+            className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
             title="Attach file"
           >
             <Paperclip className="h-4 w-4" />
@@ -201,12 +236,13 @@ export default function RichMessageInput({
           {showPreview && value.trim() ? (
             <div
               className="w-full rounded-lg text-sm resize-none overflow-hidden
-               transition-all duration-300 border border-gray-700 px-3 py-2
+               transition-all duration-300 border px-3 py-2
                leading-[20px] min-h-[40px]"
               style={{
                 boxSizing: "border-box",
-                backgroundColor: "#2a2a2a",
-                color: "#f9fafb",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
                 maxHeight: "120px",
                 overflowY: "auto",
               }}
@@ -223,27 +259,38 @@ export default function RichMessageInput({
               placeholder={placeholder}
               disabled={disabled || isPending}
               className="w-full rounded-lg text-sm font-medium resize-none overflow-hidden
-               transition-all duration-300 border border-gray-700 px-3 py-2
+               transition-all duration-300 border px-3 py-2
                leading-[20px]" // exact 20px line-height to avoid fractional gaps
               style={{
                 boxSizing: "border-box",
-                backgroundColor: "#2a2a2a",
-                color: "#f9fafb",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
                 height: "auto",
                 maxHeight: "120px",
-                // minHeight: "36px", // <- OPTIONAL: 20px line + 16px padding = 36px
+              }}
+              onFocus={e => {
+                e.currentTarget.style.borderColor = getGoldenAccent(0.3);
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onBlur={e => {
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
               }}
             />
           )}
 
           {/* Formatting hint - only show when focused or has content */}
           {value.trim() && !showPreview && (
-            <div className="absolute bottom-1 right-1 text-xs text-gray-500">
+            <div 
+              className="absolute bottom-1 right-1 text-xs"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
               {value.includes("**") ||
               value.includes("__") ||
               value.includes("*") ||
               value.includes("_") ? (
-                <span className="text-blue-400">Rich text detected</span>
+                <span style={{ color: COLORS.GOLDEN_ACCENT }}>Rich text detected</span>
               ) : null}
             </div>
           )}
@@ -252,11 +299,23 @@ export default function RichMessageInput({
         <button
           type="button"
           onClick={() => setShowFormatting(!showFormatting)}
-          className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-            showFormatting
-              ? "bg-blue-500/20 text-blue-400"
-              : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
-          }`}
+          className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
+          style={{
+            color: showFormatting ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_SECONDARY,
+            backgroundColor: showFormatting ? getGoldenAccent(0.2) : "transparent",
+          }}
+          onMouseEnter={e => {
+            if (!showFormatting) {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+            }
+          }}
+          onMouseLeave={e => {
+            if (!showFormatting) {
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              e.currentTarget.style.backgroundColor = "transparent";
+            }
+          }}
           title="Text formatting"
         >
           <Type className="h-4 w-4" />
@@ -266,11 +325,23 @@ export default function RichMessageInput({
           <button
             type="button"
             onClick={() => setShowPreview(!showPreview)}
-            className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-              showPreview
-                ? "bg-green-500/20 text-green-400"
-                : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
-            }`}
+            className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
+            style={{
+              color: showPreview ? COLORS.GREEN_PRIMARY : COLORS.TEXT_SECONDARY,
+              backgroundColor: showPreview ? getGoldenAccent(0.2) : "transparent",
+            }}
+            onMouseEnter={e => {
+              if (!showPreview) {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }
+            }}
+            onMouseLeave={e => {
+              if (!showPreview) {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }
+            }}
             title={showPreview ? "Hide preview" : "Show preview"}
           >
             {showPreview ? (
@@ -287,18 +358,18 @@ export default function RichMessageInput({
           disabled={!value.trim() || disabled || isPending}
           className="p-2 rounded-lg transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center"
           style={{
-            backgroundColor: value.trim() ? "#3B82F6" : "#6b7280",
-            color: "#ffffff",
+            backgroundColor: value.trim() ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_MUTED,
+            color: value.trim() ? "#000000" : COLORS.TEXT_SECONDARY,
           }}
           onMouseEnter={e => {
             if (value.trim() && !disabled && !isPending) {
-              e.currentTarget.style.backgroundColor = "#2563EB";
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
               e.currentTarget.style.transform = "scale(1.1)";
             }
           }}
           onMouseLeave={e => {
             if (value.trim() && !disabled && !isPending) {
-              e.currentTarget.style.backgroundColor = "#3B82F6";
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
               e.currentTarget.style.transform = "scale(1)";
             }
           }}

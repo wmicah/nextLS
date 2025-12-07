@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
-import { X, Send, Users, CheckCircle, AlertCircle, Search } from "lucide-react";
+import { X, Send, Users, CheckCircle, AlertCircle, Search, Paperclip, Link as LinkIcon } from "lucide-react";
 import { COLORS, getGoldenAccent, getBluePrimary } from "@/lib/colors";
+import MessageFileUpload from "./MessageFileUpload";
 
 interface MassMessageModalProps {
   isOpen: boolean;
@@ -19,6 +20,27 @@ export default function MassMessageModal({
   const [selectAll, setSelectAll] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<{
+    file: File;
+    uploadData: {
+      attachmentUrl: string;
+      attachmentType: string;
+      attachmentName: string;
+      attachmentSize: number;
+    };
+  } | null>(null);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [showLinkInput, setShowLinkInput] = useState(false);
+
+  // Helper function to format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
 
   // Get coach's clients
   const { data: clients = [] } = trpc.clients.list.useQuery({
@@ -46,6 +68,9 @@ export default function MassMessageModal({
       setMessage("");
       setSelectedClients([]);
       setSelectAll(false);
+      setSelectedFile(null);
+      setLinkUrl("");
+      setShowLinkInput(false);
       onClose();
     },
     onError: error => {
@@ -73,17 +98,37 @@ export default function MassMessageModal({
   };
 
   const handleSend = async () => {
-    if (!message.trim() || selectedClients.length === 0) return;
+    if ((!message.trim() && !selectedFile) || selectedClients.length === 0) return;
+
+    // If there's a link, append it to the message
+    let finalContent = message.trim();
+    if (linkUrl.trim() && !finalContent.includes(linkUrl.trim())) {
+      finalContent = finalContent ? `${finalContent}\n\n${linkUrl.trim()}` : linkUrl.trim();
+    }
 
     console.log("📤 Sending mass message to clients:", selectedClients);
-    console.log("📤 Message content:", message.trim());
+    console.log("📤 Message content:", finalContent);
+    if (selectedFile) {
+      console.log("📤 Attachment:", selectedFile.uploadData.attachmentName);
+    }
 
     setIsSending(true);
     try {
       await sendMassMessageMutation.mutateAsync({
         clientIds: selectedClients,
-        content: message.trim(),
+        content: finalContent,
+        ...(selectedFile && {
+          attachmentUrl: selectedFile.uploadData.attachmentUrl,
+          attachmentType: selectedFile.uploadData.attachmentType,
+          attachmentName: selectedFile.uploadData.attachmentName,
+          attachmentSize: selectedFile.uploadData.attachmentSize,
+        }),
       });
+      
+      // Clear form after successful send
+      setSelectedFile(null);
+      setLinkUrl("");
+      setShowLinkInput(false);
     } catch (error) {
       console.error("❌ Error sending mass message:", error);
     }
@@ -350,12 +395,141 @@ export default function MassMessageModal({
 
           {/* Message Input */}
           <div>
-            <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: COLORS.TEXT_PRIMARY }}
-            >
-              Message
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label
+                className="block text-sm font-medium"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Message
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFileUpload(true)}
+                  className="p-1.5 rounded-lg transition-all duration-200 hover:scale-105"
+                  style={{
+                    color: selectedFile ? COLORS.BLUE_PRIMARY : COLORS.TEXT_MUTED,
+                    backgroundColor: selectedFile ? getBluePrimary(0.1) : "transparent",
+                  }}
+                  onMouseEnter={e => {
+                    if (!selectedFile) {
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!selectedFile) {
+                      e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
+                  title="Attach file"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLinkInput(!showLinkInput);
+                    if (showLinkInput) setLinkUrl("");
+                  }}
+                  className="p-1.5 rounded-lg transition-all duration-200 hover:scale-105"
+                  style={{
+                    color: linkUrl ? COLORS.BLUE_PRIMARY : COLORS.TEXT_MUTED,
+                    backgroundColor: linkUrl ? getBluePrimary(0.1) : "transparent",
+                  }}
+                  onMouseEnter={e => {
+                    if (!linkUrl) {
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!linkUrl) {
+                      e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
+                  title="Add link"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Selected File Preview */}
+            {selectedFile && (
+              <div
+                className="mb-3 p-3 rounded-lg border flex items-center justify-between"
+                style={{
+                  backgroundColor: getBluePrimary(0.1),
+                  borderColor: COLORS.BLUE_PRIMARY,
+                }}
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Paperclip className="w-5 h-5 shrink-0" style={{ color: COLORS.BLUE_PRIMARY }} />
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="text-sm font-medium truncate"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      {selectedFile.uploadData.attachmentName}
+                    </div>
+                    <div
+                      className="text-xs truncate"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      {selectedFile.uploadData.attachmentType} • {formatFileSize(selectedFile.uploadData.attachmentSize)}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
+                  className="p-1 rounded-lg transition-all duration-200 hover:bg-red-500/20 shrink-0"
+                  style={{ color: COLORS.TEXT_MUTED }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = "#ef4444";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                  }}
+                  title="Remove file"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Link Input */}
+            {showLinkInput && (
+              <div className="mb-3">
+                <input
+                  type="url"
+                  value={linkUrl}
+                  onChange={e => setLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full px-4 py-2 rounded-lg text-sm transition-all duration-200"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                    border: "1px solid",
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.2)}`;
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                />
+              </div>
+            )}
+
             <textarea
               value={message}
               onChange={e => setMessage(e.target.value)}
@@ -432,7 +606,7 @@ export default function MassMessageModal({
             <button
               onClick={handleSend}
               disabled={
-                !message.trim() || selectedClients.length === 0 || isSending
+                (!message.trim() && !selectedFile) || selectedClients.length === 0 || isSending
               }
               className="px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               style={{
@@ -477,6 +651,17 @@ export default function MassMessageModal({
           </div>
         </div>
       </div>
+
+      {/* File Upload Modal */}
+      {showFileUpload && (
+        <MessageFileUpload
+          onFileSelect={(file, uploadData) => {
+            setSelectedFile({ file, uploadData });
+            setShowFileUpload(false);
+          }}
+          onClose={() => setShowFileUpload(false)}
+        />
+      )}
     </div>
   );
 }

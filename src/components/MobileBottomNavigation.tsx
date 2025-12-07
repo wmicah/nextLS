@@ -41,7 +41,14 @@ export default function MobileBottomNavigation() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#353A3A] border-t border-[#606364] shadow-lg">
+    <div 
+      className="fixed bottom-0 left-0 right-0 z-40 shadow-lg"
+      style={{ 
+        backgroundColor: "#353A3A",
+        borderTop: "none",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
       <div className="flex items-center justify-around py-2">
         {/* Notifications */}
         <button
