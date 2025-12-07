@@ -257,9 +257,6 @@ export default function MessageFileUpload({
                       fontSize: "0.75rem",
                       marginTop: "0.5rem",
                     },
-                    uploadProgress: {
-                      display: "none",
-                    },
                   }}
                 />
               </div>
