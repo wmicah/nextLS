@@ -220,6 +220,7 @@ export default function UploadResourceModal({
                 className="border-2 border-dashed rounded-md p-4 text-center"
                 style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}
               >
+                {/* @ts-expect-error - effect version conflict workaround */}
                 <UploadButton<OurFileRouter, "videoUploader">
                   endpoint="videoUploader"
                   onBeforeUploadBegin={files => {

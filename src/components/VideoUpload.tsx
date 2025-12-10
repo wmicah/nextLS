@@ -150,6 +150,7 @@ export default function VideoUpload({
                   </p>
                 </div>
 
+                {/* @ts-expect-error - effect version conflict workaround */}
                 <UploadButton<OurFileRouter, "feedbackVideoUploader">
                   endpoint="feedbackVideoUploader"
                   onUploadBegin={() => setIsUploading(true)}

@@ -336,6 +336,7 @@ export default function BugReportModalMobile({
               {/* Image Upload */}
               {!imageUrl && !videoUrl && (
                 <>
+                  {/* @ts-expect-error - effect version conflict workaround */}
                   <UploadButton<OurFileRouter, "bugReportImageUploader">
                     endpoint="bugReportImageUploader"
                     onUploadBegin={() => {
@@ -372,6 +373,7 @@ export default function BugReportModalMobile({
                       ),
                     }}
                   />
+                  {/* @ts-expect-error - effect version conflict workaround */}
                   <UploadButton<OurFileRouter, "feedbackVideoUploader">
                     endpoint="feedbackVideoUploader"
                     onUploadBegin={() => {

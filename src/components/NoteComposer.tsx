@@ -561,6 +561,7 @@ export default function NoteComposer({
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
+                  {/* @ts-expect-error - effect version conflict workaround */}
                   <UploadButton<OurFileRouter, "noteAttachmentUploader">
                     endpoint="noteAttachmentUploader"
                     onBeforeUploadBegin={files => {
