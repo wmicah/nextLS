@@ -223,11 +223,11 @@ export default function UploadResourceModal({
                 {/* @ts-expect-error - effect version conflict workaround */}
                 <UploadButton<OurFileRouter, "videoUploader">
                   endpoint="videoUploader"
-                  onBeforeUploadBegin={files => {
+                  onBeforeUploadBegin={(files: File[]) => {
                     setIsUploading(true);
                     return files;
                   }}
-                  onClientUploadComplete={async res => {
+                  onClientUploadComplete={async (res: any) => {
                     const file = res[0];
                     console.log("🎥 UploadResourceModal - Upload complete:", {
                       name: file.name,

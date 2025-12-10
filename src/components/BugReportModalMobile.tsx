@@ -346,7 +346,7 @@ export default function BugReportModalMobile({
                     onClientUploadComplete={handleFileUploadComplete}
                     onUploadError={handleFileUploadError}
                     content={{
-                      button: ({ ready }) => (
+                        button: ({ ready }: { ready: boolean }) => (
                         <div
                           className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all ${
                             ready
@@ -383,7 +383,7 @@ export default function BugReportModalMobile({
                     onClientUploadComplete={handleFileUploadComplete}
                     onUploadError={handleFileUploadError}
                     content={{
-                      button: ({ ready }) => (
+                        button: ({ ready }: { ready: boolean }) => (
                         <div
                           className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all ${
                             ready
