@@ -358,7 +358,7 @@ export default function BugReportModal({
                       onClientUploadComplete={handleFileUploadComplete}
                       onUploadError={handleFileUploadError}
                       content={{
-                        button: ({ ready }) => (
+                        button: ({ ready }: { ready: boolean }) => (
                           <div
                             className={`flex items-center justify-center gap-2 ${
                               isMobile ? "px-4 py-3" : "px-4 py-2"
@@ -411,7 +411,7 @@ export default function BugReportModal({
                       onClientUploadComplete={handleFileUploadComplete}
                       onUploadError={handleFileUploadError}
                       content={{
-                        button: ({ ready }) => (
+                        button: ({ ready }: { ready: boolean }) => (
                           <div
                             className={`flex items-center justify-center gap-2 ${
                               isMobile ? "px-4 py-3" : "px-4 py-2"
