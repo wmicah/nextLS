@@ -1607,7 +1607,7 @@ export default function AdminDashboard() {
                       {/* @ts-expect-error - effect version conflict workaround */}
                       <UploadButton<OurFileRouter, "videoUploader">
                         endpoint="videoUploader"
-                        onClientUploadComplete={res => {
+                        onClientUploadComplete={(res: any) => {
                           const file = res[0];
                           if (file) {
                             console.log("UploadThing file data:", {
