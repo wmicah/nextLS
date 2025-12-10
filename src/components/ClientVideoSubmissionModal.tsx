@@ -303,6 +303,7 @@ export default function ClientVideoSubmissionModal({
                   style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
                   {!isUploading ? (
+                    {/* @ts-expect-error - effect version conflict workaround */}
                     <UploadButton<OurFileRouter, "videoUploader">
                       endpoint="videoUploader"
                       onClientUploadComplete={res => {

@@ -1604,6 +1604,7 @@ export default function AdminDashboard() {
                           </p>
                         </div>
                       )}
+                      {/* @ts-expect-error - effect version conflict workaround */}
                       <UploadButton<OurFileRouter, "videoUploader">
                         endpoint="videoUploader"
                         onClientUploadComplete={res => {
