@@ -303,9 +303,10 @@ export default function ClientVideoSubmissionModal({
                   style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
                   {!isUploading ? (
-                    {/* @ts-expect-error - effect version conflict workaround */}
-                    <UploadButton<OurFileRouter, "videoUploader">
-                      endpoint="videoUploader"
+                    <>
+                      {/* @ts-expect-error - effect version conflict workaround */}
+                      <UploadButton<OurFileRouter, "videoUploader">
+                        endpoint="videoUploader"
                       onClientUploadComplete={res => {
                         console.log("✅ Upload complete callback fired:", res);
                         
@@ -451,6 +452,7 @@ export default function ClientVideoSubmissionModal({
                         }
                       }}
                     />
+                    </>
                   ) : (
                     <div className="space-y-4">
                       <div className="flex items-center justify-center gap-2">
