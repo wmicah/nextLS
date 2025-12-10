@@ -20,6 +20,15 @@ export function getFileKeyFromUrl(url: string): string | null {
   }
 }
 
+/**
+ * Construct UploadThing URL from file key
+ * This is useful when metadata registration fails but upload succeeds
+ */
+export function constructUploadThingUrl(fileKey: string): string {
+  // UploadThing URLs follow the pattern: https://utfs.io/f/[FILE_KEY]
+  return `https://utfs.io/f/${fileKey}`
+}
+
 export async function deleteFileFromUploadThing(url: string): Promise<boolean> {
   try {
     const fileKey = getFileKeyFromUrl(url)

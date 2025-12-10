@@ -37,6 +37,12 @@ export default function MessageFileUpload({
   const [uploadProgress, setUploadProgress] = useState(0);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const uploadStartTimeRef = useRef<number | null>(null);
+  const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const uploadFileInfoRef = useRef<{
+    name: string;
+    size: number;
+    type: string;
+  } | null>(null);
 
   // Simulate progress since UploadThing doesn't expose real-time progress
   // Define these functions first before they're used in other callbacks
@@ -52,22 +58,22 @@ export default function MessageFileUpload({
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
     }
-    
+
     uploadStartTimeRef.current = Date.now();
     setUploadProgress(0);
-    
+
     // Simulate progress: start fast, slow down near the end
     let currentProgress = 0;
     progressIntervalRef.current = setInterval(() => {
       // Exponential easing - starts fast, slows down
       const elapsed = Date.now() - (uploadStartTimeRef.current || Date.now());
       const estimatedDuration = 5000; // 5 seconds estimate
-      const progressRatio = Math.min(elapsed / estimatedDuration, 0.95); // Cap at 95%
-      
+      const progressRatio = Math.min(elapsed / estimatedDuration, 0.93); // Cap at 93% to wait for real progress
+
       // Use easing function for smooth progress
       const easedProgress = 1 - Math.pow(1 - progressRatio, 3); // Cubic ease-out
-      currentProgress = Math.min(Math.floor(easedProgress * 95), 95);
-      
+      currentProgress = Math.min(Math.floor(easedProgress * 93), 93);
+
       setUploadProgress(currentProgress);
     }, 50); // Update every 50ms for smooth animation
   }, []);
@@ -75,18 +81,36 @@ export default function MessageFileUpload({
   const handleUploadComplete = useCallback(
     async (res: any) => {
       try {
+        // Clear any timeout since callback fired successfully
+        if (uploadTimeoutRef.current) {
+          clearTimeout(uploadTimeoutRef.current);
+          uploadTimeoutRef.current = null;
+        }
+
         // Complete the progress bar
         setUploadProgress(100);
-        
+
         // Wait a moment to show 100% before completing
         await new Promise(resolve => setTimeout(resolve, 300));
-        
+
         const file = res[0];
         if (!file) {
+          console.error("❌ Upload complete but no file in response:", res);
           setError("Upload failed - no file returned");
           stopProgressSimulation();
+          setUploading(false);
+          setUploadProgress(0);
+          uploadFileInfoRef.current = null;
           return;
         }
+
+        console.log("✅ Upload complete callback fired successfully:", {
+          name: file.name,
+          url: file.url,
+          size: file.size,
+          type: file.type,
+          key: file.key,
+        });
 
         // Create upload data with the UploadThing URL
         const uploadData = {
@@ -99,8 +123,11 @@ export default function MessageFileUpload({
         // Create a dummy File object for compatibility
         const dummyFile = new File([], file.name, { type: file.type });
         onFileSelect(dummyFile, uploadData);
+
+        // Reset state
+        uploadFileInfoRef.current = null;
       } catch (err) {
-        console.error("Upload complete error:", err);
+        console.error("❌ Upload complete error:", err);
         setError("Failed to process uploaded file");
       } finally {
         stopProgressSimulation();
@@ -114,13 +141,79 @@ export default function MessageFileUpload({
     [onFileSelect, stopProgressSimulation]
   );
 
-  const handleUploadError = useCallback((error: Error) => {
-    console.error("Upload error:", error);
-    setError(`Upload failed: ${error.message}`);
-    stopProgressSimulation();
-    setUploading(false);
-    setUploadProgress(0);
-  }, [stopProgressSimulation]);
+  const handleUploadError = useCallback(
+    (error: Error) => {
+      console.error("❌ Upload error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+      });
+      setError(
+        `Upload failed: ${
+          error.message ||
+          "Unknown error occurred. Please check your connection and try again."
+        }`
+      );
+      stopProgressSimulation();
+      setUploading(false);
+      setUploadProgress(0);
+    },
+    [stopProgressSimulation]
+  );
+
+  // Add timeout to detect stuck uploads
+  useEffect(() => {
+    if (uploading) {
+      // If upload starts but progress stays at 0% for more than 10 seconds, show error
+      if (uploadProgress === 0) {
+        uploadTimeoutRef.current = setTimeout(() => {
+          if (uploadProgress === 0 && uploading) {
+            console.error(
+              "⏱️ Upload timeout - no progress detected after 10 seconds"
+            );
+            setError(
+              "Upload appears to be stuck. This might be due to:\n- Missing UploadThing credentials\n- Network connectivity issues\n- Server configuration problems\n\nPlease check the browser console for more details."
+            );
+            stopProgressSimulation();
+            setUploading(false);
+          }
+        }, 10000); // 10 second timeout
+      }
+      // If progress reaches 100% but callback doesn't fire within 5 seconds,
+      // this likely means metadata registration failed (ECONNRESET)
+      // The file upload succeeded, but we can't get the URL without the callback
+      else if (uploadProgress >= 100 && uploading) {
+        uploadTimeoutRef.current = setTimeout(() => {
+          if (uploadProgress >= 100 && uploading) {
+            console.error(
+              "❌ Upload completed (100%) but onClientUploadComplete callback never fired."
+            );
+            console.error(
+              "💡 This is likely due to ECONNRESET during metadata registration."
+            );
+            console.error(
+              "💡 The file was uploaded successfully, but we can't retrieve the URL."
+            );
+            setError(
+              "Upload completed but connection was interrupted. The file may have uploaded successfully, but we couldn't retrieve the URL. Please try uploading again or check your UploadThing dashboard."
+            );
+            stopProgressSimulation();
+            setUploading(false);
+            setUploadProgress(0);
+            uploadFileInfoRef.current = null;
+          }
+        }, 5000); // 5 second timeout after reaching 100%
+      }
+    }
+
+    return () => {
+      if (uploadTimeoutRef.current) {
+        clearTimeout(uploadTimeoutRef.current);
+        uploadTimeoutRef.current = null;
+      }
+    };
+  }, [uploading, uploadProgress, stopProgressSimulation]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -151,7 +244,9 @@ export default function MessageFileUpload({
         style={{
           backgroundColor: COLORS.BACKGROUND_DARK,
           borderColor: COLORS.BORDER_SUBTLE,
-          boxShadow: `0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 0 1px ${getGoldenAccent(0.1)}`,
+          boxShadow: `0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 0 1px ${getGoldenAccent(
+            0.1
+          )}`,
         }}
       >
         {/* Header */}
@@ -166,7 +261,10 @@ export default function MessageFileUpload({
             >
               Upload File
             </h3>
-            <p className="text-sm mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+            <p
+              className="text-sm mt-1"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+            >
               Attach files to your message
             </p>
           </div>
@@ -175,7 +273,8 @@ export default function MessageFileUpload({
             className="p-2 rounded-lg transition-all duration-200"
             style={{ color: COLORS.TEXT_SECONDARY }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
             }}
             onMouseLeave={e => {
@@ -212,7 +311,8 @@ export default function MessageFileUpload({
             }}
             onMouseEnter={e => {
               e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
             }}
             onMouseLeave={e => {
               e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
@@ -226,20 +326,64 @@ export default function MessageFileUpload({
             <p className="mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
               Upload a file attachment
             </p>
-            <p className="text-sm mb-6" style={{ color: COLORS.TEXT_SECONDARY }}>
+            <p
+              className="text-sm mb-6"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+            >
               Supports images, videos, audio, PDFs, and documents
             </p>
 
             <div className="flex flex-col items-center">
               <div className={uploading ? "hidden" : ""}>
+                {/* @ts-expect-error - effect version conflict workaround */}
                 <UploadButton<OurFileRouter, "messageAttachmentUploader">
                   endpoint="messageAttachmentUploader"
                   onClientUploadComplete={handleUploadComplete}
                   onUploadError={handleUploadError}
-                  onUploadBegin={() => {
+                  onUploadBegin={file => {
+                    console.log("📤 Upload started:", file);
                     setUploading(true);
                     setError(null);
+                    // Store file info for potential fallback
+                    uploadFileInfoRef.current = {
+                      name: file,
+                      size: 0, // Will be updated if available
+                      type: "application/octet-stream",
+                    };
                     startProgressSimulation();
+                    // Clear any existing timeout
+                    if (uploadTimeoutRef.current) {
+                      clearTimeout(uploadTimeoutRef.current);
+                      uploadTimeoutRef.current = null;
+                    }
+                  }}
+                  onUploadProgress={progress => {
+                    console.log("📊 Upload progress:", progress);
+                    // If we get real progress, update it (allow up to 99% from real progress)
+                    if (progress > 0) {
+                      setUploadProgress(Math.min(progress, 99));
+                      // If progress reaches 100%, the upload is complete
+                      // But we should still wait for onClientUploadComplete for the URL
+                      if (progress >= 100) {
+                        console.log(
+                          "📊 Upload progress reached 100%, waiting for completion callback..."
+                        );
+                        setUploadProgress(100);
+                        // Set a timeout to check if callback fires (metadata registration may fail)
+                        // This handles the ECONNRESET case where upload succeeds but metadata registration fails
+                        setTimeout(() => {
+                          if (uploading) {
+                            console.warn(
+                              "⚠️ Upload reached 100% but callback hasn't fired after 3 seconds."
+                            );
+                            console.warn(
+                              "💡 This may indicate metadata registration failed (ECONNRESET). File upload likely succeeded."
+                            );
+                            // The callback should fire, but if it doesn't, we'll handle it in the timeout effect
+                          }
+                        }, 3000);
+                      }
+                    }
                   }}
                   appearance={{
                     button: {
@@ -294,8 +438,13 @@ export default function MessageFileUpload({
               </div>
               {uploadProgress > 0 && (
                 <div className="text-center">
-                  <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
-                    {uploadProgress < 100 ? `${uploadProgress}% complete` : "Finalizing..."}
+                  <span
+                    className="text-xs"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  >
+                    {uploadProgress < 100
+                      ? `${uploadProgress}% complete`
+                      : "Finalizing..."}
                   </span>
                 </div>
               )}
@@ -317,7 +466,8 @@ export default function MessageFileUpload({
               borderColor: COLORS.BORDER_SUBTLE,
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
             }}
