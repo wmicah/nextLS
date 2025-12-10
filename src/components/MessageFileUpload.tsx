@@ -340,7 +340,7 @@ export default function MessageFileUpload({
                   endpoint="messageAttachmentUploader"
                   onClientUploadComplete={handleUploadComplete}
                   onUploadError={handleUploadError}
-                  onUploadBegin={file => {
+                  onUploadBegin={(file: string) => {
                     console.log("📤 Upload started:", file);
                     setUploading(true);
                     setError(null);
@@ -357,7 +357,7 @@ export default function MessageFileUpload({
                       uploadTimeoutRef.current = null;
                     }
                   }}
-                  onUploadProgress={progress => {
+                  onUploadProgress={(progress: number) => {
                     console.log("📊 Upload progress:", progress);
                     // If we get real progress, update it (allow up to 99% from real progress)
                     if (progress > 0) {

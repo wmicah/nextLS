@@ -564,7 +564,7 @@ export default function NoteComposer({
                   {/* @ts-expect-error - effect version conflict workaround */}
                   <UploadButton<OurFileRouter, "noteAttachmentUploader">
                     endpoint="noteAttachmentUploader"
-                    onBeforeUploadBegin={files => {
+                    onBeforeUploadBegin={(files: File[]) => {
                       setIsUploading(true);
                       setUploadProgress(0);
                       return files;
@@ -575,7 +575,7 @@ export default function NoteComposer({
                     onClientUploadComplete={handleFileUploadComplete}
                     onUploadError={handleFileUploadError}
                     content={{
-                      button: ({ ready }) => (
+                      button: ({ ready }: { ready: boolean }) => (
                         <div
                           className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border border-dashed text-xs transition-all duration-200 ${
                             !ready || isUploading ? "opacity-50" : ""

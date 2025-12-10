@@ -237,7 +237,7 @@ export default function SecureFileUpload({
             {/* @ts-expect-error - effect version conflict workaround */}
             <UploadButton<OurFileRouter, typeof endpoint>
               endpoint={endpoint}
-              onClientUploadComplete={res => {
+              onClientUploadComplete={(res: any) => {
                 if (res && res[0]) {
                   setUploadedFiles(prev => [...prev, res[0].url]);
                   onUploadComplete?.(res[0].url);

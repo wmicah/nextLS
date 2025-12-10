@@ -307,7 +307,7 @@ export default function ClientVideoSubmissionModal({
                       {/* @ts-expect-error - effect version conflict workaround */}
                       <UploadButton<OurFileRouter, "videoUploader">
                         endpoint="videoUploader"
-                      onClientUploadComplete={res => {
+                      onClientUploadComplete={(res: any) => {
                         console.log("✅ Upload complete callback fired:", res);
                         
                         // Clear any timeout
@@ -407,7 +407,7 @@ export default function ClientVideoSubmissionModal({
                           uploadTimeoutRef.current = null;
                         }
                       }}
-                      onUploadBegin={(name) => {
+                      onUploadBegin={(name: string) => {
                         console.log("📤 Upload started:", name);
                         setError("");
                         setIsUploading(true);
@@ -418,7 +418,7 @@ export default function ClientVideoSubmissionModal({
                           uploadTimeoutRef.current = null;
                         }
                       }}
-                      onUploadProgress={(progress) => {
+                      onUploadProgress={(progress: number) => {
                         console.log("📊 Real upload progress from UploadThing:", progress);
                         // If we get real progress, update it and stop simulation
                         if (progress > 0) {

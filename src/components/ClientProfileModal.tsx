@@ -181,7 +181,8 @@ ClientProfileModalProps) {
           : []
       );
     }
-  }, [client, isEditingClientInfo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(client as any)?.id, (client as any)?.age, (client as any)?.height, isEditingClientInfo]);
 
   // Update client mutation
   const updateClientMutation = trpc.clients.update.useMutation({
