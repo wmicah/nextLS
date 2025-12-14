@@ -186,8 +186,38 @@ export function validateFileSecurity(
   const warnings: string[] = [];
   let riskLevel: "low" | "medium" | "high" = "low";
 
+  // Extract file name and extension once for all checks
+  const fileName = file.name.toLowerCase();
+  const fileExtension = fileName.substring(fileName.lastIndexOf("."));
+
   // 1. Check file size
-  const maxSize = FILE_SIZE_LIMITS[uploadType];
+  // For messageAttachment, use different limits based on file type
+  let maxSize = FILE_SIZE_LIMITS[uploadType];
+  if (uploadType === "messageAttachment") {
+    // Determine size limit based on file type or extension
+    const isVideoMimeType = file.type?.startsWith("video/");
+    const isAudioMimeType = file.type?.startsWith("audio/");
+    const isVideoExtension = fileExtension && ALLOWED_VIDEO_EXTENSIONS.includes(fileExtension as any);
+    const isImageMimeType = file.type?.startsWith("image/");
+    
+    if (isVideoMimeType || isVideoExtension) {
+      maxSize = 128 * 1024 * 1024; // 128MB for videos
+    } else if (isAudioMimeType) {
+      maxSize = 64 * 1024 * 1024; // 64MB for audio
+    } else if (file.type === "application/pdf" || 
+               file.type === "application/msword" ||
+               file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      maxSize = 16 * 1024 * 1024; // 16MB for documents
+    } else if (file.type?.startsWith("text/")) {
+      maxSize = 8 * 1024 * 1024; // 8MB for text files
+    } else if (isImageMimeType) {
+      maxSize = 16 * 1024 * 1024; // 16MB for images
+    } else {
+      // Default to 16MB for unknown types
+      maxSize = 16 * 1024 * 1024;
+    }
+  }
+  
   if (file.size > maxSize) {
     errors.push(
       `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds limit (${(
@@ -198,10 +228,6 @@ export function validateFileSecurity(
     );
     riskLevel = "high";
   }
-
-  // Extract file name and extension once for all checks
-  const fileName = file.name.toLowerCase();
-  const fileExtension = fileName.substring(fileName.lastIndexOf("."));
 
   // 2. Check file type
   // For video uploads, be more lenient - accept any video/* MIME type or check extension

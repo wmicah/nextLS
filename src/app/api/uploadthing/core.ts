@@ -315,42 +315,85 @@ export const ourFileRouter = {
         const user = await getUser();
 
         if (!user?.id) {
+          console.error("❌ Message attachment upload failed - Unauthorized");
           throw new Error("Unauthorized - Please log in to upload files");
         }
 
         // Rate limiting
         if (!uploadRateLimiter.canUpload(user.id)) {
+          console.error("❌ Message attachment upload failed - Rate limit exceeded for user:", user.id);
           throw new Error("Rate limit exceeded - too many uploads");
         }
 
         // Security validation for each file
         for (const file of files) {
-          const fileData: FileValidationInput = {
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            lastModified: file.lastModified,
-          };
+          try {
+            const fileData: FileValidationInput = {
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              lastModified: file.lastModified,
+            };
 
-          const validation = validateFileSecurity(fileData, "messageAttachment");
+            console.log("🔍 Validating message attachment:", {
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              sizeMB: (file.size / 1024 / 1024).toFixed(2),
+            });
 
-          if (!validation.isValid) {
-            throw new Error(
-              `File security validation failed: ${validation.errors.join(", ")}`
-            );
-          }
+            const validation = validateFileSecurity(fileData, "messageAttachment");
 
-          if (validation.riskLevel === "high") {
-            throw new Error("File rejected due to security risk");
+            if (!validation.isValid) {
+              console.error("❌ Message attachment validation failed:", {
+                errors: validation.errors,
+                warnings: validation.warnings,
+                fileName: file.name,
+              });
+              throw new Error(
+                `File security validation failed: ${validation.errors.join(", ")}`
+              );
+            }
+
+            if (validation.riskLevel === "high") {
+              console.error("❌ Message attachment rejected - high risk:", {
+                fileName: file.name,
+                riskLevel: validation.riskLevel,
+              });
+              throw new Error("File rejected due to security risk");
+            }
+
+            if (validation.warnings.length > 0) {
+              console.warn("⚠️ Message attachment warnings:", {
+                warnings: validation.warnings,
+                fileName: file.name,
+              });
+            }
+          } catch (fileError) {
+            console.error("❌ Error validating individual file:", {
+              fileName: file.name,
+              error: fileError instanceof Error ? fileError.message : String(fileError),
+            });
+            throw fileError;
           }
         }
 
+        console.log("✅ Message attachment middleware passed for user:", user.id);
         return {
           userId: user.id,
           userEmail: user.email,
           timestamp: new Date().toISOString(),
         };
       } catch (error) {
+        // Log the error details
+        console.error("❌ Message attachment middleware error:", {
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          } : error,
+        });
+        
         // Re-throw with better error message
         if (error instanceof Error) {
           throw error;
