@@ -229,7 +229,7 @@ export default function MobileSeamlessProgramModal({
 
   // Initialize weeks based on duration
   useEffect(() => {
-    if (!initializedRef.current && programBuilderWeeks.length === 0) {
+    if (!initializedRef.current && programBuilderWeeks.length === 0 && isOpen) {
       const duration = watchedValues.duration || 1;
       const initialWeeks = Array.from({ length: duration }, (_, index) => ({
         id: `week-${Date.now()}-${index}`,
@@ -248,7 +248,7 @@ export default function MobileSeamlessProgramModal({
       setProgramBuilderWeeks(initialWeeks);
       initializedRef.current = true;
     }
-  }, [programBuilderWeeks.length, watchedValues.duration]);
+  }, [programBuilderWeeks.length, watchedValues.duration, isOpen]);
 
   // Load program data when editing
   useEffect(() => {
@@ -378,6 +378,24 @@ export default function MobileSeamlessProgramModal({
       initializedRef.current = false;
       setProgramBuilderWeeks([]);
       setInternalSelectedVideo(null);
+      
+      // Initialize weeks immediately for new program
+      const initialWeeks = Array.from({ length: 1 }, (_, index) => ({
+        id: `week-${Date.now()}-${index}`,
+        name: `Week ${index + 1}`,
+        days: {
+          sun: [],
+          mon: [],
+          tue: [],
+          wed: [],
+          thu: [],
+          fri: [],
+          sat: [],
+        },
+        collapsed: false,
+      }));
+      setProgramBuilderWeeks(initialWeeks);
+      initializedRef.current = true;
     } else if (!isOpen) {
       // Reset when modal closes
       initializedRef.current = false;
@@ -1242,7 +1260,29 @@ export default function MobileSeamlessProgramModal({
 
               {currentStep === "details" && (
                 <Button
-                  onClick={() => setCurrentStep("structure")}
+                  onClick={() => {
+                    // Ensure weeks are initialized before going to structure step
+                    if (programBuilderWeeks.length === 0 && !initializedRef.current) {
+                      const duration = watchedValues.duration || 1;
+                      const initialWeeks = Array.from({ length: duration }, (_, index) => ({
+                        id: `week-${Date.now()}-${index}`,
+                        name: `Week ${index + 1}`,
+                        days: {
+                          sun: [],
+                          mon: [],
+                          tue: [],
+                          wed: [],
+                          thu: [],
+                          fri: [],
+                          sat: [],
+                        },
+                        collapsed: false,
+                      }));
+                      setProgramBuilderWeeks(initialWeeks);
+                      initializedRef.current = true;
+                    }
+                    setCurrentStep("structure");
+                  }}
                   disabled={!canProceedToStructure}
                   className="flex-1 bg-[#4A5A70] hover:bg-[#606364] text-white text-sm h-11 min-h-[44px]"
                 >

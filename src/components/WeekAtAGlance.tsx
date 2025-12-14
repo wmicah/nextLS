@@ -595,6 +595,8 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                     transformStyle: "preserve-3d",
                     perspective: "1000px",
                     minHeight: "200px",
+                    maxHeight: className === "compact" ? "280px" : "400px",
+                    height: "100%",
                     transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
                     borderColor: isCurrentDay ? COLORS.GOLDEN_ACCENT : COLORS.GOLDEN_BORDER,
                     backgroundColor: COLORS.BACKGROUND_CARD,
@@ -633,8 +635,14 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                       </div>
 
                       {/* Events */}
-                      <div className={`${className === "compact" ? "space-y-0.5" : "space-y-1"} flex-1`}>
-                        {dayEvents.slice(0, 10).map((event: any) => {
+                      <div 
+                        className={`${className === "compact" ? "space-y-0.5" : "space-y-1"} flex-1 overflow-y-auto week-glance-scrollbar`}
+                        style={{
+                          maxHeight: className === "compact" ? "120px" : "200px",
+                          minHeight: "0",
+                        }}
+                      >
+                        {dayEvents.map((event: any) => {
                           // Determine if this is a reminder or lesson
                           const isReminder =
                             event.status === "PENDING" &&
@@ -738,12 +746,6 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
                             </div>
                           );
                         })}
-
-                        {dayEvents.length > 10 && (
-                          <div className={`${className === "compact" ? "text-[9px]" : "text-[10px]"} text-zinc-500 text-center py-0.5 rounded bg-white/[0.02]`}>
-                            +{dayEvents.length - 10} more
-                          </div>
-                        )}
                       </div>
 
                       {/* Add Button - Always at bottom */}
