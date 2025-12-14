@@ -734,9 +734,14 @@ export default function MobileClientDetailPage({
                   style={{ backgroundColor: "#606364" }}
                 />
                 <DropdownMenuItem
-                  onClick={() => {
-                    if (client.userId) {
-                      router.push(`/messages?clientId=${client.userId}`);
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    // Use client record ID (not userId) to find/create conversation
+                    if (client?.id) {
+                      router.push(`/messages?clientId=${client.id}`);
+                    } else {
+                      console.error("Client ID is missing");
+                      alert("Unable to open conversation. Client information is missing.");
                     }
                   }}
                   className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"

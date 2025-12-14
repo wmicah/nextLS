@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
-import { format } from "date-fns";
+import { format, isSameDay, isToday, isYesterday, differenceInDays } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import FormattedMessage from "./FormattedMessage";
 import ProfilePictureUploader from "./ProfilePictureUploader";
@@ -154,18 +154,49 @@ function MessagesPage({}: MessagesPageProps) {
 
   const conversations = allConversations;
 
-  // Handle URL parameters for conversation and message
+  // Mutation to get or create conversation with a client
+  const getOrCreateConversationMutation =
+    trpc.messaging.createConversationWithClient.useMutation({
+      onSuccess: conversation => {
+        // Navigate to the conversation
+        setSelectedConversation(conversation.id);
+        // Update URL to show conversation ID instead of clientId
+        router.replace(`/messages?conversation=${conversation.id}`);
+      },
+      onError: error => {
+        console.error("Failed to get or create conversation:", error);
+        // Show user-friendly error message
+        const errorMessage = error.message || "Failed to open conversation. Please try again.";
+        // Use window.alert as fallback if toast system not available
+        alert(errorMessage);
+        // Remove clientId from URL to prevent retry loop
+        router.replace("/messages");
+      },
+    });
+
+  // Handle URL parameters for conversation, message, and clientId
   useEffect(() => {
     const conversationId = searchParams.get("conversation");
     const messageId = searchParams.get("message");
+    const clientId = searchParams.get("clientId");
 
     if (conversationId) {
       setSelectedConversation(conversationId);
+    } else if (clientId && !getOrCreateConversationMutation.isPending) {
+      // Validate clientId before calling mutation
+      if (clientId && clientId.trim() !== "") {
+        // If we have a clientId, get or create the conversation
+        getOrCreateConversationMutation.mutate({ clientId: clientId.trim() });
+      } else {
+        // Invalid clientId, remove from URL
+        router.replace("/messages");
+      }
     } else if (messageId) {
       // If we have a messageId but no conversationId, we need to find the conversation
       // For now, we'll just set it to null and let the user select
       setSelectedConversation(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Function to load more conversations
@@ -415,6 +446,28 @@ function MessagesPage({}: MessagesPageProps) {
     return conversation.coach.id === currentUser.id
       ? conversation.client
       : conversation.coach;
+  };
+
+  // Format message timestamp with date
+  const formatMessageTime = (date: Date, showDate: boolean = false) => {
+    const messageDate = new Date(date);
+    const now = new Date();
+    
+    if (showDate) {
+      if (isToday(messageDate)) {
+        return format(messageDate, "h:mm a 'Today'");
+      } else if (isYesterday(messageDate)) {
+        return format(messageDate, "h:mm a 'Yesterday'");
+      } else {
+        const daysDiff = differenceInDays(now, messageDate);
+        if (daysDiff < 7) {
+          return format(messageDate, "h:mm a EEEE");
+        } else {
+          return format(messageDate, "h:mm a MMM d, yyyy");
+        }
+      }
+    }
+    return format(messageDate, "h:mm a");
   };
 
   // Format last message time
@@ -871,7 +924,7 @@ function MessagesPage({}: MessagesPageProps) {
                     }
                   >
                     <>
-                      {messages.map((message: any) => {
+                      {messages.map((message: any, index: number) => {
                         // Check if this is a workout note message
                         const isWorkoutNote =
                           message.content?.includes("📝 **Workout Note**") ||
@@ -894,17 +947,57 @@ function MessagesPage({}: MessagesPageProps) {
                           });
                         }
 
+                        // Check if we need to show a date separator
+                        const currentMessageDate = new Date(message.createdAt);
+                        const previousMessage = index > 0 ? messages[index - 1] : null;
+                        const previousMessageDate = previousMessage
+                          ? new Date(previousMessage.createdAt)
+                          : null;
+                        const showDateSeparator =
+                          !previousMessageDate ||
+                          !isSameDay(currentMessageDate, previousMessageDate);
+                        
+                        // Check if all messages are on the same day
+                        const allMessagesSameDay = messages.length > 0 && 
+                          messages.every((msg: any) => 
+                            isSameDay(new Date(msg.createdAt), currentMessageDate)
+                          );
+                        // Show date on first message timestamp if all messages are same day
+                        const showDateOnFirstMessage = allMessagesSameDay && index === 0;
+                        // Show date separator at top if all messages are same day and this is first message
+                        const showTopDateSeparator = allMessagesSameDay && index === 0;
+
                         return (
-                          <div
-                            key={message.id}
-                            className={`flex ${
-                              isWorkoutNote && isFromClient
-                                ? "justify-start"
-                                : message.sender.id === currentUser?.id
-                                ? "justify-end"
-                                : "justify-start"
-                            }`}
-                          >
+                          <div key={message.id} className="space-y-2">
+                            {/* Date Separator - show at top if all messages same day, or between different days */}
+                            {(showTopDateSeparator || (showDateSeparator && !allMessagesSameDay)) && (
+                              <div className="flex items-center justify-center py-2">
+                                <div
+                                  className="px-3 py-1 rounded-full text-xs font-medium"
+                                  style={{
+                                    backgroundColor: COLORS.BACKGROUND_CARD,
+                                    color: COLORS.TEXT_SECONDARY,
+                                    border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                                  }}
+                                >
+                                  {isToday(currentMessageDate)
+                                    ? "Today"
+                                    : isYesterday(currentMessageDate)
+                                    ? "Yesterday"
+                                    : format(currentMessageDate, "EEEE, MMMM d, yyyy")}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div
+                              className={`flex ${
+                                isWorkoutNote && isFromClient
+                                  ? "justify-start"
+                                  : message.sender.id === currentUser?.id
+                                  ? "justify-end"
+                                  : "justify-start"
+                              }`}
+                            >
                             <div
                               className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
                                 message.sender.id === currentUser?.id
@@ -1086,9 +1179,9 @@ function MessagesPage({}: MessagesPageProps) {
                                         : COLORS.TEXT_MUTED,
                                   }}
                                 >
-                                  {format(
+                                  {formatMessageTime(
                                     new Date(message.createdAt),
-                                    "h:mm a"
+                                    showDateOnFirstMessage
                                   )}
                                 </span>
                                 {message.sender.id === currentUser?.id && (
@@ -1100,7 +1193,8 @@ function MessagesPage({}: MessagesPageProps) {
                               </div>
                             </div>
                           </div>
-                        );
+                        </div>
+                      );
                       })}
 
                       {/* Pending Messages */}

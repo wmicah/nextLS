@@ -137,10 +137,40 @@ function isBot(userAgent: string): boolean {
 // Suspicious request detection
 function isSuspiciousRequest(url: string, headers: Headers): boolean {
   const urlString = url.toLowerCase();
-
-  // Check URL for suspicious patterns
-  if (suspiciousPatterns.some(pattern => pattern.test(urlString))) {
-    return true;
+  
+  // Parse URL to separate pathname from query parameters
+  try {
+    const urlObj = new URL(urlString);
+    const pathname = urlObj.pathname.toLowerCase();
+    const searchParams = urlObj.searchParams;
+    
+    // Check pathname for suspicious patterns (not query params)
+    if (suspiciousPatterns.some(pattern => pattern.test(pathname))) {
+      return true;
+    }
+    
+    // Check query parameter values for suspicious patterns
+    for (const [key, value] of searchParams.entries()) {
+      // Allow common safe query parameters
+      const safeParams = ['conversation', 'clientId', 'message', 'page', 'limit', 'offset', 'search'];
+      if (safeParams.includes(key.toLowerCase())) {
+        // Still check the value for suspicious patterns, but be more lenient
+        if (suspiciousPatterns.some(pattern => pattern.test(value))) {
+          return true;
+        }
+        continue;
+      }
+      
+      // For other query parameters, check both key and value
+      if (suspiciousPatterns.some(pattern => pattern.test(key) || pattern.test(value))) {
+        return true;
+      }
+    }
+  } catch (e) {
+    // If URL parsing fails, fall back to checking the full URL string
+    if (suspiciousPatterns.some(pattern => pattern.test(urlString))) {
+      return true;
+    }
   }
 
   // Check headers for suspicious content
