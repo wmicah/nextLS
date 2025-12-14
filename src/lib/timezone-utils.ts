@@ -235,7 +235,10 @@ export const formatTimeInTimezone = (
   timezone: string,
   formatString: string = "h:mm a"
 ): string => {
-  return formatInTimeZone(utcDate, timezone, formatString);
+  // Explicitly convert UTC date to the target timezone, then format
+  // toZonedTime interprets the Date as UTC and converts to the target timezone
+  const zonedDate = toZonedTime(utcDate, timezone);
+  return format(zonedDate, formatString);
 };
 
 /**
@@ -250,5 +253,8 @@ export const formatDateInTimezone = (
   timezone: string,
   formatString: string = "EEEE, MMMM d"
 ): string => {
-  return formatInTimeZone(utcDate, timezone, formatString);
+  // Explicitly convert UTC date to the target timezone, then format
+  // toZonedTime interprets the Date as UTC and converts to the target timezone
+  const zonedDate = toZonedTime(utcDate, timezone);
+  return format(zonedDate, formatString);
 };
