@@ -31,6 +31,8 @@ export default function ClientVideoSubmissionModal({
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const uploadStartTimeRef = useRef<number | null>(null);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const uploadFileRef = useRef<any>(null); // Store uploaded file data
 
   const utils = trpc.useUtils();
 
@@ -54,6 +56,10 @@ export default function ClientVideoSubmissionModal({
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+      completionTimeoutRef.current = null;
+    }
     uploadStartTimeRef.current = null;
   }, []);
 
@@ -69,20 +75,22 @@ export default function ClientVideoSubmissionModal({
     let currentProgress = 0;
     progressIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - (uploadStartTimeRef.current || Date.now());
-      const estimatedDuration = 20000; // 20 seconds estimate for large videos (increased)
-      const progressRatio = Math.min(elapsed / estimatedDuration, 0.94); // Cap at 94% to wait for real completion
+      const estimatedDuration = 30000; // 30 seconds estimate for large videos
+      const progressRatio = Math.min(elapsed / estimatedDuration, 0.95); // Cap at 95% to wait for real completion
       
       // Use easing function for smooth progress
       const easedProgress = 1 - Math.pow(1 - progressRatio, 3); // Cubic ease-out
-      currentProgress = Math.min(Math.floor(easedProgress * 94), 94);
+      currentProgress = Math.min(Math.floor(easedProgress * 95), 95);
       
-      setUploadProgress(currentProgress);
+      // Only update if we haven't received real progress that's higher
+      setUploadProgress(prev => Math.max(prev, currentProgress));
       
-      // If we've been simulating for a long time and haven't gotten real progress, something might be wrong
-      if (elapsed > 60000 && currentProgress >= 94) { // After 60 seconds at 94%
-        console.warn("⚠️ Progress simulation has been running for over 60 seconds at 94%. Upload may be stuck.");
+      // If we've been simulating for a very long time, stop and show warning
+      if (elapsed > 120000) { // After 2 minutes
+        console.warn("⚠️ Progress simulation has been running for over 2 minutes. Upload may be stuck or very large.");
+        // Don't stop - let the timeout handlers deal with it
       }
-    }, 50); // Update every 50ms for smooth animation
+    }, 100); // Update every 100ms for smoother performance
   }, []);
 
   const resetForm = () => {
@@ -92,10 +100,15 @@ export default function ClientVideoSubmissionModal({
     setIsSubmitting(false);
     setIsUploading(false);
     setUploadProgress(0);
+    uploadFileRef.current = null;
     stopProgressSimulation();
     if (uploadTimeoutRef.current) {
       clearTimeout(uploadTimeoutRef.current);
       uploadTimeoutRef.current = null;
+    }
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+      completionTimeoutRef.current = null;
     }
   };
 
@@ -140,6 +153,11 @@ export default function ClientVideoSubmissionModal({
       stopProgressSimulation();
       if (uploadTimeoutRef.current) {
         clearTimeout(uploadTimeoutRef.current);
+        uploadTimeoutRef.current = null;
+      }
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+        completionTimeoutRef.current = null;
       }
     };
   }, [stopProgressSimulation]);
@@ -310,56 +328,59 @@ export default function ClientVideoSubmissionModal({
                       onClientUploadComplete={(res: any) => {
                         console.log("✅ Upload complete callback fired:", res);
                         
-                        // Clear any timeout
+                        // Clear any timeouts
                         if (uploadTimeoutRef.current) {
                           clearTimeout(uploadTimeoutRef.current);
                           uploadTimeoutRef.current = null;
+                        }
+                        if (completionTimeoutRef.current) {
+                          clearTimeout(completionTimeoutRef.current);
+                          completionTimeoutRef.current = null;
                         }
                         
                         // Complete the progress bar
                         setUploadProgress(100);
                         stopProgressSimulation();
                         
-                        // Wait a moment to show 100% before completing
-                        setTimeout(() => {
-                          if (res && res.length > 0) {
-                            const file = res[0];
-                            console.log("📁 File details:", {
-                              name: file.name,
-                              url: file.url,
-                              size: file.size,
-                              type: file.type,
-                              key: file.key,
-                            });
-                            
-                            if (file?.url) {
-                              // Validate URL format
-                              try {
-                                new URL(file.url);
-                                setVideoUrl(file.url);
-                                setError("");
-                                setIsUploading(false);
-                                setUploadProgress(0);
-                                console.log("✅ Video URL set successfully:", file.url);
-                              } catch (urlError) {
-                                console.error("❌ Invalid URL format:", file.url, urlError);
-                                setError("Upload completed but received invalid URL. Please try again.");
-                                setIsUploading(false);
-                                setUploadProgress(0);
-                              }
-                            } else {
-                              console.error("❌ No URL in file object:", file);
-                              setError("Upload completed but no file URL received. Please try again.");
+                        // Process the uploaded file immediately
+                        if (res && res.length > 0) {
+                          const file = res[0];
+                          uploadFileRef.current = file;
+                          console.log("📁 File details:", {
+                            name: file.name,
+                            url: file.url,
+                            size: file.size,
+                            type: file.type,
+                            key: file.key,
+                          });
+                          
+                          if (file?.url) {
+                            // Validate URL format
+                            try {
+                              new URL(file.url);
+                              setVideoUrl(file.url);
+                              setError("");
+                              setIsUploading(false);
+                              setUploadProgress(0);
+                              console.log("✅ Video URL set successfully:", file.url);
+                            } catch (urlError) {
+                              console.error("❌ Invalid URL format:", file.url, urlError);
+                              setError("Upload completed but received invalid URL. Please try again.");
                               setIsUploading(false);
                               setUploadProgress(0);
                             }
                           } else {
-                            console.error("❌ No files in response:", res);
-                            setError("Upload completed but no file received. Please try again.");
+                            console.error("❌ No URL in file object:", file);
+                            setError("Upload completed but no file URL received. Please try again.");
                             setIsUploading(false);
                             setUploadProgress(0);
                           }
-                        }, 300);
+                        } else {
+                          console.error("❌ No files in response:", res);
+                          setError("Upload completed but no file received. Please try again.");
+                          setIsUploading(false);
+                          setUploadProgress(0);
+                        }
                       }}
                       onUploadError={(error: Error) => {
                         console.error("❌ Upload error:", error);
@@ -411,44 +432,53 @@ export default function ClientVideoSubmissionModal({
                         console.log("📤 Upload started:", name);
                         setError("");
                         setIsUploading(true);
+                        uploadFileRef.current = null; // Reset file reference
                         startProgressSimulation();
-                        // Clear any existing timeout
+                        // Clear any existing timeouts
                         if (uploadTimeoutRef.current) {
                           clearTimeout(uploadTimeoutRef.current);
                           uploadTimeoutRef.current = null;
+                        }
+                        if (completionTimeoutRef.current) {
+                          clearTimeout(completionTimeoutRef.current);
+                          completionTimeoutRef.current = null;
                         }
                       }}
                       onUploadProgress={(progress: number) => {
                         console.log("📊 Real upload progress from UploadThing:", progress);
                         // If we get real progress, update it and stop simulation
                         if (progress > 0) {
+                          // Stop simulation immediately when we get real progress
+                          stopProgressSimulation();
                           setUploadProgress(Math.min(progress, 99)); // Allow up to 99% from real progress
-                          // If we're getting real progress, we can slow down or stop the simulation
-                          if (progress > 50) {
-                            // Real progress is significant, reduce simulation speed
-                            if (progressIntervalRef.current) {
-                              clearInterval(progressIntervalRef.current);
-                              // Slower simulation for the rest
-                              uploadStartTimeRef.current = Date.now() - (progress / 100) * 10000;
-                            }
-                          }
                         }
-                        // If progress reaches 100%, the upload is complete
-                        // But we should still wait for onClientUploadComplete for the URL
+                        
+                        // If progress reaches 100%, the upload file transfer is complete
+                        // We still need to wait for onClientUploadComplete to get the file metadata
                         if (progress >= 100) {
                           console.log("📊 Upload progress reached 100%, waiting for completion callback...");
-                          // Set a timeout to check if callback fires - if it doesn't, the upload may have succeeded but callback failed
-                          setTimeout(() => {
-                            if (isUploading && !videoUrl) {
-                              console.warn("⚠️ Upload reached 100% but callback hasn't fired after 3 seconds.");
-                              console.warn("💡 This might indicate metadata registration failed. Upload succeeded but callback didn't fire.");
-                              console.warn("💡 Check UploadThing dashboard to verify upload and get the URL manually if needed.");
-                              // Show helpful error message
-                              setError("Upload appears to have completed but the completion callback didn't fire. This is often due to a network issue during metadata registration. Please:\n1. Check UploadThing dashboard to verify the upload\n2. Copy the video URL from UploadThing\n3. Paste it in the manual URL field below");
+                          setUploadProgress(100); // Show 100% immediately
+                          
+                          // Clear any existing completion timeout
+                          if (completionTimeoutRef.current) {
+                            clearTimeout(completionTimeoutRef.current);
+                          }
+                          
+                          // Set a timeout to detect if callback doesn't fire (more generous timeout for large files)
+                          completionTimeoutRef.current = setTimeout(() => {
+                            if (isUploading && !videoUrl && !uploadFileRef.current) {
+                              console.warn("⚠️ Upload reached 100% but completion callback hasn't fired after 10 seconds.");
+                              console.warn("💡 The file was likely uploaded successfully to UploadThing, but the completion callback failed.");
+                              console.warn("💡 This can happen due to network issues or timeout during metadata processing.");
+                              
+                              // The upload likely succeeded but callback failed
+                              // Show a helpful message and allow manual URL entry
+                              setError("Upload appears to have completed but didn't finish properly. The file was likely uploaded successfully. Please:\n1. Check UploadThing dashboard to verify the upload\n2. Copy the video URL from UploadThing\n3. Paste it in the manual URL field below (if shown)\n\nOr try uploading again.");
                               setIsUploading(false);
                               setUploadProgress(0);
+                              stopProgressSimulation();
                             }
-                          }, 3000); // Increased to 3 seconds
+                          }, 10000); // 10 second timeout - generous for large files and network delays
                         }
                       }}
                     />
