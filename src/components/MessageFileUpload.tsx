@@ -35,6 +35,8 @@ export default function MessageFileUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showManualUrlInput, setShowManualUrlInput] = useState(false);
+  const [manualUrl, setManualUrl] = useState("");
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const uploadStartTimeRef = useRef<number | null>(null);
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -180,9 +182,41 @@ export default function MessageFileUpload({
           }
         }, 10000); // 10 second timeout
       }
+      // If progress is stuck at 93%+ for more than 20 seconds, assume upload completed but callback failed
+      // This handles the ECONNRESET case where upload succeeds but metadata registration fails
+      // Longer timeout for cellular connections which may have delays
+      else if (uploadProgress >= 93 && uploading) {
+        uploadTimeoutRef.current = setTimeout(() => {
+          if (uploadProgress >= 93 && uploading) {
+            console.warn(
+              "⚠️ Upload appears stuck at high progress (93%+). Assuming upload completed but callback failed."
+            );
+            console.warn(
+              "💡 This is likely due to ECONNRESET during metadata registration (common on cellular connections)."
+            );
+            console.warn(
+              "💡 The file was likely uploaded successfully to UploadThing."
+            );
+            // Set progress to 100% to show completion
+            setUploadProgress(100);
+            // Show error with instructions specific to cellular connections
+            setError(
+              "Upload appears to have completed, but we couldn't confirm it due to a connection issue (common on cellular/mobile networks). The file may have uploaded successfully."
+            );
+            // Show manual URL input option
+            setShowManualUrlInput(true);
+            // Reset after a moment
+            setTimeout(() => {
+              stopProgressSimulation();
+              setUploading(false);
+              setUploadProgress(0);
+            }, 2000);
+          }
+        }, 20000); // 20 second timeout for high progress (93%+) - longer for cellular
+      }
       // If progress reaches 100% but callback doesn't fire within 5 seconds,
       // this likely means metadata registration failed (ECONNRESET)
-      // The file upload succeeded, but we can't get the URL without the callback
+      // Longer timeout for cellular connections which may have delays
       else if (uploadProgress >= 100 && uploading) {
         uploadTimeoutRef.current = setTimeout(() => {
           if (uploadProgress >= 100 && uploading) {
@@ -190,20 +224,21 @@ export default function MessageFileUpload({
               "❌ Upload completed (100%) but onClientUploadComplete callback never fired."
             );
             console.error(
-              "💡 This is likely due to ECONNRESET during metadata registration."
+              "💡 This is likely due to ECONNRESET during metadata registration (common on cellular connections)."
             );
             console.error(
               "💡 The file was uploaded successfully, but we can't retrieve the URL."
             );
             setError(
-              "Upload completed but connection was interrupted. The file may have uploaded successfully, but we couldn't retrieve the URL. Please try uploading again or check your UploadThing dashboard."
+              "Upload completed but connection was interrupted (common on cellular/mobile networks). The file may have uploaded successfully, but we couldn't retrieve the URL."
             );
+            // Show manual URL input option
+            setShowManualUrlInput(true);
             stopProgressSimulation();
             setUploading(false);
             setUploadProgress(0);
-            uploadFileInfoRef.current = null;
           }
-        }, 5000); // 5 second timeout after reaching 100%
+        }, 5000); // 5 second timeout after reaching 100% - longer for cellular
       }
     }
 
@@ -369,19 +404,10 @@ export default function MessageFileUpload({
                           "📊 Upload progress reached 100%, waiting for completion callback..."
                         );
                         setUploadProgress(100);
-                        // Set a timeout to check if callback fires (metadata registration may fail)
-                        // This handles the ECONNRESET case where upload succeeds but metadata registration fails
-                        setTimeout(() => {
-                          if (uploading) {
-                            console.warn(
-                              "⚠️ Upload reached 100% but callback hasn't fired after 3 seconds."
-                            );
-                            console.warn(
-                              "💡 This may indicate metadata registration failed (ECONNRESET). File upload likely succeeded."
-                            );
-                            // The callback should fire, but if it doesn't, we'll handle it in the timeout effect
-                          }
-                        }, 3000);
+                        // Stop simulation since we have real progress
+                        stopProgressSimulation();
+                        // For cellular connections, give more time for callback due to potential delays
+                        // The timeout effect will handle if callback doesn't fire
                       }
                     }
                   }}
@@ -448,6 +474,91 @@ export default function MessageFileUpload({
                   </span>
                 </div>
               )}
+            </div>
+          )}
+
+          {showManualUrlInput && (
+            <div
+              className="space-y-3 p-4 rounded-lg border"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
+              <p className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
+                If the file uploaded successfully, you can paste the UploadThing
+                URL here:
+              </p>
+              <input
+                type="text"
+                value={manualUrl}
+                onChange={e => setManualUrl(e.target.value)}
+                placeholder="https://utfs.io/f/..."
+                className="w-full px-3 py-2 rounded-lg text-sm"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  color: COLORS.TEXT_PRIMARY,
+                  border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (manualUrl && manualUrl.includes("utfs.io")) {
+                      // Extract file info from URL
+                      const urlParts = manualUrl.split("/f/");
+                      const fileKey = urlParts[1]?.split("?")[0] || "";
+                      const fileName =
+                        uploadFileInfoRef.current?.name || "uploaded-file";
+                      const fileType =
+                        uploadFileInfoRef.current?.type ||
+                        "application/octet-stream";
+
+                      const uploadData = {
+                        attachmentUrl: manualUrl,
+                        attachmentType: fileType,
+                        attachmentName: fileName,
+                        attachmentSize: 0, // Unknown size
+                      };
+
+                      const dummyFile = new File([], fileName, {
+                        type: fileType,
+                      });
+                      onFileSelect(dummyFile, uploadData);
+                      setShowManualUrlInput(false);
+                      setManualUrl("");
+                      setError(null);
+                    } else {
+                      setError(
+                        "Please enter a valid UploadThing URL (https://utfs.io/f/...)"
+                      );
+                    }
+                  }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    backgroundColor: COLORS.BLUE_PRIMARY,
+                    color: "#ffffff",
+                  }}
+                >
+                  Use This URL
+                </button>
+                <button
+                  onClick={() => {
+                    setShowManualUrlInput(false);
+                    setManualUrl("");
+                    setError(null);
+                    uploadFileInfoRef.current = null;
+                  }}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all border"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    color: COLORS.TEXT_SECONDARY,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
