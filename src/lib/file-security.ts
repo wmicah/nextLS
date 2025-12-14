@@ -205,9 +205,13 @@ export function validateFileSecurity(
 
   // 2. Check file type
   // For video uploads, be more lenient - accept any video/* MIME type or check extension
-  if (uploadType === "video" || uploadType === "feedbackVideo") {
+  // messageAttachment can also accept videos, audio, images, and documents
+  if (uploadType === "video" || uploadType === "feedbackVideo" || uploadType === "messageAttachment") {
     // Check if it's a video MIME type (starts with "video/")
     const isVideoMimeType = file.type && file.type.startsWith("video/");
+    
+    // For messageAttachment, also check if it's an audio file (audio/*)
+    const isAudioMimeType = uploadType === "messageAttachment" && file.type && file.type.startsWith("audio/");
 
     // Check if extension is in allowed video extensions
     const isVideoExtension =
@@ -219,21 +223,35 @@ export function validateFileSecurity(
       file.type === "" ||
       file.type === "application/octet-stream";
 
+    // For messageAttachment, also check if it's a non-video/audio file type that's allowed
+    const isAllowedNonVideoAudioType = uploadType === "messageAttachment" && 
+      ALLOWED_FILE_TYPES[file.type as keyof typeof ALLOWED_FILE_TYPES];
+
     // Allow if:
     // 1. MIME type starts with "video/" (any video format)
-    // 2. MIME type is unknown BUT extension is valid (mobile devices)
-    // Reject if:
-    // 1. MIME type is not video AND extension is not video
-    // 2. MIME type is unknown AND extension is not video
+    // 2. For messageAttachment: MIME type starts with "audio/" (any audio format)
+    // 3. MIME type is unknown BUT extension is valid (mobile devices)
+    // 4. For messageAttachment: it's an allowed non-video/audio file type (images, PDF, etc.)
     if (isVideoMimeType) {
       // Valid video MIME type - allow
+    } else if (isAudioMimeType) {
+      // Valid audio MIME type for messageAttachment - allow
     } else if (isUnknownMimeType && isVideoExtension) {
       // Unknown MIME type but valid extension - allow with warning (common on mobile)
       warnings.push(
         "File MIME type is unknown, but extension suggests it's a video file"
       );
+    } else if (isAllowedNonVideoAudioType) {
+      // For messageAttachment, allow other valid file types (images, PDF, documents, etc.)
+      // No error needed - this is allowed
+    } else if (uploadType === "messageAttachment") {
+      // For messageAttachment, reject if it's not video, audio, or an allowed file type
+      errors.push(
+        `File type '${file.type || "unknown"}' is not allowed for message attachments. Please upload an image, video, audio, PDF, or document file.`
+      );
+      riskLevel = "high";
     } else if (!isVideoExtension) {
-      // Invalid extension
+      // Invalid extension for video-only upload types
       errors.push(
         `File extension '${
           fileExtension || "none"
