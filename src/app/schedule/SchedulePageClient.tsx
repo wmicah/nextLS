@@ -18,6 +18,7 @@ import {
   XCircle,
   Repeat,
   RefreshCw,
+  Search,
 } from "lucide-react";
 import {
   format,
@@ -66,6 +67,15 @@ function SchedulePageClient() {
   const [endDate, setEndDate] = useState<string>("");
   const [previewDates, setPreviewDates] = useState<Date[]>([]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
+  const [showAddTimeForm, setShowAddTimeForm] = useState(false);
+  const [addTimeForm, setAddTimeForm] = useState({
+    clientId: "",
+    time: "",
+    duration: 60,
+  });
+  const [addTimeClientSearch, setAddTimeClientSearch] = useState("");
+  const [showAddTimeClientDropdown, setShowAddTimeClientDropdown] = useState(false);
+  const addTimeClientDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch coach's profile for working hours
   const { data: coachProfile } = trpc.user.getProfile.useQuery();
@@ -177,6 +187,21 @@ function SchedulePageClient() {
     });
   }, [clients, clientSearch]);
 
+  // Filtered clients for Add Time form - show all if search is empty, otherwise filter
+  const filteredAddTimeClients = useMemo(() => {
+    if (!addTimeClientSearch.trim()) {
+      // Show all clients if search is empty
+      return clients;
+    }
+    const searchLower = addTimeClientSearch.toLowerCase();
+    return clients.filter((client: any) => {
+      return (
+        client.name?.toLowerCase().includes(searchLower) ||
+        client.email?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [clients, addTimeClientSearch]);
+
   // Close dropdown when clicking outside
   const dropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -187,16 +212,22 @@ function SchedulePageClient() {
       ) {
         setShowClientDropdown(false);
       }
+      if (
+        addTimeClientDropdownRef.current &&
+        !addTimeClientDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowAddTimeClientDropdown(false);
+      }
     };
 
-    if (showClientDropdown) {
+    if (showClientDropdown || showAddTimeClientDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showClientDropdown]);
+  }, [showClientDropdown, showAddTimeClientDropdown]);
 
   // Fetch pending schedule requests
   const {
@@ -240,6 +271,69 @@ function SchedulePageClient() {
         alert(`Error scheduling recurring lessons: ${error.message}`);
       },
     });
+
+  const scheduleLessonWithFreedomMutation =
+    trpc.scheduling.scheduleLessonWithFreedom.useMutation({
+      onSuccess: () => {
+        utils.scheduling.getCoachSchedule.invalidate();
+        utils.scheduling.getCoachUpcomingLessons.invalidate();
+        setAddTimeForm({ clientId: "", time: "", duration: 60 });
+        setAddTimeClientSearch("");
+        setShowAddTimeForm(false);
+      },
+      onError: error => {
+        alert(`Error scheduling lesson: ${error.message}`);
+      },
+    });
+
+  const handleAddTimeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addTimeForm.clientId || !addTimeForm.time) {
+      alert("Please select a client and time");
+      return;
+    }
+    if (!selectedDate) {
+      alert("No date selected");
+      return;
+    }
+
+    // Parse the time input (format: "HH:mm")
+    const [hours, minutes] = addTimeForm.time.split(":").map(Number);
+
+    // Create a Date object in local time by combining the selected date with the time
+    const localDateTime = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      hours,
+      minutes,
+      0
+    );
+
+    // Format as local datetime string (consistent with other scheduling components)
+    // This format will be interpreted as local time by the backend's safeLocalToUTC function
+    const fullDateStr = `${localDateTime.getFullYear()}-${(
+      localDateTime.getMonth() + 1
+    )
+      .toString()
+      .padStart(2, "0")}-${localDateTime
+      .getDate()
+      .toString()
+      .padStart(2, "0")}T${localDateTime
+      .getHours()
+      .toString()
+      .padStart(2, "0")}:${localDateTime
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}:00`;
+
+    scheduleLessonWithFreedomMutation.mutate({
+      clientId: addTimeForm.clientId,
+      lessonDate: fullDateStr,
+      duration: addTimeForm.duration,
+      timeZone: getUserTimezone(),
+    });
+  };
 
   const deleteLessonMutation = trpc.scheduling.deleteLesson.useMutation({
     onSuccess: () => {
@@ -411,6 +505,12 @@ function SchedulePageClient() {
       date: format(date, "yyyy-MM-dd"),
     });
     setShowDayOverviewModal(true);
+  };
+
+  const handleAddTimeClick = (date: Date, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the day click
+    setSelectedDate(date);
+    setShowAddTimeModal(true);
   };
 
   const handleScheduleLesson = () => {
@@ -636,11 +736,8 @@ function SchedulePageClient() {
     ];
     const slots = [];
 
-    // Check if the date is on a working day
-    const dayName = format(date, "EEEE");
-    if (!workingDays.includes(dayName)) {
-      return []; // No available slots on non-working days
-    }
+    // Coaches can schedule on any day - working days are just for display, not restrictions
+    // We'll still generate time slots based on their working hours even on non-working days
 
     // Parse start and end times
     const startMatch = startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -1250,7 +1347,7 @@ function SchedulePageClient() {
                         : !isPast && isCurrentMonth && isWorkingDay
                         ? "Click to schedule lesson"
                         : !isWorkingDay && isCurrentMonth && !isPast
-                        ? "Non-working day"
+                        ? "Non-working day - Click to schedule anyway"
                         : isPast
                         ? "Past date"
                         : ""
@@ -1783,6 +1880,10 @@ function SchedulePageClient() {
                         setShowDayOverviewModal(false);
                         setSelectedDate(null);
                         setScheduleForm({ clientId: "", time: "", date: "" });
+                        setShowAddTimeForm(false);
+                        setAddTimeForm({ clientId: "", time: "", duration: 60 });
+                        setAddTimeClientSearch("");
+                        setShowAddTimeClientDropdown(false);
                       }}
                       className="transition-colors"
                       style={{ color: COLORS.TEXT_SECONDARY }}
@@ -2044,9 +2145,33 @@ function SchedulePageClient() {
 
                 {/* Available Time Slots */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
-                    Available Time Slots
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                      Available Time Slots
+                    </h3>
+                    <button
+                      onClick={() => setShowAddTimeForm(!showAddTimeForm)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                      style={{
+                        backgroundColor: showAddTimeForm ? COLORS.GOLDEN_DARK : COLORS.GOLDEN_ACCENT,
+                        color: COLORS.BACKGROUND_DARK,
+                      }}
+                      onMouseEnter={e => {
+                        if (!showAddTimeForm) {
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!showAddTimeForm) {
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                        }
+                      }}
+                      title="Add a time slot outside working hours"
+                    >
+                      <Clock className="h-3 w-3" />
+                      {showAddTimeForm ? "Hide" : "Add Time"}
+                    </button>
+                  </div>
                   {(() => {
                     // Check if this is a working day
                     const dayName = format(selectedDate, "EEEE");
@@ -2670,6 +2795,228 @@ function SchedulePageClient() {
                     );
                   })()}
                 </div>
+
+                {/* Add Time Form */}
+                {showAddTimeForm && (
+                  <div className="mb-6 mt-6 pt-6 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+                    <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
+                      Add Custom Time
+                    </h3>
+                    <form onSubmit={handleAddTimeSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Client Selection */}
+                        <div>
+                          <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
+                            Client *
+                          </label>
+                          <div className="relative" ref={addTimeClientDropdownRef}>
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
+                              <input
+                                type="text"
+                                placeholder={addTimeForm.clientId ? "" : "Search for a client..."}
+                                value={addTimeForm.clientId 
+                                  ? (clients.find(c => c.id === addTimeForm.clientId)?.name || 
+                                     clients.find(c => c.id === addTimeForm.clientId)?.email || 
+                                     addTimeClientSearch)
+                                  : addTimeClientSearch}
+                                onChange={e => {
+                                  setAddTimeClientSearch(e.target.value);
+                                  setShowAddTimeClientDropdown(true);
+                                  // Clear client selection if user is typing
+                                  if (addTimeForm.clientId) {
+                                    setAddTimeForm(prev => ({ ...prev, clientId: "" }));
+                                  }
+                                }}
+                                onFocus={() => {
+                                  setShowAddTimeClientDropdown(true);
+                                  // Show search text when focusing if client is selected
+                                  if (addTimeForm.clientId) {
+                                    const selectedClient = clients.find(c => c.id === addTimeForm.clientId);
+                                    setAddTimeClientSearch(selectedClient?.name || selectedClient?.email || "");
+                                  }
+                                }}
+                                className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_PRIMARY,
+                                  border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                                }}
+                                required={!addTimeForm.clientId}
+                              />
+                            </div>
+
+                            {/* Dropdown */}
+                            {showAddTimeClientDropdown && (
+                              filteredAddTimeClients.length > 0 ? (
+                              <div
+                                className="absolute z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg"
+                                style={{
+                                  backgroundColor: "#2A2F2F",
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  minWidth: "100%",
+                                }}
+                              >
+                                {filteredAddTimeClients.map((client: any) => (
+                                  <button
+                                    key={client.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setAddTimeForm(prev => ({ ...prev, clientId: client.id }));
+                                      setAddTimeClientSearch(client.name || client.email || "");
+                                      setShowAddTimeClientDropdown(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left transition-colors flex items-center gap-3"
+                                    style={{
+                                      color: COLORS.TEXT_PRIMARY,
+                                      backgroundColor: "#2A2F2F",
+                                    }}
+                                    onMouseEnter={e => {
+                                      e.currentTarget.style.backgroundColor = "#353A3A";
+                                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                    }}
+                                    onMouseLeave={e => {
+                                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                    }}
+                                  >
+                                    <div className="flex-1">
+                                      <div className="font-medium text-sm">
+                                        {client.name || "Unnamed"}
+                                      </div>
+                                      {client.email && (
+                                        <div className="text-xs opacity-70">
+                                          {client.email}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                              ) : (
+                                <div
+                                  className="absolute z-50 mt-1 p-3 rounded-lg border shadow-lg"
+                                  style={{
+                                    backgroundColor: COLORS.BACKGROUND_CARD,
+                                    borderColor: COLORS.BORDER_SUBTLE,
+                                    minWidth: "100%",
+                                  }}
+                                >
+                                  <p className="text-sm text-center" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                    No clients found
+                                  </p>
+                                </div>
+                              )
+                            )}
+
+                          </div>
+                        </div>
+
+                        {/* Time Selection */}
+                        <div>
+                          <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
+                            Time *
+                          </label>
+                          <input
+                            type="time"
+                            value={addTimeForm.time}
+                            onChange={e =>
+                              setAddTimeForm(prev => ({ ...prev, time: e.target.value }))
+                            }
+                            className="w-full p-2 rounded-lg border text-sm"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_DARK,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
+                            }}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Duration */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
+                          Duration (minutes) *
+                        </label>
+                        <select
+                          value={addTimeForm.duration}
+                          onChange={e =>
+                            setAddTimeForm(prev => ({
+                              ...prev,
+                              duration: parseInt(e.target.value),
+                            }))
+                          }
+                          className="w-full p-2 rounded-lg border text-sm"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            color: COLORS.TEXT_PRIMARY,
+                          }}
+                          required
+                        >
+                          <option value={15}>15 minutes</option>
+                          <option value={30}>30 minutes</option>
+                          <option value={45}>45 minutes</option>
+                          <option value={60}>1 hour</option>
+                          <option value={90}>1.5 hours</option>
+                          <option value={120}>2 hours</option>
+                          <option value={180}>3 hours</option>
+                          <option value={240}>4 hours</option>
+                        </select>
+                      </div>
+
+                      {/* Info Box */}
+                      <div
+                        className="p-3 rounded-lg"
+                        style={{ backgroundColor: getGoldenAccent(0.1), borderColor: COLORS.GOLDEN_BORDER }}
+                      >
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 mt-0.5" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                          <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                            This lesson can be scheduled at any time, even outside your normal working hours.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="submit"
+                          disabled={scheduleLessonWithFreedomMutation.isPending}
+                          className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          style={{
+                            backgroundColor: COLORS.GREEN_PRIMARY,
+                            color: COLORS.BACKGROUND_DARK,
+                          }}
+                        >
+                          <Save className="h-4 w-4" />
+                          {scheduleLessonWithFreedomMutation.isPending
+                            ? "Scheduling..."
+                            : "Schedule Lesson"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddTimeForm(false);
+                            setAddTimeForm({ clientId: "", time: "", duration: 60 });
+                            setAddTimeClientSearch("");
+                            setShowAddTimeClientDropdown(false);
+                          }}
+                          className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
+                          style={{
+                            backgroundColor: "transparent",
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            color: COLORS.TEXT_PRIMARY,
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
 
                 {/* Recurring Lesson Options */}
                 <div
