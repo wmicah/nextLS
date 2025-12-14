@@ -139,16 +139,8 @@ export const schedulingRouter = router({
         });
       }
 
-      // Check if the requested date is on a working day (unless override is enabled)
-      if (!input.overrideWorkingDays && coach.workingDays) {
-        const dayName = format(localLessonDate, "EEEE");
-        if (!coach.workingDays.includes(dayName)) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `You are not available on ${dayName}s`,
-          });
-        }
-      }
+      // Coaches can schedule on any day - no working day restrictions
+      // (Working days are used for displaying availability to clients, not restricting coaches)
 
       // Validate lesson scheduling for DST issues
       const dstValidation = validateLessonScheduling(utcLessonDate, timeZone);
@@ -527,21 +519,12 @@ export const schedulingRouter = router({
       let currentDate = new Date(utcStartDate);
 
       while (currentDate <= endDate) {
-        // Check if the date is on a working day (unless override is enabled)
-        if (!input.overrideWorkingDays && coach.workingDays) {
-          const dayName = format(currentDate, "EEEE");
-          if (coach.workingDays.includes(dayName)) {
-            // Create a new date with the same time as the original start date
-            const lessonDate = new Date(currentDate);
-            lessonDate.setHours(startTime, startMinutes, startSeconds, 0);
-            lessonDates.push(lessonDate);
-          }
-        } else {
-          // Create a new date with the same time as the original start date
-          const lessonDate = new Date(currentDate);
-          lessonDate.setHours(startTime, startMinutes, startSeconds, 0);
-          lessonDates.push(lessonDate);
-        }
+        // Coaches can schedule on any day - no working day restrictions
+        // (Working days are used for displaying availability to clients, not restricting coaches)
+        // Create a new date with the same time as the original start date
+        const lessonDate = new Date(currentDate);
+        lessonDate.setHours(startTime, startMinutes, startSeconds, 0);
+        lessonDates.push(lessonDate);
 
         // Calculate next lesson date based on recurrence pattern
         switch (input.recurrencePattern) {
@@ -1372,42 +1355,9 @@ export const schedulingRouter = router({
         });
       }
 
-      // Check for conflicts with blocked times
-      const blockedTimes = await db.blockedTime.findMany({
-        where: {
-          coachId: ensureUserId(user.id),
-          startTime: {
-            lte: new Date(utcLessonDate.getTime() + 24 * 60 * 60 * 1000), // Check 24 hours after
-          },
-          endTime: {
-            gte: new Date(utcLessonDate.getTime() - 24 * 60 * 60 * 1000), // Check 24 hours before
-          },
-        },
-        select: {
-          id: true,
-          title: true,
-          startTime: true,
-          endTime: true,
-        },
-      });
-
-      // Check for time overlaps with blocked times
-      const conflictingBlockedTime = blockedTimes.find(blockedTime => {
-        const blockedStart = blockedTime.startTime;
-        const blockedEnd = blockedTime.endTime;
-
-        // Check if lesson overlaps with blocked time
-        return (
-          utcLessonDate < blockedEnd && freedomLessonEndTime > blockedStart
-        );
-      });
-
-      if (conflictingBlockedTime) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: `Cannot schedule lesson during blocked time: ${conflictingBlockedTime.title}`,
-        });
-      }
+      // Check for conflicts with blocked times - DISABLED FOR COACHES
+      // Coaches using scheduleLessonWithFreedom can schedule at any time, even during blocked times
+      // This gives coaches complete freedom over their schedule
 
       // Determine lesson title
       const isSchedulingForAnotherCoach =
