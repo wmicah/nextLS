@@ -3890,7 +3890,7 @@ function ClientDetailPage({
             />
           )}
 
-          {showAssignVideoModal && (
+          {showAssignVideoModal && client && (
             <AssignVideoModal
               isOpen={showAssignVideoModal}
               onClose={() => {
@@ -3898,7 +3898,7 @@ function ClientDetailPage({
                 refreshAllData();
               }}
               clientId={clientId}
-              clientName={client.name}
+              clientName={client.name || "Client"}
               startDate={
                 selectedDate
                   ? selectedDate.toISOString().split("T")[0]
