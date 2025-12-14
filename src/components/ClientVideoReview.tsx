@@ -403,11 +403,12 @@ export default function ClientVideoReview({ videoId }: ClientVideoReviewProps) {
           {/* Main Video Section */}
           <div className="space-y-6">
             {/* Video Player */}
-            <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
+            <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl" style={{ maxHeight: "calc(100vh - 200px)" }}>
               <video
                 ref={videoRef}
                 src={submission.videoUrl}
                 className="w-full h-auto"
+                style={{ maxHeight: "calc(100vh - 200px)", objectFit: "contain" }}
                 controls={false}
                 preload="metadata"
                 playsInline

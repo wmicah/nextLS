@@ -511,7 +511,7 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
         {/* Main Video Section */}
         <div className="space-y-6">
           {/* Video Player */}
-          <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl">
+          <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl" style={{ maxHeight: "calc(100vh - 200px)" }}>
             {videoError ? (
               <div className="flex items-center justify-center h-96" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
                 <div className="text-center p-8">
@@ -554,6 +554,7 @@ export default function VideoReview({ videoId }: VideoReviewProps) {
                 ref={videoRef}
                 src={currentVideo.url}
                 className="w-full h-auto"
+                style={{ maxHeight: "calc(100vh - 200px)", objectFit: "contain" }}
                 controls={false}
                 preload="metadata"
                 playsInline
