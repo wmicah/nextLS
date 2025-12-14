@@ -160,7 +160,7 @@ export default function MobileClientDetailPage({
   );
 
   // Fetch client's assigned programs
-  const { data: assignedPrograms = [] } =
+  const { data: assignedPrograms = [], refetch: refetchAssignedPrograms } =
     trpc.clients.getAssignedPrograms.useQuery({
       clientId,
     });
@@ -178,7 +178,7 @@ export default function MobileClientDetailPage({
     });
 
   // Fetch temporary program day replacements for this client
-  const { data: temporaryReplacements = [] } =
+  const { data: temporaryReplacements = [], refetch: refetchTemporaryReplacements } =
     trpc.programs.getTemporaryReplacements.useQuery({
       clientId,
     });
@@ -292,8 +292,28 @@ export default function MobileClientDetailPage({
   // Delete program day mutation
   const deleteProgramDayMutation = trpc.programs.deleteProgramDay.useMutation({
     onSuccess: async () => {
-      await refreshClientData();
-      setShowDayOverviewModal(false);
+      // Invalidate all relevant queries
+      await Promise.all([
+        utils.clients.getById.invalidate({ id: clientId }),
+        utils.clients.getAssignedPrograms.invalidate({ clientId }),
+        utils.programs.getTemporaryReplacements.invalidate({ clientId }),
+        utils.clients.getComplianceData.invalidate({
+          clientId,
+          period: compliancePeriod,
+        }),
+      ]);
+      
+      // Force immediate refetch of the queries that display program days
+      // This ensures the UI updates immediately with the new replacement record
+      await Promise.all([
+        refetchAssignedPrograms(),
+        refetchTemporaryReplacements(),
+      ]);
+      
+      // Small delay to ensure UI updates before closing modal
+      setTimeout(() => {
+        setShowDayOverviewModal(false);
+      }, 100);
     },
     onError: error => {
       console.error("Failed to delete program day:", error);
@@ -421,6 +441,18 @@ export default function MobileClientDetailPage({
 
         // Only show if the date is within the program duration
         if (daysSinceStart >= 0 && daysSinceStart < programDurationInDays) {
+          // Check if this day has been replaced or deleted
+          const dayReplacement = assignment.replacements?.find((replacement: any) => {
+            const replacementDate = new Date(replacement.replacedDate);
+            const replacementDateStr = replacementDate.toISOString().split("T")[0];
+            return replacementDateStr === targetDateStr;
+          });
+
+          // Skip this day if it has been replaced or deleted
+          if (dayReplacement) {
+            return; // Don't show this day - it's been replaced or deleted
+          }
+
           const weekNumber = Math.floor(daysSinceStart / 7) + 1;
           const dayNumber = (daysSinceStart % 7) + 1;
 
@@ -434,39 +466,29 @@ export default function MobileClientDetailPage({
             );
 
             if (programDay) {
-              // Check if it's a rest day
+              // Skip rest days - don't show them on the coach side
               if (programDay.isRestDay || programDay.drills?.length === 0) {
-                // Show rest day indicator
-                programsForDate.push({
-                  id: `${assignment.id}-${weekNumber}-${dayNumber}-rest`,
-                  title: `${program.title} - Rest Day`,
-                  description: "Recovery day",
-                  type: "rest",
-                  assignment,
-                  program,
-                  weekNumber,
-                  dayNumber,
-                  isRestDay: true,
-                });
-              } else {
-                // Show workout day with program title and day info
-                programsForDate.push({
-                  id: `${assignment.id}-${weekNumber}-${dayNumber}`,
-                  title: `${program.title} - ${
-                    programDay.title
-                      ? programDay.title.substring(0, 8)
-                      : "Workout"
-                  }`,
-                  description: `${programDay.drills.length} drills`,
-                  type: "program",
-                  assignment,
-                  program,
-                  weekNumber,
-                  dayNumber,
-                  drillCount: programDay.drills.length,
-                  isRestDay: false,
-                });
+                // Don't show rest days - just skip them
+                return;
               }
+              
+              // Show workout day with program title and day info
+              programsForDate.push({
+                id: `${assignment.id}-${weekNumber}-${dayNumber}`,
+                title: `${program.title} - ${
+                  programDay.title
+                    ? programDay.title.substring(0, 8)
+                    : "Workout"
+                }`,
+                description: `${programDay.drills.length} drills`,
+                type: "program",
+                assignment,
+                program,
+                weekNumber,
+                dayNumber,
+                drillCount: programDay.drills.length,
+                isRestDay: false,
+              });
             }
           }
         }
@@ -1006,11 +1028,6 @@ export default function MobileClientDetailPage({
                         {hasPrograms && (
                           <>
                             {programsForDay.some(
-                              (p: any) => p.type === "rest"
-                            ) && (
-                              <div className="w-2 h-2 rounded-full bg-orange-400" />
-                            )}
-                            {programsForDay.some(
                               (p: any) => p.type === "program"
                             ) && (
                               <div className="w-2 h-2 rounded-full bg-blue-400" />
@@ -1067,11 +1084,6 @@ export default function MobileClientDetailPage({
                           {hasPrograms && (
                             <>
                               {programsForDay.some(
-                                (p: any) => p.type === "rest"
-                              ) && (
-                                <div className="w-3 h-3 rounded-full bg-orange-400" />
-                              )}
-                              {programsForDay.some(
                                 (p: any) => p.type === "program"
                               ) && (
                                 <div className="w-3 h-3 rounded-full bg-blue-400" />
@@ -1111,19 +1123,14 @@ export default function MobileClientDetailPage({
                       {hasPrograms && (
                         <div className="space-y-1 mt-2">
                           {programsForDay
+                            .filter((p: any) => p.type !== "rest") // Filter out rest days
                             .slice(0, 2)
                             .map((program: any, index: number) => (
                               <div
                                 key={`week-program-${program.id || index}`}
-                                className={`text-xs px-2 py-1 rounded ${
-                                  program.type === "rest"
-                                    ? "bg-orange-500/20 text-orange-300"
-                                    : "bg-blue-500/20 text-blue-300"
-                                }`}
+                                className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300"
                               >
-                                {program.type === "rest"
-                                  ? "Rest Day"
-                                  : program.title}
+                                {program.title}
                               </div>
                             ))}
                         </div>
@@ -1151,10 +1158,6 @@ export default function MobileClientDetailPage({
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-cyan-400" />
               <span className="text-xs text-gray-300">Temporary</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-orange-400" />
-              <span className="text-xs text-gray-300">Rest Days</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-600" />
@@ -1451,7 +1454,8 @@ export default function MobileClientDetailPage({
                                     }}
                                   >
                                     <DropdownMenuItem
-                                      onClick={() => {
+                                      onSelect={(e) => {
+                                        e.preventDefault();
                                         // Replace with lesson functionality
                                         const replacementData = {
                                           assignmentId:
@@ -1487,7 +1491,8 @@ export default function MobileClientDetailPage({
                                       style={{ backgroundColor: "#606364" }}
                                     />
                                     <DropdownMenuItem
-                                      onClick={() => {
+                                      onSelect={(e) => {
+                                        e.preventDefault();
                                         // Handle temporary program days
                                         if (
                                           program.isTemporary &&
@@ -1526,7 +1531,8 @@ export default function MobileClientDetailPage({
                                       Remove This Day
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      onClick={() => {
+                                      onSelect={(e) => {
+                                        e.preventDefault();
                                         // Handle temporary program days
                                         if (
                                           program.isTemporary &&
