@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
-import { format } from "date-fns";
+import { format, isSameDay, isToday, isYesterday, differenceInDays } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import RichMessageInput from "./RichMessageInput";
@@ -35,6 +35,7 @@ interface MobileMessagesPageProps {
 }
 
 export default function MobileMessagesPage({}: MobileMessagesPageProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
@@ -97,6 +98,44 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   // Get current user info
   const { data: currentUser } = trpc.user.getProfile.useQuery();
 
+  // Format message timestamp with date
+  const formatMessageTime = (date: Date, showDate: boolean = false) => {
+    const messageDate = new Date(date);
+    const now = new Date();
+    
+    if (showDate) {
+      if (isToday(messageDate)) {
+        return format(messageDate, "h:mm a 'Today'");
+      } else if (isYesterday(messageDate)) {
+        return format(messageDate, "h:mm a 'Yesterday'");
+      } else {
+        const daysDiff = differenceInDays(now, messageDate);
+        if (daysDiff < 7) {
+          return format(messageDate, "h:mm a EEEE");
+        } else {
+          return format(messageDate, "h:mm a MMM d, yyyy");
+        }
+      }
+    }
+    return format(messageDate, "h:mm a");
+  };
+
+  // Format last message time for conversation list
+  const formatLastMessageTime = (date: string) => {
+    const messageDate = new Date(date);
+    const now = new Date();
+    const diffInHours =
+      (now.getTime() - messageDate.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 24) {
+      return format(messageDate, "h:mm a");
+    } else if (diffInHours < 168) {
+      return format(messageDate, "EEE");
+    } else {
+      return format(messageDate, "MMM d");
+    }
+  };
+
   // Pagination state
   const [conversationsOffset, setConversationsOffset] = useState(0);
   const CONVERSATIONS_PER_PAGE = 20;
@@ -137,18 +176,49 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   const conversations = allConversations;
   const hasMore = conversationsData?.hasMore || false;
 
-  // Handle URL parameters for conversation and message
+  // Mutation to get or create conversation with a client
+  const getOrCreateConversationMutation =
+    trpc.messaging.createConversationWithClient.useMutation({
+      onSuccess: conversation => {
+        // Navigate to the conversation
+        setSelectedConversation(conversation.id);
+        // Update URL to show conversation ID instead of clientId
+        router.replace(`/messages?conversation=${conversation.id}`);
+      },
+      onError: error => {
+        console.error("Failed to get or create conversation:", error);
+        // Show user-friendly error message
+        const errorMessage = error.message || "Failed to open conversation. Please try again.";
+        // Use window.alert as fallback if toast system not available
+        alert(errorMessage);
+        // Remove clientId from URL to prevent retry loop
+        router.replace("/messages");
+      },
+    });
+
+  // Handle URL parameters for conversation, message, and clientId
   useEffect(() => {
     const conversationId = searchParams.get("conversation");
     const messageId = searchParams.get("message");
+    const clientId = searchParams.get("clientId");
 
     if (conversationId) {
       setSelectedConversation(conversationId);
+    } else if (clientId && !getOrCreateConversationMutation.isPending) {
+      // Validate clientId before calling mutation
+      if (clientId && clientId.trim() !== "") {
+        // If we have a clientId, get or create the conversation
+        getOrCreateConversationMutation.mutate({ clientId: clientId.trim() });
+      } else {
+        // Invalid clientId, remove from URL
+        router.replace("/messages");
+      }
     } else if (messageId) {
       // If we have a messageId but no conversationId, we need to find the conversation
       // For now, we'll just set it to null and let the user select
       setSelectedConversation(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Get unread counts with optimized caching
@@ -660,10 +730,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                                   className="text-xs flex-shrink-0 ml-2"
                                   style={{ color: COLORS.TEXT_MUTED }}
                                 >
-                                  {format(
-                                    new Date(lastMessage.createdAt),
-                                    "HH:mm"
-                                  )}
+                                  {formatLastMessageTime(lastMessage.createdAt)}
                                 </span>
                               )}
                             </div>
@@ -861,7 +928,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                   "calc(6rem + 5.5rem + env(safe-area-inset-bottom))", // Space for input (6rem) + bottom nav (5.5rem) + safe area
               }}
             >
-              {messages.map((message: any) => {
+              {messages.map((message: any, index: number) => {
                 const isCurrentUser = message.sender.id === currentUser?.id;
                 // Check if this is a workout note message
                 const isWorkoutNote =
@@ -869,8 +936,48 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                   message.content?.includes("📝 **Daily Workout Note**");
                 const isFromClient = !isCurrentUser;
 
+                // Check if we need to show a date separator
+                const currentMessageDate = new Date(message.createdAt);
+                const previousMessage = index > 0 ? messages[index - 1] : null;
+                const previousMessageDate = previousMessage
+                  ? new Date(previousMessage.createdAt)
+                  : null;
+                const showDateSeparator =
+                  !previousMessageDate ||
+                  !isSameDay(currentMessageDate, previousMessageDate);
+                
+                // Check if all messages are on the same day
+                const allMessagesSameDay = messages.length > 0 && 
+                  messages.every((msg: any) => 
+                    isSameDay(new Date(msg.createdAt), currentMessageDate)
+                  );
+                // Show date on first message timestamp if all messages are same day
+                const showDateOnFirstMessage = allMessagesSameDay && index === 0;
+                // Show date separator at top if all messages are same day and this is first message
+                const showTopDateSeparator = allMessagesSameDay && index === 0;
+
                 return (
                   <div key={message.id} className="space-y-2">
+                    {/* Date Separator - show at top if all messages same day, or between different days */}
+                    {(showTopDateSeparator || (showDateSeparator && !allMessagesSameDay)) && (
+                      <div className="flex items-center justify-center py-2">
+                        <div
+                          className="px-3 py-1 rounded-full text-xs font-medium"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                            color: COLORS.TEXT_SECONDARY,
+                            border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                          }}
+                        >
+                          {isToday(currentMessageDate)
+                            ? "Today"
+                            : isYesterday(currentMessageDate)
+                            ? "Yesterday"
+                            : format(currentMessageDate, "EEEE, MMMM d, yyyy")}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Workout Note Header for client messages */}
                     {isWorkoutNote && isFromClient && (
                       <div className="w-full">
@@ -1003,7 +1110,10 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                                 : COLORS.TEXT_MUTED,
                             }}
                           >
-                            {format(new Date(message.createdAt), "h:mm a")}
+                            {formatMessageTime(
+                              new Date(message.createdAt),
+                              showDateOnFirstMessage
+                            )}
                           </span>
                           {isCurrentUser && (
                             <CheckCheck
