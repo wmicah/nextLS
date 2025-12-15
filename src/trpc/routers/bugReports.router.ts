@@ -468,4 +468,173 @@ export const bugReportsRouter = router({
 
       return bugReport;
     }),
+
+  // Send email to bug report submitter (admin only)
+  sendEmailToReporter: publicProcedure
+    .input(
+      z.object({
+        bugReportId: z.string(),
+        subject: z.string().min(1, "Subject is required").max(200),
+        message: z.string().min(1, "Message is required").max(5000),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      // Check if user is admin
+      const dbUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: { isAdmin: true },
+      });
+
+      if (!dbUser?.isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can send emails to bug report submitters",
+        });
+      }
+
+      // Get bug report with user info
+      const bugReport = await db.bugReport.findUnique({
+        where: { id: input.bugReportId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      if (!bugReport) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Bug report not found",
+        });
+      }
+
+      if (!bugReport.user?.email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bug report submitter does not have an email address",
+        });
+      }
+
+      // Format the email with bug report context
+      const emailService = CompleteEmailService.getInstance();
+      
+      // Escape HTML to prevent XSS
+      const escapeHtml = (text: string) => {
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      };
+
+      const safeSubject = escapeHtml(input.subject);
+      const safeMessage = escapeHtml(input.message);
+      const safeBugTitle = escapeHtml(bugReport.title);
+      const safeBugDescription = escapeHtml(bugReport.description);
+      const safePage = escapeHtml(bugReport.page);
+      const safeUserName = escapeHtml(bugReport.user.name || bugReport.user.email || "User");
+
+      // Convert newlines to <br> for HTML
+      const formattedMessage = safeMessage.replace(/\n/g, "<br>");
+
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+          <div style="background: linear-gradient(135deg, #4A5A70 0%, #2D3748 100%); padding: 40px 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+              Response to Your Bug Report
+            </h1>
+            <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">
+              NextLevel Coaching Platform
+            </p>
+          </div>
+          
+          <div style="padding: 40px 30px;">
+            <p style="color: #2D3748; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Hello ${safeUserName},
+            </p>
+            
+            <p style="color: #4A5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+              ${formattedMessage}
+            </p>
+            
+            <div style="background: #F7FAFC; padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #4A5A70;">
+              <h3 style="color: #2D3748; margin: 0 0 15px 0; font-size: 18px;">
+                Reference: Your Bug Report
+              </h3>
+              <div style="margin-bottom: 10px;">
+                <strong style="color: #2D3748;">Title:</strong>
+                <span style="color: #4A5568; margin-left: 10px;">${safeBugTitle}</span>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <strong style="color: #2D3748;">Page:</strong>
+                <span style="color: #4A5568; margin-left: 10px;">${safePage}</span>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <strong style="color: #2D3748;">Description:</strong>
+                <p style="color: #4A5568; margin: 5px 0 0 0; white-space: pre-wrap;">${safeBugDescription}</p>
+              </div>
+              <div style="margin-top: 15px;">
+                <strong style="color: #2D3748;">Status:</strong>
+                <span style="background: ${
+                  bugReport.status === "RESOLVED" ? "#22c55e" :
+                  bugReport.status === "IN_PROGRESS" ? "#3b82f6" :
+                  bugReport.status === "CLOSED" ? "#6b7280" :
+                  "#eab308"
+                }; color: white; padding: 4px 12px; border-radius: 4px; margin-left: 10px; font-size: 12px; font-weight: bold;">
+                  ${bugReport.status}
+                </span>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${
+                process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+              }" 
+                 style="background: #4A5A70; color: #ffffff; padding: 15px 30px; text-decoration: none; 
+                        border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                Visit Platform
+              </a>
+            </div>
+            
+            <p style="color: #718096; font-size: 14px; margin: 30px 0 0 0; border-top: 1px solid #E2E8F0; padding-top: 20px;">
+              If you have any questions or need further assistance, please don't hesitate to reach out.
+            </p>
+          </div>
+          
+          <div style="background: #F7FAFC; padding: 20px; text-align: center; border-top: 1px solid #E2E8F0;">
+            <p style="color: #718096; font-size: 12px; margin: 0;">
+              © 2024 NextLevel Coaching. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `;
+
+      const success = await emailService.sendCustomEmail(
+        bugReport.user.email,
+        input.subject,
+        emailHtml
+      );
+
+      if (!success) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to send email",
+        });
+      }
+
+      return { success: true };
+    }),
 });

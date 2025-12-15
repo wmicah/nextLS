@@ -2,22 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
-import {
-  Search,
-  Play,
-  BookOpen,
-  Video,
-  FileText,
-  Plus,
-  Filter,
-  Grid3X3,
-  List,
-  Sparkles,
-  Users,
-  Target,
-  Eye,
-  X,
-} from "lucide-react";
+// Icons removed - using text-only design
 import YouTubePlayer from "./YouTubePlayer";
 import YouTubeImportModal from "./YouTubeImportModal";
 import UploadResourceModal from "./UploadResourceModal";
@@ -25,6 +10,7 @@ import VideoViewerModal from "./VideoViewerModal";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import CategoryDropdown from "./ui/CategoryDropdown";
+import { COLORS } from "@/lib/colors";
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
@@ -175,10 +161,10 @@ export default function MobileLibraryPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
         <div
           className="animate-spin rounded-full h-8 w-8 border-b-2"
-          style={{ borderColor: "#4A5A70" }}
+          style={{ borderColor: COLORS.GOLDEN_ACCENT }}
         />
       </div>
     );
@@ -186,40 +172,36 @@ export default function MobileLibraryPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-red-400">Error loading library: {error.message}</p>
+      <div className="flex items-center justify-center h-64" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+        <p style={{ color: COLORS.RED_ALERT }}>Error loading library: {error.message}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
       {/* Mobile Header */}
       <div 
-        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
-        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+        className="sticky top-0 z-50 border-b px-4 pb-3"
+        style={{ 
+          paddingTop: `calc(0.75rem + env(safe-area-inset-top))`,
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE
+        }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
-            >
-              <BookOpen className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Training Library</h1>
-              <p className="text-xs text-gray-400">
-                {activeTab === "master" ? "Shared resources" : "Your resources"}
-              </p>
-            </div>
+          <div>
+            <h1 className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Training Library</h1>
+            <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+              {activeTab === "master" ? "Shared resources" : "Your resources"}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <span
               className="px-3 py-1 rounded-full text-sm font-medium"
               style={{
-                backgroundColor: "#4A5A70",
-                color: "#C3BCC2",
+                backgroundColor: COLORS.GOLDEN_DARK,
+                color: COLORS.TEXT_PRIMARY,
               }}
             >
               {libraryItems.length}
@@ -232,7 +214,13 @@ export default function MobileLibraryPage() {
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-4">
         {/* Tabs */}
-        <div className="flex space-x-1 p-1 rounded-xl border bg-[#353A3A] border-[#606364]">
+        <div 
+          className="flex space-x-1 p-1 rounded-xl border"
+          style={{ 
+            backgroundColor: "#1C2021",
+            borderColor: COLORS.BORDER_SUBTLE
+          }}
+        >
           <button
             onClick={() => setActiveTab("master")}
             className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
@@ -240,14 +228,11 @@ export default function MobileLibraryPage() {
             }`}
             style={{
               backgroundColor:
-                activeTab === "master" ? "#4A5A70" : "transparent",
-              color: activeTab === "master" ? "#FFFFFF" : "#ABA4AA",
+                activeTab === "master" ? COLORS.GOLDEN_ACCENT : "transparent",
+              color: activeTab === "master" ? COLORS.BACKGROUND_DARK : COLORS.TEXT_SECONDARY,
             }}
           >
-            <div className="flex items-center justify-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              <span>Shared Library</span>
-            </div>
+            <span>Shared Library</span>
           </button>
           <button
             onClick={() => setActiveTab("local")}
@@ -256,29 +241,36 @@ export default function MobileLibraryPage() {
             }`}
             style={{
               backgroundColor:
-                activeTab === "local" ? "#4A5A70" : "transparent",
-              color: activeTab === "local" ? "#FFFFFF" : "#ABA4AA",
+                activeTab === "local" ? COLORS.GOLDEN_ACCENT : "transparent",
+              color: activeTab === "local" ? COLORS.BACKGROUND_DARK : COLORS.TEXT_SECONDARY,
             }}
           >
-            <div className="flex items-center justify-center gap-2">
-              <Video className="h-4 w-4" />
-              <span>My Library</span>
-            </div>
+            <span>My Library</span>
           </button>
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-[#353A3A] border border-[#606364] rounded-xl p-4">
+        <div 
+          className="border rounded-xl p-4"
+          style={{ 
+            backgroundColor: "#1C2021",
+            borderColor: COLORS.BORDER_SUBTLE
+          }}
+        >
           <div className="space-y-3">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search resources..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border bg-[#606364] border-[#ABA4AA] text-[#C3BCC2] text-sm"
+                className="w-full px-4 py-2.5 rounded-lg border text-sm"
+                style={{
+                  backgroundColor: "#2A2F2F",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
               />
             </div>
 
@@ -293,31 +285,35 @@ export default function MobileLibraryPage() {
                   cat => !DEFAULT_CATEGORIES.includes(cat.name)
                 )}
                 style={{
-                  backgroundColor: "#606364",
-                  borderColor: "#ABA4AA",
-                  color: "#C3BCC2",
+                  backgroundColor: "#2A2F2F",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
                 }}
               />
 
               {/* View Mode Toggle */}
-              <div className="flex rounded-lg border border-[#ABA4AA] overflow-hidden">
+              <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-2 transition-all duration-200 ${
-                    viewMode === "grid" ? "bg-[#4A5A70]" : "bg-[#606364]"
-                  } text-[#C3BCC2]`}
+                  className="px-3 py-2 text-xs transition-all duration-200"
+                  style={{
+                    backgroundColor: viewMode === "grid" ? COLORS.GOLDEN_ACCENT : "#2A2F2F",
+                    color: viewMode === "grid" ? COLORS.BACKGROUND_DARK : COLORS.TEXT_PRIMARY,
+                  }}
                   title="Grid View"
                 >
-                  <Grid3X3 className="h-4 w-4" />
+                  Grid
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-2 transition-all duration-200 ${
-                    viewMode === "list" ? "bg-[#4A5A70]" : "bg-[#606364]"
-                  } text-[#C3BCC2]`}
+                  className="px-3 py-2 text-xs transition-all duration-200"
+                  style={{
+                    backgroundColor: viewMode === "list" ? COLORS.GOLDEN_ACCENT : "#2A2F2F",
+                    color: viewMode === "list" ? COLORS.BACKGROUND_DARK : COLORS.TEXT_PRIMARY,
+                  }}
                   title="List View"
                 >
-                  <List className="h-4 w-4" />
+                  List
                 </button>
               </div>
             </div>
@@ -329,35 +325,58 @@ export default function MobileLibraryPage() {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setIsYouTubeModalOpen(true)}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#DC2626] text-white"
+              className="p-3 rounded-lg transition-colors text-sm font-medium"
+              style={{ backgroundColor: COLORS.RED_ALERT, color: COLORS.TEXT_PRIMARY }}
+              onMouseEnter={(e) => {
+                if (window.matchMedia("(hover: hover)").matches) {
+                  e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (window.matchMedia("(hover: hover)").matches) {
+                  e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                }
+              }}
             >
-              <Video className="h-5 w-5" />
-              <span className="text-xs font-medium">YouTube</span>
+              YouTube
             </button>
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#4A5A70] text-white"
+              className="p-3 rounded-lg transition-colors text-sm font-medium"
+              style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
+              onMouseEnter={(e) => {
+                if (window.matchMedia("(hover: hover)").matches) {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (window.matchMedia("(hover: hover)").matches) {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                }
+              }}
             >
-              <Plus className="h-5 w-5" />
-              <span className="text-xs font-medium">Upload</span>
+              Upload
             </button>
           </div>
         )}
 
         {/* Permission Guidance */}
         {activeTab === "master" && (
-          <div className="bg-[#2D3748] border border-[#4A5A70] rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <BookOpen className="h-5 w-5 text-[#4A5A70]" />
-              <div>
-                <h4 className="font-semibold text-sm text-[#C3BCC2]">
-                  Shared Library Access
-                </h4>
-                <p className="text-xs text-[#ABA4AA]">
-                  View and assign resources to clients. Only administrators can
-                  modify.
-                </p>
-              </div>
+          <div 
+            className="border rounded-lg p-4"
+            style={{ 
+              backgroundColor: "#1C2021",
+              borderColor: COLORS.BORDER_SUBTLE
+            }}
+          >
+            <div>
+              <h4 className="font-semibold text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
+                Shared Library Access
+              </h4>
+              <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+                View and assign resources to clients. Only administrators can
+                modify.
+              </p>
             </div>
           </div>
         )}
@@ -365,7 +384,7 @@ export default function MobileLibraryPage() {
         {/* Results Header */}
         {libraryItems.length > 0 && (
           <div>
-            <p className="text-sm text-[#ABA4AA]">
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
               {libraryItems.length}{" "}
               {libraryItems.length === 1 ? "resource" : "resources"} found
             </p>
@@ -374,18 +393,21 @@ export default function MobileLibraryPage() {
 
         {/* Resources List/Grid */}
         {libraryItems.length === 0 ? (
-          <div className="bg-[#353A3A] border border-[#606364] rounded-xl text-center p-8">
-            <div className="w-16 h-16 rounded-xl bg-[#4A5A70] flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="h-8 w-8 text-[#C3BCC2]" />
-            </div>
-            <h3 className="text-xl font-bold mb-2 text-[#C3BCC2]">
+          <div 
+            className="border rounded-xl text-center p-8"
+            style={{ 
+              backgroundColor: "#1C2021",
+              borderColor: COLORS.BORDER_SUBTLE
+            }}
+          >
+            <h3 className="text-xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
               {searchTerm
                 ? "No resources found"
                 : activeTab === "master"
                 ? "No shared resources"
                 : "No resources in your library"}
             </h3>
-            <p className="mb-6 max-w-sm mx-auto text-[#ABA4AA]">
+            <p className="mb-6 max-w-sm mx-auto" style={{ color: COLORS.TEXT_SECONDARY }}>
               {searchTerm
                 ? `No resources match "${searchTerm}". Try a different search term.`
                 : activeTab === "master"
@@ -396,24 +418,61 @@ export default function MobileLibraryPage() {
               <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
                 <button
                   onClick={() => setIsYouTubeModalOpen(true)}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#DC2626] text-white"
+                  className="p-3 rounded-lg transition-colors text-xs font-medium"
+                  style={{ backgroundColor: COLORS.RED_ALERT, color: COLORS.TEXT_PRIMARY }}
+                  onMouseEnter={(e) => {
+                    if (window.matchMedia("(hover: hover)").matches) {
+                      e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (window.matchMedia("(hover: hover)").matches) {
+                      e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                    }
+                  }}
                 >
-                  <Video className="h-5 w-5" />
-                  <span className="text-xs font-medium">YouTube</span>
+                  YouTube
                 </button>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg bg-[#4A5A70] text-white"
+                  className="p-3 rounded-lg transition-colors text-xs font-medium"
+                  style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
+                  onMouseEnter={(e) => {
+                    if (window.matchMedia("(hover: hover)").matches) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (window.matchMedia("(hover: hover)").matches) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                    }
+                  }}
                 >
-                  <Plus className="h-5 w-5" />
-                  <span className="text-xs font-medium">Upload Video</span>
+                  Upload Video
                 </button>
               </div>
             )}
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="text-sm px-4 py-2 rounded-lg bg-transparent text-[#ABA4AA] border border-[#606364] mx-auto"
+                className="text-sm px-4 py-2 rounded-lg border mx-auto transition-colors"
+                style={{ 
+                  backgroundColor: "transparent",
+                  color: COLORS.TEXT_SECONDARY,
+                  borderColor: COLORS.BORDER_SUBTLE
+                }}
+                onMouseEnter={(e) => {
+                  if (window.matchMedia("(hover: hover)").matches) {
+                    e.currentTarget.style.backgroundColor = "#2A2F2F";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (window.matchMedia("(hover: hover)").matches) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  }
+                }}
               >
                 Clear Search
               </button>
@@ -427,27 +486,44 @@ export default function MobileLibraryPage() {
                 {libraryItems.map((item: any) => (
                   <div
                     key={item.id}
-                    className="bg-[#353A3A] border border-[#606364] rounded-xl p-3 transition-all duration-200 hover:bg-[#3A4040] hover:border-[#4A5A70] cursor-pointer"
+                    className="border rounded-xl p-3 transition-all duration-200 cursor-pointer"
+                    style={{
+                      backgroundColor: "#1C2021",
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (window.matchMedia("(hover: hover)").matches) {
+                        e.currentTarget.style.backgroundColor = "#2A2F2F";
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (window.matchMedia("(hover: hover)").matches) {
+                        e.currentTarget.style.backgroundColor = "#1C2021";
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      }
+                    }}
+                    onTouchStart={(e) => {
+                      e.currentTarget.style.backgroundColor = "#1C2021";
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                     onClick={() => handleItemClick(item)}
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-[#C3BCC2] line-clamp-2 flex-1">
+                        <h3 className="text-sm font-semibold line-clamp-2 flex-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                           {item.title}
                         </h3>
-                        {item.type === "VIDEO" && (
-                          <Play className="h-3 w-3 text-[#ABA4AA] ml-1 flex-shrink-0" />
-                        )}
                       </div>
-                      <p className="text-xs text-[#ABA4AA] line-clamp-1">
+                      <p className="text-xs line-clamp-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {item.category || "Uncategorized"}
                       </p>
                       <div className="flex items-center gap-1">
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-[#4A5A70] text-[#C3BCC2]">
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}>
                           {item.type}
                         </span>
                         {item.isYoutube && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-[#DC2626] text-white">
+                          <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: COLORS.RED_ALERT, color: COLORS.TEXT_PRIMARY }}>
                             YT
                           </span>
                         )}
@@ -464,33 +540,46 @@ export default function MobileLibraryPage() {
                 {libraryItems.map((item: any) => (
                   <div
                     key={item.id}
-                    className="bg-[#353A3A] border border-[#606364] rounded-xl p-5 transition-all duration-200 hover:bg-[#3A4040] hover:border-[#4A5A70] cursor-pointer"
+                    className="border rounded-xl p-5 transition-all duration-200 cursor-pointer"
+                    style={{
+                      backgroundColor: "#1C2021",
+                      borderColor: COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (window.matchMedia("(hover: hover)").matches) {
+                        e.currentTarget.style.backgroundColor = "#2A2F2F";
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (window.matchMedia("(hover: hover)").matches) {
+                        e.currentTarget.style.backgroundColor = "#1C2021";
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      }
+                    }}
+                    onTouchStart={(e) => {
+                      e.currentTarget.style.backgroundColor = "#1C2021";
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                     onClick={() => handleItemClick(item)}
                   >
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-bold text-[#C3BCC2] mb-1 line-clamp-2">
+                          <h3 className="text-lg font-bold mb-1 line-clamp-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {item.title}
                           </h3>
-                          <p className="text-sm text-[#ABA4AA] mb-2">
+                          <p className="text-sm mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {item.category || "Uncategorized"}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 ml-3">
-                          {item.type === "VIDEO" && (
-                            <div className="w-8 h-8 rounded-full bg-[#4A5A70] flex items-center justify-center">
-                              <Play className="h-4 w-4 text-white ml-0.5" />
-                            </div>
-                          )}
-                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm px-3 py-1.5 rounded-lg bg-[#4A5A70] text-[#C3BCC2] font-medium">
+                        <span className="text-sm px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}>
                           {item.type}
                         </span>
                         {item.isYoutube && (
-                          <span className="text-sm px-3 py-1.5 rounded-lg bg-[#DC2626] text-white font-medium">
+                          <span className="text-sm px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: COLORS.RED_ALERT, color: COLORS.TEXT_PRIMARY }}>
                             YouTube
                           </span>
                         )}

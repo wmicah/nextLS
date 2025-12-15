@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { trpc } from "@/app/_trpc/client";
 import { useToast } from "@/lib/hooks/use-toast";
+import { COLORS } from "@/lib/colors";
 
 interface Client {
   id: string;
@@ -209,7 +210,11 @@ export default function MobileSimpleAssignRoutineModal({
                           <Checkbox
                             checked={selectedClients.includes(client.id)}
                             onChange={() => handleClientToggle(client.id)}
-                            className="border-[#606364] data-[state=checked]:bg-[#4A5A70] data-[state=checked]:border-[#4A5A70]"
+                            className="border-[#606364] transition-colors"
+                            style={{
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              accentColor: COLORS.GOLDEN_ACCENT,
+                            }}
                           />
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-medium text-[#C3BCC2] truncate">
@@ -230,7 +235,8 @@ export default function MobileSimpleAssignRoutineModal({
                 <div className="text-center">
                   <Badge
                     variant="secondary"
-                    className="bg-[#4A5A70] text-[#ABA4AA] px-3 py-1"
+                    className="text-white px-3 py-1"
+                    style={{ backgroundColor: COLORS.GOLDEN_DARK }}
                   >
                     {selectedClients.length} client
                     {selectedClients.length !== 1 ? "s" : ""} selected
@@ -263,7 +269,20 @@ export default function MobileSimpleAssignRoutineModal({
                       )
                     }
                     min="2020-01-01"
-                    className="w-full px-3 py-2 rounded-lg border bg-[#353A3A] border-[#606364] text-[#C3BCC2] focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
+                    className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 transition-colors"
+                    style={{ 
+                      backgroundColor: "#2A2F2F", 
+                      borderColor: COLORS.BORDER_SUBTLE, 
+                      color: COLORS.TEXT_PRIMARY 
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.GOLDEN_ACCENT}40`;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
                   />
                 </div>
 
@@ -271,7 +290,8 @@ export default function MobileSimpleAssignRoutineModal({
                   <div className="text-center">
                     <Badge
                       variant="secondary"
-                      className="bg-[#4A5A70] text-[#ABA4AA] px-3 py-1"
+                      className="text-white px-3 py-1"
+                      style={{ backgroundColor: COLORS.GOLDEN_DARK }}
                     >
                       <Clock className="h-3 w-3 mr-1" />
                       Starting {format(startDate, "MMM d, yyyy")}
@@ -346,7 +366,22 @@ export default function MobileSimpleAssignRoutineModal({
           {currentStep > 1 && (
             <Button
               onClick={prevStep}
-              className="px-4 py-2 rounded-lg border border-[#606364] text-[#ABA4AA] hover:bg-[#4A5A70] transition-colors flex items-center gap-2"
+              className="px-4 py-2 rounded-lg border transition-colors flex items-center gap-2"
+              style={{ 
+                borderColor: COLORS.BORDER_SUBTLE, 
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: "transparent"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#1C2021";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               <ArrowLeft className="h-4 w-4" />
               Back
@@ -357,7 +392,18 @@ export default function MobileSimpleAssignRoutineModal({
             <Button
               onClick={nextStep}
               disabled={!canProceed()}
-              className="flex-1 px-4 py-2 rounded-lg bg-[#4A5A70] text-white hover:bg-[#606364] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                }
+              }}
             >
               Next
               <ArrowRight className="h-4 w-4" />

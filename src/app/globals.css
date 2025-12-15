@@ -231,15 +231,24 @@
     background: #2a3133;
     margin: 0;
     padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   body {
     @apply text-foreground;
     background: #2a3133;
     margin: 0;
     padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
   #__next {
     height: 100%;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -584,4 +593,9 @@ select option:hover,
 select option:focus {
   background-color: rgba(255, 255, 255, 0.04) !important;
   color: #E5B232 !important;
+}
+
+/* Checkbox styling with golden accent */
+input[type="checkbox"] {
+  accent-color: #E5B232;
 }

@@ -74,6 +74,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { COLORS } from "@/lib/colors";
 
 // Types
 type DayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
@@ -884,25 +885,34 @@ export default function MobileProgramBuilder({
   return (
     <div
       className="w-full max-w-full overflow-x-hidden"
-      style={{ backgroundColor: hideHeader ? "transparent" : "#2A3133" }}
+      style={{ backgroundColor: hideHeader ? "transparent" : COLORS.BACKGROUND_DARK }}
     >
       {/* Mobile Header - Hide when embedded */}
       {!hideHeader && (
-        <div className="sticky top-0 z-30 bg-[#2A3133] border-b border-[#606364] py-3 px-4">
+        <div className="sticky top-0 z-30 border-b py-3 px-4" style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }}>
           <div className="flex items-center justify-between w-full min-w-0">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {programDetails?.onBack && (
                 <Button
                   variant="ghost"
                   onClick={programDetails.onBack}
-                  className="p-2 text-[#C3BCC2] hover:text-white hover:bg-[#353A3A] min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg"
+                  className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    e.currentTarget.style.backgroundColor = "#1C2021";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
               )}
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-lg font-bold text-[#C3BCC2] break-words truncate">
+                  <h1 className="text-lg font-bold break-words truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                     {programDetails?.title || "Program Builder"}
                   </h1>
                 </div>
@@ -912,7 +922,18 @@ export default function MobileProgramBuilder({
               <Button
                 onClick={handleSave}
                 disabled={programDetails?.isSaving}
-                className="p-3 rounded-lg bg-green-600 hover:bg-green-700 text-white min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
+                className="p-3 rounded-lg text-white min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg transition-colors"
+                style={{ backgroundColor: COLORS.GREEN_DARK }}
+                onMouseEnter={(e) => {
+                  if (!programDetails?.isSaving) {
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!programDetails?.isSaving) {
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                  }
+                }}
               >
                 <Save className="h-5 w-5" />
               </Button>
@@ -924,20 +945,20 @@ export default function MobileProgramBuilder({
       {/* Program Details Card */}
       {programDetails && (
         <div className="p-4">
-          <Card className="bg-[#353A3A] border-[#606364]">
+          <Card className="rounded-lg border" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
             <CardContent className="p-4">
               <div className="space-y-3">
                 <div>
-                  <h2 className="text-lg font-bold text-[#C3BCC2] mb-1 break-words">
+                  <h2 className="text-lg font-bold mb-1 break-words" style={{ color: COLORS.TEXT_PRIMARY }}>
                     {programDetails.title}
                   </h2>
-                  <p className="text-sm text-[#ABA4AA] break-words">
+                  <p className="text-sm break-words" style={{ color: COLORS.TEXT_SECONDARY }}>
                     {programDetails.description || "No description provided"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2"></div>
                 {programDetails.lastSaved && (
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Last saved: {programDetails.lastSaved.toLocaleTimeString()}
                   </p>
                 )}
@@ -952,7 +973,14 @@ export default function MobileProgramBuilder({
         <div className="grid grid-cols-2 gap-3">
           <Button
             onClick={addWeek}
-            className="bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-lg shadow-lg font-medium"
+            className="text-white h-14 rounded-lg shadow-lg font-medium transition-colors"
+            style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+            }}
           >
             <Plus className="h-5 w-5 mr-2" />
             Add Week
@@ -960,7 +988,20 @@ export default function MobileProgramBuilder({
           <Button
             onClick={() => setIsCreateRoutineModalOpen(true)}
             variant="outline"
-            className="border-green-500/50 text-green-400 hover:bg-green-500/10 h-14 rounded-lg font-medium"
+            className="h-14 rounded-lg font-medium transition-colors"
+            style={{ 
+              borderColor: COLORS.GREEN_DARK, 
+              color: COLORS.GREEN_PRIMARY,
+              backgroundColor: "transparent"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#1C2021";
+              e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.borderColor = COLORS.GREEN_DARK;
+            }}
           >
             <Target className="h-5 w-5 mr-2" />
             Create Routine
@@ -969,7 +1010,22 @@ export default function MobileProgramBuilder({
         <Button
           onClick={toggleCollapseAll}
           variant="outline"
-          className="w-full border-[#606364] text-[#C3BCC2] hover:bg-[#353A3A] hover:text-white h-12 rounded-lg font-medium"
+          className="w-full h-12 rounded-lg font-medium transition-colors"
+          style={{ 
+            borderColor: COLORS.BORDER_SUBTLE, 
+            color: COLORS.TEXT_SECONDARY,
+            backgroundColor: "transparent"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#1C2021";
+            e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+          }}
         >
           {weeks.every(week => week.collapsed) ? (
             <>
@@ -1054,29 +1110,29 @@ export default function MobileProgramBuilder({
 
       {/* Superset Modal */}
       <Dialog open={isSupersetModalOpen} onOpenChange={setIsSupersetModalOpen}>
-        <DialogContent className="bg-[#2A3133] border-[#606364]">
+        <DialogContent style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
           <DialogHeader>
-            <DialogTitle className="text-[#C3BCC2]">
+            <DialogTitle style={{ color: COLORS.TEXT_PRIMARY }}>
               Create Superset
             </DialogTitle>
-            <DialogDescription className="text-[#ABA4AA]">
+            <DialogDescription style={{ color: COLORS.TEXT_SECONDARY }}>
               Select another exercise from the same day to create a superset
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-[#C3BCC2]">First Exercise</Label>
-              <div className="p-3 bg-[#353A3A] rounded border border-[#606364]">
-                <p className="text-[#C3BCC2] font-medium break-words">
+              <Label style={{ color: COLORS.TEXT_PRIMARY }}>First Exercise</Label>
+              <div className="p-3 rounded border" style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE }}>
+                <p className="font-medium break-words" style={{ color: COLORS.TEXT_PRIMARY }}>
                   {pendingSupersetDrill?.title}
                 </p>
-                <p className="text-[#ABA4AA] text-sm break-words">
+                <p className="text-sm break-words" style={{ color: COLORS.TEXT_SECONDARY }}>
                   {pendingSupersetDrill?.notes}
                 </p>
               </div>
             </div>
             <div>
-              <Label className="text-[#C3BCC2]">Second Exercise</Label>
+              <Label style={{ color: COLORS.TEXT_PRIMARY }}>Second Exercise</Label>
               <CustomSelect
                 value=""
                 onChange={value => {
@@ -1102,9 +1158,9 @@ export default function MobileProgramBuilder({
                 ]}
                 placeholder="Select an exercise from the same day..."
                 style={{
-                  backgroundColor: "#353A3A",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
+                  backgroundColor: "#2A2F2F",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
                 }}
               />
             </div>
@@ -1117,12 +1173,12 @@ export default function MobileProgramBuilder({
         open={isCreateRoutineModalOpen}
         onOpenChange={setIsCreateRoutineModalOpen}
       >
-        <DialogContent className="bg-[#2A3133] border-[#606364] max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }} className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-[#C3BCC2]">
+            <DialogTitle style={{ color: COLORS.TEXT_PRIMARY }}>
               Create New Routine
             </DialogTitle>
-            <DialogDescription className="text-[#ABA4AA]">
+            <DialogDescription style={{ color: COLORS.TEXT_SECONDARY }}>
               Add videos/exercises to create a reusable routine
             </DialogDescription>
           </DialogHeader>
@@ -1130,7 +1186,7 @@ export default function MobileProgramBuilder({
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <Label htmlFor="routine-name" className="text-[#C3BCC2]">
+                <Label htmlFor="routine-name" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Routine Name
                 </Label>
                 <Input
@@ -1140,11 +1196,11 @@ export default function MobileProgramBuilder({
                     setNewRoutine(prev => ({ ...prev, name: e.target.value }))
                   }
                   placeholder="e.g., Drive Warm-up, Core Stability"
-                  className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
+                  style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
                 />
               </div>
               <div>
-                <Label htmlFor="routine-description" className="text-[#C3BCC2]">
+                <Label htmlFor="routine-description" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Description
                 </Label>
                 <Input
@@ -1157,14 +1213,14 @@ export default function MobileProgramBuilder({
                     }))
                   }
                   placeholder="Describe what this routine focuses on..."
-                  className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
+                  style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
                 />
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-[#C3BCC2]">
+                <h3 className="text-lg font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Routine Day
                 </h3>
                 <Button
@@ -1175,18 +1231,25 @@ export default function MobileProgramBuilder({
                     setSelectedDayKey("sun");
                   }}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="text-white transition-colors"
+                  style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                  }}
                 >
                   <Video className="h-4 w-4 mr-2" />
                   Add from Library
                 </Button>
               </div>
 
-              <Card className="bg-[#353A3A]/50 border-[#606364]">
+              <Card className="rounded-lg border" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
                 <CardContent className="p-4">
                   {!newRoutine.exercises ||
                   newRoutine.exercises.length === 0 ? (
-                    <div className="text-center py-8 text-[#ABA4AA]">
+                    <div className="text-center py-8" style={{ color: COLORS.TEXT_SECONDARY }}>
                       <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p className="break-words">
                         No exercises added yet. Click "Add from Library" to get
@@ -1198,7 +1261,8 @@ export default function MobileProgramBuilder({
                       {newRoutine.exercises?.map((exercise, index) => (
                         <div
                           key={exercise.id}
-                          className="flex items-center gap-3 p-3 bg-[#2A3133] rounded-lg border border-[#606364]"
+                          className="flex items-center gap-3 p-3 rounded-lg border"
+                          style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE }}
                         >
                           <div className="flex-1">
                             <Input
@@ -1217,7 +1281,8 @@ export default function MobileProgramBuilder({
                                 }));
                               }}
                               placeholder="Exercise name"
-                              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mb-2"
+                              style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                              className="mb-2"
                             />
                             <div className="grid grid-cols-3 gap-2">
                               <Input
@@ -1238,7 +1303,8 @@ export default function MobileProgramBuilder({
                                   }));
                                 }}
                                 type="number"
-                                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
+                                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                                className="text-sm"
                               />
                               <Input
                                 value={exercise.reps || ""}
@@ -1258,7 +1324,8 @@ export default function MobileProgramBuilder({
                                   }));
                                 }}
                                 type="number"
-                                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
+                                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                                className="text-sm"
                               />
                               <Input
                                 value={exercise.tempo || ""}
@@ -1276,7 +1343,8 @@ export default function MobileProgramBuilder({
                                   }));
                                 }}
                                 placeholder="e.g., 30 seconds"
-                                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm"
+                                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                                className="text-sm"
                               />
                             </div>
                             <Input
@@ -1295,7 +1363,8 @@ export default function MobileProgramBuilder({
                                 }));
                               }}
                               placeholder="Notes (optional)"
-                              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] text-sm mt-2"
+                              style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                              className="text-sm mt-2"
                             />
                           </div>
                           <Button
@@ -1311,7 +1380,14 @@ export default function MobileProgramBuilder({
                                 exercises: updatedExercises,
                               }));
                             }}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                            className="transition-colors"
+                            style={{ color: COLORS.RED_ALERT }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#1C2021";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                            }}
                             type="button"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1332,7 +1408,18 @@ export default function MobileProgramBuilder({
                 setIsCreateRoutineModalOpen(false);
                 setNewRoutine({ name: "", description: "", exercises: [] });
               }}
-              className="border-[#606364] text-[#ABA4AA]"
+              className="transition-colors"
+              style={{ borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#1C2021";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
@@ -1344,7 +1431,18 @@ export default function MobileProgramBuilder({
                 !newRoutine.exercises ||
                 newRoutine.exercises.length === 0
               }
-              className="bg-green-600 hover:bg-green-700"
+              className="transition-colors"
+              style={{ backgroundColor: COLORS.GREEN_DARK }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                }
+              }}
             >
               Create Routine
             </Button>
@@ -1357,19 +1455,19 @@ export default function MobileProgramBuilder({
         open={isAddRoutineModalOpen}
         onOpenChange={setIsAddRoutineModalOpen}
       >
-        <DialogContent className="bg-[#2A3133] border-[#606364] max-w-2xl">
+        <DialogContent style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }} className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-[#C3BCC2]">
+            <DialogTitle style={{ color: COLORS.TEXT_PRIMARY }}>
               Add Routine to Day
             </DialogTitle>
-            <DialogDescription className="text-[#ABA4AA]">
+            <DialogDescription style={{ color: COLORS.TEXT_SECONDARY }}>
               Select a routine to add to this day
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {routines.length === 0 ? (
-              <div className="text-center py-8 text-[#ABA4AA]">
+              <div className="text-center py-8" style={{ color: COLORS.TEXT_SECONDARY }}>
                 <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p className="break-words">No routines created yet.</p>
                 <p className="text-sm break-words">
@@ -1381,7 +1479,16 @@ export default function MobileProgramBuilder({
                 {routines.map(routine => (
                   <Card
                     key={routine.id}
-                    className="bg-[#353A3A]/50 border-[#606364] hover:bg-[#353A3A] cursor-pointer transition-colors"
+                    className="rounded-lg border cursor-pointer transition-colors"
+                    style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "#1C2021";
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                     onClick={() => {
                       if (pendingRoutineDay) {
                         handleAddRoutineToDay(
@@ -1397,13 +1504,13 @@ export default function MobileProgramBuilder({
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-medium text-[#C3BCC2] mb-1 break-words">
+                          <h3 className="font-medium mb-1 break-words" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {routine.name}
                           </h3>
-                          <p className="text-sm text-[#ABA4AA] mb-2 break-words">
+                          <p className="text-sm mb-2 break-words" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {routine.description || "No description provided"}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-[#ABA4AA]">
+                          <div className="flex items-center gap-2 text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                             <span>
                               {routine.exercises.length} exercise
                               {routine.exercises.length !== 1 ? "s" : ""}
@@ -1420,7 +1527,14 @@ export default function MobileProgramBuilder({
                         </div>
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="text-white transition-colors"
+                          style={{ backgroundColor: COLORS.GREEN_DARK }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                          }}
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add
@@ -1440,7 +1554,18 @@ export default function MobileProgramBuilder({
                 setIsAddRoutineModalOpen(false);
                 setPendingRoutineDay(null);
               }}
-              className="border-[#606364] text-[#ABA4AA]"
+              className="transition-colors"
+              style={{ borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#1C2021";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
@@ -1514,8 +1639,8 @@ function MobileWeekCard({
   return (
     <Card
       ref={setNodeRef}
-      style={style}
-      className="bg-[#353A3A] border-[#606364] shadow-lg w-full rounded-xl"
+      style={{ ...style, backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+      className="rounded-lg border shadow-lg w-full"
     >
       <CardHeader className="pb-3 px-4">
         <div className="flex items-center justify-between gap-2">
@@ -1524,7 +1649,16 @@ function MobileWeekCard({
               variant="ghost"
               size="sm"
               onClick={onToggleCollapse}
-              className="p-2 h-10 w-10 text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#2A3133] flex-shrink-0 rounded-lg"
+              className="p-2 h-10 w-10 flex-shrink-0 rounded-lg transition-colors"
+              style={{ color: COLORS.TEXT_MUTED }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = "#2A2F2F";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
               {week.collapsed ? (
                 <ChevronRight className="h-5 w-5" />
@@ -1533,11 +1667,11 @@ function MobileWeekCard({
               )}
             </Button>
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg font-bold text-[#C3BCC2] break-words">
+              <CardTitle className="text-lg font-bold break-words" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {week.name}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-[#ABA4AA]">
+                <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                   {Object.values(week.days).flat().length} exercises
                 </span>
               </div>
@@ -1548,7 +1682,18 @@ function MobileWeekCard({
               variant="outline"
               size="sm"
               onClick={onDuplicate}
-              className="border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] h-8 w-8 p-0 rounded-lg"
+              className="h-8 w-8 p-0 rounded-lg transition-colors"
+              style={{ borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#2A2F2F";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
               title="Copy week"
             >
               <Copy className="h-3.5 w-3.5" />
@@ -1557,7 +1702,16 @@ function MobileWeekCard({
               variant="outline"
               size="sm"
               onClick={onDelete}
-              className="border-red-500 text-red-400 hover:bg-red-500/10 h-8 w-8 p-0 rounded-lg"
+              className="h-8 w-8 p-0 rounded-lg transition-colors"
+              style={{ borderColor: COLORS.RED_DARK, color: COLORS.RED_ALERT }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#2A2F2F";
+                e.currentTarget.style.borderColor = COLORS.RED_ALERT;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.RED_DARK;
+              }}
               title="Delete week"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -1697,27 +1851,26 @@ function MobileDayCard({
     <div className="space-y-3">
       {/* Day Header */}
       <div className="text-center">
-        <h3 className="text-sm font-medium text-[#C3BCC2] mb-1">{dayLabel}</h3>
-        <div className="text-xs text-[#ABA4AA] uppercase tracking-wide">
+        <h3 className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>{dayLabel}</h3>
+        <div className="text-xs uppercase tracking-wide" style={{ color: COLORS.TEXT_MUTED }}>
           {dayKey}
         </div>
       </div>
 
       {/* Day Content */}
       <Card
-        className={cn(
-          "min-h-[200px] w-full rounded-lg",
-          isRestDay
-            ? "bg-[#2A3133]/30 border-[#606364]/30"
-            : "bg-[#2A3133]/50 border-[#606364]/50"
-        )}
+        className="min-h-[200px] w-full rounded-lg border"
+        style={{
+          backgroundColor: isRestDay ? "#1A1D1E" : "#1C2021",
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
       >
         <CardContent className="p-4">
           {isRestDay ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-[#ABA4AA] py-8">
+            <div className="flex flex-col items-center justify-center h-full text-center py-8" style={{ color: COLORS.TEXT_MUTED }}>
               <Moon className="h-8 w-8 mb-3 opacity-50" />
               <span className="text-sm font-medium">Rest Day</span>
-              <span className="text-xs text-[#606364] mt-1">
+              <span className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
                 No exercises scheduled
               </span>
             </div>
@@ -1847,7 +2000,22 @@ function MobileDayCard({
           onClick={() => onAddItem()}
           variant="outline"
           size="sm"
-          className="w-full border-[#606364]/50 text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2] hover:border-[#606364] h-12 rounded-lg font-medium"
+          className="w-full h-12 rounded-lg font-medium transition-colors"
+          style={{ 
+            borderColor: COLORS.BORDER_SUBTLE, 
+            color: COLORS.TEXT_SECONDARY,
+            backgroundColor: "transparent"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#1C2021";
+            e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+          }}
         >
           <Video className="h-4 w-4 mr-2" />
           Add from Library
@@ -1856,7 +2024,20 @@ function MobileDayCard({
           onClick={() => onOpenAddRoutine(weekId, dayKey)}
           variant="outline"
           size="sm"
-          className="w-full border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-400 h-12 rounded-lg font-medium"
+          className="w-full h-12 rounded-lg font-medium transition-colors"
+          style={{ 
+            borderColor: COLORS.GREEN_DARK, 
+            color: COLORS.GREEN_PRIMARY,
+            backgroundColor: "transparent"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#1C2021";
+            e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.borderColor = COLORS.GREEN_DARK;
+          }}
         >
           <Target className="h-4 w-4 mr-2" />
           Add Routine
@@ -1926,15 +2107,22 @@ function MobileSortableDrillItem({
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        backgroundColor: isSuperset 
+          ? "#2A1F2F" 
+          : isRoutine 
+          ? "#1F2A1F" 
+          : "#1C2021",
+        borderColor: isSuperset 
+          ? COLORS.GOLDEN_ACCENT 
+          : isRoutine 
+          ? COLORS.GREEN_DARK 
+          : COLORS.BORDER_SUBTLE,
+      }}
       className={cn(
         "rounded-lg p-4 border transition-all duration-200 shadow-sm",
-        isDragging && "opacity-50 scale-95",
-        isSuperset
-          ? "bg-purple-600/30 border-purple-500/50"
-          : isRoutine
-          ? "bg-green-900/20 border-green-400"
-          : "bg-[#2A3133] border-[#606364]"
+        isDragging && "opacity-50 scale-95"
       )}
     >
       <div className="flex items-start gap-3">
@@ -1942,7 +2130,16 @@ function MobileSortableDrillItem({
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-2 text-[#ABA4AA] hover:text-[#C3BCC2] flex-shrink-0 rounded-lg hover:bg-[#2A3133]"
+          className="cursor-grab active:cursor-grabbing p-2 flex-shrink-0 rounded-lg transition-colors"
+          style={{ color: COLORS.TEXT_MUTED }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            e.currentTarget.style.backgroundColor = "#2A2F2F";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = COLORS.TEXT_MUTED;
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
         >
           <GripVertical className="h-4 w-4" />
         </div>
@@ -1954,11 +2151,11 @@ function MobileSortableDrillItem({
             <div className="space-y-1 mb-2">
               {supersetGroup.items.map((supersetItem, index) => (
                 <div key={supersetItem.id} className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-[#C3BCC2] break-words">
+                  <span className="text-xs font-medium break-words" style={{ color: COLORS.TEXT_PRIMARY }}>
                     {supersetItem.title}
                   </span>
                   {index === 0 && (
-                    <span className="text-xs text-purple-300 font-medium">
+                    <span className="text-xs font-medium" style={{ color: COLORS.GOLDEN_ACCENT }}>
                       +
                     </span>
                   )}
@@ -1967,7 +2164,7 @@ function MobileSortableDrillItem({
             </div>
           ) : (
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-[#C3BCC2] break-words">
+              <span className="text-xs font-medium break-words" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {item.title}
               </span>
             </div>
@@ -1977,24 +2174,24 @@ function MobileSortableDrillItem({
           {(() => {
             const displayItem = isSuperset ? supersetGroup?.items[0] : item;
             return (
-              <div className="flex flex-wrap gap-1 text-xs text-[#ABA4AA] mb-2">
+              <div className="flex flex-wrap gap-1 text-xs mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                 {displayItem?.sets && (
-                  <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
+                  <span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: "#2A2F2F" }}>
                     Sets: {displayItem.sets}
                   </span>
                 )}
                 {displayItem?.reps && (
-                  <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
+                  <span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: "#2A2F2F" }}>
                     Reps: {displayItem.reps}
                   </span>
                 )}
                 {displayItem?.tempo && (
-                  <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs">
+                  <span className="px-2 py-1 rounded text-xs" style={{ backgroundColor: "#2A2F2F" }}>
                     Duration: {displayItem.tempo}
                   </span>
                 )}
                 {displayItem?.duration && (
-                  <span className="px-2 py-1 bg-[#2A3133]/50 rounded text-xs flex items-center gap-1">
+                  <span className="px-2 py-1 rounded text-xs flex items-center gap-1" style={{ backgroundColor: "#2A2F2F" }}>
                     <Clock className="h-3 w-3" />
                     {displayItem.duration}
                   </span>
@@ -2005,7 +2202,7 @@ function MobileSortableDrillItem({
 
           {/* Notes */}
           {item.notes && (
-            <p className="text-xs text-[#ABA4AA] break-words line-clamp-2">
+            <p className="text-xs break-words line-clamp-2" style={{ color: COLORS.TEXT_SECONDARY }}>
               {item.notes}
             </p>
           )}
@@ -2019,7 +2216,20 @@ function MobileSortableDrillItem({
               variant="ghost"
               size="sm"
               onClick={onAddSuperset}
-              className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-blue-400/30 rounded-lg"
+              className="h-8 w-8 p-0 border rounded-lg transition-colors"
+              style={{ 
+                color: COLORS.GOLDEN_ACCENT, 
+                borderColor: COLORS.GOLDEN_DARK,
+                backgroundColor: "transparent"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#1C2021";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_DARK;
+              }}
               title="Add Superset"
             >
               <Link className="h-4 w-4" />
@@ -2029,7 +2239,20 @@ function MobileSortableDrillItem({
               variant="ghost"
               size="sm"
               onClick={() => onRemoveSuperset(item.id)}
-              className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10 border border-red-400/30 rounded-lg"
+              className="h-8 w-8 p-0 border rounded-lg transition-colors"
+              style={{ 
+                color: COLORS.RED_ALERT, 
+                borderColor: COLORS.RED_DARK,
+                backgroundColor: "transparent"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#1C2021";
+                e.currentTarget.style.borderColor = COLORS.RED_ALERT;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.RED_DARK;
+              }}
               title="Remove Superset"
             >
               <Unlink className="h-4 w-4" />
@@ -2040,7 +2263,16 @@ function MobileSortableDrillItem({
             variant="ghost"
             size="sm"
             onClick={onEdit}
-            className="h-8 w-8 p-0 text-[#ABA4AA] hover:text-[#C3BCC2] hover:bg-[#2A3133] rounded-lg"
+            className="h-8 w-8 p-0 rounded-lg transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              e.currentTarget.style.backgroundColor = "#2A2F2F";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
             title="Edit"
           >
             <Edit className="h-4 w-4" />
@@ -2049,7 +2281,14 @@ function MobileSortableDrillItem({
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg"
+            className="h-8 w-8 p-0 rounded-lg transition-colors"
+            style={{ color: COLORS.RED_ALERT }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#1C2021";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
             title="Delete"
           >
             <Trash2 className="h-4 w-4" />
@@ -2116,11 +2355,12 @@ function ExerciseEditDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         nested={true}
-        className="bg-[#2A3133] border-[#606364] max-w-[95vw] w-[95vw] max-h-[90vh] overflow-y-auto"
+        style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+        className="max-w-[95vw] w-[95vw] max-h-[90vh] overflow-y-auto"
       >
         <DialogHeader>
-          <DialogTitle className="text-[#C3BCC2]">Edit Exercise</DialogTitle>
-          <DialogDescription className="text-[#ABA4AA]">
+          <DialogTitle style={{ color: COLORS.TEXT_PRIMARY }}>Edit Exercise</DialogTitle>
+          <DialogDescription style={{ color: COLORS.TEXT_SECONDARY }}>
             Update the exercise details and instructions
           </DialogDescription>
         </DialogHeader>
@@ -2128,7 +2368,7 @@ function ExerciseEditDialog({
         <div className="space-y-4">
           {/* Title */}
           <div>
-            <Label htmlFor="title" className="text-[#C3BCC2] text-sm">
+            <Label htmlFor="title" className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
               Exercise Title *
             </Label>
             <Input
@@ -2137,7 +2377,8 @@ function ExerciseEditDialog({
               onChange={e =>
                 setFormData(prev => ({ ...prev, title: e.target.value }))
               }
-              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+              style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+              className="mt-2"
               placeholder="Exercise name"
               required
             />
@@ -2146,10 +2387,10 @@ function ExerciseEditDialog({
           {/* Description */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <Label htmlFor="description" className="text-[#C3BCC2] text-sm">
+              <Label htmlFor="description" className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Description
               </Label>
-              <span className="text-xs text-[#ABA4AA]">
+              <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                 {formData.description.length}/120
               </span>
             </div>
@@ -2162,7 +2403,8 @@ function ExerciseEditDialog({
                   setFormData(prev => ({ ...prev, description: value }));
                 }
               }}
-              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+              style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+              className="mt-2"
               placeholder="Describe how to perform this exercise..."
               rows={3}
               maxLength={120}
@@ -2172,7 +2414,7 @@ function ExerciseEditDialog({
           {/* Sets, Reps, Tempo */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label htmlFor="sets" className="text-[#C3BCC2] text-sm">
+              <Label htmlFor="sets" className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Sets
               </Label>
               <Input
@@ -2185,13 +2427,14 @@ function ExerciseEditDialog({
                     sets: e.target.value ? parseInt(e.target.value) : undefined,
                   }))
                 }
-                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+                style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+              className="mt-2"
                 min="0"
               />
             </div>
 
             <div>
-              <Label htmlFor="reps" className="text-[#C3BCC2] text-sm">
+              <Label htmlFor="reps" className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Reps
               </Label>
               <Input
@@ -2204,13 +2447,14 @@ function ExerciseEditDialog({
                     reps: e.target.value ? parseInt(e.target.value) : undefined,
                   }))
                 }
-                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+                style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+              className="mt-2"
                 min="0"
               />
             </div>
 
             <div>
-              <Label htmlFor="tempo" className="text-[#C3BCC2] text-sm">
+              <Label htmlFor="tempo" className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Tempo
               </Label>
               <Input
@@ -2219,7 +2463,8 @@ function ExerciseEditDialog({
                 onChange={e =>
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
-                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+                style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+              className="mt-2"
                 placeholder="e.g., 2-0-2"
               />
             </div>
@@ -2227,7 +2472,7 @@ function ExerciseEditDialog({
 
           {/* Duration */}
           <div>
-            <Label htmlFor="duration" className="text-[#C3BCC2] text-sm">
+            <Label htmlFor="duration" className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
               Duration (optional)
             </Label>
             <Input
@@ -2236,7 +2481,8 @@ function ExerciseEditDialog({
               onChange={e =>
                 setFormData(prev => ({ ...prev, duration: e.target.value }))
               }
-              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2] mt-2"
+              style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+              className="mt-2"
               placeholder="e.g., 30 seconds"
             />
           </div>
@@ -2247,14 +2493,32 @@ function ExerciseEditDialog({
             type="button"
             variant="outline"
             onClick={onClose}
-            className="w-full sm:w-auto border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2]"
+            className="w-full sm:w-auto transition-colors"
+            style={{ borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#1C2021";
+              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
             Cancel
           </Button>
           <Button
             type="button"
             onClick={handleSubmit}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full sm:w-auto text-white transition-colors"
+            style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+            }}
           >
             Save Changes
           </Button>
@@ -2312,17 +2576,17 @@ function VideoDetailsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="bg-[#2A3133] border-[#606364] text-[#C3BCC2]">
+      <DialogContent style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}>
         <DialogHeader>
           <DialogTitle>Add Video Details</DialogTitle>
-          <DialogDescription className="text-[#ABA4AA] break-words">
+          <DialogDescription style={{ color: COLORS.TEXT_SECONDARY }} className="break-words">
             Add optional details for {video.title}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="notes" className="text-[#C3BCC2]">
+            <Label htmlFor="notes" style={{ color: COLORS.TEXT_PRIMARY }}>
               Notes (Optional)
             </Label>
             <Textarea
@@ -2331,7 +2595,7 @@ function VideoDetailsDialog({
               onChange={e =>
                 setFormData(prev => ({ ...prev, notes: e.target.value }))
               }
-              className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
+              style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
               placeholder="Additional instructions or notes..."
               rows={3}
             />
@@ -2339,7 +2603,7 @@ function VideoDetailsDialog({
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label htmlFor="sets" className="text-[#C3BCC2]">
+              <Label htmlFor="sets" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Sets (Optional)
               </Label>
               <Input
@@ -2355,13 +2619,13 @@ function VideoDetailsDialog({
                     }));
                   }
                 }}
-                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
+                style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
                 min="0"
               />
             </div>
 
             <div>
-              <Label htmlFor="reps" className="text-[#C3BCC2]">
+              <Label htmlFor="reps" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Reps (Optional)
               </Label>
               <Input
@@ -2377,13 +2641,13 @@ function VideoDetailsDialog({
                     }));
                   }
                 }}
-                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
+                style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
                 min="0"
               />
             </div>
 
             <div>
-              <Label htmlFor="tempo" className="text-[#C3BCC2]">
+              <Label htmlFor="tempo" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Duration (Optional)
               </Label>
               <Input
@@ -2392,7 +2656,7 @@ function VideoDetailsDialog({
                 onChange={e =>
                   setFormData(prev => ({ ...prev, tempo: e.target.value }))
                 }
-                className="bg-[#353A3A] border-[#606364] text-[#C3BCC2]"
+                style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
                 placeholder="e.g., 30 seconds or 2-0-2"
               />
             </div>
@@ -2403,13 +2667,31 @@ function VideoDetailsDialog({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-[#606364] text-[#ABA4AA] hover:bg-[#2A3133] hover:text-[#C3BCC2]"
+              className="transition-colors"
+              style={{ borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#1C2021";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="text-white transition-colors"
+              style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
             >
               Add Video
             </Button>

@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  Mail,
 } from "lucide-react";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import PerformanceDashboard from "@/components/PerformanceDashboard";
@@ -32,6 +33,16 @@ import { Youtube } from "lucide-react";
 import { isYouTubeUrl } from "@/lib/youtube-utils";
 import { extractYouTubeVideoId, getYouTubeThumbnail } from "@/lib/youtube";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 // Component for sending bug report announcement
 function SendBugReportAnnouncementButton() {
@@ -140,6 +151,10 @@ export default function AdminDashboard() {
   const { data: deletionAnalytics } =
     trpc.user.getAccountDeletionAnalytics.useQuery();
   const [showArchivedBugReports, setShowArchivedBugReports] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedBugReport, setSelectedBugReport] = useState<any>(null);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
   const { data: bugReportsData, refetch: refetchBugReports } =
     trpc.bugReports.list.useQuery({
       includeArchived: false,
@@ -168,6 +183,25 @@ export default function AdminDashboard() {
       refetchAllBugReports();
     },
   });
+  const sendEmailMutation = trpc.bugReports.sendEmailToReporter.useMutation({
+    onSuccess: () => {
+      alert("Email sent successfully!");
+      setEmailModalOpen(false);
+      setSelectedBugReport(null);
+      setEmailSubject("");
+      setEmailMessage("");
+    },
+    onError: (error) => {
+      alert(`Failed to send email: ${error.message}`);
+    },
+  });
+
+  const handleOpenEmailModal = (report: any) => {
+    setSelectedBugReport(report);
+    setEmailSubject(`Re: Bug Report - ${report.title}`);
+    setEmailMessage(`Hi ${report.user?.name || report.user?.email},\n\nThank you for reporting this bug. `);
+    setEmailModalOpen(true);
+  };
 
   const addResourceMutation = trpc.admin.addToMasterLibrary.useMutation({
     onSuccess: () => {
@@ -1015,26 +1049,94 @@ export default function AdminDashboard() {
                             </p>
                           </div>
 
-                          {report.imageUrl && (
-                            <div className="mb-3">
-                              <img
-                                src={report.imageUrl}
-                                alt="Bug screenshot"
-                                className="max-w-md rounded-lg border border-[#4A5A70]"
-                              />
+                          {/* Debug: Always show if URLs exist (even if empty) */}
+                          {(report.imageUrl !== null || report.videoUrl !== null) && (
+                            <div className="mb-2 p-2 bg-yellow-900 rounded border border-yellow-700">
+                              <p className="text-xs text-yellow-200 mb-1 font-semibold">Debug - Attachment Data:</p>
+                              <p className="text-xs text-yellow-100">
+                                imageUrl: {report.imageUrl === null ? "null" : report.imageUrl === "" ? '"" (empty string)' : `"${report.imageUrl}"`}
+                              </p>
+                              <p className="text-xs text-yellow-100">
+                                videoUrl: {report.videoUrl === null ? "null" : report.videoUrl === "" ? '"" (empty string)' : `"${report.videoUrl}"`}
+                              </p>
                             </div>
                           )}
 
-                          {report.videoUrl && (
+                          {(report.imageUrl && report.imageUrl.trim() !== "") && (
                             <div className="mb-3">
-                              <a
-                                href={report.videoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-400 hover:underline text-sm"
-                              >
-                                View Video →
-                              </a>
+                              <p className="text-xs text-gray-400 mb-2">Screenshot:</p>
+                              <div className="relative rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
+                                <img
+                                  src={report.imageUrl}
+                                  alt="Bug screenshot"
+                                  className="max-w-full max-h-96 object-contain rounded-lg"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = "none";
+                                    const errorDiv = document.createElement("div");
+                                    errorDiv.className = "p-4 text-center";
+                                    errorDiv.innerHTML = `
+                                      <p class="text-gray-400 text-sm mb-2">Failed to load image. URL may be invalid or expired.</p>
+                                      <a href="${report.imageUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
+                                        ${report.imageUrl}
+                                      </a>
+                                    `;
+                                    target.parentElement?.appendChild(errorDiv);
+                                  }}
+                                />
+                                <a
+                                  href={report.imageUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="absolute top-2 right-2 px-2 py-1 bg-black hover:bg-gray-900 text-white text-xs rounded transition-colors"
+                                >
+                                  Open Full Size
+                                </a>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1 break-all">
+                                URL: <a href={report.imageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{report.imageUrl}</a>
+                              </p>
+                            </div>
+                          )}
+
+                          {(report.videoUrl && report.videoUrl.trim() !== "") && (
+                            <div className="mb-3">
+                              <p className="text-xs text-gray-400 mb-2">Video:</p>
+                              <div className="rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
+                                <video
+                                  src={report.videoUrl}
+                                  controls
+                                  className="w-full max-h-96"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLVideoElement;
+                                    target.style.display = "none";
+                                    const errorDiv = document.createElement("div");
+                                    errorDiv.className = "p-4 text-center";
+                                    errorDiv.innerHTML = `
+                                      <p class="text-gray-400 text-sm mb-2">Failed to load video. URL may be invalid or expired.</p>
+                                      <a href="${report.videoUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
+                                        ${report.videoUrl}
+                                      </a>
+                                    `;
+                                    target.parentElement?.appendChild(errorDiv);
+                                  }}
+                                >
+                                  Your browser does not support the video tag.
+                                </video>
+                                <div className="p-2 bg-[#1A1D1E] border-t border-[#4A5A70]">
+                                  <a
+                                    href={report.videoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:underline text-sm flex items-center gap-1"
+                                  >
+                                    Open Video in New Tab →
+                                  </a>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1 break-all">
+                                URL: <a href={report.videoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{report.videoUrl}</a>
+                              </p>
                             </div>
                           )}
 
@@ -1090,6 +1192,14 @@ export default function AdminDashboard() {
                               className="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
                             >
                               Archive
+                            </button>
+                            <button
+                              onClick={() => handleOpenEmailModal(report)}
+                              className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                              title={`Email ${report.user?.name || report.user?.email}`}
+                            >
+                              <Mail className="h-3 w-3" />
+                              Email
                             </button>
                           </div>
                         </div>
@@ -1193,26 +1303,81 @@ export default function AdminDashboard() {
                               </p>
                             </div>
 
-                            {report.imageUrl && (
+                            {(report.imageUrl && report.imageUrl.trim() !== "") && (
                               <div className="mb-3">
-                                <img
-                                  src={report.imageUrl}
-                                  alt="Bug screenshot"
-                                  className="max-w-md rounded-lg border border-[#4A5A70]"
-                                />
+                                <p className="text-xs text-gray-400 mb-2">Screenshot:</p>
+                                <div className="relative rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
+                                  <img
+                                    src={report.imageUrl}
+                                    alt="Bug screenshot"
+                                    className="max-w-full max-h-96 object-contain rounded-lg"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = "none";
+                                      const errorDiv = document.createElement("div");
+                                      errorDiv.className = "p-4 text-center";
+                                      errorDiv.innerHTML = `
+                                        <p class="text-gray-400 text-sm mb-2">Failed to load image. URL may be invalid or expired.</p>
+                                        <a href="${report.imageUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
+                                          ${report.imageUrl}
+                                        </a>
+                                      `;
+                                      target.parentElement?.appendChild(errorDiv);
+                                    }}
+                                  />
+                                  <a
+                                    href={report.imageUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="absolute top-2 right-2 px-2 py-1 bg-black hover:bg-gray-900 text-white text-xs rounded transition-colors"
+                                  >
+                                    Open Full Size
+                                  </a>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1 break-all">
+                                  URL: <a href={report.imageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{report.imageUrl}</a>
+                                </p>
                               </div>
                             )}
 
-                            {report.videoUrl && (
+                            {(report.videoUrl && report.videoUrl.trim() !== "") && (
                               <div className="mb-3">
-                                <a
-                                  href={report.videoUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-400 hover:underline text-sm"
-                                >
-                                  View Video →
-                                </a>
+                                <p className="text-xs text-gray-400 mb-2">Video:</p>
+                                <div className="rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
+                                  <video
+                                    src={report.videoUrl}
+                                    controls
+                                    className="w-full max-h-96"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLVideoElement;
+                                      target.style.display = "none";
+                                      const errorDiv = document.createElement("div");
+                                      errorDiv.className = "p-4 text-center";
+                                      errorDiv.innerHTML = `
+                                        <p class="text-gray-400 text-sm mb-2">Failed to load video. URL may be invalid or expired.</p>
+                                        <a href="${report.videoUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
+                                          ${report.videoUrl}
+                                        </a>
+                                      `;
+                                      target.parentElement?.appendChild(errorDiv);
+                                    }}
+                                  >
+                                    Your browser does not support the video tag.
+                                  </video>
+                                  <div className="p-2 bg-[#1A1D1E] border-t border-[#4A5A70]">
+                                    <a
+                                      href={report.videoUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-400 hover:underline text-sm flex items-center gap-1"
+                                    >
+                                      Open Video in New Tab →
+                                    </a>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1 break-all">
+                                  URL: <a href={report.videoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{report.videoUrl}</a>
+                                </p>
                               </div>
                             )}
 
@@ -1228,6 +1393,14 @@ export default function AdminDashboard() {
                                 className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
                               >
                                 Unarchive
+                              </button>
+                              <button
+                                onClick={() => handleOpenEmailModal(report)}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                                title={`Email ${report.user?.name || report.user?.email}`}
+                              >
+                                <Mail className="h-3 w-3" />
+                                Email
                               </button>
                             </div>
                           </div>
@@ -1922,6 +2095,111 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Email Modal */}
+      <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
+        <DialogContent className="max-w-2xl" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE, opacity: 1 }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: COLORS.TEXT_PRIMARY }}>
+              Send Email to Bug Report Submitter
+            </DialogTitle>
+            <DialogDescription style={{ color: COLORS.TEXT_MUTED }}>
+              Compose an email to the bug report submitter with context about their report.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedBugReport && (
+            <div className="mt-2 mb-4 p-3 rounded-lg" style={{ backgroundColor: COLORS.BACKGROUND_SECONDARY, borderColor: COLORS.BORDER_SUBTLE, border: "1px solid" }}>
+              <div className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
+                To: <span className="font-semibold">{selectedBugReport.user?.name || selectedBugReport.user?.email}</span>
+              </div>
+              <div className="text-sm mt-1" style={{ color: COLORS.TEXT_PRIMARY }}>
+                Bug Report: <span className="font-semibold">{selectedBugReport.title}</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="email-subject" style={{ color: COLORS.TEXT_PRIMARY }}>
+                Subject
+              </Label>
+              <Input
+                id="email-subject"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Email subject"
+                className="mt-1"
+                style={{ backgroundColor: COLORS.BACKGROUND_SECONDARY, borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="email-message" style={{ color: COLORS.TEXT_PRIMARY }}>
+                Message
+              </Label>
+              <Textarea
+                id="email-message"
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                placeholder="Your message to the bug report submitter..."
+                rows={10}
+                className="mt-1"
+                style={{ backgroundColor: COLORS.BACKGROUND_SECONDARY, borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+              />
+              <p className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
+                The bug report details (title, description, page, status) will be automatically included in the email.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <button
+              onClick={() => {
+                setEmailModalOpen(false);
+                setSelectedBugReport(null);
+                setEmailSubject("");
+                setEmailMessage("");
+              }}
+              className="px-4 py-2 rounded-lg text-sm transition-colors"
+              style={{ backgroundColor: COLORS.BACKGROUND_SECONDARY, color: COLORS.TEXT_PRIMARY, borderColor: COLORS.BORDER_SUBTLE, border: "1px solid" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (!selectedBugReport || !emailSubject.trim() || !emailMessage.trim()) {
+                  alert("Please fill in both subject and message");
+                  return;
+                }
+                sendEmailMutation.mutate({
+                  bugReportId: selectedBugReport.id,
+                  subject: emailSubject,
+                  message: emailMessage,
+                });
+              }}
+              disabled={sendEmailMutation.isPending || !emailSubject.trim() || !emailMessage.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-gray-600 flex items-center gap-2"
+              style={{ 
+                backgroundColor: (sendEmailMutation.isPending || !emailSubject.trim() || !emailMessage.trim()) ? "#4B5563" : "#2563EB",
+                opacity: 1
+              }}
+            >
+              {sendEmailMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4" />
+                  Send Email
+                </>
+              )}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

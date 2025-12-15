@@ -40,13 +40,14 @@ export default function Toast() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[80] space-y-2">
+    <div className="fixed top-4 right-4 z-[80] space-y-2 max-w-[calc(100vw-2rem)]">
       {toasts.map(toast => (
         <div
           key={toast.id}
           className={`flex items-start gap-3 p-4 rounded-lg border shadow-lg max-w-sm ${getBackgroundColor(
             toast.type
           )}`}
+          style={{ pointerEvents: "auto" }}
         >
           {getIcon(toast.type)}
           <div className="flex-1 min-w-0">
@@ -58,6 +59,8 @@ export default function Toast() {
           <button
             onClick={() => removeToast(toast.id)}
             className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
+            aria-label="Dismiss notification"
+            title="Dismiss"
           >
             <X className="h-4 w-4 text-gray-400" />
           </button>

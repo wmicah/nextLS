@@ -3,18 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Home,
-  Users,
-  Target,
-  BookOpen,
-  Calendar,
-  Settings,
   X,
   LogOut,
   Check,
 } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
 import ProfilePictureUploader from "./ProfilePictureUploader";
+import { COLORS } from "@/lib/colors";
 
 interface MobileNavigationProps {
   currentPage?: string;
@@ -71,37 +66,31 @@ export default function MobileNavigation({
     {
       name: "Dashboard",
       href: "/dashboard",
-      icon: Home,
       isActive: currentPage === "dashboard",
     },
     {
       name: "Clients",
       href: "/clients",
-      icon: Users,
       isActive: currentPage === "clients",
     },
     {
       name: "Programs",
       href: "/programs",
-      icon: Target,
       isActive: currentPage === "programs",
     },
     {
       name: "Library",
       href: "/library",
-      icon: BookOpen,
       isActive: currentPage === "library",
     },
     {
       name: "Schedule",
       href: "/schedule",
-      icon: Calendar,
       isActive: currentPage === "schedule",
     },
     {
       name: "Settings",
       href: "/settings",
-      icon: Settings,
       isActive: currentPage === "settings",
     },
   ];
@@ -120,7 +109,20 @@ export default function MobileNavigation({
       {/* Hamburger Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="p-2 rounded-lg bg-[#4A5A70] text-white transition-all duration-200 hover:bg-[#606364] active:scale-95"
+        className="p-1.5 rounded-lg border transition-all duration-200"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+          color: COLORS.TEXT_PRIMARY,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+          e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+        }}
         aria-label="Open navigation menu"
       >
         <svg
@@ -142,24 +144,41 @@ export default function MobileNavigation({
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+          className="fixed inset-0 z-50 backdrop-blur-sm transition-opacity duration-300"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Navigation Panel */}
       <div
-        className={`fixed top-0 left-0 right-0 bg-[#353A3A] border-b border-[#606364] shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
+        className={`fixed top-0 left-0 right-0 border-b shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
           isOpen ? "translate-y-0" : "-translate-y-full"
         }`}
-        style={{ paddingTop: "env(safe-area-inset-top)" }}
+        style={{ 
+          paddingTop: "env(safe-area-inset-top)",
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#606364]">
-          <h2 className="text-lg font-bold text-white">Navigation</h2>
+        <div 
+          className="flex items-center justify-between p-4 border-b"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
+        >
+          <h2 className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Navigation</h2>
           <button
             onClick={() => setIsOpen(false)}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#4A5A70] transition-all duration-200 active:scale-95"
+            className="p-2 rounded-lg transition-all duration-200"
+            style={{ color: COLORS.TEXT_MUTED }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.TEXT_MUTED;
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
             aria-label="Close navigation menu"
           >
             <X className="h-5 w-5" />
@@ -170,18 +189,31 @@ export default function MobileNavigation({
         <div className="p-4">
           <div className="grid grid-cols-2 gap-3">
             {navigationItems.map(item => {
-              const Icon = item.icon;
               return (
                 <button
                   key={item.name}
                   onClick={() => handleNavigation(item.href)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                    item.isActive
-                      ? "bg-[#4A5A70] text-white shadow-lg"
-                      : "bg-[#2A2F2F] text-gray-300 hover:bg-[#3A4040] hover:text-white"
-                  }`}
+                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border transition-all duration-200"
+                  style={{
+                    backgroundColor: item.isActive ? COLORS.GOLDEN_ACCENT : "rgba(255, 255, 255, 0.02)",
+                    borderColor: item.isActive ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                    color: item.isActive ? "#FFFFFF" : COLORS.TEXT_SECONDARY,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!item.isActive) {
+                      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.04)";
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!item.isActive) {
+                      e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.02)";
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }
+                  }}
                 >
-                  <Icon className="h-6 w-6" />
                   <span className="text-sm font-medium text-center">
                     {item.name}
                   </span>
@@ -192,10 +224,22 @@ export default function MobileNavigation({
         </div>
 
         {/* User Profile Footer */}
-        <div className="p-4 border-t border-[#606364]">
-          <div className="bg-[#2A2F2F] border border-[#606364] rounded-lg p-3">
+        <div 
+          className="p-4 border-t"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
+        >
+          <div 
+            className="rounded-lg p-3 border"
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.02)",
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
             <div className="flex items-center gap-3">
-              <div className="border border-white/20 rounded-full p-0.5">
+              <div 
+                className="rounded-full p-0.5 border"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
                 <ProfilePictureUploader
                   currentAvatarUrl={userSettings?.avatarUrl || null}
                   userName={currentUser?.name || currentUser?.email || "User"}
@@ -205,10 +249,10 @@ export default function MobileNavigation({
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
+                <p className="text-sm font-medium truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                   {currentUser?.name || currentUser?.email || "User"}
                 </p>
-                <p className="text-xs text-gray-400 truncate">Coach</p>
+                <p className="text-xs truncate" style={{ color: COLORS.TEXT_MUTED }}>Coach</p>
               </div>
 
               <button
@@ -220,11 +264,28 @@ export default function MobileNavigation({
                     setShowLogout(true);
                   }
                 }}
-                className={`rounded-full p-2 transition-all duration-300 ${
-                  showLogout
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-[#4A5A70] hover:bg-[#606364] text-white"
-                }`}
+                className="rounded-lg p-2 transition-all duration-300 border"
+                style={{
+                  backgroundColor: showLogout ? COLORS.GREEN_DARK : "rgba(255, 255, 255, 0.02)",
+                  borderColor: showLogout ? COLORS.GREEN_DARK : COLORS.BORDER_SUBTLE,
+                  color: "#FFFFFF",
+                }}
+                onMouseEnter={(e) => {
+                  if (showLogout) {
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                  } else {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.04)";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (showLogout) {
+                    e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                  } else {
+                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.02)";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  }
+                }}
               >
                 <div className="relative w-4 h-4">
                   <LogOut

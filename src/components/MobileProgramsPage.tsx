@@ -65,6 +65,7 @@ import MobileSimpleAssignRoutineModal from "@/components/MobileSimpleAssignRouti
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import CategoryDropdown from "./ui/CategoryDropdown";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface ProgramWeek {
   id: string;
@@ -500,7 +501,7 @@ export default function MobileProgramsPage() {
       <div className="flex items-center justify-center h-64">
         <div
           className="animate-spin rounded-full h-8 w-8 border-b-2"
-          style={{ borderColor: "#4A5A70" }}
+          style={{ borderColor: COLORS.GOLDEN_ACCENT }}
         />
       </div>
     );
@@ -509,43 +510,39 @@ export default function MobileProgramsPage() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-red-400">Error loading programs: {error.message}</p>
+        <p style={{ color: COLORS.RED_ALERT }}>Error loading programs: {error.message}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
       {/* Mobile Header */}
       <div 
-        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
-        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+        className="sticky top-0 z-50 border-b px-4 pb-3"
+        style={{ 
+          paddingTop: `calc(0.75rem + env(safe-area-inset-top))`,
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE
+        }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
-            >
-              <BookOpen className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">
-                Training Programs
-              </h1>
-              <p className="text-xs text-gray-400">
-                {activeTab === "programs"
-                  ? "Manage programs"
-                  : "Manage routines"}
-              </p>
-            </div>
+          <div>
+            <h1 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+              Training Programs
+            </h1>
+            <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+              {activeTab === "programs"
+                ? "Manage programs"
+                : "Manage routines"}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <span
               className="px-3 py-1 rounded-full text-sm font-medium"
               style={{
-                backgroundColor: "#4A5A70",
-                color: "#C3BCC2",
+                backgroundColor: COLORS.GOLDEN_DARK,
+                color: "#FFFFFF",
               }}
             >
               {activeTab === "programs"
@@ -560,53 +557,52 @@ export default function MobileProgramsPage() {
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-4">
         {/* Tabs */}
-        <div className="flex space-x-1 p-1 rounded-xl border bg-[#353A3A] border-[#606364]">
+        <div className="flex space-x-1 p-1 rounded-xl border" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
           <button
             onClick={() => setActiveTab("programs")}
-            className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+            className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
               activeTab === "programs" ? "shadow-lg" : ""
             }`}
             style={{
               backgroundColor:
-                activeTab === "programs" ? "#4A5A70" : "transparent",
-              color: activeTab === "programs" ? "#FFFFFF" : "#ABA4AA",
+                activeTab === "programs" ? COLORS.GOLDEN_ACCENT : "transparent",
+              color: activeTab === "programs" ? "#FFFFFF" : COLORS.TEXT_SECONDARY,
             }}
           >
-            <div className="flex items-center justify-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              <span>Programs</span>
-            </div>
+            <span className="text-sm">Programs</span>
           </button>
           <button
             onClick={() => setActiveTab("routines")}
-            className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+            className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
               activeTab === "routines" ? "shadow-lg" : ""
             }`}
             style={{
               backgroundColor:
-                activeTab === "routines" ? "#4A5A70" : "transparent",
-              color: activeTab === "routines" ? "#FFFFFF" : "#ABA4AA",
+                activeTab === "routines" ? COLORS.GOLDEN_ACCENT : "transparent",
+              color: activeTab === "routines" ? "#FFFFFF" : COLORS.TEXT_SECONDARY,
             }}
           >
-            <div className="flex items-center justify-center gap-2">
-              <Target className="h-4 w-4" />
-              <span>Routines</span>
-            </div>
+            <span className="text-sm">Routines</span>
           </button>
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-[#353A3A] border border-[#606364] rounded-xl p-4">
+        <div className="rounded-lg border p-4" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
           <div className="space-y-3">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: COLORS.TEXT_MUTED }} />
               <input
                 type="text"
                 placeholder="Search programs..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border bg-[#606364] border-[#ABA4AA] text-[#C3BCC2] text-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border text-sm"
+                style={{
+                  backgroundColor: "#2A2F2F",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY
+                }}
               />
             </div>
 
@@ -621,28 +617,32 @@ export default function MobileProgramsPage() {
                   cat => !DEFAULT_PROGRAM_CATEGORIES.includes(cat.name)
                 )}
                 style={{
-                  backgroundColor: "#606364",
-                  borderColor: "#ABA4AA",
-                  color: "#C3BCC2",
+                  backgroundColor: "#2A2F2F",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
                 }}
               />
 
               {/* View Mode Toggle */}
-              <div className="flex rounded-lg border border-[#ABA4AA] overflow-hidden">
+              <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-2 transition-all duration-200 ${
-                    viewMode === "grid" ? "bg-[#4A5A70]" : "bg-[#606364]"
-                  } text-[#C3BCC2]`}
+                  className="p-2 transition-all duration-200"
+                  style={{
+                    backgroundColor: viewMode === "grid" ? COLORS.GOLDEN_ACCENT : "#2A2F2F",
+                    color: viewMode === "grid" ? "#FFFFFF" : COLORS.TEXT_PRIMARY
+                  }}
                   title="Grid View"
                 >
                   <Grid3X3 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-2 transition-all duration-200 ${
-                    viewMode === "list" ? "bg-[#4A5A70]" : "bg-[#606364]"
-                  } text-[#C3BCC2]`}
+                  className="p-2 transition-all duration-200"
+                  style={{
+                    backgroundColor: viewMode === "list" ? COLORS.GOLDEN_ACCENT : "#2A2F2F",
+                    color: viewMode === "list" ? "#FFFFFF" : COLORS.TEXT_PRIMARY
+                  }}
                   title="List View"
                 >
                   <List className="h-4 w-4" />
@@ -657,8 +657,14 @@ export default function MobileProgramsPage() {
           {activeTab === "programs" ? (
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-sm"
-              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-sm transition-colors"
+              style={{ backgroundColor: COLORS.GOLDEN_DARK, color: "#FFFFFF" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
             >
               <Plus className="h-4 w-4" />
               Create Program
@@ -669,8 +675,14 @@ export default function MobileProgramsPage() {
                 setSelectedRoutine(null);
                 setIsRoutineModalOpen(true);
               }}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-sm"
-              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-sm transition-colors"
+              style={{ backgroundColor: COLORS.GOLDEN_DARK, color: "#FFFFFF" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+              }}
             >
               <Plus className="h-4 w-4" />
               Create Routine
@@ -683,14 +695,14 @@ export default function MobileProgramsPage() {
           <>
             {/* Programs List/Grid */}
             {filteredPrograms.length === 0 ? (
-              <div className="bg-[#353A3A] border border-[#606364] rounded-xl text-center p-8">
-                <div className="w-16 h-16 rounded-xl bg-[#4A5A70] flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="h-8 w-8 text-[#C3BCC2]" />
+              <div className="rounded-xl text-center p-8 border" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
+                <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "#2A2F2F" }}>
+                  <BookOpen className="h-8 w-8" style={{ color: COLORS.TEXT_MUTED }} />
                 </div>
-                <h3 className="text-xl font-bold mb-2 text-[#C3BCC2]">
+                <h3 className="text-xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                   {searchTerm ? "No programs found" : "No programs created yet"}
                 </h3>
-                <p className="mb-6 max-w-sm mx-auto text-[#ABA4AA]">
+                <p className="mb-6 max-w-sm mx-auto" style={{ color: COLORS.TEXT_SECONDARY }}>
                   {searchTerm
                     ? `No programs match "${searchTerm}". Try a different search term.`
                     : "Create your first training program to get started."}
@@ -698,7 +710,14 @@ export default function MobileProgramsPage() {
                 {!searchTerm && (
                   <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="text-sm px-4 py-2 rounded-lg bg-[#4A5A70] text-[#C3BCC2] mx-auto"
+                    className="text-sm px-4 py-2 rounded-lg transition-colors"
+                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: "#FFFFFF" }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                    }}
                   >
                     Create Your First Program
                   </button>
@@ -706,7 +725,20 @@ export default function MobileProgramsPage() {
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm("")}
-                    className="text-sm px-4 py-2 rounded-lg bg-transparent text-[#ABA4AA] border border-[#606364] mx-auto"
+                    className="text-sm px-4 py-2 rounded-lg border transition-colors"
+                    style={{ 
+                      backgroundColor: "#2A2F2F", 
+                      color: COLORS.TEXT_SECONDARY, 
+                      borderColor: COLORS.BORDER_SUBTLE 
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#353A3A";
+                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }}
                   >
                     Clear Search
                   </button>
@@ -720,16 +752,36 @@ export default function MobileProgramsPage() {
                     {filteredPrograms.map((program: ProgramListItem) => (
                       <div
                         key={program.id}
-                        className="bg-[#353A3A] border border-[#606364] rounded-xl p-4 transition-all duration-200 hover:bg-[#3A4040] hover:border-[#4A5A70] cursor-pointer"
+                        className="rounded-lg border p-4 transition-all duration-200 cursor-pointer"
+                        style={{
+                          backgroundColor: "#1C2021",
+                          borderColor: COLORS.BORDER_SUBTLE,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (window.matchMedia("(hover: hover)").matches) {
+                            e.currentTarget.style.backgroundColor = "#1F2426";
+                            e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (window.matchMedia("(hover: hover)").matches) {
+                            e.currentTarget.style.backgroundColor = "#1C2021";
+                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                          }
+                        }}
+                        onTouchStart={(e) => {
+                          e.currentTarget.style.backgroundColor = "#1C2021";
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        }}
                         onClick={() => handleProgramClick(program)}
                       >
                         <div className="space-y-3">
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-base font-semibold text-[#C3BCC2] mb-1 line-clamp-2">
+                              <h3 className="text-base font-semibold mb-1 line-clamp-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                                 {program.title}
                               </h3>
-                              <p className="text-sm text-[#ABA4AA] mb-2 line-clamp-2">
+                              <p className="text-sm mb-2 line-clamp-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                                 {program.description || "No description"}
                               </p>
                             </div>
@@ -737,17 +789,32 @@ export default function MobileProgramsPage() {
                               <DropdownMenu>
                                 <DropdownMenuTrigger
                                   onClick={e => e.stopPropagation()}
-                                  className="p-1 rounded hover:bg-[#4A5A70]"
+                                  className="p-1 rounded transition-colors"
+                                  style={{ color: COLORS.TEXT_SECONDARY }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = "transparent";
+                                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                                  }}
                                 >
-                                  <MoreHorizontal className="h-4 w-4 text-[#ABA4AA]" />
+                                  <MoreHorizontal className="h-4 w-4" />
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent className="bg-[#353A3A] border-[#606364]">
+                                <DropdownMenuContent style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
                                   <DropdownMenuItem
                                     onClick={e => {
                                       e.stopPropagation();
                                       handleProgramClick(program);
                                     }}
-                                    className="text-[#C3BCC2] hover:bg-[#4A5A70]"
+                                    style={{ color: COLORS.TEXT_PRIMARY }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = "transparent";
+                                    }}
                                   >
                                     <Eye className="h-4 w-4 mr-2" />
                                     View Details
@@ -757,18 +824,30 @@ export default function MobileProgramsPage() {
                                       e.stopPropagation();
                                       handleAssignProgram(program);
                                     }}
-                                    className="text-[#C3BCC2] hover:bg-[#4A5A70]"
+                                    style={{ color: COLORS.TEXT_PRIMARY }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = "transparent";
+                                    }}
                                   >
                                     <Users className="h-4 w-4 mr-2" />
                                     Assign to Client
                                   </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-[#606364]" />
+                                  <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
                                   <DropdownMenuItem
                                     onClick={e => {
                                       e.stopPropagation();
                                       handleDeleteProgram(program.id);
                                     }}
-                                    className="text-red-400 hover:bg-red-900/20"
+                                    style={{ color: COLORS.RED_ALERT }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = "transparent";
+                                    }}
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Delete
@@ -778,11 +857,17 @@ export default function MobileProgramsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs px-2 py-1 rounded bg-[#F59E0B] text-white">
+                            <span 
+                              className="text-xs px-2 py-1 rounded text-white"
+                              style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                            >
                               {program.duration} weeks
                             </span>
                             {program.activeClientCount > 0 && (
-                              <span className="text-xs px-2 py-1 rounded bg-[#10B981] text-white">
+                              <span 
+                                className="text-xs px-2 py-1 rounded text-white"
+                                style={{ backgroundColor: COLORS.GREEN_DARK }}
+                              >
                                 {program.activeClientCount} assigned
                               </span>
                             )}
@@ -799,16 +884,36 @@ export default function MobileProgramsPage() {
                     {filteredPrograms.map((program: ProgramListItem) => (
                       <div
                         key={program.id}
-                        className="bg-[#353A3A] border border-[#606364] rounded-xl p-4 transition-all duration-200 hover:bg-[#3A4040] hover:border-[#4A5A70] cursor-pointer"
+                        className="rounded-lg border p-4 transition-all duration-200 cursor-pointer"
+                        style={{
+                          backgroundColor: "#1C2021",
+                          borderColor: COLORS.BORDER_SUBTLE,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (window.matchMedia("(hover: hover)").matches) {
+                            e.currentTarget.style.backgroundColor = "#1F2426";
+                            e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (window.matchMedia("(hover: hover)").matches) {
+                            e.currentTarget.style.backgroundColor = "#1C2021";
+                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                          }
+                        }}
+                        onTouchStart={(e) => {
+                          e.currentTarget.style.backgroundColor = "#1C2021";
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        }}
                         onClick={() => handleProgramClick(program)}
                       >
                         <div className="space-y-2">
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-lg font-bold text-[#C3BCC2] mb-1">
+                              <h3 className="text-sm font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                                 {program.title}
                               </h3>
-                              <p className="text-sm text-[#ABA4AA] mb-2">
+                              <p className="text-xs mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                                 {program.description || "No description"}
                               </p>
                             </div>
@@ -816,17 +921,32 @@ export default function MobileProgramsPage() {
                               <DropdownMenu>
                                 <DropdownMenuTrigger
                                   onClick={e => e.stopPropagation()}
-                                  className="p-1 rounded hover:bg-[#4A5A70]"
+                                  className="p-1 rounded transition-colors"
+                                  style={{ color: COLORS.TEXT_SECONDARY }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = "transparent";
+                                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                                  }}
                                 >
-                                  <MoreHorizontal className="h-4 w-4 text-[#ABA4AA]" />
+                                  <MoreHorizontal className="h-4 w-4" />
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent className="bg-[#353A3A] border-[#606364]">
+                                <DropdownMenuContent style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
                                   <DropdownMenuItem
                                     onClick={e => {
                                       e.stopPropagation();
                                       handleProgramClick(program);
                                     }}
-                                    className="text-[#C3BCC2] hover:bg-[#4A5A70]"
+                                    style={{ color: COLORS.TEXT_PRIMARY }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = "transparent";
+                                    }}
                                   >
                                     <Eye className="h-4 w-4 mr-2" />
                                     View Details
@@ -836,18 +956,30 @@ export default function MobileProgramsPage() {
                                       e.stopPropagation();
                                       handleAssignProgram(program);
                                     }}
-                                    className="text-[#C3BCC2] hover:bg-[#4A5A70]"
+                                    style={{ color: COLORS.TEXT_PRIMARY }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = "transparent";
+                                    }}
                                   >
                                     <Users className="h-4 w-4 mr-2" />
                                     Assign to Client
                                   </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-[#606364]" />
+                                  <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
                                   <DropdownMenuItem
                                     onClick={e => {
                                       e.stopPropagation();
                                       handleDeleteProgram(program.id);
                                     }}
-                                    className="text-red-400 hover:bg-red-900/20"
+                                    style={{ color: COLORS.RED_ALERT }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = "transparent";
+                                    }}
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Delete
@@ -857,11 +989,17 @@ export default function MobileProgramsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm px-3 py-1 rounded-lg bg-[#F59E0B] text-white">
+                            <span 
+                              className="text-xs px-2 py-1 rounded text-white"
+                              style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                            >
                               {program.duration} weeks
                             </span>
                             {program.activeClientCount > 0 && (
-                              <span className="text-sm px-3 py-1 rounded-lg bg-[#10B981] text-white">
+                              <span 
+                                className="text-xs px-2 py-1 rounded text-white"
+                                style={{ backgroundColor: COLORS.GREEN_DARK }}
+                              >
                                 {program.activeClientCount} assigned
                               </span>
                             )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Filter, ChevronDown, Sparkles, Grid3X3 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { COLORS } from "@/lib/colors";
 
 interface CategoryDropdownProps {
@@ -24,7 +24,7 @@ export default function CategoryDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredGroup, setHoveredGroup] = useState<
     "standard" | "custom" | null
-  >(null);
+  >("standard"); // Default to "standard" so categories show immediately
   const [position, setPosition] = useState<{
     top: number;
     left: number | "auto";
@@ -37,22 +37,46 @@ export default function CategoryDropdown({
     if (isOpen && dropdownRef.current) {
       const rect = dropdownRef.current.getBoundingClientRect();
       const dropdownWidth = 320;
+      const dropdownHeight = 400; // Approximate max height
       const spaceOnRight = window.innerWidth - rect.right;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      let top = rect.bottom + 8;
+      let left: number | "auto" = rect.left;
+      let right: number | "auto" = "auto";
+
+      // If not enough space below, position above
+      if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+        top = rect.top - dropdownHeight - 8;
+      } else if (spaceBelow < dropdownHeight && spaceAbove < dropdownHeight) {
+        // If not enough space either way, position below but adjust height
+        top = rect.bottom + 8;
+      }
 
       // Position dropdown to the right if there's space, otherwise to the left
       if (spaceOnRight >= dropdownWidth) {
-        setPosition({
-          top: rect.bottom + 8,
-          left: rect.left,
-          right: "auto",
-        });
+        left = rect.left;
+        right = "auto";
       } else {
-        setPosition({
-          top: rect.bottom + 8,
-          left: "auto",
-          right: window.innerWidth - rect.right,
-        });
+        left = "auto";
+        right = Math.max(8, window.innerWidth - rect.right);
       }
+
+      // Ensure dropdown stays within viewport
+      if (typeof left === "number") {
+        if (left < 8) {
+          left = 8;
+        } else if (left + dropdownWidth > window.innerWidth - 8) {
+          left = window.innerWidth - dropdownWidth - 8;
+        }
+      }
+
+      setPosition({
+        top: Math.max(8, Math.min(top, window.innerHeight - dropdownHeight - 8)),
+        left,
+        right,
+      });
     }
   }, [isOpen]);
 
@@ -111,13 +135,12 @@ export default function CategoryDropdown({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-all duration-200 text-xs whitespace-nowrap"
         style={{
-          backgroundColor: style.backgroundColor || COLORS.BACKGROUND_DARK,
+          backgroundColor: style.backgroundColor || "#2A2F2F",
           borderColor: isOpen ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
           color: COLORS.TEXT_PRIMARY,
           minWidth: "120px",
         }}
       >
-        <Filter className="h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
         <span className="flex-1 text-left truncate text-xs">
           {displayValue}
         </span>
@@ -134,14 +157,17 @@ export default function CategoryDropdown({
         <div
           className="fixed rounded-lg border shadow-lg overflow-hidden"
           style={{
-            backgroundColor: COLORS.BACKGROUND_DARK,
+            backgroundColor: "#1F2426",
             borderColor: COLORS.BORDER_SUBTLE,
             width: "320px",
-            zIndex: 9999,
+            maxWidth: "calc(100vw - 16px)",
+            zIndex: 99999,
             top: `${position.top}px`,
             left: position.left !== "auto" ? `${position.left}px` : undefined,
             right:
               position.right !== "auto" ? `${position.right}px` : undefined,
+            maxHeight: "calc(100vh - 16px)",
+            overflowY: "auto",
           }}
         >
           {/* All Categories Option */}
@@ -151,19 +177,19 @@ export default function CategoryDropdown({
             className="w-full px-3 py-2 text-left transition-all duration-200 border-b text-xs"
             style={{
               backgroundColor:
-                value === "All Categories" ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                value === "All Categories" ? COLORS.GOLDEN_DARK : "#1F2426",
               borderColor: COLORS.BORDER_SUBTLE,
               color: value === "All Categories" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
             }}
             onMouseEnter={e => {
               if (value !== "All Categories") {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor = "#2A2F2F";
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }
             }}
             onMouseLeave={e => {
               if (value !== "All Categories") {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                e.currentTarget.style.backgroundColor = "#1F2426";
                 e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               }
             }}
@@ -175,17 +201,21 @@ export default function CategoryDropdown({
             {/* Left Side - Group Selector */}
             <div
               className="w-28 border-r"
-              style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_DARK }}
+              style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: "#1F2426" }}
             >
               {/* Standard Group */}
               <button
                 type="button"
-                onMouseEnter={() => setHoveredGroup("standard")}
+                onMouseEnter={() => {
+                  if (window.matchMedia("(hover: hover)").matches) {
+                    setHoveredGroup("standard");
+                  }
+                }}
                 onClick={() => setHoveredGroup("standard")}
                 className="w-full px-3 py-2 text-left transition-all duration-200 flex items-center gap-1.5 border-b text-xs"
                 style={{
                   backgroundColor:
-                    hoveredGroup === "standard" ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                    hoveredGroup === "standard" ? COLORS.GOLDEN_DARK : "#1F2426",
                   borderColor: COLORS.BORDER_SUBTLE,
                   color: hoveredGroup === "standard" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                 }}
@@ -197,12 +227,16 @@ export default function CategoryDropdown({
               {customCategories.length > 0 && (
                 <button
                   type="button"
-                  onMouseEnter={() => setHoveredGroup("custom")}
+                  onMouseEnter={() => {
+                    if (window.matchMedia("(hover: hover)").matches) {
+                      setHoveredGroup("custom");
+                    }
+                  }}
                   onClick={() => setHoveredGroup("custom")}
                   className="w-full px-3 py-2 text-left transition-all duration-200 flex items-center gap-1.5 text-xs"
                   style={{
                     backgroundColor:
-                      hoveredGroup === "custom" ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                      hoveredGroup === "custom" ? COLORS.GOLDEN_DARK : "#1F2426",
                     color: hoveredGroup === "custom" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                   }}
                 >
@@ -223,18 +257,18 @@ export default function CategoryDropdown({
                       className="w-full px-3 py-2 text-left transition-all duration-200 hover:pl-4 text-xs"
                       style={{
                         backgroundColor:
-                          value === cat ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                          value === cat ? COLORS.GOLDEN_DARK : "#1F2426",
                         color: value === cat ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                       }}
                       onMouseEnter={e => {
                         if (value !== cat) {
-                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.backgroundColor = "#2A2F2F";
                           e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                         }
                       }}
                       onMouseLeave={e => {
                         if (value !== cat) {
-                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                          e.currentTarget.style.backgroundColor = "#1F2426";
                           e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                         }
                       }}
@@ -255,18 +289,18 @@ export default function CategoryDropdown({
                       className="w-full px-3 py-2 text-left transition-all duration-200 hover:pl-4 flex items-center justify-between text-xs"
                       style={{
                         backgroundColor:
-                          value === cat.name ? COLORS.GOLDEN_DARK : COLORS.BACKGROUND_DARK,
+                          value === cat.name ? COLORS.GOLDEN_DARK : "#1F2426",
                         color: value === cat.name ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                       }}
                       onMouseEnter={e => {
                         if (value !== cat.name) {
-                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.backgroundColor = "#2A2F2F";
                           e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                         }
                       }}
                       onMouseLeave={e => {
                         if (value !== cat.name) {
-                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                          e.currentTarget.style.backgroundColor = "#1F2426";
                           e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                         }
                       }}
@@ -283,7 +317,9 @@ export default function CategoryDropdown({
               {!hoveredGroup && (
                 <div className="px-3 py-6 text-center">
                   <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
-                    Hover over a group to see categories
+                    {window.matchMedia("(hover: hover)").matches
+                      ? "Hover over a group to see categories"
+                      : "Tap a group to see categories"}
                   </p>
                 </div>
               )}

@@ -11,7 +11,6 @@ import {
   Clock,
   Activity,
   BarChart3,
-  Calendar,
   UserCheck,
   Target,
   Home,
@@ -20,8 +19,8 @@ import {
 import WeekAtAGlance from "@/components/WeekAtAGlance";
 import MobileNavigation from "@/components/MobileNavigation";
 import MobileBottomNavigation from "@/components/MobileBottomNavigation";
-
 import PushNotificationPrompt from "./PushNotificationPrompt";
+import { COLORS, getGoldenAccent, getRedAlert } from "@/lib/colors";
 
 export default function MobileDashboard() {
   const router = useRouter();
@@ -49,107 +48,63 @@ export default function MobileDashboard() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
       {/* Mobile Header */}
       <div 
-        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
-        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+        className="sticky top-0 z-50 border-b px-4 pb-3"
+        style={{ 
+          paddingTop: `calc(0.75rem + env(safe-area-inset-top))`,
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE
+        }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
-            >
-              <Home className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Dashboard</h1>
-              <p className="text-xs text-gray-400">Coach Overview</p>
-            </div>
+          <div>
+            <h1 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+              Welcome back{userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
+            </h1>
+            <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
           </div>
           <MobileNavigation currentPage="dashboard" />
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="p-4 pb-20 space-y-6">
+      <div className="p-4 pb-20 space-y-4">
         <div className="pt-4">
           <PushNotificationPrompt />
         </div>
-        {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-[#4A5A70] to-[#606364] rounded-2xl p-4">
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-white mb-1">
-              Welcome back, Coach
-            </h2>
-            <div className="text-sm text-gray-400">
-              {new Date().toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            href="/clients"
-            className="bg-[#353A3A] border border-[#606364] rounded-xl p-4 text-center"
-          >
-            <Users className="h-6 w-6 text-blue-400 mx-auto mb-2" />
-            <div className="text-white font-medium text-sm">Clients</div>
-            <div className="text-gray-400 text-xs">Manage athletes</div>
-          </Link>
-          <Link
-            href="/programs"
-            className="bg-[#353A3A] border border-[#606364] rounded-xl p-4 text-center"
-          >
-            <Target className="h-6 w-6 text-green-400 mx-auto mb-2" />
-            <div className="text-white font-medium text-sm">Programs</div>
-            <div className="text-gray-400 text-xs">Training plans</div>
-          </Link>
-          <Link
-            href="/schedule"
-            className="bg-[#353A3A] border border-[#606364] rounded-xl p-4 text-center"
-          >
-            <Calendar className="h-6 w-6 text-purple-400 mx-auto mb-2" />
-            <div className="text-white font-medium text-sm">Schedule</div>
-            <div className="text-gray-400 text-xs">Lessons & events</div>
-          </Link>
-          <Link
-            href="/messages"
-            className="bg-[#353A3A] border border-[#606364] rounded-xl p-4 text-center"
-          >
-            <MessageCircle className="h-6 w-6 text-orange-400 mx-auto mb-2" />
-            <div className="text-white font-medium text-sm">Messages</div>
-            <div className="text-gray-400 text-xs">Communicate</div>
-          </Link>
-        </div>
 
         {/* Week at a Glance - Mobile Optimized */}
-        <div className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <Calendar className="h-5 w-5 text-white" />
-            <h3 className="text-lg font-bold text-white">This Week</h3>
+        <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+              Week at a Glance
+            </h2>
+            <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+              Week of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </span>
           </div>
-          <WeekAtAGlance className="mobile-optimized" />
+          <WeekAtAGlance className="compact" />
         </div>
-
-        {/* Quick Stats */}
-        <QuickStatsSection />
-
-        {/* Recent Notifications */}
-        <RecentNotificationsSection />
 
         {/* Today's Schedule */}
         <TodaysScheduleSection />
 
+        {/* Needs Attention - Mobile version */}
+        <NeedsAttentionSectionMobile />
+
         {/* Recent Activity */}
         <RecentClientActivitySection />
+
+        {/* Quick Stats */}
+        <QuickStatsSection />
       </div>
 
       {/* Bottom Navigation */}
@@ -220,27 +175,71 @@ function QuickStatsSection() {
     },
   ];
 
-  return (
-    <div className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4">
-      <div className="flex items-center gap-3 mb-4">
-        <BarChart3 className="h-5 w-5 text-white" />
-        <h3 className="text-lg font-bold text-white">Quick Stats</h3>
+  const statsArray = [
+    {
+      label: "Active clients",
+      value: isLoading ? "..." : clients.length,
+    },
+    {
+      label: "Scheduled sessions this week",
+      value: isLoading ? "..." : totalUpcomingLessons || 0,
+    },
+    {
+      label: "Programs created",
+      value: isLoading ? "..." : totalPrograms || 0,
+    },
+    {
+      label: "Average completion rate",
+      value: isLoading ? "..." : `${completionRate || 0}%`,
+      progress: completionRate || 0,
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+        <div className="animate-pulse">
+          <div className="h-5 w-32 rounded mb-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-20 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+            ))}
+          </div>
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+      <h2 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
+        Quick stats
+      </h2>
 
       <div className="grid grid-cols-2 gap-3">
-        {stats.map((stat, index) => (
+        {statsArray.map((stat, index) => (
           <div
             key={index}
-            className="bg-[#2A2F2F] border border-[#606364] rounded-lg p-3 text-center"
+            className="p-3 rounded-lg border"
+            style={{ 
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+              borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`
+            }}
           >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2"
-              style={{ backgroundColor: stat.color + "20" }}
-            >
-              <stat.icon className="h-4 w-4" style={{ color: stat.color }} />
-            </div>
-            <p className="text-lg font-bold text-white mb-1">{stat.value}</p>
-            <p className="text-xs text-gray-400">{stat.label}</p>
+            <p className="text-xl font-bold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>{stat.value}</p>
+            <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>{stat.label}</p>
+            {stat.progress !== undefined && (
+              <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}>
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                    width: `${stat.progress}%`,
+                  }}
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -271,74 +270,7 @@ function RecentNotificationsSection() {
     return null; // Don't show section if no notifications
   }
 
-  return (
-    <div className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Bell className="h-5 w-5 text-white" />
-          <h3 className="text-lg font-bold text-white">Recent Notifications</h3>
-          {unreadCount > 0 && (
-            <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
-              {unreadCount}
-            </span>
-          )}
-        </div>
-        <Link
-          href="/notifications"
-          className="text-sm text-blue-400 hover:text-blue-300 font-medium"
-        >
-          View All
-        </Link>
-      </div>
-      <div className="space-y-3">
-        {notifications.slice(0, 3).map((notification: any) => (
-          <div
-            key={notification.id}
-            className={`p-3 rounded-lg ${
-              !notification.isRead
-                ? "bg-blue-500/10 border-l-2 border-blue-500"
-                : "bg-[#2A2F2F]"
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 mt-1">
-                {notification.type === "CLIENT_JOIN_REQUEST" ? (
-                  <Users className="h-4 w-4 text-green-400" />
-                ) : (
-                  <Bell className="h-4 w-4 text-gray-400" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className={`text-sm font-medium ${
-                    !notification.isRead ? "font-semibold" : ""
-                  } text-white`}
-                >
-                  {notification.title}
-                </p>
-                <p className="text-xs mt-1 line-clamp-2 text-gray-400">
-                  {notification.message}
-                </p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-gray-500">
-                    {new Date(notification.createdAt).toLocaleDateString()}
-                  </span>
-                  {notification.type === "CLIENT_JOIN_REQUEST" && (
-                    <Link
-                      href="/clients"
-                      className="text-xs text-blue-400 hover:text-blue-300 font-medium"
-                    >
-                      View Client
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return null; // Remove notifications section to match desktop (not shown on desktop dashboard)
 }
 
 // Today's Schedule Section Component
@@ -404,34 +336,35 @@ function TodaysScheduleSection() {
 
   if (isLoading) {
     return (
-      <div className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4">
+      <div 
+        className="rounded-lg border p-4"
+        style={{ 
+          backgroundColor: COLORS.BACKGROUND_CARD, 
+          borderColor: COLORS.BORDER_SUBTLE 
+        }}
+      >
         <div className="flex items-center gap-3 mb-4">
-          <Calendar className="h-5 w-5 text-white" />
-          <h3 className="text-lg font-bold text-white">Today's Schedule</h3>
+          <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+            Today's Schedule
+          </h3>
         </div>
         <div className="text-center py-6">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#4A5A70] mx-auto mb-2" />
-          <p className="text-gray-400 text-sm">Loading schedule...</p>
+          <div 
+            className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2"
+            style={{ borderColor: COLORS.GOLDEN_ACCENT }}
+          />
+          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>Loading schedule...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4">
+    <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Calendar className="h-5 w-5 text-white" />
-          <h3 className="text-lg font-bold text-white">Today's Schedule</h3>
-        </div>
-        {todaysSchedule.length > 0 && (
-          <Link
-            href="/schedule"
-            className="text-xs text-blue-400 hover:text-blue-300 font-medium"
-          >
-            View All
-          </Link>
-        )}
+        <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+          Today's schedule
+        </h2>
       </div>
 
       {todaysSchedule.length > 0 ? (
@@ -448,93 +381,292 @@ function TodaysScheduleSection() {
                     router.push("/schedule");
                   }
                 }}
-                className="w-full p-3 rounded-lg bg-[#2A2F2F] border border-[#606364] hover:bg-[#353A3A] transition-colors text-left"
+                className="w-full p-2 rounded border transition-colors text-left"
+                style={{
+                  borderColor: COLORS.GOLDEN_BORDER,
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {item.type === "lesson" ? (
-                      <Clock
-                        className={`h-4 w-4 flex-shrink-0 ${
-                          isPast ? "text-gray-500" : "text-blue-400"
-                        }`}
-                      />
-                    ) : (
-                      <Bell className="h-4 w-4 flex-shrink-0 text-orange-400" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-white font-medium text-sm ${
-                          isPast ? "opacity-60" : ""
-                        }`}
-                      >
-                        {new Date(item.date).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      <p
-                        className={`text-gray-400 text-xs truncate ${
-                          isPast ? "opacity-60" : ""
-                        }`}
-                      >
-                        {item.type === "lesson"
-                          ? item.client?.name || "Unknown Client"
-                          : item.title}
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2">
                   <span
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ml-2"
-                    style={{
-                      backgroundColor:
-                        item.type === "lesson"
-                          ? item.status === "CONFIRMED"
-                            ? isPast
-                              ? "#6B7280"
-                              : "#10B981"
-                            : "#F59E0B"
-                          : "#F59E0B",
-                      color:
-                        item.type === "lesson"
-                          ? item.status === "CONFIRMED"
-                            ? isPast
-                              ? "#D1D5DB"
-                              : "#DCFCE7"
-                            : "#FEF3C7"
-                          : "#FEF3C7",
-                    }}
+                    className="text-xs font-medium"
+                    style={{ color: COLORS.GOLDEN_ACCENT }}
                   >
-                    {item.type === "lesson"
-                      ? isPast
-                        ? "Completed"
-                        : item.status
-                      : "REMINDER"}
+                    {new Date(item.date).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`text-xs font-medium truncate ${
+                        isPast ? "opacity-50" : ""
+                      }`}
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      {item.type === "lesson"
+                        ? item.client?.name || "Unknown Client"
+                        : item.title}
+                    </p>
+                    {item.type === "lesson" && (
+                      <p
+                        className="text-[10px] truncate"
+                        style={{ color: COLORS.TEXT_MUTED }}
+                      >
+                        {item.status}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </button>
             );
           })}
-          {todaysSchedule.length > 5 && (
-            <Link
-              href="/schedule"
-              className="block text-center text-sm text-blue-400 hover:text-blue-300 font-medium py-2"
-            >
-              +{todaysSchedule.length - 5} more items today →
-            </Link>
-          )}
         </div>
       ) : (
-        <div className="text-center py-6">
-          <Calendar className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-          <p className="text-gray-400 text-sm mb-2">
+        <div className="text-center py-4">
+          <p className="text-xs mb-2" style={{ color: COLORS.TEXT_MUTED }}>
             No lessons or reminders for today
           </p>
           <Link
             href="/schedule"
-            className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+            className="inline-block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{
+              backgroundColor: COLORS.GOLDEN_DARK,
+              color: "#FFFFFF",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+            }}
           >
-            View Schedule →
+            Schedule a lesson
           </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Needs Attention Section - Mobile version
+function NeedsAttentionSectionMobile() {
+  const router = useRouter();
+  const { data: attentionItemsData = [], isLoading: attentionLoading } =
+    trpc.sidebar.getAttentionItems.useQuery();
+
+  const { data: conversationsData, isLoading: conversationsLoading } =
+    trpc.messaging.getConversations.useQuery();
+
+  if (attentionLoading || conversationsLoading) {
+    return (
+      <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+        <div className="animate-pulse">
+          <div className="h-5 w-40 rounded mb-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+          <div className="space-y-3">
+            <div className="h-16 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+            <div className="h-16 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const conversations = Array.isArray(conversationsData) ? conversationsData : [];
+  const attentionItems: any[] = [...attentionItemsData];
+
+  if (Array.isArray(conversations)) {
+    conversations.forEach((conversation: any) => {
+      const unreadCount = conversation.unreadCount || 0;
+      if (unreadCount > 0) {
+        const otherUser =
+          conversation.coach?.id !== conversation.client?.id
+            ? conversation.client || conversation.coach
+            : null;
+        const lastMessage = conversation.messages?.[0];
+
+        attentionItems.push({
+          id: `message-${conversation.id}`,
+          type: "message",
+          priority: 2,
+          clientName: otherUser?.name || "Unknown",
+          clientId: otherUser?.id || undefined,
+          title: `commented on ${lastMessage?.content ? "message" : "conversation"}`,
+          description: lastMessage?.content || "New message",
+          timestamp: lastMessage?.createdAt || conversation.updatedAt,
+          href: `/messages/${conversation.id}`,
+          actionButton: "Reply",
+        });
+      }
+    });
+  }
+
+  attentionItems.sort((a, b) => {
+    if (a.priority !== b.priority) {
+      return (a.priority || 99) - (b.priority || 99);
+    }
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "video_review":
+        return "Video Review";
+      case "message":
+        return "Message";
+      case "missed_drill":
+        return "Missed Drill";
+      case "lesson_confirmation":
+        return "Lesson";
+      case "program_update":
+        return "Program";
+      default:
+        return "Notification";
+    }
+  };
+
+  return (
+    <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 
+          className="text-lg font-semibold pl-3"
+          style={{ 
+            color: COLORS.TEXT_PRIMARY,
+            borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`
+          }}
+        >
+          Needs your attention
+        </h2>
+        {attentionItems.length > 0 && (
+          <Link
+            href="/notifications"
+            className="text-sm"
+            style={{ color: COLORS.GOLDEN_ACCENT }}
+          >
+            View all →
+          </Link>
+        )}
+      </div>
+
+      {attentionItems.length > 0 ? (
+        <div className="space-y-2">
+          {attentionItems.map((item) => {
+            const handleItemClick = () => {
+              if (item.actionButton) {
+                return;
+              }
+              if (item.clientId) {
+                router.push(`/clients/${item.clientId}/detail`);
+                return;
+              }
+              if (item.href) {
+                router.push(item.href);
+              }
+            };
+
+            const handleActionClick = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (item.href) {
+                router.push(item.href);
+              }
+            };
+
+            return (
+              <div
+                key={item.id}
+                onClick={handleItemClick}
+                style={{
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                }}
+                className={`flex items-start gap-2 p-2 rounded-lg border transition-colors ${
+                  (item.clientId || item.href) && !item.actionButton ? "cursor-pointer" : ""
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                    {item.clientName && (
+                      <span className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
+                        {item.clientName}
+                      </span>
+                    )}
+                    {item.type !== "missed_drill" && (
+                      <span
+                        className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+                        style={{
+                          backgroundColor: getGoldenAccent(0.12),
+                          color: COLORS.GOLDEN_HOVER,
+                        }}
+                      >
+                        {getTypeLabel(item.type)}
+                      </span>
+                    )}
+                    {item.badge && (
+                      <span
+                        className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+                        style={{
+                          backgroundColor: getRedAlert(0.4),
+                          color: COLORS.RED_ALERT,
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-medium mb-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
+                    {item.title}
+                  </p>
+                  {item.description && (
+                    <p className="text-[10px] line-clamp-1" style={{ color: COLORS.TEXT_MUTED }}>
+                      {item.description}
+                    </p>
+                  )}
+                  <p className="text-[10px] mt-0.5" style={{ color: COLORS.TEXT_MUTED }}>
+                    {formatTimestamp(item.timestamp)}
+                  </p>
+                </div>
+                {item.actionButton && (
+                  <button
+                    onClick={handleActionClick}
+                    className="px-2 py-1 rounded text-[10px] font-medium transition-colors flex-shrink-0"
+                    style={{
+                      backgroundColor: COLORS.GOLDEN_ACCENT,
+                      color: "#FFFFFF",
+                    }}
+                  >
+                    {item.actionButton}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>All caught up! No items need your attention.</p>
         </div>
       )}
     </div>
@@ -565,36 +697,121 @@ function RecentClientActivitySection() {
     return null; // Don't show section if no activity
   }
 
-  return (
-    <div className="bg-[#353A3A] border border-[#606364] rounded-2xl p-4">
-      <div className="flex items-center gap-3 mb-4">
-        <Activity className="h-5 w-5 text-white" />
-        <h3 className="text-lg font-bold text-white">Recent Activity</h3>
-      </div>
+  const { data: recentCompletions = [], isLoading } =
+    trpc.sidebar.getRecentCompletions.useQuery();
 
-      <div className="space-y-3">
-        {recentActivity.map((activity: any, index: number) => (
-          <div
-            key={`${activity.clientName}-${activity.completedAt}-${index}`}
-            className="p-3 rounded-lg bg-[#2A2F2F] border border-[#606364]"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#4A5A70] flex items-center justify-center">
-                <UserCheck className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-white font-medium text-sm">
-                  {activity.clientName}
-                </p>
-                <p className="text-gray-400 text-xs">{activity.activity}</p>
-              </div>
-              <span className="text-xs text-gray-500">
-                {new Date(activity.completedAt).toLocaleDateString()}
-              </span>
-            </div>
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    return date.toLocaleDateString();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+        <div className="animate-pulse">
+          <div className="h-5 w-40 rounded mb-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+          <div className="space-y-3">
+            <div className="h-12 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+            <div className="h-12 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
           </div>
-        ))}
+        </div>
       </div>
+    );
+  }
+
+  if (recentCompletions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+      <h2 
+        className="text-lg font-semibold mb-4 pl-3"
+        style={{ 
+          color: COLORS.TEXT_PRIMARY,
+          borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`
+        }}
+      >
+        Recent client activity
+      </h2>
+
+      {recentCompletions.length > 0 ? (
+        <div className="space-y-3">
+          {recentCompletions.map((completion: any) => {
+            const getActivityText = () => {
+              const count = completion.count || 1;
+              const latest = completion.latestCompletion;
+              const completionType = completion.completionType || latest?.type;
+              
+              if (completionType === "program") {
+                if (latest?.title) {
+                  return count > 1 
+                    ? `completed ${count} drills including "${latest.title}"`
+                    : `completed drill "${latest.title}"`;
+                }
+                return count > 1 
+                  ? `completed ${count} drills`
+                  : `completed a drill`;
+              } else if (completionType === "routine") {
+                return count > 1
+                  ? `completed ${count} routine exercises`
+                  : `completed a routine exercise`;
+              } else {
+                return count > 1
+                  ? `completed ${count} exercises`
+                  : `completed an exercise`;
+              }
+            };
+
+            const getWorkoutName = () => {
+              if (completion.programTitle) {
+                return completion.programTitle;
+              }
+              if (completion.latestCompletion?.programTitle) {
+                return completion.latestCompletion.programTitle;
+              }
+              return null;
+            };
+
+            return (
+              <div key={completion.id} className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                    <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>{completion.clientName}</span>{" "}
+                    {getActivityText()}
+                    {getWorkoutName() && (
+                      <>
+                        {" "}
+                        <span style={{ color: COLORS.TEXT_SECONDARY }}>in </span>
+                        <span className="font-medium text-green-400">
+                          {getWorkoutName()}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: COLORS.TEXT_MUTED }}>
+                    {formatTimestamp(completion.completedAt)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-6">
+          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>No recent completions</p>
+        </div>
+      )}
     </div>
   );
 }
