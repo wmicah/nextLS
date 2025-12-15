@@ -2109,7 +2109,7 @@ export default function AdminDashboard() {
           </DialogHeader>
           
           {selectedBugReport && (
-            <div className="mt-2 mb-4 p-3 rounded-lg" style={{ backgroundColor: COLORS.BACKGROUND_SECONDARY, borderColor: COLORS.BORDER_SUBTLE, border: "1px solid" }}>
+            <div className="mt-2 mb-4 p-3 rounded-lg" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, border: "1px solid" }}>
               <div className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
                 To: <span className="font-semibold">{selectedBugReport.user?.name || selectedBugReport.user?.email}</span>
               </div>

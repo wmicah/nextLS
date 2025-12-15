@@ -8,8 +8,25 @@ export async function POST(request: NextRequest) {
     const secret = searchParams.get("secret");
 
     if (secret !== process.env.CRON_SECRET) {
+      console.error("❌ Unauthorized request to daily workout reminders API");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Check if RESEND_API_KEY is configured
+    if (!process.env.RESEND_API_KEY) {
+      console.error("❌ RESEND_API_KEY not configured");
+      return NextResponse.json(
+        { 
+          error: "Email service not configured",
+          message: "RESEND_API_KEY environment variable is not set"
+        },
+        { status: 503 }
+      );
+    }
+
+    console.log("📧 Starting daily workout reminder process...");
+    console.log(`   RESEND_API_KEY configured: ${process.env.RESEND_API_KEY ? "Yes" : "No"}`);
+    console.log(`   From email: NextLevel Coaching <noreply@nxlvlcoach.com>`);
 
     // Send daily workout reminders
     await dailyWorkoutReminderService.sendDailyWorkoutReminders();
@@ -18,9 +35,14 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "Daily workout reminders processed",
       timestamp: new Date().toISOString(),
+      resendConfigured: !!process.env.RESEND_API_KEY,
     });
   } catch (error) {
-    console.error("Error in daily workout reminder API:", error);
+    console.error("❌ Error in daily workout reminder API:", error);
+    if (error instanceof Error) {
+      console.error(`   Error message: ${error.message}`);
+      console.error(`   Error stack: ${error.stack}`);
+    }
     return NextResponse.json(
       {
         error: "Internal server error",

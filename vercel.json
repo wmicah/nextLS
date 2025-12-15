@@ -11,7 +11,7 @@
     },
     {
       "path": "/api/daily-workout-reminders?secret=20657f0bd5d8a9102a0da2fb47e473f2b320248fd6e813bc1738f638452a1349",
-      "schedule": "0 8 * * *"
+      "schedule": "0 13 * * *"
     }
   ],
   "redirects": [
