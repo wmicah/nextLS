@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { trpc } from "@/app/_trpc/client";
 import { useToast } from "@/lib/hooks/use-toast";
+import { COLORS } from "@/lib/colors";
 import {
   Calendar,
   Users,
@@ -145,7 +146,7 @@ export default function MobileProgramDetailsModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#606364]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#4A5A70] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}>
               <BookOpen className="h-4 w-4 text-white" />
             </div>
             <div>
@@ -157,7 +158,16 @@ export default function MobileProgramDetailsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-[#4A5A70] text-[#ABA4AA]"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#1C2021";
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
             <X className="h-5 w-5" />
           </button>
@@ -230,7 +240,7 @@ export default function MobileProgramDetailsModal({
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 rounded bg-[#4A5A70] text-[#C3BCC2]">
+                    <span className="text-xs px-2 py-1 rounded text-white" style={{ backgroundColor: COLORS.GOLDEN_DARK }}>
                       {currentProgram.level || "No level"}
                     </span>
                     <span className="text-xs px-2 py-1 rounded bg-[#F59E0B] text-white">
@@ -395,14 +405,36 @@ export default function MobileProgramDetailsModal({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-[#606364] text-[#ABA4AA] hover:bg-[#4A5A70] transition-colors"
+              className="px-4 py-2 rounded-lg border transition-colors"
+              style={{ 
+                borderColor: COLORS.BORDER_SUBTLE, 
+                color: COLORS.TEXT_SECONDARY,
+                backgroundColor: "transparent"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#1C2021";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Close
             </button>
             {onAssign && (
               <button
                 onClick={onAssign}
-                className="px-4 py-2 rounded-lg bg-[#10B981] text-white hover:bg-[#059669] transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
+                style={{ backgroundColor: COLORS.GREEN_DARK }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                }}
               >
                 <Users className="h-4 w-4" />
                 Assign
@@ -411,7 +443,14 @@ export default function MobileProgramDetailsModal({
             {onEdit && (
               <button
                 onClick={onEdit}
-                className="px-4 py-2 rounded-lg bg-[#4A5A70] text-white hover:bg-[#606364] transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2"
+                style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                }}
               >
                 <Edit3 className="h-4 w-4" />
                 Edit

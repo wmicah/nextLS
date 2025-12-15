@@ -29,6 +29,7 @@ import MobileProgramBuilder from "./MobileProgramBuilder";
 import VideoLibraryDialog from "./VideoLibraryDialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import { trpc } from "@/app/_trpc/client";
+import { COLORS } from "@/lib/colors";
 
 // Default program categories
 const DEFAULT_PROGRAM_CATEGORIES = [
@@ -816,7 +817,7 @@ export default function MobileSeamlessProgramModal({
       case "Extension":
         return "bg-red-500/20 text-red-300 border-red-500/30";
       default:
-        return "bg-gray-500/20 text-gray-300 border-gray-500/30";
+        return "";
     }
   };
 
@@ -824,15 +825,16 @@ export default function MobileSeamlessProgramModal({
     <>
       <Dialog open={isOpen} onOpenChange={() => {}}>
         <DialogContent
-          className={`bg-[#2A3133] border-gray-600 max-h-[90dvh] h-[90dvh] overflow-hidden flex flex-col p-0 [&>button]:hidden max-w-[100vw] w-[100vw] sm:max-w-[95vw] sm:w-[95vw]`}
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }}
+          className={`max-h-[90dvh] h-[90dvh] overflow-hidden flex flex-col p-0 [&>button]:hidden max-w-[100vw] w-[100vw] sm:max-w-[95vw] sm:w-[95vw]`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-600 flex-shrink-0">
+          <div className="flex items-center justify-between p-4 border-b flex-shrink-0" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
             <div>
-              <DialogTitle className="text-white text-lg font-bold">
+              <DialogTitle className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {program ? "Edit Program" : "Create New Program"}
               </DialogTitle>
-              <DialogDescription className="text-gray-400 mt-1 text-sm">
+              <DialogDescription className="mt-1 text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                 {program
                   ? "Update your training program"
                   : "Build a comprehensive training program"}
@@ -842,14 +844,23 @@ export default function MobileSeamlessProgramModal({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-gray-400 hover:text-white hover:bg-gray-600"
+              className="transition-colors"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = "#1C2021";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
 
           {/* Progress Steps */}
-          <div className="px-4 py-3 border-b border-gray-600 flex-shrink-0">
+          <div className="px-4 py-3 border-b flex-shrink-0" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
             <div className="flex items-center justify-center space-x-4">
               {[
                 { key: "details", label: "Details" },
@@ -865,27 +876,33 @@ export default function MobileSeamlessProgramModal({
                 return (
                   <div key={step.key} className="flex items-center">
                     <div
-                      className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300 ${
-                        isActive
-                          ? "bg-[#4A5A70] border-[#4A5A70] text-white"
+                      className="flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300"
+                      style={{
+                        backgroundColor: isActive
+                          ? COLORS.GOLDEN_ACCENT
                           : isCompleted
-                          ? "bg-green-500 border-green-500 text-white"
-                          : "bg-transparent border-gray-600 text-gray-400"
-                      }`}
+                          ? COLORS.GREEN_DARK
+                          : "transparent",
+                        borderColor: isActive
+                          ? COLORS.GOLDEN_ACCENT
+                          : isCompleted
+                          ? COLORS.GREEN_DARK
+                          : COLORS.BORDER_SUBTLE,
+                        color: isActive || isCompleted ? "#FFFFFF" : COLORS.TEXT_MUTED,
+                      }}
                     >
                       <span className="text-xs font-bold">
                         {isCompleted && !isActive ? "✓" : index + 1}
                       </span>
                     </div>
                     <span
-                      className={`ml-2 text-xs font-medium ${
-                        isActive ? "text-white" : "text-gray-400"
-                      }`}
+                      className="ml-2 text-xs font-medium"
+                      style={{ color: isActive ? COLORS.TEXT_PRIMARY : COLORS.TEXT_MUTED }}
                     >
                       {step.label}
                     </span>
                     {index < 2 && (
-                      <ArrowRight className="h-3 w-3 text-gray-600 mx-2" />
+                      <ArrowRight className="h-3 w-3 mx-2" style={{ color: COLORS.BORDER_SUBTLE }} />
                     )}
                   </div>
                 );
@@ -900,9 +917,9 @@ export default function MobileSeamlessProgramModal({
                 <div className="text-center">
                   <div
                     className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"
-                    style={{ borderColor: "#4A5A70" }}
+                    style={{ borderColor: COLORS.GOLDEN_ACCENT }}
                   />
-                  <p className="text-gray-400 text-sm">Loading program...</p>
+                  <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>Loading program...</p>
                 </div>
               </div>
             ) : (
@@ -910,10 +927,10 @@ export default function MobileSeamlessProgramModal({
                 {currentStep === "details" && (
                   <div className="space-y-4">
                     <div className="text-center mb-4">
-                      <h3 className="text-lg font-semibold text-white mb-1">
+                      <h3 className="text-lg font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                         Program Details
                       </h3>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                         Set up the basic information for your training program
                       </p>
                     </div>
@@ -922,7 +939,8 @@ export default function MobileSeamlessProgramModal({
                       <div>
                         <Label
                           htmlFor="program-title"
-                          className="text-white text-sm font-medium"
+                          className="text-sm font-medium"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
                         >
                           Program Title *
                         </Label>
@@ -930,16 +948,17 @@ export default function MobileSeamlessProgramModal({
                           id="program-title"
                           {...register("title")}
                           placeholder="e.g., Advanced Hitting Program"
-                          className="bg-[#353A3A] border-gray-600 text-white mt-2 h-11 text-base"
+                          style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                          className="mt-2 h-11 text-base"
                           maxLength={60}
                         />
                         <div className="flex justify-between items-center mt-1">
                           {errors.title && (
-                            <p className="text-red-400 text-xs">
+                            <p className="text-xs" style={{ color: COLORS.RED_ALERT }}>
                               {errors.title.message}
                             </p>
                           )}
-                          <p className="text-gray-400 text-xs ml-auto">
+                          <p className="text-xs ml-auto" style={{ color: COLORS.TEXT_MUTED }}>
                             {watch("title")?.length || 0}/60 characters
                           </p>
                         </div>
@@ -948,7 +967,8 @@ export default function MobileSeamlessProgramModal({
                       <div>
                         <Label
                           htmlFor="program-description"
-                          className="text-white text-sm font-medium"
+                          className="text-sm font-medium"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
                         >
                           Description
                         </Label>
@@ -956,7 +976,8 @@ export default function MobileSeamlessProgramModal({
                           id="program-description"
                           {...register("description")}
                           placeholder="Describe what this program covers..."
-                          className="bg-[#353A3A] border-gray-600 text-white mt-2 min-h-[80px] resize-none"
+                          style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                          className="mt-2 min-h-[80px] resize-none"
                           rows={3}
                         />
                       </div>
@@ -965,7 +986,8 @@ export default function MobileSeamlessProgramModal({
                         <div>
                           <Label
                             htmlFor="program-level"
-                            className="text-white text-sm font-medium"
+                            className="text-sm font-medium"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Focus Area *
                           </Label>
@@ -977,15 +999,16 @@ export default function MobileSeamlessProgramModal({
                                 onChange={e =>
                                   setValue("level", e.target.value)
                                 }
-                                className="w-full px-3 py-2.5 rounded-lg border bg-[#353A3A] border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 h-11 text-sm"
+                                style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                                className="w-full px-3 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 h-11 text-sm"
                               >
                                 <option value="">Select focus area...</option>
 
                                 <optgroup
                                   label="Standard Categories"
                                   style={{
-                                    backgroundColor: "#2A3133",
-                                    color: "#C3BCC2",
+                                    backgroundColor: "#1C2021",
+                                    color: COLORS.TEXT_PRIMARY,
                                   }}
                                 >
                                   {DEFAULT_PROGRAM_CATEGORIES.map(cat => (
@@ -993,8 +1016,8 @@ export default function MobileSeamlessProgramModal({
                                       key={cat}
                                       value={cat}
                                       style={{
-                                        backgroundColor: "#353A3A",
-                                        color: "#C3BCC2",
+                                        backgroundColor: "#2A2F2F",
+                                        color: COLORS.TEXT_PRIMARY,
                                       }}
                                     >
                                       {cat}
@@ -1011,8 +1034,8 @@ export default function MobileSeamlessProgramModal({
                                   <optgroup
                                     label="Your Categories"
                                     style={{
-                                      backgroundColor: "#2A3133",
-                                      color: "#C3BCC2",
+                                      backgroundColor: "#1C2021",
+                                      color: COLORS.TEXT_PRIMARY,
                                     }}
                                   >
                                     {programCategoriesData
@@ -1027,8 +1050,8 @@ export default function MobileSeamlessProgramModal({
                                           key={cat.name}
                                           value={cat.name}
                                           style={{
-                                            backgroundColor: "#353A3A",
-                                            color: "#C3BCC2",
+                                            backgroundColor: "#2A2F2F",
+                                            color: COLORS.TEXT_PRIMARY,
                                           }}
                                         >
                                           {cat.name} ({cat.count})
@@ -1043,9 +1066,17 @@ export default function MobileSeamlessProgramModal({
                                 onClick={() => setShowCustomCategory(true)}
                                 className="w-full p-2.5 rounded-lg border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-2 font-medium text-xs"
                                 style={{
-                                  borderColor: "#606364",
-                                  color: "#ABA4AA",
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_SECONDARY,
                                   backgroundColor: "transparent",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                                 }}
                               >
                                 <Plus className="h-3 w-3" />
@@ -1065,9 +1096,9 @@ export default function MobileSeamlessProgramModal({
                                 maxLength={50}
                                 className="w-full p-2.5 rounded-lg border-2 focus:outline-none transition-all duration-200 h-11 text-sm"
                                 style={{
-                                  backgroundColor: "#2A3133",
-                                  borderColor: "#C3BCC2",
-                                  color: "#C3BCC2",
+                                  backgroundColor: "#2A2F2F",
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_PRIMARY,
                                 }}
                                 autoFocus
                               />
@@ -1086,8 +1117,16 @@ export default function MobileSeamlessProgramModal({
                                 }}
                                 className="text-xs px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1"
                                 style={{
-                                  color: "#ABA4AA",
-                                  backgroundColor: "#2A3133",
+                                  color: COLORS.TEXT_SECONDARY,
+                                  backgroundColor: "#1C2021",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = "#2A2F2F";
+                                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "#1C2021";
+                                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                                 }}
                               >
                                 <ChevronLeft className="h-3 w-3" />
@@ -1097,7 +1136,7 @@ export default function MobileSeamlessProgramModal({
                           )}
 
                           {errors.level && (
-                            <p className="text-red-400 text-xs mt-1">
+                            <p className="text-xs mt-1" style={{ color: COLORS.RED_ALERT }}>
                               {errors.level.message}
                             </p>
                           )}
@@ -1106,7 +1145,8 @@ export default function MobileSeamlessProgramModal({
                         <div>
                           <Label
                             htmlFor="program-duration"
-                            className="text-white text-sm font-medium"
+                            className="text-sm font-medium"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
                           >
                             Duration (Weeks) - Auto-calculated *
                           </Label>
@@ -1116,10 +1156,11 @@ export default function MobileSeamlessProgramModal({
                             min="1"
                             {...register("duration", { valueAsNumber: true })}
                             placeholder="Auto-calculated from weeks"
-                            className="bg-[#353A3A] border-gray-600 text-white mt-2 h-11 cursor-not-allowed opacity-75"
+                            style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                            className="mt-2 h-11 cursor-not-allowed opacity-75"
                             readOnly
                           />
-                          <p className="text-gray-400 text-xs mt-1">
+                          <p className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
                             Duration automatically updates based on number of
                             weeks
                           </p>
@@ -1132,22 +1173,22 @@ export default function MobileSeamlessProgramModal({
                 {currentStep === "structure" && (
                   <div className="space-y-4 w-full -mx-4 px-0">
                     <div className="text-center mb-3 px-4">
-                      <h3 className="text-base font-medium text-white mb-1">
+                      <h3 className="text-base font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                         Program Structure
                       </h3>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                         Build your program with weeks, days, and exercises
                       </p>
                     </div>
 
                     <div className="w-full max-w-full">
                       {programBuilderWeeks.length === 0 ? (
-                        <Card className="bg-[#353A3A] border-gray-600 mx-4">
+                        <Card className="rounded-lg border mx-4" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
                           <CardContent className="p-8 text-center">
-                            <h4 className="text-base font-medium text-white mb-2">
+                            <h4 className="text-base font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                               No weeks added yet
                             </h4>
-                            <p className="text-gray-400 text-sm mb-4">
+                            <p className="text-sm mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                               Start building your program by adding weeks and
                               organizing your training schedule
                             </p>
@@ -1184,24 +1225,24 @@ export default function MobileSeamlessProgramModal({
                 {currentStep === "review" && (
                   <div className="space-y-4">
                     <div className="text-center mb-4">
-                      <h3 className="text-lg font-semibold text-white mb-1">
+                      <h3 className="text-lg font-semibold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                         Review Your Program
                       </h3>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                         Double-check everything looks good before saving
                       </p>
                     </div>
 
                     <div className="space-y-4">
-                      <Card className="bg-[#353A3A] border-gray-600">
+                      <Card className="rounded-lg border" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}>
                         <CardContent className="p-4">
-                          <h4 className="text-base font-semibold text-white mb-2">
+                          <h4 className="text-base font-semibold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {watchedValues.title}
                           </h4>
-                          <p className="text-gray-400 text-sm mb-3">
+                          <p className="text-sm mb-3" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {watchedValues.description}
                           </p>
-                          <div className="flex items-center gap-3 text-xs text-gray-400">
+                          <div className="flex items-center gap-3 text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                             <span>{watchedValues.duration} weeks</span>
                             <span>
                               {programBuilderWeeks.length} weeks configured
@@ -1211,22 +1252,23 @@ export default function MobileSeamlessProgramModal({
                       </Card>
 
                       <div className="space-y-2">
-                        <h5 className="text-white font-medium text-sm">
+                        <h5 className="font-medium text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
                           Program Structure:
                         </h5>
                         {programBuilderWeeks.map((week, index) => (
                           <div
                             key={week.id}
-                            className="flex items-center gap-3 p-3 bg-[#353A3A] rounded-lg border border-gray-600"
+                            className="flex items-center gap-3 p-3 rounded-lg border"
+                            style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
                           >
-                            <div className="w-6 h-6 bg-[#4A5A70] rounded-full flex items-center justify-center text-white text-xs font-medium">
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium" style={{ backgroundColor: COLORS.GOLDEN_ACCENT, color: "#FFFFFF" }}>
                               {index + 1}
                             </div>
                             <div className="flex-1">
-                              <span className="text-white font-medium text-sm">
+                              <span className="font-medium text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
                                 {week.name}
                               </span>
-                              <div className="text-xs text-gray-400 mt-1">
+                              <div className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
                                 {Object.values(week.days).flat().length} total
                                 exercises across 7 days
                               </div>
@@ -1242,7 +1284,7 @@ export default function MobileSeamlessProgramModal({
           </div>
 
           {/* Footer - Mobile optimized */}
-          <div className="flex flex-col gap-2 p-3 border-t border-gray-600 flex-shrink-0 bg-[#2A3133]">
+          <div className="flex flex-col gap-2 p-3 border-t flex-shrink-0" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_DARK }}>
             {/* Primary action buttons */}
             <div className="flex gap-2 w-full">
               {currentStep !== "details" && (
@@ -1252,7 +1294,18 @@ export default function MobileSeamlessProgramModal({
                     if (currentStep === "structure") setCurrentStep("details");
                     if (currentStep === "review") setCurrentStep("structure");
                   }}
-                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-600 text-sm h-11 min-h-[44px]"
+                  className="flex-1 text-sm h-11 min-h-[44px] transition-colors"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_SECONDARY }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#1C2021";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
                 >
                   Back
                 </Button>
@@ -1284,7 +1337,18 @@ export default function MobileSeamlessProgramModal({
                     setCurrentStep("structure");
                   }}
                   disabled={!canProceedToStructure}
-                  className="flex-1 bg-[#4A5A70] hover:bg-[#606364] text-white text-sm h-11 min-h-[44px]"
+                  className="flex-1 text-white text-sm h-11 min-h-[44px] transition-colors"
+                  style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                    }
+                  }}
                 >
                   Next: Structure
                   <ArrowRight className="h-4 w-4 ml-1.5" />
@@ -1295,7 +1359,18 @@ export default function MobileSeamlessProgramModal({
                 <Button
                   onClick={() => setCurrentStep("review")}
                   disabled={!canProceedToReview}
-                  className="flex-1 bg-[#4A5A70] hover:bg-[#606364] text-white text-sm h-11 min-h-[44px]"
+                  className="flex-1 text-white text-sm h-11 min-h-[44px] transition-colors"
+                  style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                    }
+                  }}
                 >
                   Next: Review
                   <ArrowRight className="h-4 w-4 ml-1.5" />
@@ -1306,7 +1381,18 @@ export default function MobileSeamlessProgramModal({
                 <Button
                   onClick={handleSubmit(handleSubmitForm)}
                   disabled={isSubmitting}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm h-11 min-h-[44px]"
+                  className="flex-1 text-white text-sm h-11 min-h-[44px] transition-colors"
+                  style={{ backgroundColor: COLORS.GREEN_DARK }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                    }
+                  }}
                 >
                   {isSubmitting ? (
                     <>
@@ -1327,7 +1413,18 @@ export default function MobileSeamlessProgramModal({
             <Button
               variant="outline"
               onClick={onClose}
-              className="w-full border-gray-600 text-gray-300 hover:bg-gray-600 text-sm h-10 min-h-[40px]"
+              className="w-full text-sm h-10 min-h-[40px] transition-colors"
+              style={{ borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_SECONDARY }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#1C2021";
+                e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+              }}
             >
               Cancel
             </Button>

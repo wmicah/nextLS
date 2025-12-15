@@ -37,6 +37,7 @@ import { trpc } from "@/app/_trpc/client";
 import { useToast } from "@/lib/hooks/use-toast";
 import VideoLibraryDialog from "./VideoLibraryDialog";
 import SupersetDescriptionModal from "./SupersetDescriptionModal";
+import { COLORS } from "@/lib/colors";
 
 interface RoutineExercise {
   id: string;
@@ -313,7 +314,18 @@ function ExerciseEditDialog({
             </Button>
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto h-11 min-h-[44px]"
+              className="text-white w-full sm:w-auto h-11 min-h-[44px] transition-colors"
+              style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                }
+              }}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Saving..." : "Save Changes"}
@@ -473,7 +485,16 @@ function SortableExerciseItem({
           variant="ghost"
           size="sm"
           onClick={() => onEditExercise(exercise)}
-          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 p-1 h-8 w-8 min-h-[44px] min-w-[44px]"
+          className="p-1 h-8 w-8 min-h-[44px] min-w-[44px] transition-colors"
+          style={{ color: COLORS.GOLDEN_ACCENT }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+            e.currentTarget.style.backgroundColor = "#1C2021";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -485,7 +506,16 @@ function SortableExerciseItem({
             variant="ghost"
             size="sm"
             onClick={() => onOpenSupersetModal(exercise)}
-            className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 p-1 h-8 w-8 min-h-[44px] min-w-[44px]"
+            className="p-1 h-8 w-8 min-h-[44px] min-w-[44px] transition-colors"
+            style={{ color: COLORS.GOLDEN_ACCENT }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+              e.currentTarget.style.backgroundColor = "#1C2021";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
             title="Add Superset or Circuit"
           >
             <svg
@@ -509,7 +539,16 @@ function SortableExerciseItem({
               variant="ghost"
               size="sm"
               onClick={() => onOpenSupersetModal(exercise, exercise.supersetId)}
-              className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 p-1 h-8 w-8 min-h-[44px] min-w-[44px]"
+              className="p-1 h-8 w-8 min-h-[44px] min-w-[44px] transition-colors"
+              style={{ color: COLORS.GOLDEN_ACCENT }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                e.currentTarget.style.backgroundColor = "#1C2021";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
               title="Add exercise to group"
             >
               <Plus className="h-4 w-4" />
@@ -1269,13 +1308,20 @@ export default function MobileSeamlessRoutineModal({
                 return (
                   <div key={step.key} className="flex items-center">
                     <div
-                      className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300 ${
-                        isActive
-                          ? "bg-[#4A5A70] border-[#4A5A70] text-white"
+                      className="flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300"
+                      style={{
+                        backgroundColor: isActive
+                          ? COLORS.GOLDEN_ACCENT
                           : isCompleted
-                          ? "bg-green-500 border-green-500 text-white"
-                          : "bg-transparent border-gray-600 text-gray-400"
-                      }`}
+                          ? COLORS.GREEN_DARK
+                          : "transparent",
+                        borderColor: isActive
+                          ? COLORS.GOLDEN_ACCENT
+                          : isCompleted
+                          ? COLORS.GREEN_DARK
+                          : COLORS.BORDER_SUBTLE,
+                        color: isActive || isCompleted ? "#FFFFFF" : COLORS.TEXT_MUTED,
+                      }}
                     >
                       <span className="text-xs font-bold">
                         {isCompleted && !isActive ? "✓" : index + 1}
@@ -1370,7 +1416,14 @@ export default function MobileSeamlessRoutineModal({
                   <Button
                     type="button"
                     onClick={() => onOpenVideoLibrary?.()}
-                    className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white h-11 min-h-[44px]"
+                    className="w-full text-white h-11 min-h-[44px] transition-colors"
+                    style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                    }}
                   >
                     Add from Video Library
                   </Button>
@@ -1488,7 +1541,7 @@ export default function MobileSeamlessRoutineModal({
                           key={exercise.id}
                           className="flex items-center gap-3 p-3 bg-[#353A3A] rounded-lg border border-[#606364]"
                         >
-                          <div className="w-6 h-6 bg-[#4A5A70] rounded-full flex items-center justify-center text-white text-xs font-medium">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium" style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}>
                             {index + 1}
                           </div>
                           <div className="flex-1">
@@ -1571,7 +1624,18 @@ export default function MobileSeamlessRoutineModal({
                 <Button
                   onClick={() => setCurrentStep("exercises")}
                   disabled={!canProceedToExercises}
-                  className="bg-[#4A5A70] hover:bg-[#606364] text-white text-sm h-11 min-h-[44px]"
+                  className="text-white text-sm h-11 min-h-[44px] transition-colors"
+                  style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                    }
+                  }}
                 >
                   Next: Add Exercises
                   <ArrowRight className="h-3 w-3 ml-1" />
@@ -1582,7 +1646,18 @@ export default function MobileSeamlessRoutineModal({
                 <Button
                   onClick={() => setCurrentStep("review")}
                   disabled={!canProceedToReview}
-                  className="bg-[#4A5A70] hover:bg-[#606364] text-white text-sm h-11 min-h-[44px]"
+                  className="text-white text-sm h-11 min-h-[44px] transition-colors"
+                  style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                    }
+                  }}
                 >
                   Next: Review
                   <ArrowRight className="h-3 w-3 ml-1" />
@@ -1685,7 +1760,12 @@ export default function MobileSeamlessRoutineModal({
                           type="checkbox"
                           checked={selectedExerciseIds.has(ex.id)}
                           onChange={() => toggleExerciseSelection(ex.id)}
-                          className="w-4 h-4 text-blue-600 bg-[#353A3A] border-[#606364] rounded focus:ring-blue-500"
+                          className="w-4 h-4 rounded transition-colors"
+                          style={{ 
+                            backgroundColor: "#2A2F2F", 
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            accentColor: COLORS.GOLDEN_ACCENT
+                          }}
                         />
                         <div className="flex-1">
                           <p className="text-white text-sm font-medium">
@@ -1719,7 +1799,18 @@ export default function MobileSeamlessRoutineModal({
               <Button
                 onClick={handleConfirmSuperset}
                 disabled={!isAddingToExisting && selectedExerciseIds.size === 0}
-                className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto h-11 min-h-[44px]"
+                className="text-white w-full sm:w-auto h-11 min-h-[44px] transition-colors"
+                style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                  }
+                }}
               >
                 {isAddingToExisting ? "Add Exercises" : "Create Group"}
               </Button>

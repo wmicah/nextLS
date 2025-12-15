@@ -23,6 +23,7 @@ import BlockedTimesModal from "./BlockedTimesModal";
 import AddTimeModal from "./AddTimeModal";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 import {
   format,
   startOfMonth,
@@ -322,39 +323,71 @@ export default function MobileSchedulePage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div 
+      className="min-h-screen overflow-y-auto"
+      style={{ 
+        backgroundColor: COLORS.BACKGROUND_DARK,
+        WebkitOverflowScrolling: "touch",
+        height: "100vh",
+        position: "relative",
+        WebkitFontSmoothing: "antialiased",
+        MozOsxFontSmoothing: "grayscale",
+        textRendering: "optimizeLegibility",
+        touchAction: "pan-y", // Enable vertical touch scrolling
+        overscrollBehavior: "contain", // Prevent overscroll bounce
+      }}
+    >
       {/* Mobile Header */}
       <div 
-        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
-        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+        className="sticky top-0 z-50 border-b px-4 pb-3"
+        style={{ 
+          paddingTop: `calc(0.75rem + env(safe-area-inset-top))`,
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+          WebkitBackfaceVisibility: "hidden",
+          backfaceVisibility: "hidden",
+        }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
-            >
-              <Calendar className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Schedule</h1>
-              <p className="text-xs text-gray-400">
-                Manage lessons & availability
-              </p>
-            </div>
+          <div>
+            <h1 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>Schedule</h1>
+            <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+              Manage lessons & availability
+            </p>
           </div>
           <MobileNavigation currentPage="schedule" />
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="p-4 pb-20 space-y-6">
+      <div 
+        className="p-4 pb-20 space-y-6"
+        style={{
+          minHeight: "calc(100vh - 120px)",
+          WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
+          textRendering: "optimizeLegibility",
+          transform: "translateZ(0)", // Force hardware acceleration
+          willChange: "transform",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+        }}
+      >
         {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => setShowBlockedTimesModal(true)}
-            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-all duration-200"
-            style={{ backgroundColor: "#b76e79", color: "#FFFFFF" }}
+            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-colors"
+            style={{ 
+              backgroundColor: COLORS.RED_DARK, 
+              color: "#FFFFFF" 
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+            }}
           >
             <Ban className="w-4 h-4" />
             <span className="hidden sm:inline">Block Times</span>
@@ -362,8 +395,17 @@ export default function MobileSchedulePage() {
           </button>
           <button
             onClick={() => setShowAddTimeModal(true)}
-            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-all duration-200"
-            style={{ backgroundColor: "#5a7fa4", color: "#FFFFFF" }}
+            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-colors"
+            style={{ 
+              backgroundColor: COLORS.GOLDEN_DARK, 
+              color: "#FFFFFF" 
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+            }}
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Add Time</span>
@@ -371,8 +413,21 @@ export default function MobileSchedulePage() {
           </button>
           <button
             onClick={() => setShowWorkingHoursModal(true)}
-            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-all duration-200"
-            style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+            className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg font-medium text-xs transition-colors"
+            style={{ 
+              backgroundColor: COLORS.BACKGROUND_CARD, 
+              color: COLORS.TEXT_PRIMARY,
+              borderColor: COLORS.BORDER_SUBTLE,
+              border: "1px solid"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+            }}
           >
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">Working Hours</span>
@@ -671,14 +726,25 @@ export default function MobileSchedulePage() {
           {/* Mobile Calendar */}
           <div
             className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            style={{ 
+              backgroundColor: COLORS.BACKGROUND_CARD, 
+              borderColor: COLORS.BORDER_SUBTLE,
+              WebkitFontSmoothing: "antialiased",
+              MozOsxFontSmoothing: "grayscale",
+              textRendering: "optimizeLegibility",
+            }}
           >
             {/* Day Headers */}
             <div className="grid grid-cols-7 gap-1 mb-3">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                 <div
                   key={day}
-                  className="text-center text-xs font-semibold text-gray-400 py-2"
+                  className="text-center text-xs font-semibold py-2"
+                  style={{ 
+                    color: COLORS.TEXT_MUTED,
+                    WebkitFontSmoothing: "antialiased",
+                    MozOsxFontSmoothing: "grayscale",
+                  }}
                 >
                   {day.slice(0, 1)}
                 </div>
@@ -735,9 +801,24 @@ export default function MobileSchedulePage() {
                         : "text-gray-600 bg-gray-900/30 border-gray-700"
                     }
                   `}
+                    style={{
+                      WebkitFontSmoothing: "antialiased",
+                      MozOsxFontSmoothing: "grayscale",
+                      textRendering: "optimizeLegibility",
+                      WebkitTapHighlightColor: "rgba(0, 0, 0, 0.1)",
+                      touchAction: "manipulation",
+                    }}
                   >
                     {/* Date Number */}
-                    <div className="font-bold text-sm">{format(day, "d")}</div>
+                    <div 
+                      className="font-bold text-sm"
+                      style={{
+                        WebkitFontSmoothing: "antialiased",
+                        MozOsxFontSmoothing: "grayscale",
+                      }}
+                    >
+                      {format(day, "d")}
+                    </div>
 
                     {/* Lesson Indicators */}
                     {hasLessons && (
