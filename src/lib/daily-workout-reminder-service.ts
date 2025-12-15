@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { startOfDay, endOfDay } from "date-fns";
-import { formatInTimeZone, zonedTimeToUtc } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import { CompleteEmailService } from "./complete-email-service";
 import { getUserTimezoneFromDB } from "./timezone-utils";
 
@@ -33,15 +33,10 @@ class DailyWorkoutReminderService {
     clientName: string;
     clientEmail: string | null;
   } | null> {
-    // Use EST/EDT timezone for "today" calculation
-    // Get the current date in EST/EDT timezone
-    const estTimeZone = "America/New_York";
-    const todayInEST = formatInTimeZone(today, estTimeZone, "yyyy-MM-dd");
-    const todayStartEST = zonedTimeToUtc(`${todayInEST} 00:00:00`, estTimeZone);
-    const todayEndEST = zonedTimeToUtc(`${todayInEST} 23:59:59`, estTimeZone);
-    
-    const todayStart = todayStartEST;
-    const todayEnd = todayEndEST;
+    // Since cron runs at 8 AM EST (1 PM UTC), "today" in EST is the current UTC date
+    // Use regular date functions - database stores dates in UTC
+    const todayStart = startOfDay(today);
+    const todayEnd = endOfDay(today);
 
     // Get client with coach info
     const client = await db.client.findFirst({
@@ -117,14 +112,10 @@ class DailyWorkoutReminderService {
 
     if (programAssignment) {
       // Calculate which week and day we're on based on start date
-      // Use EST/EDT timezone for date calculations
-      const estTimeZone = "America/New_York";
       const startDate = new Date(programAssignment.startDate || programAssignment.assignedAt);
-      const startDateInEST = formatInTimeZone(startDate, estTimeZone, "yyyy-MM-dd");
-      const startDateEST = zonedTimeToUtc(`${startDateInEST} 00:00:00`, estTimeZone);
+      const startDateEST = startOfDay(startDate);
       
-      const todayInEST = formatInTimeZone(today, estTimeZone, "yyyy-MM-dd");
-      const todayStartEST = zonedTimeToUtc(`${todayInEST} 00:00:00`, estTimeZone);
+      const todayStartEST = startOfDay(today);
       
       const daysSinceStart = Math.floor(
         (todayStartEST.getTime() - startDateEST.getTime()) / (1000 * 60 * 60 * 24)
@@ -146,6 +137,7 @@ class DailyWorkoutReminderService {
       // dayNumber in ProgramDay: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
       // JavaScript getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
       // Use formatInTimeZone to get the day of week in EST
+      const estTimeZone = "America/New_York";
       const dayOfWeekInEST = parseInt(formatInTimeZone(today, estTimeZone, "e")); // 1=Monday, 7=Sunday
       const dayNumber = dayOfWeekInEST === 7 ? 7 : dayOfWeekInEST; // Already in correct format (1-7)
 

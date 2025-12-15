@@ -2130,7 +2130,7 @@ export default function AdminDashboard() {
                 onChange={(e) => setEmailSubject(e.target.value)}
                 placeholder="Email subject"
                 className="mt-1"
-                style={{ backgroundColor: COLORS.BACKGROUND_SECONDARY, borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
               />
             </div>
             
@@ -2145,7 +2145,7 @@ export default function AdminDashboard() {
                 placeholder="Your message to the bug report submitter..."
                 rows={10}
                 className="mt-1"
-                style={{ backgroundColor: COLORS.BACKGROUND_SECONDARY, borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
               />
               <p className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
                 The bug report details (title, description, page, status) will be automatically included in the email.
@@ -2162,7 +2162,7 @@ export default function AdminDashboard() {
                 setEmailMessage("");
               }}
               className="px-4 py-2 rounded-lg text-sm transition-colors"
-              style={{ backgroundColor: COLORS.BACKGROUND_SECONDARY, color: COLORS.TEXT_PRIMARY, borderColor: COLORS.BORDER_SUBTLE, border: "1px solid" }}
+              style={{ backgroundColor: "#1C2021", color: COLORS.TEXT_PRIMARY, borderColor: COLORS.BORDER_SUBTLE, border: "1px solid" }}
             >
               Cancel
             </button>
