@@ -365,11 +365,19 @@ export class CompleteEmailService {
     workouts: Array<{ title: string; description?: string; duration?: string; type: 'assigned' | 'program' }>
   ): Promise<boolean> {
     try {
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("❌ RESEND_API_KEY not configured - cannot send daily workout reminder email");
+        return false;
+      }
+
       const template = completeEmailTemplates.dailyWorkoutReminder(
         clientName,
         coachName,
         workouts
       );
+
+      console.log(`📧 Attempting to send daily workout reminder to ${clientEmail} (${clientName})`);
 
       const result = await resend.emails.send({
         from: this.fromEmail,
@@ -378,10 +386,19 @@ export class CompleteEmailService {
         html: template.html,
       });
 
-      console.log("Daily workout reminder email sent:", result);
+      if (result.error) {
+        console.error(`❌ Resend API error for ${clientEmail}:`, result.error);
+        return false;
+      }
+
+      console.log(`✅ Daily workout reminder email sent successfully to ${clientEmail}:`, result.data?.id);
       return true;
     } catch (error) {
-      console.error("Failed to send daily workout reminder email:", error);
+      console.error(`❌ Failed to send daily workout reminder email to ${clientEmail}:`, error);
+      if (error instanceof Error) {
+        console.error(`   Error message: ${error.message}`);
+        console.error(`   Error stack: ${error.stack}`);
+      }
       return false;
     }
   }

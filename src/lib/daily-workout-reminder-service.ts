@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { startOfDay, endOfDay } from "date-fns";
+import { formatInTimeZone, zonedTimeToUtc } from "date-fns-tz";
 import { CompleteEmailService } from "./complete-email-service";
 import { getUserTimezoneFromDB } from "./timezone-utils";
 
@@ -32,8 +33,15 @@ class DailyWorkoutReminderService {
     clientName: string;
     clientEmail: string | null;
   } | null> {
-    const todayStart = startOfDay(today);
-    const todayEnd = endOfDay(today);
+    // Use EST/EDT timezone for "today" calculation
+    // Get the current date in EST/EDT timezone
+    const estTimeZone = "America/New_York";
+    const todayInEST = formatInTimeZone(today, estTimeZone, "yyyy-MM-dd");
+    const todayStartEST = zonedTimeToUtc(`${todayInEST} 00:00:00`, estTimeZone);
+    const todayEndEST = zonedTimeToUtc(`${todayInEST} 23:59:59`, estTimeZone);
+    
+    const todayStart = todayStartEST;
+    const todayEnd = todayEndEST;
 
     // Get client with coach info
     const client = await db.client.findFirst({
@@ -109,12 +117,37 @@ class DailyWorkoutReminderService {
 
     if (programAssignment) {
       // Calculate which week and day we're on based on start date
-      const startDate = programAssignment.startDate || programAssignment.assignedAt;
+      // Use EST/EDT timezone for date calculations
+      const estTimeZone = "America/New_York";
+      const startDate = new Date(programAssignment.startDate || programAssignment.assignedAt);
+      const startDateInEST = formatInTimeZone(startDate, estTimeZone, "yyyy-MM-dd");
+      const startDateEST = zonedTimeToUtc(`${startDateInEST} 00:00:00`, estTimeZone);
+      
+      const todayInEST = formatInTimeZone(today, estTimeZone, "yyyy-MM-dd");
+      const todayStartEST = zonedTimeToUtc(`${todayInEST} 00:00:00`, estTimeZone);
+      
       const daysSinceStart = Math.floor(
-        (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        (todayStartEST.getTime() - startDateEST.getTime()) / (1000 * 60 * 60 * 24)
       );
+      
+      // Only process if we're on or past the start date
+      if (daysSinceStart < 0) {
+        return {
+          workouts,
+          coachName: client.coach?.name || "Your Coach",
+          clientName: client.name || "Client",
+          clientEmail: client.user.email,
+        };
+      }
+      
       const currentWeek = Math.floor(daysSinceStart / 7) + 1;
-      const currentDay = (daysSinceStart % 7) + 1;
+      
+      // Get the actual day of the week in EST/EDT
+      // dayNumber in ProgramDay: 1=Monday, 2=Tuesday, ..., 6=Saturday, 7=Sunday
+      // JavaScript getDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
+      // Use formatInTimeZone to get the day of week in EST
+      const dayOfWeekInEST = parseInt(formatInTimeZone(today, estTimeZone, "e")); // 1=Monday, 7=Sunday
+      const dayNumber = dayOfWeekInEST === 7 ? 7 : dayOfWeekInEST; // Already in correct format (1-7)
 
       // Get today's program day
       const currentWeekData = programAssignment.program.weeks.find(
@@ -123,7 +156,7 @@ class DailyWorkoutReminderService {
 
       if (currentWeekData) {
         const todayProgramDay = currentWeekData.days.find(
-          d => d.dayNumber === currentDay
+          d => d.dayNumber === dayNumber && !d.isRestDay
         );
 
         if (todayProgramDay && todayProgramDay.drills.length > 0) {
@@ -152,11 +185,22 @@ class DailyWorkoutReminderService {
    */
   async sendDailyWorkoutReminders(): Promise<void> {
     try {
+      const now = new Date();
       console.log("🏋️ Starting daily workout reminder service...");
+      console.log(`   Current time (UTC): ${now.toISOString()}`);
+      console.log(`   Current time (EST): ${now.toLocaleString("en-US", { timeZone: "America/New_York" })}`);
+
+      // Check if RESEND_API_KEY is configured
+      if (!process.env.RESEND_API_KEY) {
+        console.error("❌ RESEND_API_KEY not configured - cannot send daily workout reminders");
+        return;
+      }
 
       const today = new Date();
       const todayStart = startOfDay(today);
       const todayEnd = endOfDay(today);
+      
+      console.log(`   Checking for workouts on: ${today.toLocaleDateString("en-US", { timeZone: "America/New_York" })}`);
 
       // Get all clients who have workouts scheduled for today
       // We'll check both AssignedWorkout and ProgramAssignment
@@ -199,12 +243,18 @@ class DailyWorkoutReminderService {
             }
 
             // Send daily workout reminder email
-            await this.emailService.sendDailyWorkoutReminder(
+            const emailSent = await this.emailService.sendDailyWorkoutReminder(
               clientWorkouts.clientEmail,
               clientWorkouts.clientName,
               clientWorkouts.coachName,
               clientWorkouts.workouts
             );
+
+            if (!emailSent) {
+              console.error(`❌ Failed to send email to ${clientWorkouts.clientName} (${clientWorkouts.clientEmail})`);
+              emailsFailed++;
+              continue; // Skip push notification if email failed
+            }
 
             // Send push notification for daily workouts
             if (client.userId) {
