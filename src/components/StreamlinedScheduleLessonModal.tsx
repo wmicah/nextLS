@@ -28,6 +28,7 @@ import {
   isPast,
 } from "date-fns";
 import { getUserTimezone } from "@/lib/timezone-utils";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface StreamlinedScheduleLessonModalProps {
   isOpen: boolean;
@@ -410,20 +411,23 @@ export default function StreamlinedScheduleLessonModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}>
       <div
         className="rounded-2xl shadow-xl border p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: "#1C2021",
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">Schedule Lesson</h2>
+          <h2 className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Schedule Lesson</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={(e) => e.currentTarget.style.color = COLORS.TEXT_PRIMARY}
+            onMouseLeave={(e) => e.currentTarget.style.color = COLORS.TEXT_SECONDARY}
           >
             <X className="h-6 w-6" />
           </button>
@@ -434,18 +438,17 @@ export default function StreamlinedScheduleLessonModal({
           className="mb-6 p-4 rounded-lg"
           style={{ backgroundColor: "#2A2F2F" }}
         >
-          <p className="text-sm text-gray-300 mb-1">Scheduling for:</p>
-          <p className="text-white font-semibold text-lg">{clientName}</p>
+          <p className="text-sm mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>Scheduling for:</p>
+          <p className="font-semibold text-lg" style={{ color: COLORS.TEXT_PRIMARY }}>{clientName}</p>
           {clientEmail && (
-            <p className="text-sm text-gray-400">{clientEmail}</p>
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>{clientEmail}</p>
           )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Calendar Section */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+            <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
               Select Date
             </h3>
 
@@ -453,18 +456,28 @@ export default function StreamlinedScheduleLessonModal({
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={() => navigateMonth("prev")}
-                className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
-                style={{ color: "#C3BCC2" }}
+                className="p-2 rounded-lg transition-colors"
+                style={{ 
+                  backgroundColor: "#2A2F2F",
+                  color: COLORS.TEXT_PRIMARY
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <h4 className="text-lg font-semibold text-white">
+              <h4 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {format(currentMonth, "MMMM yyyy")}
               </h4>
               <button
                 onClick={() => navigateMonth("next")}
-                className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
-                style={{ color: "#C3BCC2" }}
+                className="p-2 rounded-lg transition-colors"
+                style={{ 
+                  backgroundColor: "#2A2F2F",
+                  color: COLORS.TEXT_PRIMARY
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
@@ -476,7 +489,7 @@ export default function StreamlinedScheduleLessonModal({
                 <div
                   key={day}
                   className="text-center text-sm font-bold py-2"
-                  style={{ color: "#4A5A70" }}
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
                   {day}
                 </div>
@@ -491,26 +504,33 @@ export default function StreamlinedScheduleLessonModal({
                     key={day.toISOString()}
                     onClick={() => setSelectedDate(day)}
                     disabled={isPastDay}
-                    className={`
-                      p-2 rounded-lg text-sm font-medium transition-all duration-200
-                      ${
-                        isSelected
-                          ? "bg-sky-500 text-white"
-                          : isPastDay
-                          ? "text-gray-500 cursor-not-allowed"
-                          : isCurrentMonth
-                          ? "text-white hover:bg-sky-500/20"
-                          : "text-gray-600"
-                      }
-                    `}
+                    className="p-2 rounded-lg text-sm font-medium transition-all duration-200"
                     style={{
                       backgroundColor: isSelected
-                        ? "#0EA5E9"
+                        ? COLORS.GOLDEN_ACCENT
                         : isPastDay
                         ? "transparent"
                         : isCurrentMonth
-                        ? "transparent"
-                        : "transparent",
+                        ? "#2A2F2F"
+                        : "#1C2021",
+                      color: isSelected
+                        ? COLORS.BACKGROUND_DARK
+                        : isPastDay
+                        ? COLORS.TEXT_MUTED
+                        : isCurrentMonth
+                        ? COLORS.TEXT_PRIMARY
+                        : COLORS.TEXT_MUTED,
+                      cursor: isPastDay ? "not-allowed" : "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isPastDay && !isSelected && isCurrentMonth) {
+                        e.currentTarget.style.backgroundColor = "#353A3A";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isPastDay && !isSelected && isCurrentMonth) {
+                        e.currentTarget.style.backgroundColor = "#2A2F2F";
+                      }
                     }}
                   >
                     {format(day, "d")}
@@ -522,14 +542,13 @@ export default function StreamlinedScheduleLessonModal({
 
           {/* Time Selection Section */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+            <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
               Select Time
             </h3>
 
             {selectedDate ? (
               <div>
-                <p className="text-sm text-gray-300 mb-4">
+                <p className="text-sm mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                   Available times for{" "}
                   {format(selectedDate, "EEEE, MMMM d, yyyy")}:
                 </p>
@@ -541,23 +560,37 @@ export default function StreamlinedScheduleLessonModal({
                         key={time}
                         onClick={() => isAvailable && setSelectedTime(time)}
                         disabled={!isAvailable}
-                        className={`
-                          p-3 rounded-lg text-sm font-medium transition-all duration-200
-                          ${
-                            selectedTime === time
-                              ? "bg-sky-500 text-white"
-                              : isAvailable
-                              ? "text-white hover:bg-sky-500/20 border border-gray-600"
-                              : "text-gray-500 cursor-not-allowed border border-gray-700"
-                          }
-                        `}
+                        className="p-3 rounded-lg text-sm font-medium transition-all duration-200 border"
                         style={{
                           backgroundColor:
                             selectedTime === time
-                              ? "#0EA5E9"
+                              ? COLORS.GOLDEN_ACCENT
                               : isAvailable
-                              ? "transparent"
-                              : "#1F2426",
+                              ? "#2A2F2F"
+                              : "#1C2021",
+                          color:
+                            selectedTime === time
+                              ? COLORS.BACKGROUND_DARK
+                              : isAvailable
+                              ? COLORS.TEXT_PRIMARY
+                              : COLORS.TEXT_MUTED,
+                          borderColor:
+                            selectedTime === time
+                              ? COLORS.GOLDEN_ACCENT
+                              : COLORS.BORDER_SUBTLE,
+                          cursor: isAvailable ? "pointer" : "not-allowed",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (isAvailable && selectedTime !== time) {
+                            e.currentTarget.style.backgroundColor = "#353A3A";
+                            e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (isAvailable && selectedTime !== time) {
+                            e.currentTarget.style.backgroundColor = "#2A2F2F";
+                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                          }
                         }}
                       >
                         {time}
@@ -571,11 +604,7 @@ export default function StreamlinedScheduleLessonModal({
                 className="p-8 text-center rounded-lg"
                 style={{ backgroundColor: "#2A2F2F" }}
               >
-                <Calendar
-                  className="h-12 w-12 mx-auto mb-4"
-                  style={{ color: "#4A5A70" }}
-                />
-                <p className="text-gray-400">
+                <p style={{ color: COLORS.TEXT_SECONDARY }}>
                   Select a date to see available times
                 </p>
               </div>
@@ -587,18 +616,17 @@ export default function StreamlinedScheduleLessonModal({
         <div
           className="mt-6 p-4 rounded-lg border"
           style={{
-            backgroundColor: "#353A3A",
-            borderColor: "#4A5A70",
+            backgroundColor: "#2A2F2F",
+            borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <Repeat className="h-5 w-5 text-sky-400" />
               <div>
-                <label className="text-lg font-medium text-white">
+                <label className="text-lg font-medium block" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Schedule Recurring Lessons
                 </label>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                   Create multiple lessons at once
                 </p>
               </div>
@@ -608,21 +636,25 @@ export default function StreamlinedScheduleLessonModal({
               id="recurring"
               checked={isRecurring}
               onChange={e => setIsRecurring(e.target.checked)}
-              className="w-4 h-4 text-sky-600 bg-gray-700 border-gray-600 rounded focus:ring-sky-500 focus:ring-2"
+              className="checkbox"
             />
           </div>
 
           {isRecurring && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-white mb-2 block">
+                <label className="mb-2 block" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Recurrence Pattern
                 </label>
                 <select
                   value={recurrencePattern}
                   onChange={e => setRecurrencePattern(e.target.value as any)}
-                  className="w-full p-3 rounded-md text-white"
-                  style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+                  className="w-full p-3 rounded-md border"
+                  style={{ 
+                    backgroundColor: "#1C2021", 
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY
+                  }}
                 >
                   <option value="weekly">Weekly</option>
                   <option value="biweekly">Every 2 Weeks</option>
@@ -634,7 +666,7 @@ export default function StreamlinedScheduleLessonModal({
                 </select>
               </div>
               <div>
-                <label className="text-white mb-2 block">End Date</label>
+                <label className="mb-2 block" style={{ color: COLORS.TEXT_PRIMARY }}>End Date</label>
                 <input
                   type="date"
                   value={endDate}
@@ -644,8 +676,12 @@ export default function StreamlinedScheduleLessonModal({
                       ? format(selectedDate, "yyyy-MM-dd")
                       : undefined
                   }
-                  className="w-full p-3 rounded-md text-white"
-                  style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+                  className="w-full p-3 rounded-md border"
+                  style={{ 
+                    backgroundColor: "#1C2021", 
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY
+                  }}
                 />
               </div>
             </div>
@@ -653,7 +689,7 @@ export default function StreamlinedScheduleLessonModal({
 
           {isRecurring && previewDates.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm text-gray-300 mb-2">
+              <p className="text-sm mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Preview ({previewDates.length} lessons):
               </p>
               <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
@@ -661,13 +697,13 @@ export default function StreamlinedScheduleLessonModal({
                   <span
                     key={index}
                     className="px-2 py-1 rounded text-xs"
-                    style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
                   >
                     {format(date, "MMM d")}
                   </span>
                 ))}
                 {previewDates.length > 10 && (
-                  <span className="px-2 py-1 rounded text-xs text-gray-400">
+                  <span className="px-2 py-1 rounded text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                     +{previewDates.length - 10} more
                   </span>
                 )}
@@ -680,24 +716,49 @@ export default function StreamlinedScheduleLessonModal({
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-            style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border"
+            style={{ 
+              backgroundColor: "transparent", 
+              borderColor: COLORS.BORDER_SUBTLE,
+              color: COLORS.TEXT_PRIMARY
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#2A2F2F";
+              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+            }}
           >
             Cancel
           </button>
           <button
             onClick={handleSchedule}
             disabled={!selectedDate || !selectedTime || isScheduling}
-            className="px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-sky-500 hover:bg-sky-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{ 
+              backgroundColor: COLORS.GOLDEN_ACCENT,
+              color: COLORS.BACKGROUND_DARK
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }
+            }}
           >
             {isScheduling ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
                 Scheduling...
               </>
             ) : (
               <>
-                <Check className="h-4 w-4" />
                 Schedule Lesson{isRecurring ? "s" : ""}
               </>
             )}

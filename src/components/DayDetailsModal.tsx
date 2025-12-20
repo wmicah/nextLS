@@ -63,24 +63,32 @@ export default function DayDetailsModal({
     onReplaceWithLesson(replacementData);
   };
 
-  // Check if a program has finished completely
+  // Check if the selected day has already passed (not if the entire program is finished)
+  // This allows coaches to delete/modify future program days regardless of program status
   const isProgramFinished = (programData: any) => {
-    if (
-      !programData.assignment ||
-      !programData.assignment.startDate ||
-      !programData.program?.duration
-    ) {
-      return false; // If we don't have the required data, assume it's not finished
+    if (!selectedDate) {
+      return false; // If no date is selected, assume it's not finished
     }
 
-    const startDate = new Date(programData.assignment.startDate);
-    const programDurationDays = programData.program.duration * 7; // Convert weeks to days
-    const endDate = new Date(
-      startDate.getTime() + programDurationDays * 24 * 60 * 60 * 1000
+    // Check if the selected day has already passed
+    const today = new Date();
+    const selectedDay = new Date(selectedDate);
+
+    // Set both dates to start of day for accurate comparison (ignore time)
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const selectedDayStart = new Date(
+      selectedDay.getFullYear(),
+      selectedDay.getMonth(),
+      selectedDay.getDate()
     );
 
-    // Program is finished if current date is past the end date
-    return new Date() > endDate;
+    // Day is "finished" (has passed) if it's before today
+    // This allows deletion of today's and future days, but prevents deletion of past days
+    return selectedDayStart < todayStart;
   };
 
   const handleRemoveProgram = (program: any, action: "entire" | "day") => {
@@ -439,7 +447,7 @@ export default function DayDetailsModal({
                                   backgroundColor: "#6B7280",
                                   color: "#9CA3AF",
                                 }}
-                                title="Program has finished - cannot be removed"
+                                title="This day has already passed - cannot be removed"
                               >
                                 Finished
                               </div>

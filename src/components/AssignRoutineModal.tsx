@@ -5,6 +5,7 @@ import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { Calendar, Users, Target, X, Search } from "lucide-react";
 import { format } from "date-fns";
+import { COLORS } from "@/lib/colors";
 
 interface AssignRoutineModalProps {
   isOpen: boolean;
@@ -236,36 +237,44 @@ export default function AssignRoutineModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}>
       <div
-        className="bg-[#2A3133] rounded-2xl shadow-2xl border max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden"
-        style={{ borderColor: "#606364" }}
+        className="rounded-2xl shadow-2xl border max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden"
+        style={{ 
+          backgroundColor: "#1C2021",
+          borderColor: COLORS.BORDER_SUBTLE
+        }}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between p-6 border-b"
-          style={{ borderColor: "#606364" }}
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
         >
           <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "#10B981" }}
-            >
-              <Target className="h-6 w-6" style={{ color: "#f0fdf4" }} />
-            </div>
             <div>
-              <h2 className="text-2xl font-bold" style={{ color: "#C3BCC2" }}>
+              <h2 className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Assign Routine
               </h2>
-              <p className="text-sm" style={{ color: "#ABA4AA" }}>
+              <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Assign standalone routines to clients for extra training
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg transition-all duration-300 hover:bg-gray-600"
-            style={{ color: "#ABA4AA" }}
+            className="p-2 rounded-lg transition-all duration-300"
+            style={{ 
+              color: COLORS.TEXT_SECONDARY,
+              backgroundColor: "transparent"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#2A2F2F";
+              e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+            }}
           >
             <X className="h-5 w-5" />
           </button>
@@ -276,7 +285,7 @@ export default function AssignRoutineModal({
           {/* Mode Toggle */}
           <div
             className="flex rounded-xl border overflow-hidden mb-6"
-            style={{ borderColor: "#606364" }}
+            style={{ borderColor: COLORS.BORDER_SUBTLE }}
           >
             <button
               onClick={() => setViewMode("assign")}
@@ -284,11 +293,10 @@ export default function AssignRoutineModal({
                 viewMode === "assign" ? "font-medium" : ""
               }`}
               style={{
-                backgroundColor: viewMode === "assign" ? "#10B981" : "#353A3A",
-                color: viewMode === "assign" ? "#f0fdf4" : "#C3BCC2",
+                backgroundColor: viewMode === "assign" ? COLORS.GREEN_DARK : "#2A2F2F",
+                color: viewMode === "assign" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
               }}
             >
-              <Target className="h-4 w-4" />
               Assign Routine
             </button>
             <button
@@ -297,11 +305,10 @@ export default function AssignRoutineModal({
                 viewMode === "manage" ? "font-medium" : ""
               }`}
               style={{
-                backgroundColor: viewMode === "manage" ? "#10B981" : "#353A3A",
-                color: viewMode === "manage" ? "#f0fdf4" : "#C3BCC2",
+                backgroundColor: viewMode === "manage" ? COLORS.GREEN_DARK : "#2A2F2F",
+                color: viewMode === "manage" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
               }}
             >
-              <Users className="h-4 w-4" />
               Manage Assignments
             </button>
           </div>
@@ -312,7 +319,7 @@ export default function AssignRoutineModal({
               <div>
                 <label
                   className="block text-sm font-medium mb-3"
-                  style={{ color: "#C3BCC2" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Select Routine
                 </label>
@@ -320,20 +327,28 @@ export default function AssignRoutineModal({
                   {routines.map(routine => (
                     <div
                       key={routine.id}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all duration-300 ${
-                        selectedRoutine === routine.id
-                          ? "border-blue-500 bg-blue-500/10"
-                          : "border-gray-600 hover:border-gray-500"
-                      }`}
+                      className="p-4 rounded-xl border cursor-pointer transition-all duration-300"
                       style={{
                         backgroundColor:
                           selectedRoutine === routine.id
-                            ? "#10B981"
-                            : "#353A3A",
+                            ? COLORS.GREEN_DARK
+                            : "#2A2F2F",
                         borderColor:
                           selectedRoutine === routine.id
-                            ? "#10B981"
-                            : "#606364",
+                            ? COLORS.GREEN_DARK
+                            : COLORS.BORDER_SUBTLE,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedRoutine !== routine.id) {
+                          e.currentTarget.style.backgroundColor = "#353A3A";
+                          e.currentTarget.style.borderColor = COLORS.GREEN_DARK;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedRoutine !== routine.id) {
+                          e.currentTarget.style.backgroundColor = "#2A2F2F";
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        }
                       }}
                       onClick={() => setSelectedRoutine(routine.id)}
                     >
@@ -342,8 +357,8 @@ export default function AssignRoutineModal({
                         style={{
                           color:
                             selectedRoutine === routine.id
-                              ? "#000000"
-                              : "#C3BCC2",
+                              ? COLORS.TEXT_PRIMARY
+                              : COLORS.TEXT_PRIMARY,
                         }}
                       >
                         {routine.name}
@@ -353,8 +368,8 @@ export default function AssignRoutineModal({
                         style={{
                           color:
                             selectedRoutine === routine.id
-                              ? "#1f2937"
-                              : "#ABA4AA",
+                              ? COLORS.TEXT_SECONDARY
+                              : COLORS.TEXT_SECONDARY,
                         }}
                       >
                         {routine.description || "No description"}
@@ -365,12 +380,12 @@ export default function AssignRoutineModal({
                           style={{
                             backgroundColor:
                               selectedRoutine === routine.id
-                                ? "#000000"
-                                : "#10B981",
+                                ? COLORS.BACKGROUND_DARK
+                                : COLORS.GREEN_DARK,
                             color:
                               selectedRoutine === routine.id
-                                ? "#ffffff"
-                                : "#f0fdf4",
+                                ? COLORS.TEXT_PRIMARY
+                                : COLORS.TEXT_PRIMARY,
                           }}
                         >
                           {routine.exercises.length} exercises
@@ -385,7 +400,7 @@ export default function AssignRoutineModal({
               <div>
                 <label
                   className="block text-sm font-medium mb-3"
-                  style={{ color: "#C3BCC2" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Select Clients
                 </label>
@@ -393,18 +408,26 @@ export default function AssignRoutineModal({
                   {sortedClients.map(client => (
                     <div
                       key={client.id}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all duration-300 ${
-                        selectedClients.includes(client.id)
-                          ? "border-blue-500 bg-blue-500/10"
-                          : "border-gray-600 hover:border-gray-500"
-                      }`}
+                      className="p-3 rounded-lg border cursor-pointer transition-all duration-300"
                       style={{
                         backgroundColor: selectedClients.includes(client.id)
-                          ? "#10B981"
-                          : "#353A3A",
+                          ? COLORS.GREEN_DARK
+                          : "#2A2F2F",
                         borderColor: selectedClients.includes(client.id)
-                          ? "#10B981"
-                          : "#606364",
+                          ? COLORS.GREEN_DARK
+                          : COLORS.BORDER_SUBTLE,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!selectedClients.includes(client.id)) {
+                          e.currentTarget.style.backgroundColor = "#353A3A";
+                          e.currentTarget.style.borderColor = COLORS.GREEN_DARK;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!selectedClients.includes(client.id)) {
+                          e.currentTarget.style.backgroundColor = "#2A2F2F";
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        }
                       }}
                       onClick={() => toggleClientSelection(client.id)}
                     >
@@ -412,9 +435,7 @@ export default function AssignRoutineModal({
                         <h4
                           className="font-medium text-sm mb-1 transition-colors duration-300"
                           style={{
-                            color: selectedClients.includes(client.id)
-                              ? "#000000"
-                              : "#C3BCC2",
+                            color: COLORS.TEXT_PRIMARY
                           }}
                         >
                           {client.name}
@@ -422,16 +443,14 @@ export default function AssignRoutineModal({
                         <p
                           className="text-xs transition-colors duration-300"
                           style={{
-                            color: selectedClients.includes(client.id)
-                              ? "#1f2937"
-                              : "#ABA4AA",
+                            color: COLORS.TEXT_SECONDARY
                           }}
                         >
                           {client.email}
                         </p>
                         {selectedClients.includes(client.id) && (
                           <div className="mt-2 animate-pulse">
-                            <span className="text-black font-semibold text-xs">
+                            <span className="font-semibold text-xs" style={{ color: COLORS.TEXT_PRIMARY }}>
                               ✓ Selected
                             </span>
                           </div>
@@ -446,22 +465,22 @@ export default function AssignRoutineModal({
               <div>
                 <label
                   className="block text-sm font-medium mb-3"
-                  style={{ color: "#C3BCC2" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Start Date
                 </label>
                 <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5" style={{ color: "#ABA4AA" }} />
                   <input
                     type="date"
                     value={startDate}
                     onChange={e => setStartDate(e.target.value)}
                     min="2020-01-01"
-                    className="px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="px-4 py-2 rounded-lg border focus:outline-none focus:ring-2"
                     style={{
-                      backgroundColor: "#353A3A",
-                      borderColor: "#606364",
-                      color: "#C3BCC2",
+                      backgroundColor: "#2A2F2F",
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                      focusRingColor: COLORS.GREEN_DARK + "50"
                     }}
                   />
                 </div>
@@ -471,11 +490,19 @@ export default function AssignRoutineModal({
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={onClose}
-                  className="px-6 py-3 rounded-xl transition-all duration-300 font-medium"
+                  className="px-6 py-3 rounded-xl transition-all duration-300 font-medium border"
                   style={{
-                    backgroundColor: "#353A3A",
-                    color: "#C3BCC2",
-                    borderColor: "#606364",
+                    backgroundColor: "transparent",
+                    color: COLORS.TEXT_PRIMARY,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#2A2F2F";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   }}
                 >
                   Cancel
@@ -489,8 +516,18 @@ export default function AssignRoutineModal({
                   }
                   className="px-6 py-3 rounded-xl transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    backgroundColor: "#10B981",
-                    color: "#f0fdf4",
+                    backgroundColor: COLORS.GREEN_DARK,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                    }
                   }}
                 >
                   {isAssigning ? "Assigning..." : "Assign Routine"}
@@ -503,18 +540,19 @@ export default function AssignRoutineModal({
               <div>
                 <label
                   className="block text-sm font-medium mb-3"
-                  style={{ color: "#C3BCC2" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Select Routine to Manage
                 </label>
                 <select
                   value={selectedRoutine}
                   onChange={e => setSelectedRoutine(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
                   style={{
-                    backgroundColor: "#353A3A",
-                    borderColor: "#606364",
-                    color: "#C3BCC2",
+                    backgroundColor: "#2A2F2F",
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                    focusRingColor: COLORS.GREEN_DARK + "50"
                   }}
                 >
                   <option value="">Select a routine...</option>
@@ -531,17 +569,13 @@ export default function AssignRoutineModal({
                 <div>
                   <h3
                     className="text-lg font-semibold mb-4"
-                    style={{ color: "#C3BCC2" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Current Assignments
                   </h3>
                   {routineAssignments.length === 0 ? (
                     <div className="text-center py-8">
-                      <Users
-                        className="h-12 w-12 mx-auto mb-4"
-                        style={{ color: "#ABA4AA" }}
-                      />
-                      <p style={{ color: "#ABA4AA" }}>
+                      <p style={{ color: COLORS.TEXT_SECONDARY }}>
                         No clients assigned to this routine yet.
                       </p>
                     </div>
@@ -552,26 +586,26 @@ export default function AssignRoutineModal({
                           key={assignment.id}
                           className="p-4 rounded-lg border"
                           style={{
-                            backgroundColor: "#353A3A",
-                            borderColor: "#606364",
+                            backgroundColor: "#2A2F2F",
+                            borderColor: COLORS.BORDER_SUBTLE,
                           }}
                         >
                           <div className="text-center">
                             <h4
                               className="font-medium mb-1"
-                              style={{ color: "#C3BCC2" }}
+                              style={{ color: COLORS.TEXT_PRIMARY }}
                             >
                               {assignment.client.name}
                             </h4>
                             <p
                               className="text-sm mb-2"
-                              style={{ color: "#ABA4AA" }}
+                              style={{ color: COLORS.TEXT_SECONDARY }}
                             >
                               {assignment.client.email}
                             </p>
                             <p
                               className="text-xs mb-3"
-                              style={{ color: "#ABA4AA" }}
+                              style={{ color: COLORS.TEXT_SECONDARY }}
                             >
                               Assigned{" "}
                               {format(
@@ -583,8 +617,17 @@ export default function AssignRoutineModal({
                               onClick={() =>
                                 handleUnassign([assignment.clientId])
                               }
-                              className="px-3 py-1 rounded-lg transition-all duration-300 hover:bg-red-500/10 text-xs hover:scale-105"
-                              style={{ color: "#EF4444" }}
+                              className="px-3 py-1 rounded-lg transition-all duration-300 text-xs"
+                              style={{ 
+                                color: COLORS.RED_ALERT,
+                                backgroundColor: "transparent"
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = COLORS.RED_ALERT + "20";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "transparent";
+                              }}
                             >
                               Unassign
                             </button>

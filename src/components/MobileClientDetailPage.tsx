@@ -79,6 +79,7 @@ import {
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 import ClientProfileModal from "./ClientProfileModal";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface MobileClientDetailPageProps {
   clientId: string;
@@ -323,14 +324,14 @@ export default function MobileClientDetailPage({
   // Loading state
   if (clientLoading || lessonsLoading) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ backgroundColor: "#2A3133" }}
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
           <div
             className="flex items-center space-x-3"
-            style={{ color: "#C3BCC2" }}
+            style={{ color: COLORS.TEXT_PRIMARY }}
           >
             <Loader2 className="h-6 w-6 animate-spin" />
             <span>Loading client details...</span>
@@ -343,26 +344,28 @@ export default function MobileClientDetailPage({
   // Error state
   if (!client) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+      <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ backgroundColor: "#2A3133" }}
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
         >
           <div className="text-center">
             <h2
               className="text-2xl font-semibold mb-3"
-              style={{ color: "#C3BCC2" }}
+              style={{ color: COLORS.TEXT_PRIMARY }}
             >
               Client Not Found
             </h2>
-            <p className="text-gray-400 mb-6">
+            <p style={{ color: COLORS.TEXT_SECONDARY }} className="mb-6">
               The client you're looking for doesn't exist or you don't have
               access to it.
             </p>
             <button
               onClick={() => router.push(backPath)}
               className="px-6 py-3 rounded-lg text-white transition-all duration-200"
-              style={{ backgroundColor: "#4A5A70" }}
+              style={{ backgroundColor: COLORS.GOLDEN_DARK }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK}
             >
               Back to Clients
             </button>
@@ -648,90 +651,116 @@ export default function MobileClientDetailPage({
   const displayUpcomingLessons = upcomingLessons.slice(0, 5);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
       {/* Mobile Header */}
       <div
         className="sticky top-0 z-40 px-4 pb-3 border-b"
         style={{ 
-          backgroundColor: "#353A3A", 
-          borderColor: "#606364",
+          backgroundColor: "#1F2426", 
+          borderColor: COLORS.BORDER_SUBTLE,
           paddingTop: `calc(0.75rem + env(safe-area-inset-top))`
         }}
       >
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(backPath)}
-            className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ 
+              backgroundColor: "#2A2F2F",
+              color: COLORS.TEXT_PRIMARY
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
           >
-            <ArrowLeft className="h-5 w-5 text-white" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-white truncate">
+            <h1 className="text-lg font-bold truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
               {client.name}
             </h1>
-            <p className="text-xs text-gray-400">Client Details</p>
+            <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Client Details</p>
           </div>
           <div className="flex items-center gap-1">
             {/* Primary action - Schedule Lesson */}
             <button
               onClick={() => setShowScheduleModal(true)}
               className="p-2 rounded-lg transition-all duration-200"
-              style={{ backgroundColor: "#F59E0B" }}
+              style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT}
               title="Schedule Lesson"
             >
-              <Calendar className="w-5 h-5 text-white" />
+              <Calendar className="w-5 h-5" style={{ color: COLORS.BACKGROUND_DARK }} />
             </button>
             {/* Dropdown for other actions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="p-2 rounded-lg transition-all duration-200 hover:bg-[#4A5A70]"
+                  className="p-2 rounded-lg transition-all duration-200"
+                  style={{ 
+                    backgroundColor: "#2A2F2F",
+                    color: COLORS.TEXT_PRIMARY
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
                   title="More actions"
                 >
-                  <MoreVertical className="w-5 h-5 text-white" />
+                  <MoreVertical className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
                 className="min-w-[200px] rounded-lg border shadow-xl"
                 style={{
-                  backgroundColor: "#1F2323",
-                  borderColor: "#606364",
+                  backgroundColor: "#1C2021",
+                  borderColor: COLORS.BORDER_SUBTLE,
                 }}
               >
                 <DropdownMenuItem
                   onClick={() => {
                     setShowQuickAssignProgramModal(true);
                   }}
-                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                  style={{ color: "#C3BCC2" }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
+                  style={{ 
+                    color: COLORS.TEXT_PRIMARY,
+                    backgroundColor: "transparent"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                 >
-                  <BookOpen className="h-4 w-4" style={{ color: "#3B82F6" }} />
                   Assign Program
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
                     setShowAssignRoutineModal(true);
                   }}
-                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                  style={{ color: "#C3BCC2" }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
+                  style={{ 
+                    color: COLORS.TEXT_PRIMARY,
+                    backgroundColor: "transparent"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                 >
-                  <Target className="h-4 w-4" style={{ color: "#10B981" }} />
                   Assign Routine
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
                     setShowAssignVideoModal(true);
                   }}
-                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                  style={{ color: "#C3BCC2" }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
+                  style={{ 
+                    color: COLORS.TEXT_PRIMARY,
+                    backgroundColor: "transparent"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                 >
-                  <Video className="h-4 w-4" style={{ color: "#8B5CF6" }} />
                   Assign Video
                 </DropdownMenuItem>
                 <DropdownMenuSeparator
                   className="my-1"
-                  style={{ backgroundColor: "#606364" }}
+                  style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                 />
                 <DropdownMenuItem
                   onSelect={(e) => {
@@ -744,23 +773,28 @@ export default function MobileClientDetailPage({
                       alert("Unable to open conversation. Client information is missing.");
                     }
                   }}
-                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                  style={{ color: "#C3BCC2" }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
+                  style={{ 
+                    color: COLORS.TEXT_PRIMARY,
+                    backgroundColor: "transparent"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                 >
-                  <MessageSquare
-                    className="h-4 w-4"
-                    style={{ color: "#10B981" }}
-                  />
                   Send Message
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
                     setShowProfileModal(true);
                   }}
-                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                  style={{ color: "#C3BCC2" }}
+                  className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
+                  style={{ 
+                    color: COLORS.TEXT_PRIMARY,
+                    backgroundColor: "transparent"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                 >
-                  <Edit className="h-4 w-4" style={{ color: "#3B82F6" }} />
                   Edit Client
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -773,7 +807,7 @@ export default function MobileClientDetailPage({
         {/* Client Info Card */}
         <div
           className="p-4 rounded-lg border-2"
-          style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+          style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
         >
           <div className="flex items-center gap-4 mb-4">
             <ProfilePictureUploader
@@ -786,14 +820,14 @@ export default function MobileClientDetailPage({
               readOnly={true}
             />
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-white mb-1">
+              <h2 className="text-xl font-bold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {client.name}
               </h2>
               {client.email && (
-                <p className="text-sm text-gray-400 mb-1">{client.email}</p>
+                <p className="text-sm mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>{client.email}</p>
               )}
               {client.phone && (
-                <p className="text-sm text-gray-400">{client.phone}</p>
+                <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>{client.phone}</p>
               )}
             </div>
           </div>
@@ -804,12 +838,11 @@ export default function MobileClientDetailPage({
         {/* Compliance Rate */}
         <div
           className="p-4 rounded-lg border-2"
-          style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+          style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Target className="h-5 w-5 text-emerald-400" />
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Compliance Rate
               </h2>
             </div>
@@ -820,14 +853,21 @@ export default function MobileClientDetailPage({
                   onClick={() =>
                     setCompliancePeriod(period as "4" | "6" | "8" | "all")
                   }
-                  className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
-                    compliancePeriod === period
-                      ? "text-white"
-                      : "text-gray-400 hover:text-white"
-                  }`}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200`}
                   style={{
                     backgroundColor:
-                      compliancePeriod === period ? "#4A5A70" : "transparent",
+                      compliancePeriod === period ? COLORS.GOLDEN_DARK : "transparent",
+                    color: compliancePeriod === period ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (compliancePeriod !== period) {
+                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (compliancePeriod !== period) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
                   }}
                 >
                   {period === "all" ? "All" : `${period}w`}
@@ -838,10 +878,10 @@ export default function MobileClientDetailPage({
 
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-medium" style={{ color: "#ABA4AA" }}>
+              <p className="text-sm font-medium" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Completion Rate
               </p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 {complianceLoading ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
                 ) : (
@@ -852,7 +892,6 @@ export default function MobileClientDetailPage({
                 )}
               </p>
             </div>
-            <Target className="h-8 w-8" style={{ color: "#10B981" }} />
           </div>
 
           {/* Progress Bar */}
@@ -863,10 +902,10 @@ export default function MobileClientDetailPage({
                 width: `${Math.min(100, complianceData?.completionRate || 0)}%`,
                 backgroundColor:
                   Math.min(100, complianceData?.completionRate || 0) >= 80
-                    ? "#10B981"
+                    ? COLORS.GREEN_PRIMARY
                     : Math.min(100, complianceData?.completionRate || 0) >= 60
-                    ? "#F59E0B"
-                    : "#EF4444",
+                    ? COLORS.GOLDEN_ACCENT
+                    : COLORS.RED_ALERT,
               }}
             />
           </div>
@@ -875,7 +914,7 @@ export default function MobileClientDetailPage({
           {complianceData && (
             <div
               className="flex justify-between text-xs"
-              style={{ color: "#ABA4AA" }}
+              style={{ color: COLORS.TEXT_SECONDARY }}
             >
               <span>
                 {Math.min(
@@ -893,11 +932,10 @@ export default function MobileClientDetailPage({
         {displayUpcomingLessons.length > 0 && (
           <div
             className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
           >
             <div className="flex items-center gap-3 mb-3">
-              <Calendar className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                 Upcoming Lessons ({displayUpcomingLessons.length})
               </h2>
             </div>
@@ -905,13 +943,17 @@ export default function MobileClientDetailPage({
               {displayUpcomingLessons.map((lesson: any, index: number) => (
                 <div
                   key={`upcoming-lesson-${lesson.id || index}`}
-                  className="flex items-center justify-between p-3 rounded bg-emerald-500/10 border border-emerald-500/20"
+                  className="flex items-center justify-between p-3 rounded border"
+                  style={{
+                    backgroundColor: "#2A2F2F",
+                    borderColor: COLORS.GREEN_PRIMARY + "40"
+                  }}
                 >
                   <div className="flex-1">
-                    <div className="font-medium text-emerald-300">
+                    <div className="font-medium" style={{ color: COLORS.GREEN_PRIMARY }}>
                       {formatDateTimeInUserTimezone(lesson.date)}
                     </div>
-                    <div className="text-sm text-emerald-200">
+                    <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                       {lesson.title}
                     </div>
                   </div>
@@ -924,34 +966,32 @@ export default function MobileClientDetailPage({
         {/* View Mode Toggle */}
         <div
           className="p-4 rounded-lg border-2"
-          style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+          style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Calendar View</h2>
+            <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>Calendar View</h2>
             <div
               className="flex rounded-lg border overflow-hidden"
-              style={{ borderColor: "#606364" }}
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
             >
               <button
                 onClick={() => setViewMode("month")}
-                className={`px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                  viewMode === "month" ? "text-white" : "text-gray-400"
-                }`}
+                className="px-3 py-2 text-sm font-medium transition-all duration-200"
                 style={{
                   backgroundColor:
-                    viewMode === "month" ? "#4A5A70" : "transparent",
+                    viewMode === "month" ? COLORS.GOLDEN_DARK : "transparent",
+                  color: viewMode === "month" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                 }}
               >
                 Month
               </button>
               <button
                 onClick={() => setViewMode("week")}
-                className={`px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                  viewMode === "week" ? "text-white" : "text-gray-400"
-                }`}
+                className="px-3 py-2 text-sm font-medium transition-all duration-200"
                 style={{
                   backgroundColor:
-                    viewMode === "week" ? "#4A5A70" : "transparent",
+                    viewMode === "week" ? COLORS.GOLDEN_DARK : "transparent",
+                  color: viewMode === "week" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                 }}
               >
                 Week
@@ -963,11 +1003,17 @@ export default function MobileClientDetailPage({
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => navigateDate("prev")}
-              className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ 
+                backgroundColor: "#2A2F2F",
+                color: COLORS.TEXT_PRIMARY
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
             >
-              <ChevronLeft className="h-5 w-5 text-white" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
               {viewMode === "month"
                 ? format(currentDate, "MMMM yyyy")
                 : `${format(startOfWeek(currentDate), "MMM d")} - ${format(
@@ -977,9 +1023,15 @@ export default function MobileClientDetailPage({
             </h3>
             <button
               onClick={() => navigateDate("next")}
-              className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ 
+                backgroundColor: "#2A2F2F",
+                color: COLORS.TEXT_PRIMARY
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
             >
-              <ChevronRight className="h-5 w-5 text-white" />
+              <ChevronRight className="h-5 w-5" />
             </button>
           </div>
 
@@ -992,7 +1044,8 @@ export default function MobileClientDetailPage({
                 {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
                   <div
                     key={`day-header-${index}`}
-                    className="text-center text-xs font-bold text-blue-300 py-2"
+                    className="text-center text-xs font-bold py-2"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
                   >
                     {day}
                   </div>
@@ -1012,40 +1065,56 @@ export default function MobileClientDetailPage({
                     <div
                       key={day.toISOString()}
                       onClick={() => handleDateClick(day)}
-                      className={`
-                          p-2 text-sm rounded-lg transition-all duration-200 relative min-h-[50px] border-2 overflow-hidden cursor-pointer
-                          ${
-                            isToday
-                              ? "bg-blue-500/20 text-blue-300 border-blue-400"
-                              : isCurrentMonth
-                              ? "bg-gray-800/50 text-white border-gray-600 hover:bg-gray-700/50"
-                              : "bg-gray-900/30 text-gray-500 border-gray-700"
-                          }
-                        `}
+                      className="p-2 text-sm rounded-lg transition-all duration-200 relative min-h-[50px] border-2 overflow-hidden cursor-pointer"
+                      style={{
+                        backgroundColor: isToday
+                          ? getGoldenAccent(0.2)
+                          : isCurrentMonth
+                          ? "#2A2F2F"
+                          : "#1C2021",
+                        color: isToday
+                          ? COLORS.GOLDEN_ACCENT
+                          : isCurrentMonth
+                          ? COLORS.TEXT_PRIMARY
+                          : COLORS.TEXT_MUTED,
+                        borderColor: isToday
+                          ? COLORS.GOLDEN_ACCENT
+                          : COLORS.BORDER_SUBTLE,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (isCurrentMonth && !isToday) {
+                          e.currentTarget.style.backgroundColor = "#353A3A";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isCurrentMonth && !isToday) {
+                          e.currentTarget.style.backgroundColor = "#2A2F2F";
+                        }
+                      }}
                     >
                       <div className="font-bold text-sm mb-1">
                         {format(day, "d")}
                       </div>
                       <div className="flex justify-center items-center gap-1 mt-1">
                         {hasLessons && (
-                          <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GREEN_PRIMARY }} />
                         )}
                         {hasPrograms && (
                           <>
                             {programsForDay.some(
                               (p: any) => p.type === "program"
                             ) && (
-                              <div className="w-2 h-2 rounded-full bg-blue-400" />
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GOLDEN_ACCENT }} />
                             )}
                             {programsForDay.some(
                               (p: any) => p.type === "temporary_program"
                             ) && (
-                              <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.BLUE_PRIMARY }} />
                             )}
                           </>
                         )}
                         {hasRoutines && (
-                          <div className="w-2 h-2 rounded-full bg-green-600" />
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GREEN_DARK }} />
                         )}
                       </div>
                     </div>
@@ -1069,14 +1138,28 @@ export default function MobileClientDetailPage({
                     <div
                       key={day.toISOString()}
                       onClick={() => handleDateClick(day)}
-                      className={`
-                          p-3 rounded-lg transition-all duration-200 border-2 cursor-pointer
-                          ${
-                            isToday
-                              ? "bg-blue-500/20 text-blue-300 border-blue-400"
-                              : "bg-gray-800/50 text-white border-gray-600 hover:bg-gray-700/50"
-                          }
-                        `}
+                      className="p-3 rounded-lg transition-all duration-200 border-2 cursor-pointer"
+                      style={{
+                        backgroundColor: isToday
+                          ? getGoldenAccent(0.2)
+                          : "#2A2F2F",
+                        color: isToday
+                          ? COLORS.GOLDEN_ACCENT
+                          : COLORS.TEXT_PRIMARY,
+                        borderColor: isToday
+                          ? COLORS.GOLDEN_ACCENT
+                          : COLORS.BORDER_SUBTLE,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isToday) {
+                          e.currentTarget.style.backgroundColor = "#353A3A";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isToday) {
+                          e.currentTarget.style.backgroundColor = "#2A2F2F";
+                        }
+                      }}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-bold">
@@ -1084,24 +1167,24 @@ export default function MobileClientDetailPage({
                         </div>
                         <div className="flex items-center gap-2">
                           {hasLessons && (
-                            <div className="w-3 h-3 rounded-full bg-emerald-400" />
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.GREEN_PRIMARY }} />
                           )}
                           {hasPrograms && (
                             <>
                               {programsForDay.some(
                                 (p: any) => p.type === "program"
                               ) && (
-                                <div className="w-3 h-3 rounded-full bg-blue-400" />
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.GOLDEN_ACCENT }} />
                               )}
                               {programsForDay.some(
                                 (p: any) => p.type === "temporary_program"
                               ) && (
-                                <div className="w-3 h-3 rounded-full bg-cyan-400" />
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.BLUE_PRIMARY }} />
                               )}
                             </>
                           )}
                           {hasRoutines && (
-                            <div className="w-3 h-3 rounded-full bg-green-600" />
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.GREEN_DARK }} />
                           )}
                         </div>
                       </div>
@@ -1112,14 +1195,18 @@ export default function MobileClientDetailPage({
                             .map((lesson: any, index: number) => (
                               <div
                                 key={`week-lesson-${lesson.id || index}`}
-                                className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded"
+                                className="text-xs px-2 py-1 rounded"
+                                style={{
+                                  backgroundColor: COLORS.GREEN_PRIMARY + "20",
+                                  color: COLORS.GREEN_PRIMARY
+                                }}
                               >
                                 {formatTimeInUserTimezone(lesson.date)} -{" "}
                                 {lesson.title}
                               </div>
                             ))}
                           {lessonsForDay.length > 2 && (
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                               +{lessonsForDay.length - 2} more
                             </div>
                           )}
@@ -1133,7 +1220,11 @@ export default function MobileClientDetailPage({
                             .map((program: any, index: number) => (
                               <div
                                 key={`week-program-${program.id || index}`}
-                                className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300"
+                                className="text-xs px-2 py-1 rounded"
+                                style={{
+                                  backgroundColor: getGoldenAccent(0.2),
+                                  color: COLORS.GOLDEN_ACCENT
+                                }}
                               >
                                 {program.title}
                               </div>
@@ -1150,23 +1241,23 @@ export default function MobileClientDetailPage({
           {/* Calendar Legend */}
           <div
             className="flex items-center justify-center gap-4 pt-3 border-t"
-            style={{ borderColor: "#4A5A70" }}
+            style={{ borderColor: COLORS.BORDER_SUBTLE }}
           >
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-xs text-gray-300">Lessons</span>
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GREEN_PRIMARY }} />
+              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Lessons</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-400" />
-              <span className="text-xs text-gray-300">Programs</span>
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GOLDEN_ACCENT }} />
+              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Programs</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-cyan-400" />
-              <span className="text-xs text-gray-300">Temporary</span>
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.BLUE_PRIMARY }} />
+              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Temporary</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-600" />
-              <span className="text-xs text-gray-300">Routines</span>
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GREEN_DARK }} />
+              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Routines</span>
             </div>
           </div>
         </div>
@@ -1258,17 +1349,17 @@ export default function MobileClientDetailPage({
 
         {/* Day Overview Modal */}
         {showDayOverviewModal && selectedDate && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}>
             <div
               className="rounded-2xl shadow-xl border w-full max-w-2xl max-h-[80vh] overflow-y-auto"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+              style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
             >
               <div
                 className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
-                style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
               >
                 <div>
-                  <h2 className="text-xl font-bold text-white">
+                  <h2 className="text-xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                     {format(selectedDate, "EEEE, MMMM d, yyyy")}
                   </h2>
                 </div>
@@ -1277,78 +1368,156 @@ export default function MobileClientDetailPage({
                     setShowDayOverviewModal(false);
                     setSelectedDate(null);
                   }}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="transition-colors"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = COLORS.TEXT_PRIMARY}
+                  onMouseLeave={(e) => e.currentTarget.style.color = COLORS.TEXT_SECONDARY}
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
               <div className="p-4">
                 {/* Quick Actions */}
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <button
-                    onClick={() => {
-                      setShowDayOverviewModal(false);
-                      setShowScheduleModal(true);
-                    }}
-                    className="flex items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105 border"
-                    style={{
-                      backgroundColor: "#F59E0B",
-                      borderColor: "#F59E0B",
-                    }}
+                <div>
+                  <h3
+                    className="text-sm font-semibold mb-3"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
-                    <Calendar className="h-5 w-5 text-white flex-shrink-0" />
-                    <span className="text-sm font-medium text-white">
-                      Schedule Lesson
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDayOverviewModal(false);
-                      setShowQuickAssignProgramModal(true);
-                    }}
-                    className="flex items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105 border"
-                    style={{
-                      backgroundColor: "#3B82F6",
-                      borderColor: "#3B82F6",
-                    }}
-                  >
-                    <BookOpen className="h-5 w-5 text-white flex-shrink-0" />
-                    <span className="text-sm font-medium text-white">
-                      Assign Program
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDayOverviewModal(false);
-                      setShowQuickAssignRoutineFromDayModal(true);
-                    }}
-                    className="flex items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105 border"
-                    style={{
-                      backgroundColor: "#10B981",
-                      borderColor: "#10B981",
-                    }}
-                  >
-                    <Target className="h-5 w-5 text-white flex-shrink-0" />
-                    <span className="text-sm font-medium text-white">
-                      Assign Routine
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDayOverviewModal(false);
-                      setShowAssignVideoModal(true);
-                    }}
-                    className="flex items-center gap-2 p-3 rounded-lg transition-all duration-200 hover:scale-105 border"
-                    style={{
-                      backgroundColor: "#8B5CF6",
-                      borderColor: "#8B5CF6",
-                    }}
-                  >
-                    <Video className="h-5 w-5 text-white flex-shrink-0" />
-                    <span className="text-sm font-medium text-white">
-                      Assign Video
-                    </span>
-                  </button>
+                    Quick Actions
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {/* Schedule Lesson */}
+                    <button
+                      onClick={() => {
+                        setShowDayOverviewModal(false);
+                        setShowScheduleModal(true);
+                      }}
+                      className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer"
+                      style={{
+                        backgroundColor: "rgba(245, 158, 11, 0.1)",
+                        borderColor: "rgba(245, 158, 11, 0.2)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(245, 158, 11, 0.2)";
+                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(245, 158, 11, 0.1)";
+                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.2)";
+                      }}
+                    >
+                      <div className="text-center">
+                        <div
+                          className="text-xs font-medium"
+                          style={{ color: "#F59E0B" }}
+                        >
+                          Schedule Lesson
+                        </div>
+                        <div className="text-[10px]" style={{ color: "rgba(245, 158, 11, 0.8)" }}>
+                          Book a lesson
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Assign Program */}
+                    <button
+                      onClick={() => {
+                        setShowDayOverviewModal(false);
+                        setShowQuickAssignProgramModal(true);
+                      }}
+                      className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer"
+                      style={{
+                        backgroundColor: "rgba(59, 130, 246, 0.1)",
+                        borderColor: "rgba(59, 130, 246, 0.2)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(59, 130, 246, 0.2)";
+                        e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.3)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(59, 130, 246, 0.1)";
+                        e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.2)";
+                      }}
+                    >
+                      <div className="text-center">
+                        <div
+                          className="text-xs font-medium"
+                          style={{ color: "#3B82F6" }}
+                        >
+                          Assign Program
+                        </div>
+                        <div className="text-[10px]" style={{ color: "rgba(59, 130, 246, 0.8)" }}>
+                          Start a program
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Assign Routine */}
+                    <button
+                      onClick={() => {
+                        setShowDayOverviewModal(false);
+                        setShowQuickAssignRoutineFromDayModal(true);
+                      }}
+                      className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer"
+                      style={{
+                        backgroundColor: "rgba(16, 185, 129, 0.1)",
+                        borderColor: "rgba(16, 185, 129, 0.2)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(16, 185, 129, 0.2)";
+                        e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.3)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
+                        e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.2)";
+                      }}
+                    >
+                      <div className="text-center">
+                        <div
+                          className="text-xs font-medium"
+                          style={{ color: "#10B981" }}
+                        >
+                          Assign Routine
+                        </div>
+                        <div className="text-[10px]" style={{ color: "rgba(16, 185, 129, 0.8)" }}>
+                          Assign a routine
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Assign Video */}
+                    <button
+                      onClick={() => {
+                        setShowDayOverviewModal(false);
+                        setShowAssignVideoModal(true);
+                      }}
+                      className="flex items-center justify-center p-3 rounded-lg border transition-all duration-200 cursor-pointer"
+                      style={{
+                        backgroundColor: "rgba(139, 92, 246, 0.1)",
+                        borderColor: "rgba(139, 92, 246, 0.2)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(139, 92, 246, 0.2)";
+                        e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(139, 92, 246, 0.1)";
+                        e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.2)";
+                      }}
+                    >
+                      <div className="text-center">
+                        <div
+                          className="text-xs font-medium"
+                          style={{ color: "#8B5CF6" }}
+                        >
+                          Assign Video
+                        </div>
+                        <div className="text-[10px]" style={{ color: "rgba(139, 92, 246, 0.8)" }}>
+                          Assign a video
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 {(() => {
@@ -1366,26 +1535,33 @@ export default function MobileClientDetailPage({
                       {/* Lessons Section */}
                       {dayLessons.length > 0 && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-white">
+                          <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                             Scheduled Lessons
                           </h3>
                           <div className="space-y-3">
                             {dayLessons.map((lesson: any, index: number) => (
                               <div
                                 key={`day-lesson-${lesson.id || index}`}
-                                className="flex items-center justify-between p-4 rounded-lg border group bg-emerald-500/10 border-emerald-500/20"
+                                className="flex items-center justify-between p-4 rounded-lg border"
+                                style={{
+                                  backgroundColor: "#2A2F2F",
+                                  borderColor: COLORS.GREEN_PRIMARY + "40"
+                                }}
                               >
                                 <div className="flex-1">
-                                  <div className="font-medium text-emerald-300">
+                                  <div className="font-medium" style={{ color: COLORS.GREEN_PRIMARY }}>
                                     {formatTimeInUserTimezone(lesson.date)}
                                   </div>
-                                  <div className="text-sm text-emerald-200">
+                                  <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                                     {lesson.title}
                                   </div>
                                 </div>
                                 <button
                                   onClick={() => handleRemoveLesson(lesson)}
-                                  className="p-2 text-emerald-400 hover:text-red-400 transition-colors"
+                                  className="p-2 transition-colors"
+                                  style={{ color: COLORS.GREEN_PRIMARY }}
+                                  onMouseEnter={(e) => e.currentTarget.style.color = COLORS.RED_ALERT}
+                                  onMouseLeave={(e) => e.currentTarget.style.color = COLORS.GREEN_PRIMARY}
                                   title="Remove lesson"
                                 >
                                   <X className="h-4 w-4" />
@@ -1399,41 +1575,35 @@ export default function MobileClientDetailPage({
                       {/* Programs Section */}
                       {dayPrograms.length > 0 && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-white">
+                          <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                             Assigned Programs
                           </h3>
                           <div className="space-y-3">
                             {dayPrograms.map((program: any, index: number) => (
                               <div
                                 key={`day-program-${program.id || index}`}
-                                className={`flex items-center justify-between p-4 rounded-lg border group ${
-                                  program.type === "rest"
-                                    ? "bg-orange-500/10 border-orange-500/20"
-                                    : program.type === "temporary_program"
-                                    ? "bg-cyan-500/10 border-cyan-500/20"
-                                    : "bg-blue-500/10 border-blue-500/20"
-                                }`}
+                                className="flex items-center justify-between p-4 rounded-lg border"
+                                style={{
+                                  backgroundColor: "#2A2F2F",
+                                  borderColor: program.type === "temporary_program"
+                                    ? COLORS.BLUE_PRIMARY + "40"
+                                    : getGoldenAccent(0.2)
+                                }}
                               >
                                 <div className="flex-1">
                                   <div
-                                    className={`font-medium ${
-                                      program.type === "rest"
-                                        ? "text-orange-300"
-                                        : program.type === "temporary_program"
-                                        ? "text-cyan-300"
-                                        : "text-blue-300"
-                                    }`}
+                                    className="font-medium"
+                                    style={{
+                                      color: program.type === "temporary_program"
+                                        ? COLORS.BLUE_PRIMARY
+                                        : COLORS.GOLDEN_ACCENT
+                                    }}
                                   >
                                     {program.title}
                                   </div>
                                   <div
-                                    className={`text-sm ${
-                                      program.type === "rest"
-                                        ? "text-orange-200"
-                                        : program.type === "temporary_program"
-                                        ? "text-cyan-200"
-                                        : "text-blue-200"
-                                    }`}
+                                    className="text-sm"
+                                    style={{ color: COLORS.TEXT_SECONDARY }}
                                   >
                                     {program.description}
                                   </div>
@@ -1441,21 +1611,24 @@ export default function MobileClientDetailPage({
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <button
-                                      className="p-2 rounded-lg hover:bg-[#4A5A70]/50 transition-colors"
+                                      className="p-2 rounded-lg transition-colors"
+                                      style={{ 
+                                        backgroundColor: "transparent",
+                                        color: COLORS.TEXT_SECONDARY
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                                       title="Program actions"
                                     >
-                                      <MoreVertical
-                                        className="h-4 w-4"
-                                        style={{ color: "#ABA4AA" }}
-                                      />
+                                      <MoreVertical className="h-4 w-4" />
                                     </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent
                                     align="end"
                                     className="min-w-[180px] rounded-lg border shadow-xl"
                                     style={{
-                                      backgroundColor: "#1F2323",
-                                      borderColor: "#606364",
+                                      backgroundColor: "#1C2021",
+                                      borderColor: COLORS.BORDER_SUBTLE,
                                     }}
                                   >
                                     <DropdownMenuItem
@@ -1482,18 +1655,19 @@ export default function MobileClientDetailPage({
                                         setShowScheduleModal(true);
                                         setShowDayOverviewModal(false);
                                       }}
-                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                                      style={{ color: "#C3BCC2" }}
+                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
+                                      style={{ 
+                                        color: COLORS.TEXT_PRIMARY,
+                                        backgroundColor: "transparent"
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                                     >
-                                      <Calendar
-                                        className="h-4 w-4"
-                                        style={{ color: "#F59E0B" }}
-                                      />
                                       Replace with Lesson
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator
                                       className="my-1"
-                                      style={{ backgroundColor: "#606364" }}
+                                      style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                                     />
                                     <DropdownMenuItem
                                       onSelect={(e) => {
@@ -1526,13 +1700,14 @@ export default function MobileClientDetailPage({
                                         };
                                         handleRemoveProgram(programData, "day");
                                       }}
-                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                                      style={{ color: "#C3BCC2" }}
+                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
+                                      style={{ 
+                                        color: COLORS.TEXT_PRIMARY,
+                                        backgroundColor: "transparent"
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                                     >
-                                      <X
-                                        className="h-4 w-4"
-                                        style={{ color: "#F59E0B" }}
-                                      />
                                       Remove This Day
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
@@ -1569,13 +1744,14 @@ export default function MobileClientDetailPage({
                                           "entire"
                                         );
                                       }}
-                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#353A3A]"
-                                      style={{ color: "#EF4444" }}
+                                      className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
+                                      style={{ 
+                                        color: COLORS.RED_ALERT,
+                                        backgroundColor: "transparent"
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                                     >
-                                      <X
-                                        className="h-4 w-4"
-                                        style={{ color: "#EF4444" }}
-                                      />
                                       Remove Entire Program
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -1589,24 +1765,25 @@ export default function MobileClientDetailPage({
                       {/* Routine Assignments Section */}
                       {dayRoutines.length > 0 && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-white">
+                          <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                             Assigned Routines
                           </h3>
                           <div className="space-y-3">
                             {dayRoutines.map((routine: any, index: number) => (
                               <div
                                 key={`day-routine-${routine.id || index}`}
-                                className="flex items-center justify-between p-4 rounded-lg border group bg-green-500/10 border-green-500/20"
+                                className="flex items-center justify-between p-4 rounded-lg border"
+                                style={{
+                                  backgroundColor: "#2A2F2F",
+                                  borderColor: COLORS.GREEN_DARK + "40"
+                                }}
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                                    <Target className="w-4 h-4 text-white" />
-                                  </div>
                                   <div>
-                                    <div className="font-medium text-green-300">
+                                    <div className="font-medium" style={{ color: COLORS.GREEN_PRIMARY }}>
                                       {routine.routine?.name || "Routine"}
                                     </div>
-                                    <div className="text-sm text-green-200">
+                                    <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                                       {routine.routine?.exercises?.length || 0}{" "}
                                       exercises
                                     </div>
@@ -1614,7 +1791,10 @@ export default function MobileClientDetailPage({
                                 </div>
                                 <button
                                   onClick={() => handleRemoveRoutine(routine)}
-                                  className="p-2 text-green-400 hover:text-red-400 transition-colors"
+                                  className="p-2 transition-colors"
+                                  style={{ color: COLORS.GREEN_PRIMARY }}
+                                  onMouseEnter={(e) => e.currentTarget.style.color = COLORS.RED_ALERT}
+                                  onMouseLeave={(e) => e.currentTarget.style.color = COLORS.GREEN_PRIMARY}
                                   title="Remove routine"
                                 >
                                   <X className="h-4 w-4" />
@@ -1626,14 +1806,15 @@ export default function MobileClientDetailPage({
                       )}
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <Calendar className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                      <p className="text-gray-400 text-sm">
-                        No lessons or programs scheduled for this day
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Use the quick actions above to get started
-                      </p>
+                    <div className="text-center py-6">
+                      <div className="space-y-2">
+                        <div
+                          className="text-sm font-semibold"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
+                          No items scheduled for this day
+                        </div>
+                      </div>
                     </div>
                   );
                 })()}
