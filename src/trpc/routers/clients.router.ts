@@ -2396,4 +2396,172 @@ export const clientsRouter = router({
 
     return clientRecord;
   }),
+
+  // Get the most recent activity for a specific client
+  getLastActivity: publicProcedure
+    .input(z.object({ clientId: z.string() }))
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH and has access to this client
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can access this endpoint",
+        });
+      }
+
+      // Verify the client belongs to this coach (or is in the coach's organization)
+      const client = await db.client.findFirst({
+        where: { id: input.clientId },
+        select: { coachId: true, organizationId: true },
+      });
+
+      if (!client) {
+        return null;
+      }
+
+      // Check if coach has access to this client
+      const hasAccess = client.coachId === user.id;
+      if (!hasAccess && client.organizationId) {
+        // Check if coach is in the same organization
+        const coachOrg = await db.coachOrganization.findFirst({
+          where: {
+            coachId: user.id,
+            organizationId: client.organizationId,
+            isActive: true,
+          },
+        });
+        if (!coachOrg) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You don't have access to this client",
+          });
+        }
+      } else if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have access to this client",
+        });
+      }
+
+      // Get the most recent activity from all completion types
+      const [programCompletions, routineCompletions, exerciseCompletions] =
+        await Promise.all([
+          // Program drill completions
+          db.programDrillCompletion.findFirst({
+            where: { clientId: input.clientId },
+            orderBy: { completedAt: "desc" },
+            select: {
+              completedAt: true,
+              drill: {
+                select: {
+                  title: true,
+                },
+              },
+              programAssignment: {
+                select: {
+                  program: {
+                    select: {
+                      title: true,
+                    },
+                  },
+                },
+              },
+            },
+          }),
+
+          // Routine exercise completions
+          db.routineExerciseCompletion.findFirst({
+            where: { clientId: input.clientId },
+            orderBy: { completedAt: "desc" },
+            select: {
+              completedAt: true,
+              routineAssignment: {
+                select: {
+                  routine: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          }),
+
+          // Exercise completions (newer system)
+          db.exerciseCompletion.findFirst({
+            where: {
+              clientId: input.clientId,
+              completed: true,
+              completedAt: { not: null },
+            },
+            orderBy: { completedAt: "desc" },
+            select: {
+              completedAt: true,
+            },
+          }),
+        ]);
+
+      // Find the most recent completion
+      const activities: Array<{
+        type: "program_drill" | "routine_exercise" | "exercise";
+        timestamp: Date;
+        description: string;
+        programTitle: string | null;
+      }> = [];
+
+      if (programCompletions?.completedAt) {
+        activities.push({
+          type: "program_drill",
+          timestamp: programCompletions.completedAt,
+          description: programCompletions.drill?.title || "Program drill",
+          programTitle:
+            programCompletions.programAssignment?.program?.title || null,
+        });
+      }
+
+      if (routineCompletions?.completedAt) {
+        activities.push({
+          type: "routine_exercise",
+          timestamp: routineCompletions.completedAt,
+          description:
+            routineCompletions.routineAssignment?.routine?.name ||
+            "Routine exercise",
+          programTitle: null,
+        });
+      }
+
+      if (exerciseCompletions?.completedAt) {
+        activities.push({
+          type: "exercise",
+          timestamp: exerciseCompletions.completedAt,
+          description: "Exercise",
+          programTitle: null,
+        });
+      }
+
+      if (activities.length === 0) {
+        return null;
+      }
+
+      // Sort by timestamp and get the most recent
+      const mostRecent = activities.sort(
+        (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+      )[0];
+
+      return {
+        type: mostRecent.type,
+        timestamp: mostRecent.timestamp.toISOString(),
+        description: mostRecent.description,
+        programTitle: mostRecent.programTitle,
+      };
+    }),
 });

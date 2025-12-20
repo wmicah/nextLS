@@ -891,6 +891,11 @@ function ClientDetailPage({
       clientId,
     });
 
+  // Fetch client's last activity
+  const { data: lastActivity } = trpc.clients.getLastActivity.useQuery({
+    clientId,
+  });
+
   const utils = trpc.useUtils();
 
   // Remove program mutation - using specific assignment ID
@@ -2944,16 +2949,55 @@ function ClientDetailPage({
                 >
                   Last Activity
                 </p>
-                {/* Mock data for now - replace with real data later */}
-                <p
-                  className="text-sm font-semibold"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  2 days ago
-                </p>
-                <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
-                  Completed routine
-                </p>
+                {lastActivity ? (
+                  <>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      {(() => {
+                        const activityDate = parseISO(lastActivity.timestamp);
+                        const now = new Date();
+                        const diffMs = now.getTime() - activityDate.getTime();
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const diffHours = Math.floor(diffMs / 3600000);
+                        const diffDays = Math.floor(diffMs / 86400000);
+
+                        if (diffMins < 1) return "Just now";
+                        if (diffMins < 60) return `${diffMins}m ago`;
+                        if (diffHours < 24) return `${diffHours}h ago`;
+                        if (diffDays === 1) return "1 day ago";
+                        if (diffDays < 7) return `${diffDays} days ago`;
+                        if (diffDays < 30) {
+                          const weeks = Math.floor(diffDays / 7);
+                          return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
+                        }
+                        return format(activityDate, "MMM d, yyyy");
+                      })()}
+                    </p>
+                    <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                      {lastActivity.type === "program_drill"
+                        ? lastActivity.programTitle
+                          ? `${lastActivity.description} - ${lastActivity.programTitle}`
+                          : lastActivity.description
+                        : lastActivity.type === "routine_exercise"
+                        ? `Completed ${lastActivity.description}`
+                        : `Completed ${lastActivity.description}`}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      No activity yet
+                    </p>
+                    <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                      Waiting for first completion
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
