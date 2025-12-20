@@ -15,6 +15,7 @@ import {
   Eye,
 } from "lucide-react";
 import { format } from "date-fns";
+import { COLORS } from "@/lib/colors";
 
 interface AssignVideoModalProps {
   isOpen: boolean;
@@ -111,33 +112,30 @@ export default function AssignVideoModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}>
       <div
         className="rounded-2xl shadow-xl border p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: "#1C2021",
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: "#8B5CF6" }}
-            >
-              <Video className="h-5 w-5 text-white" />
-            </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Assign Video</h2>
-              <p className="text-sm text-gray-400">
+              <h2 className="text-xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Assign Video</h2>
+              <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                 Assign a training video to {clientName}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={(e) => e.currentTarget.style.color = COLORS.TEXT_PRIMARY}
+            onMouseLeave={(e) => e.currentTarget.style.color = COLORS.TEXT_SECONDARY}
           >
             <X className="h-5 w-5" />
           </button>
@@ -146,44 +144,41 @@ export default function AssignVideoModal({
         <div className="space-y-6">
           {/* Video Type Tabs */}
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
               Video Type
             </label>
             <div
               className="flex rounded-lg border overflow-hidden"
-              style={{ borderColor: "#606364" }}
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
             >
               <button
                 onClick={() => setVideoType("all")}
-                className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                  videoType === "all" ? "text-white" : "text-gray-400"
-                }`}
+                className="px-4 py-2 text-sm font-medium transition-all duration-200"
                 style={{
-                  backgroundColor: videoType === "all" ? "#4A5A70" : "#2A2F2F",
+                  backgroundColor: videoType === "all" ? COLORS.GOLDEN_DARK : "#2A2F2F",
+                  color: videoType === "all" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                 }}
               >
                 All Videos
               </button>
               <button
                 onClick={() => setVideoType("master")}
-                className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                  videoType === "master" ? "text-white" : "text-gray-400"
-                }`}
+                className="px-4 py-2 text-sm font-medium transition-all duration-200"
                 style={{
                   backgroundColor:
-                    videoType === "master" ? "#4A5A70" : "#2A2F2F",
+                    videoType === "master" ? COLORS.GOLDEN_DARK : "#2A2F2F",
+                  color: videoType === "master" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                 }}
               >
                 Master Videos
               </button>
               <button
                 onClick={() => setVideoType("local")}
-                className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                  videoType === "local" ? "text-white" : "text-gray-400"
-                }`}
+                className="px-4 py-2 text-sm font-medium transition-all duration-200"
                 style={{
                   backgroundColor:
-                    videoType === "local" ? "#4A5A70" : "#2A2F2F",
+                    videoType === "local" ? COLORS.GOLDEN_DARK : "#2A2F2F",
+                  color: videoType === "local" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
                 }}
               >
                 Local Videos
@@ -193,20 +188,20 @@ export default function AssignVideoModal({
 
           {/* Video Search */}
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
               Search Videos
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder="Search videos by name, description, or type..."
-                className="w-full pl-10 pr-4 py-3 rounded-lg border text-white"
+                className="w-full pl-4 pr-4 py-3 rounded-lg border"
                 style={{
                   backgroundColor: "#2A2F2F",
-                  borderColor: "#606364",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
                 }}
               />
             </div>
@@ -214,19 +209,18 @@ export default function AssignVideoModal({
 
           {/* Video Selection */}
           <div>
-            <label className="block text-sm font-medium text-white mb-3">
+            <label className="block text-sm font-medium mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
               Select Video
             </label>
 
             {videosLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
-                <span className="ml-2 text-gray-400">Loading videos...</span>
+                <Loader2 className="h-6 w-6 animate-spin" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                <span className="ml-2" style={{ color: COLORS.TEXT_SECONDARY }}>Loading videos...</span>
               </div>
             ) : filteredVideos.length === 0 ? (
               <div className="text-center py-8">
-                <Video className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                <p className="text-gray-400">
+                <p style={{ color: COLORS.TEXT_SECONDARY }}>
                   {searchTerm
                     ? "No videos found matching your search"
                     : "No videos available"}
@@ -238,49 +232,59 @@ export default function AssignVideoModal({
                   <div
                     key={video.id}
                     onClick={() => setSelectedVideo(video.id)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                      selectedVideo === video.id
-                        ? "border-purple-400 bg-purple-500/10"
-                        : "border-gray-600 bg-gray-800/50 hover:border-gray-500"
-                    }`}
+                    className="p-4 rounded-lg border-2 cursor-pointer transition-all duration-200"
+                    style={{
+                      backgroundColor: selectedVideo === video.id
+                        ? "#2A2F2F"
+                        : "#2A2F2F",
+                      borderColor: selectedVideo === video.id
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedVideo !== video.id) {
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedVideo !== video.id) {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                      }
+                    }}
                   >
                     <div className="flex items-start gap-4">
                       {/* Video Thumbnail */}
-                      <div
-                        className="w-16 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: "#2A2F2F" }}
-                      >
-                        {video.thumbnail ? (
+                      {video.thumbnail && (
+                        <div
+                          className="w-16 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: "#2A2F2F" }}
+                        >
                           <img
                             src={video.thumbnail}
                             alt={video.title}
                             className="w-full h-full object-cover rounded-lg"
                           />
-                        ) : (
-                          <Play className="h-6 w-6 text-gray-400" />
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {/* Video Info */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white mb-1 truncate">
+                        <h3 className="font-semibold mb-1 truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                           {video.title}
                         </h3>
                         {video.description && (
-                          <p className="text-sm text-gray-400 mb-2 line-clamp-2">
+                          <p className="text-sm mb-2 line-clamp-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {video.description}
                           </p>
                         )}
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex items-center gap-4 text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                           {video.type && (
-                            <div className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />
+                            <div>
                               {video.type}
                             </div>
                           )}
                           {video.duration && (
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
+                            <div>
                               {video.duration}
                             </div>
                           )}
@@ -290,7 +294,7 @@ export default function AssignVideoModal({
                       {/* Selection Indicator */}
                       {selectedVideo === video.id && (
                         <div className="flex-shrink-0">
-                          <Check className="h-5 w-5 text-purple-400" />
+                          <span style={{ color: COLORS.GOLDEN_ACCENT }}>✓</span>
                         </div>
                       )}
                     </div>
@@ -302,7 +306,7 @@ export default function AssignVideoModal({
 
           {/* Assign Date (Required) */}
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
               Assign Date *
             </label>
             <input
@@ -311,20 +315,21 @@ export default function AssignVideoModal({
               onChange={e => setAssignDate(e.target.value)}
               min={format(new Date(), "yyyy-MM-dd")}
               required
-              className="w-full p-3 rounded-lg border text-white"
+              className="w-full p-3 rounded-lg border"
               style={{
                 backgroundColor: "#2A2F2F",
-                borderColor: "#606364",
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
               }}
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
               Set a deadline for the client to complete this video assignment
             </p>
           </div>
 
           {/* Instructions (Optional) */}
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
               Instructions (Optional)
             </label>
             <textarea
@@ -332,13 +337,14 @@ export default function AssignVideoModal({
               onChange={e => setInstructions(e.target.value)}
               placeholder="Add specific instructions or notes for this video assignment..."
               rows={3}
-              className="w-full p-3 rounded-lg border text-white resize-none"
+              className="w-full p-3 rounded-lg border resize-none"
               style={{
                 backgroundColor: "#2A2F2F",
-                borderColor: "#606364",
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
               }}
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
               Provide any specific instructions or context for this video
             </p>
           </div>
@@ -347,33 +353,31 @@ export default function AssignVideoModal({
           {selectedVideo && (
             <div
               className="p-4 rounded-lg border"
-              style={{ backgroundColor: "#2A2F2F", borderColor: "#606364" }}
+              style={{ backgroundColor: "#2A2F2F", borderColor: COLORS.BORDER_SUBTLE }}
             >
-              <h4 className="font-semibold text-white mb-2">Selected Video</h4>
+              <h4 className="font-semibold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>Selected Video</h4>
               {(() => {
                 const video = videos.find((v: any) => v.id === selectedVideo);
                 return video ? (
                   <div className="flex items-start gap-3">
-                    <div
-                      className="w-12 h-9 rounded flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: "#1F2937" }}
-                    >
-                      {video.thumbnail ? (
+                    {video.thumbnail && (
+                      <div
+                        className="w-12 h-9 rounded flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: "#1F2937" }}
+                      >
                         <img
                           src={video.thumbnail}
                           alt={video.title}
                           className="w-full h-full object-cover rounded"
                         />
-                      ) : (
-                        <Play className="h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-300 font-medium truncate">
+                      <p className="text-sm font-medium truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                         {video.title}
                       </p>
                       {video.type && (
-                        <p className="text-xs text-gray-400">{video.type}</p>
+                        <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>{video.type}</p>
                       )}
                     </div>
                   </div>
@@ -390,8 +394,16 @@ export default function AssignVideoModal({
             className="flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 border"
             style={{
               backgroundColor: "transparent",
-              borderColor: "#606364",
-              color: "#FFFFFF",
+              borderColor: COLORS.BORDER_SUBTLE,
+              color: COLORS.TEXT_PRIMARY,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#2A2F2F";
+              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
             }}
           >
             Cancel
@@ -401,8 +413,18 @@ export default function AssignVideoModal({
             disabled={!selectedVideo || isAssigning}
             className="flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
-              backgroundColor: "#8B5CF6",
-              color: "#FFFFFF",
+              backgroundColor: COLORS.GOLDEN_ACCENT,
+              color: COLORS.BACKGROUND_DARK,
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }
             }}
           >
             {isAssigning ? (
@@ -412,7 +434,6 @@ export default function AssignVideoModal({
               </>
             ) : (
               <>
-                <Check className="h-4 w-4" />
                 Assign Video
               </>
             )}

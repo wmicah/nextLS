@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Search, Target } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
 import { useToast } from "@/lib/hooks/use-toast";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface QuickAssignRoutineFromDayModalProps {
   isOpen: boolean;
@@ -87,28 +88,31 @@ export default function QuickAssignRoutineFromDayModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}>
       <div
         className="rounded-2xl shadow-xl border w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
         style={{
-          backgroundColor: "#353A3A",
-          borderColor: "#606364",
+          backgroundColor: "#1C2021",
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6 p-6 pb-0">
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">
+            <h2 className="text-2xl font-bold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
               Assign Routine
             </h2>
-            <p className="text-gray-400">
+            <p style={{ color: COLORS.TEXT_SECONDARY }}>
               Assign a routine to {clientName} for{" "}
               {new Date(startDate + "T00:00:00").toLocaleDateString()}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="transition-colors"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+            onMouseEnter={(e) => e.currentTarget.style.color = COLORS.TEXT_PRIMARY}
+            onMouseLeave={(e) => e.currentTarget.style.color = COLORS.TEXT_SECONDARY}
           >
             <X className="h-6 w-6" />
           </button>
@@ -119,21 +123,22 @@ export default function QuickAssignRoutineFromDayModal({
           {/* Search */}
           <div className="mb-6">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search routines by name or description..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg border text-white focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                className="w-full pl-4 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
                 style={{
-                  backgroundColor: "#2A3133",
-                  borderColor: "#606364",
+                  backgroundColor: "#2A2F2F",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                  focusRingColor: COLORS.GREEN_DARK + "50"
                 }}
               />
             </div>
             {searchTerm && (
-              <p className="text-gray-400 text-sm mt-2">
+              <p className="text-sm mt-2" style={{ color: COLORS.TEXT_SECONDARY }}>
                 {filteredRoutines.length} routine
                 {filteredRoutines.length !== 1 ? "s" : ""} found
               </p>
@@ -144,10 +149,10 @@ export default function QuickAssignRoutineFromDayModal({
           <div className="space-y-2">
             {filteredRoutines.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-lg font-semibold text-white mb-2">
+                <div className="text-lg font-semibold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
                   {searchTerm ? "No Routines Found" : "No Routines Available"}
                 </div>
-                <p className="text-gray-400">
+                <p style={{ color: COLORS.TEXT_SECONDARY }}>
                   {searchTerm
                     ? `No routines match "${searchTerm}"`
                     : "There are no routines available to assign."}
@@ -161,26 +166,35 @@ export default function QuickAssignRoutineFromDayModal({
                   className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                     isAssigning
                       ? "opacity-50 cursor-not-allowed"
-                      : "hover:scale-[1.01] hover:shadow-md"
+                      : "hover:scale-[1.01]"
                   }`}
                   style={{
-                    backgroundColor: "#2A3133",
-                    borderColor: "#606364",
+                    backgroundColor: "#2A2F2F",
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isAssigning) {
+                      e.currentTarget.style.backgroundColor = "#353A3A";
+                      e.currentTarget.style.borderColor = COLORS.GREEN_DARK;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isAssigning) {
+                      e.currentTarget.style.backgroundColor = "#2A2F2F";
+                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    }
                   }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="p-2 rounded-lg bg-green-500/10 flex-shrink-0">
-                        <Target className="h-5 w-5 text-green-400" />
-                      </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-white truncate">
+                        <div className="font-medium truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                           {routine.name}
                         </div>
                       </div>
                     </div>
                     <div className="ml-3 flex-shrink-0">
-                      <div className="text-sm font-medium text-green-400">
+                      <div className="text-sm font-medium" style={{ color: COLORS.GREEN_PRIMARY }}>
                         {isAssigning ? "Assigning..." : "Click to Assign"}
                       </div>
                     </div>
