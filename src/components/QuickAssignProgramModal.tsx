@@ -135,7 +135,6 @@ export default function QuickAssignProgramModal({
                   backgroundColor: "#2A2F2F",
                   borderColor: COLORS.BORDER_SUBTLE,
                   color: COLORS.TEXT_PRIMARY,
-                  focusRingColor: COLORS.GOLDEN_ACCENT + "50"
                 }}
               />
             </div>

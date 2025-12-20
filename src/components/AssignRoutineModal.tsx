@@ -480,7 +480,6 @@ export default function AssignRoutineModal({
                       backgroundColor: "#2A2F2F",
                       borderColor: COLORS.BORDER_SUBTLE,
                       color: COLORS.TEXT_PRIMARY,
-                      focusRingColor: COLORS.GREEN_DARK + "50"
                     }}
                   />
                 </div>
@@ -552,7 +551,6 @@ export default function AssignRoutineModal({
                     backgroundColor: "#2A2F2F",
                     borderColor: COLORS.BORDER_SUBTLE,
                     color: COLORS.TEXT_PRIMARY,
-                    focusRingColor: COLORS.GREEN_DARK + "50"
                   }}
                 >
                   <option value="">Select a routine...</option>
