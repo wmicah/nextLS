@@ -615,10 +615,15 @@ export const adminRouter = {
     // Check if user is admin
     await requireAdmin(user.id, "get_all_programs_for_admin");
 
-    // Get all programs (both master library and non-master library)
+    // Get all programs created by admins only
     // Exclude temporary programs (those with [TEMP] in the title)
-    const programs = await db.program.findMany({
+    // Only include programs that use master library videos exclusively
+    const allAdminPrograms = await db.program.findMany({
       where: {
+        // Only programs created by admins
+        coach: {
+          isAdmin: true,
+        },
         // Exclude temporary programs (those with [TEMP] in the title)
         title: {
           not: {
@@ -626,21 +631,27 @@ export const adminRouter = {
           },
         },
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        level: true,
-        sport: true,
-        duration: true,
-        status: true,
-        isMasterLibrary: true,
-        createdAt: true,
+      include: {
         coach: {
           select: {
             id: true,
             name: true,
             email: true,
+            isAdmin: true,
+          },
+        },
+        weeks: {
+          include: {
+            days: {
+              include: {
+                drills: {
+                  select: {
+                    id: true,
+                    videoId: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -649,7 +660,56 @@ export const adminRouter = {
       },
     });
 
-    return programs;
+    // Filter to only include programs that use master library videos exclusively
+    const programsWithMasterLibraryVideos = await Promise.all(
+      allAdminPrograms.map(async (program) => {
+        // Get all videoIds from all drills in this program
+        const videoIds = program.weeks.flatMap((week) =>
+          week.days.flatMap((day) =>
+            day.drills.map((drill) => drill.videoId).filter((id): id is string => !!id)
+          )
+        );
+
+        // If program has no videos, skip it (can't be added to master library)
+        if (videoIds.length === 0) {
+          return null;
+        }
+
+        // Check if all videos are from master library
+        const masterLibraryVideoCount = await db.libraryResource.count({
+          where: {
+            id: { in: videoIds },
+            isMasterLibrary: true,
+          },
+        });
+
+        // Only include if ALL videos are from master library
+        if (masterLibraryVideoCount !== videoIds.length) {
+          return null;
+        }
+
+        // Return program with minimal data for display
+        return {
+          id: program.id,
+          title: program.title,
+          description: program.description,
+          level: program.level,
+          sport: program.sport,
+          duration: program.duration,
+          status: program.status,
+          isMasterLibrary: program.isMasterLibrary,
+          createdAt: program.createdAt,
+          coach: program.coach,
+        };
+      })
+    );
+
+    // Filter out nulls
+    const validPrograms = programsWithMasterLibraryVideos.filter(
+      (p): p is NonNullable<typeof p> => p !== null
+    );
+
+    return validPrograms;
   }),
 
   // Get master library programs for admin
@@ -723,9 +783,29 @@ export const adminRouter = {
       // Check if user is admin
       await requireAdmin(user.id, "add_program_to_master_library");
 
-      // Verify program exists
+      // Verify program exists and is created by an admin
       const program = await db.program.findUnique({
         where: { id: input.programId },
+        include: {
+          coach: {
+            select: {
+              isAdmin: true,
+            },
+          },
+          weeks: {
+            include: {
+              days: {
+                include: {
+                  drills: {
+                    select: {
+                      videoId: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!program) {
@@ -733,6 +813,38 @@ export const adminRouter = {
           code: "NOT_FOUND",
           message: "Program not found",
         });
+      }
+
+      // Verify program is created by an admin
+      if (!program.coach.isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only programs created by admins can be added to master library",
+        });
+      }
+
+      // Get all videoIds from all drills
+      const videoIds = program.weeks.flatMap((week) =>
+        week.days.flatMap((day) =>
+          day.drills.map((drill) => drill.videoId).filter((id): id is string => !!id)
+        )
+      );
+
+      // If program has videos, verify they're all from master library
+      if (videoIds.length > 0) {
+        const masterLibraryVideoCount = await db.libraryResource.count({
+          where: {
+            id: { in: videoIds },
+            isMasterLibrary: true,
+          },
+        });
+
+        if (masterLibraryVideoCount !== videoIds.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Program must only use master library videos to be added to master library",
+          });
+        }
       }
 
       // Update program to be master library
@@ -828,19 +940,28 @@ export const adminRouter = {
     // Check if user is admin
     await requireAdmin(user.id, "get_all_routines_for_admin");
 
-    // Get all routines (both master library and non-master library)
-    const routines = await db.routine.findMany({
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        isMasterLibrary: true,
-        createdAt: true,
+    // Get all routines created by admins only
+    // Only include routines that use master library videos exclusively
+    const allAdminRoutines = await db.routine.findMany({
+      where: {
+        // Only routines created by admins
+        coach: {
+          isAdmin: true,
+        },
+      },
+      include: {
         coach: {
           select: {
             id: true,
             name: true,
             email: true,
+            isAdmin: true,
+          },
+        },
+        exercises: {
+          select: {
+            id: true,
+            videoId: true,
           },
         },
       },
@@ -849,7 +970,50 @@ export const adminRouter = {
       },
     });
 
-    return routines;
+    // Filter to only include routines that use master library videos exclusively
+    const routinesWithMasterLibraryVideos = await Promise.all(
+      allAdminRoutines.map(async (routine) => {
+        // Get all videoIds from all exercises in this routine
+        const videoIds = routine.exercises
+          .map((ex) => ex.videoId)
+          .filter((id): id is string => !!id);
+
+        // If routine has no videos, skip it (can't be added to master library)
+        if (videoIds.length === 0) {
+          return null;
+        }
+
+        // Check if all videos are from master library
+        const masterLibraryVideoCount = await db.libraryResource.count({
+          where: {
+            id: { in: videoIds },
+            isMasterLibrary: true,
+          },
+        });
+
+        // Only include if ALL videos are from master library
+        if (masterLibraryVideoCount !== videoIds.length) {
+          return null;
+        }
+
+        // Return routine with minimal data for display
+        return {
+          id: routine.id,
+          name: routine.name,
+          description: routine.description,
+          isMasterLibrary: routine.isMasterLibrary,
+          createdAt: routine.createdAt,
+          coach: routine.coach,
+        };
+      })
+    );
+
+    // Filter out nulls
+    const validRoutines = routinesWithMasterLibraryVideos.filter(
+      (r): r is NonNullable<typeof r> => r !== null
+    );
+
+    return validRoutines;
   }),
 
   // Get master library routines for admin
@@ -913,9 +1077,21 @@ export const adminRouter = {
       // Check if user is admin
       await requireAdmin(user.id, "add_routine_to_master_library");
 
-      // Verify routine exists
+      // Verify routine exists and is created by an admin
       const routine = await db.routine.findUnique({
         where: { id: input.routineId },
+        include: {
+          coach: {
+            select: {
+              isAdmin: true,
+            },
+          },
+          exercises: {
+            select: {
+              videoId: true,
+            },
+          },
+        },
       });
 
       if (!routine) {
@@ -923,6 +1099,36 @@ export const adminRouter = {
           code: "NOT_FOUND",
           message: "Routine not found",
         });
+      }
+
+      // Verify routine is created by an admin
+      if (!routine.coach.isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only routines created by admins can be added to master library",
+        });
+      }
+
+      // Get all videoIds from all exercises
+      const videoIds = routine.exercises
+        .map((ex) => ex.videoId)
+        .filter((id): id is string => !!id);
+
+      // If routine has videos, verify they're all from master library
+      if (videoIds.length > 0) {
+        const masterLibraryVideoCount = await db.libraryResource.count({
+          where: {
+            id: { in: videoIds },
+            isMasterLibrary: true,
+          },
+        });
+
+        if (masterLibraryVideoCount !== videoIds.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Routine must only use master library videos to be added to master library",
+          });
+        }
       }
 
       // Update routine to be master library
