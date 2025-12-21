@@ -25,6 +25,7 @@ import {
   Mail,
   Target,
   Dumbbell,
+  Search,
 } from "lucide-react";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import PerformanceDashboard from "@/components/PerformanceDashboard";
@@ -45,6 +46,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 // Component for sending bug report announcement
 function SendBugReportAnnouncementButton() {
@@ -148,14 +150,66 @@ export default function AdminDashboard() {
 
   // Check if user is admin
   const { data: authData } = trpc.authCallback.useQuery();
+  
+  // Master library search and filter state
+  const [masterLibraryProgramSearch, setMasterLibraryProgramSearch] = useState("");
+  const debouncedMasterLibraryProgramSearch = useDebounce(masterLibraryProgramSearch, 300);
+  const [masterLibrarySelectedCoachId, setMasterLibrarySelectedCoachId] = useState("");
+  
   const { data: masterLibrary = [], refetch: refetchMasterLibrary } =
     trpc.admin.getMasterLibraryForAdmin.useQuery();
+  const { data: adminCoaches = [] } = trpc.admin.getAdminCoaches.useQuery();
   const { data: masterLibraryPrograms = [], refetch: refetchMasterLibraryPrograms } =
-    trpc.admin.getMasterLibraryProgramsForAdmin.useQuery();
+    trpc.admin.getMasterLibraryProgramsForAdmin.useQuery(
+      {
+        search: debouncedMasterLibraryProgramSearch || undefined,
+        coachId: masterLibrarySelectedCoachId || undefined,
+      },
+      {
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+        refetchOnWindowFocus: false, // Don't refetch on window focus
+        refetchOnMount: false, // Don't refetch on mount if data exists
+        refetchOnReconnect: true, // Only refetch on reconnect
+        retry: 1, // Only retry once on failure
+        retryDelay: 1000, // Wait 1 second before retry
+      }
+    );
   const { data: masterLibraryRoutines = [], refetch: refetchMasterLibraryRoutines } =
-    trpc.admin.getMasterLibraryRoutinesForAdmin.useQuery();
-  const { data: allPrograms = [] } = trpc.admin.getAllProgramsForAdmin.useQuery();
-  const { data: allRoutines = [] } = trpc.admin.getAllRoutinesForAdmin.useQuery();
+    trpc.admin.getMasterLibraryRoutinesForAdmin.useQuery({
+      search: debouncedMasterLibraryProgramSearch || undefined,
+      coachId: masterLibrarySelectedCoachId || undefined,
+    });
+  const { data: allPrograms = [] } = trpc.admin.getAllProgramsForAdmin.useQuery(
+    {
+      search: debouncedMasterLibraryProgramSearch || undefined,
+      coachId: masterLibrarySelectedCoachId || undefined,
+    },
+    {
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchOnMount: false, // Don't refetch on mount if data exists
+      refetchOnReconnect: true, // Only refetch on reconnect
+      retry: 1, // Only retry once on failure
+      retryDelay: 1000, // Wait 1 second before retry
+    }
+  );
+  const { data: allRoutines = [] } = trpc.admin.getAllRoutinesForAdmin.useQuery(
+    {
+      search: debouncedMasterLibraryProgramSearch || undefined,
+      coachId: masterLibrarySelectedCoachId || undefined,
+    },
+    {
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchOnMount: false, // Don't refetch on mount if data exists
+      refetchOnReconnect: true, // Only refetch on reconnect
+      retry: 1, // Only retry once on failure
+      retryDelay: 1000, // Wait 1 second before retry
+    }
+  );
   const { data: stats } = trpc.admin.getStats.useQuery();
   const { data: deletionAnalytics } =
     trpc.user.getAccountDeletionAnalytics.useQuery();
@@ -838,6 +892,54 @@ export default function AdminDashboard() {
                   <p className="text-gray-400 mb-4">
                     Programs currently in the master library. Select programs from all programs to add to master library.
                   </p>
+
+                  <div className="flex flex-wrap items-center gap-4 mb-6">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Input
+                        type="text"
+                        placeholder="Search programs..."
+                        value={masterLibraryProgramSearch}
+                        onChange={(e) => setMasterLibraryProgramSearch(e.target.value)}
+                        className="pl-10 bg-[#2A3133] border-[#4A5A70] text-white"
+                      />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                    <div className="w-full sm:w-64">
+                      <select
+                        value={masterLibrarySelectedCoachId}
+                        onChange={(e) => setMasterLibrarySelectedCoachId(e.target.value)}
+                        className="w-full px-4 py-2 bg-[#2A3133] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
+                      >
+                        <option value="">All Admin Coaches</option>
+                        {adminCoaches.map((coach: any) => (
+                          <option key={coach.id} value={coach.id}>
+                            {coach.name || coach.email}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {(masterLibraryProgramSearch || masterLibrarySelectedCoachId) && (
+                      <button
+                        onClick={() => {
+                          setMasterLibraryProgramSearch("");
+                          setMasterLibrarySelectedCoachId("");
+                        }}
+                        className="px-4 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors whitespace-nowrap"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Results count */}
+                  {(debouncedMasterLibraryProgramSearch || masterLibrarySelectedCoachId) && (
+                    <div className="mb-4 text-sm text-gray-400">
+                      Showing {masterLibraryPrograms.length} program{masterLibraryPrograms.length !== 1 ? 's' : ''}
+                      {debouncedMasterLibraryProgramSearch && ` matching "${debouncedMasterLibraryProgramSearch}"`}
+                      {masterLibrarySelectedCoachId && adminCoaches.find((c: any) => c.id === masterLibrarySelectedCoachId) &&
+                        ` from ${adminCoaches.find((c: any) => c.id === masterLibrarySelectedCoachId)?.name || 'selected coach'}`}
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     {masterLibraryPrograms.map((program: any) => (
@@ -870,13 +972,26 @@ export default function AdminDashboard() {
                       </div>
                     ))}
                   </div>
+                  {masterLibraryPrograms.length === 0 && (
+                    <p className="text-gray-400 text-center py-8">
+                      No master library programs found matching your criteria.
+                    </p>
+                  )}
 
                   <div className="border-t pt-6" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
-                    <h4 className="font-semibold mb-4 text-white">All Programs - Add to Master Library</h4>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-white">All Programs - Add to Master Library</h4>
+                      <span className="text-sm text-gray-500">
+                        ({allPrograms.filter((p: any) => !p.isMasterLibrary).length} available)
+                      </span>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {allPrograms
                         .filter((p: any) => !p.isMasterLibrary)
-                        .map((program: any) => (
+                        .length > 0 ? (
+                        allPrograms
+                          .filter((p: any) => !p.isMasterLibrary)
+                          .map((program: any) => (
                           <div
                             key={program.id}
                             className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
@@ -907,11 +1022,13 @@ export default function AdminDashboard() {
                               Add to Master Library
                             </button>
                           </div>
-                        ))}
+                        ))
+                      ) : (
+                        <p className="text-gray-400 text-center py-8 col-span-full">
+                          All programs are already in the master library or no programs found matching criteria.
+                        </p>
+                      )}
                     </div>
-                    {allPrograms.filter((p: any) => !p.isMasterLibrary).length === 0 && (
-                      <p className="text-gray-400 text-center py-8">All programs are already in the master library.</p>
-                    )}
                   </div>
                 </div>
               </div>
