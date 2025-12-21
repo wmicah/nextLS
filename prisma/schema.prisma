@@ -391,6 +391,7 @@ model Program {
   sharedWithOrg Boolean               @default(false) @map("shared_with_org")
   createdByCoachId String?            @map("created_by_coach_id")
   supersededByProgramId String?       @map("superseded_by_program_id")
+  isMasterLibrary Boolean             @default(false) @map("is_master_library")
   createdAt    DateTime                @default(now())
   updatedAt    DateTime                @updatedAt
   assignments  ProgramAssignment[]
@@ -601,6 +602,7 @@ model Routine {
   organizationId String?         @map("organization_id")
   sharedWithOrg Boolean          @default(false) @map("shared_with_org")
   createdByCoachId String?       @map("created_by_coach_id")
+  isMasterLibrary Boolean        @default(false) @map("is_master_library")
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   assignments RoutineAssignment[]

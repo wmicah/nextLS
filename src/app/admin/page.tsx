@@ -23,6 +23,8 @@ import {
   XCircle,
   Loader2,
   Mail,
+  Target,
+  Dumbbell,
 } from "lucide-react";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import PerformanceDashboard from "@/components/PerformanceDashboard";
@@ -118,6 +120,7 @@ function SendBugReportAnnouncementButton() {
 export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
+  const [masterLibrarySubTab, setMasterLibrarySubTab] = useState<"videos" | "programs" | "routines">("videos");
   const [selectedResource, setSelectedResource] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
@@ -147,6 +150,12 @@ export default function AdminDashboard() {
   const { data: authData } = trpc.authCallback.useQuery();
   const { data: masterLibrary = [], refetch: refetchMasterLibrary } =
     trpc.admin.getMasterLibraryForAdmin.useQuery();
+  const { data: masterLibraryPrograms = [], refetch: refetchMasterLibraryPrograms } =
+    trpc.admin.getMasterLibraryProgramsForAdmin.useQuery();
+  const { data: masterLibraryRoutines = [], refetch: refetchMasterLibraryRoutines } =
+    trpc.admin.getMasterLibraryRoutinesForAdmin.useQuery();
+  const { data: allPrograms = [] } = trpc.admin.getAllProgramsForAdmin.useQuery();
+  const { data: allRoutines = [] } = trpc.admin.getAllRoutinesForAdmin.useQuery();
   const { data: stats } = trpc.admin.getStats.useQuery();
   const { data: deletionAnalytics } =
     trpc.user.getAccountDeletionAnalytics.useQuery();
@@ -245,6 +254,56 @@ export default function AdminDashboard() {
     onError: error => {
       console.error("Failed to update resource:", error);
       alert(`Failed to update resource: ${error.message}`);
+    },
+  });
+
+  // Master Library Programs mutations
+  const addProgramToMasterLibraryMutation = trpc.admin.addProgramToMasterLibrary.useMutation({
+    onSuccess: () => {
+      refetchMasterLibraryPrograms();
+      refetchMasterLibrary();
+      alert("Program added to master library successfully!");
+    },
+    onError: error => {
+      console.error("Failed to add program:", error);
+      alert(`Failed to add program: ${error.message}`);
+    },
+  });
+
+  const removeProgramFromMasterLibraryMutation = trpc.admin.removeProgramFromMasterLibrary.useMutation({
+    onSuccess: () => {
+      refetchMasterLibraryPrograms();
+      refetchMasterLibrary();
+      alert("Program removed from master library successfully!");
+    },
+    onError: error => {
+      console.error("Failed to remove program:", error);
+      alert(`Failed to remove program: ${error.message}`);
+    },
+  });
+
+  // Master Library Routines mutations
+  const addRoutineToMasterLibraryMutation = trpc.admin.addRoutineToMasterLibrary.useMutation({
+    onSuccess: () => {
+      refetchMasterLibraryRoutines();
+      refetchMasterLibrary();
+      alert("Routine added to master library successfully!");
+    },
+    onError: error => {
+      console.error("Failed to add routine:", error);
+      alert(`Failed to add routine: ${error.message}`);
+    },
+  });
+
+  const removeRoutineFromMasterLibraryMutation = trpc.admin.removeRoutineFromMasterLibrary.useMutation({
+    onSuccess: () => {
+      refetchMasterLibraryRoutines();
+      refetchMasterLibrary();
+      alert("Routine removed from master library successfully!");
+    },
+    onError: error => {
+      console.error("Failed to remove routine:", error);
+      alert(`Failed to remove routine: ${error.message}`);
     },
   });
 
@@ -597,54 +656,100 @@ export default function AdminDashboard() {
         {activeTab === "master-library" && (
           <div className="space-y-6">
             {/* Master Library Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h2 className="text-2xl font-bold">
                   Master Library Management
                 </h2>
                 <p className="text-gray-400">
-                  Manage the central video library available to all coaches
+                  Manage the central library (videos, programs, routines) available to all coaches with Master Library tier
                 </p>
               </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={async () => {
-                    try {
-                      const response = await fetch(
-                        "/api/admin/fix-master-library-types",
-                        {
-                          method: "POST",
+              {masterLibrarySubTab === "videos" && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(
+                          "/api/admin/fix-master-library-types",
+                          {
+                            method: "POST",
+                          }
+                        );
+                        const result = await response.json();
+                        if (response.ok) {
+                          alert(`Fixed ${result.updatedCount} resources!`);
+                          refetchMasterLibrary();
+                        } else {
+                          alert(`Error: ${result.error}`);
                         }
-                      );
-                      const result = await response.json();
-                      if (response.ok) {
-                        alert(`Fixed ${result.updatedCount} resources!`);
-                        refetchMasterLibrary();
-                      } else {
-                        alert(`Error: ${result.error}`);
+                      } catch (error) {
+                        alert(`Error: ${error}`);
                       }
-                    } catch (error) {
-                      alert(`Error: ${error}`);
-                    }
-                  }}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
-                >
-                  <Settings className="w-4 h-4" />
-                  Fix Types
-                </button>
-                <button
-                  onClick={() => setIsAddResourceModalOpen(true)}
-                  className="px-4 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Resource
-                </button>
-              </div>
+                    }}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Fix Types
+                  </button>
+                  <button
+                    onClick={() => setIsAddResourceModalOpen(true)}
+                    className="px-4 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Video
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Master Library Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {masterLibrary.map((resource: any) => (
+            {/* Sub-tabs for Master Library */}
+            <div className="flex gap-2 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+              <button
+                onClick={() => setMasterLibrarySubTab("videos")}
+                className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                  masterLibrarySubTab === "videos" ? "" : ""
+                }`}
+                style={{
+                  color: masterLibrarySubTab === "videos" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  borderBottomColor: masterLibrarySubTab === "videos" ? COLORS.GOLDEN_ACCENT : "transparent",
+                }}
+              >
+                <Video className="w-4 h-4 inline mr-2" />
+                Videos ({masterLibrary.length})
+              </button>
+              <button
+                onClick={() => setMasterLibrarySubTab("programs")}
+                className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                  masterLibrarySubTab === "programs" ? "" : ""
+                }`}
+                style={{
+                  color: masterLibrarySubTab === "programs" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  borderBottomColor: masterLibrarySubTab === "programs" ? COLORS.GOLDEN_ACCENT : "transparent",
+                }}
+              >
+                <Target className="w-4 h-4 inline mr-2" />
+                Programs ({masterLibraryPrograms.length})
+              </button>
+              <button
+                onClick={() => setMasterLibrarySubTab("routines")}
+                className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                  masterLibrarySubTab === "routines" ? "" : ""
+                }`}
+                style={{
+                  color: masterLibrarySubTab === "routines" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  borderBottomColor: masterLibrarySubTab === "routines" ? COLORS.GOLDEN_ACCENT : "transparent",
+                }}
+              >
+                <Dumbbell className="w-4 h-4 inline mr-2" />
+                Routines ({masterLibraryRoutines.length})
+              </button>
+            </div>
+
+            {/* Videos Sub-tab */}
+            {masterLibrarySubTab === "videos" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {masterLibrary.map((resource: any) => (
                 <div
                   key={resource.id}
                   className="bg-[#1A1D1E] rounded-xl border-2 border-[#2D3748] hover:border-[#4A5A70] transition-all duration-300 cursor-pointer group"
@@ -722,7 +827,177 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
+
+            {/* Programs Sub-tab */}
+            {masterLibrarySubTab === "programs" && (
+              <div className="space-y-6">
+                <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+                  <h3 className="text-xl font-bold mb-4">Master Library Programs</h3>
+                  <p className="text-gray-400 mb-4">
+                    Programs currently in the master library. Select programs from all programs to add to master library.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {masterLibraryPrograms.map((program: any) => (
+                      <div
+                        key={program.id}
+                        className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-white mb-1">{program.title}</h4>
+                            {program.description && (
+                              <p className="text-sm text-gray-400 line-clamp-2 mb-2">{program.description}</p>
+                            )}
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              {program.level && <span>{program.level}</span>}
+                              {program.duration && <span>{program.duration} weeks</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remove "${program.title}" from master library?`)) {
+                              removeProgramFromMasterLibraryMutation.mutate({ programId: program.id });
+                            }
+                          }}
+                          className="w-full mt-3 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                        >
+                          Remove from Master Library
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="border-t pt-6" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+                    <h4 className="font-semibold mb-4 text-white">All Programs - Add to Master Library</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {allPrograms
+                        .filter((p: any) => !p.isMasterLibrary)
+                        .map((program: any) => (
+                          <div
+                            key={program.id}
+                            className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-white mb-1">{program.title}</h4>
+                                {program.description && (
+                                  <p className="text-sm text-gray-400 line-clamp-2 mb-2">{program.description}</p>
+                                )}
+                                <div className="flex items-center gap-3 text-xs text-gray-500">
+                                  {program.level && <span>{program.level}</span>}
+                                  {program.duration && <span>{program.duration} weeks</span>}
+                                </div>
+                                {program.coach && (
+                                  <p className="text-xs text-gray-500 mt-1">by {program.coach.name}</p>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Add "${program.title}" to master library?`)) {
+                                  addProgramToMasterLibraryMutation.mutate({ programId: program.id });
+                                }
+                              }}
+                              className="w-full mt-3 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                            >
+                              Add to Master Library
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                    {allPrograms.filter((p: any) => !p.isMasterLibrary).length === 0 && (
+                      <p className="text-gray-400 text-center py-8">All programs are already in the master library.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Routines Sub-tab */}
+            {masterLibrarySubTab === "routines" && (
+              <div className="space-y-6">
+                <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+                  <h3 className="text-xl font-bold mb-4">Master Library Routines</h3>
+                  <p className="text-gray-400 mb-4">
+                    Routines currently in the master library. Select routines from all routines to add to master library.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {masterLibraryRoutines.map((routine: any) => (
+                      <div
+                        key={routine.id}
+                        className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-white mb-1">{routine.name}</h4>
+                            {routine.description && (
+                              <p className="text-sm text-gray-400 line-clamp-2 mb-2">{routine.description}</p>
+                            )}
+                            {routine.coach && (
+                              <p className="text-xs text-gray-500 mt-1">by {routine.coach.name}</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remove "${routine.name}" from master library?`)) {
+                              removeRoutineFromMasterLibraryMutation.mutate({ routineId: routine.id });
+                            }
+                          }}
+                          className="w-full mt-3 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                        >
+                          Remove from Master Library
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="border-t pt-6" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+                    <h4 className="font-semibold mb-4 text-white">All Routines - Add to Master Library</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {allRoutines
+                        .filter((r: any) => !r.isMasterLibrary)
+                        .map((routine: any) => (
+                          <div
+                            key={routine.id}
+                            className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-white mb-1">{routine.name}</h4>
+                                {routine.description && (
+                                  <p className="text-sm text-gray-400 line-clamp-2 mb-2">{routine.description}</p>
+                                )}
+                                {routine.coach && (
+                                  <p className="text-xs text-gray-500 mt-1">by {routine.coach.name}</p>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Add "${routine.name}" to master library?`)) {
+                                  addRoutineToMasterLibraryMutation.mutate({ routineId: routine.id });
+                                }
+                              }}
+                              className="w-full mt-3 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                            >
+                              Add to Master Library
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                    {allRoutines.filter((r: any) => !r.isMasterLibrary).length === 0 && (
+                      <p className="text-gray-400 text-center py-8">All routines are already in the master library.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

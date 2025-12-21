@@ -14,6 +14,10 @@ import {
 } from "@/lib/youtube";
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+import {
+  canAddClient,
+  getRestrictionErrorMessage,
+} from "@/lib/subscription-restrictions";
 
 /**
  * Clients Router
@@ -649,6 +653,47 @@ export const clientsRouter = router({
           },
         });
       } else {
+        // Check subscription tier restrictions for creating new clients
+        // Get coach's subscription tier and client limit
+        const coachWithSubscription = await db.user.findUnique({
+          where: { id: user.id },
+          select: {
+            subscriptionTier: true,
+            clientLimit: true,
+          },
+        });
+
+        if (coachWithSubscription) {
+          // Count current active (non-archived) clients for this coach
+          const currentClientCount = await db.client.count({
+            where: {
+              coachId: ensureUserId(user.id),
+              archived: false,
+            },
+          });
+
+          // Check if coach can add another client
+          const canAdd = canAddClient(
+            coachWithSubscription.subscriptionTier,
+            coachWithSubscription.clientLimit,
+            currentClientCount
+          );
+
+          if (!canAdd.allowed) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message:
+                canAdd.reason ||
+                getRestrictionErrorMessage(
+                  "client_limit",
+                  coachWithSubscription.subscriptionTier,
+                  currentClientCount,
+                  coachWithSubscription.clientLimit
+                ),
+            });
+          }
+        }
+
         // Find user account if email is provided
         let userId = null;
         if (input.email) {

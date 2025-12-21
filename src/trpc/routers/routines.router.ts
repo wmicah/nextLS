@@ -1125,4 +1125,150 @@ export const routinesRouter = router({
         messageId: message.id,
       };
     }),
+
+  // ============ MASTER LIBRARY ENDPOINTS ============
+  // These endpoints are for coaches with MASTER_LIBRARY subscription tier
+  // to view and assign master library routines (read-only)
+
+  // List all master library routines (view-only for MASTER_LIBRARY tier coaches)
+  listMasterLibrary: publicProcedure
+    .input(
+      z
+        .object({
+          search: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+        select: {
+          id: true,
+          subscriptionTier: true,
+        },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view master library routines",
+        });
+      }
+
+      // Check if coach has MASTER_LIBRARY subscription tier or higher
+      // PREMADE_ROUTINES tier includes MASTER_LIBRARY access (higher tiers get all lower tier features)
+      if (
+        coach.subscriptionTier !== "MASTER_LIBRARY" &&
+        coach.subscriptionTier !== "PREMADE_ROUTINES"
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Master Library subscription tier required to access master library routines",
+        });
+      }
+
+      // Build where clause for master library routines
+      const whereClause: any = {
+        isMasterLibrary: true,
+      };
+
+      if (input?.search) {
+        whereClause.OR = [
+          { name: { contains: input.search, mode: "insensitive" } },
+          { description: { contains: input.search, mode: "insensitive" } },
+        ];
+      }
+
+      // Get master library routines (limited fields for list view)
+      const routines = await db.routine.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return routines;
+    }),
+
+  // Get master library routine by ID with full details (read-only)
+  getMasterLibraryById: publicProcedure
+    .input(z.object({ routineId: z.string() }))
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+        select: {
+          id: true,
+          subscriptionTier: true,
+        },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view master library routines",
+        });
+      }
+
+      // Check if coach has MASTER_LIBRARY subscription tier or higher
+      // PREMADE_ROUTINES tier includes MASTER_LIBRARY access
+      if (
+        coach.subscriptionTier !== "MASTER_LIBRARY" &&
+        coach.subscriptionTier !== "PREMADE_ROUTINES"
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Master Library subscription tier required to access master library routines",
+        });
+      }
+
+      // Get the master library routine with full structure
+      const routine = await db.routine.findFirst({
+        where: {
+          id: input.routineId,
+          isMasterLibrary: true,
+        },
+        include: {
+          exercises: {
+            orderBy: { order: "asc" },
+          },
+        },
+      });
+
+      if (!routine) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Master library routine not found",
+        });
+      }
+
+      // CRITICAL: Ensure description is always a string, never null/undefined
+      return {
+        ...routine,
+        description: routine.description ?? "",
+        exercises: routine.exercises.map(ex => ({
+          ...ex,
+          description: ex.description ?? "",
+          notes: ex.notes ?? "",
+        })),
+      };
+    }),
 });
