@@ -3358,7 +3358,7 @@ export const programsRouter = router({
       // Build where clause for master library programs
       const whereClause: any = {
         isMasterLibrary: true,
-        status: "ACTIVE", // Only show active master programs
+        // Don't filter by status - show all master library programs regardless of status
         // Exclude temporary programs (those with [TEMP] in the title)
         title: {
           not: {
@@ -3446,7 +3446,7 @@ export const programsRouter = router({
         where: {
           id: input.programId,
           isMasterLibrary: true,
-          status: "ACTIVE",
+          // Don't filter by status - allow viewing all master library programs
           // Exclude temporary programs (those with [TEMP] in the title)
           title: {
             not: {
@@ -3463,6 +3463,15 @@ export const programsRouter = router({
                 include: {
                   drills: {
                     orderBy: { order: "asc" },
+                    include: {
+                      routine: {
+                        include: {
+                          exercises: {
+                            orderBy: { order: "asc" },
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },

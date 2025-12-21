@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -42,7 +43,19 @@ const DEFAULT_CATEGORIES = [
 ];
 
 function LibraryPage() {
-  const [activeTab, setActiveTab] = useState<"master" | "local">("local");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get("tab");
+  const videoIdParam = searchParams?.get("videoId");
+  const [activeTab, setActiveTab] = useState<"master" | "local">(
+    tabParam === "master" ? "master" : "local"
+  );
+  
+  // Update active tab when URL param changes
+  useEffect(() => {
+    if (tabParam === "master") {
+      setActiveTab("master");
+    }
+  }, [tabParam]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -198,6 +211,26 @@ function LibraryPage() {
     }
   }, [masterLibraryItems, masterCurrentPage, masterFetching]);
 
+  // Handle opening specific video from URL parameter
+  useEffect(() => {
+    if (videoIdParam && activeTab === "master") {
+      // Wait for master items to load
+      if (masterItems.length > 0) {
+        const videoItem = masterItems.find((item: any) => item.id === videoIdParam);
+        if (videoItem) {
+          const itemIndex = masterItems.findIndex((item: any) => item.id === videoIdParam);
+          setCurrentItemIndex(itemIndex);
+          setSelectedItem(videoItem);
+          setIsVideoViewerOpen(true);
+          // Clean up URL parameter
+          window.history.replaceState({}, "", "/library?tab=master");
+        }
+      } else if (!masterLoading && masterItems.length === 0) {
+        // If items loaded but video not found, clean up URL
+        window.history.replaceState({}, "", "/library?tab=master");
+      }
+    }
+  }, [videoIdParam, activeTab, masterItems, masterLoading]);
 
   // Handle local library data - ensure it always updates when data arrives
   useEffect(() => {
