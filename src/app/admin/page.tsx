@@ -150,6 +150,7 @@ export default function AdminDashboard() {
 
   // Check if user is admin
   const { data: authData } = trpc.authCallback.useQuery();
+  const utils = trpc.useUtils();
   
   // Master library search and filter state
   const [masterLibraryProgramSearch, setMasterLibraryProgramSearch] = useState("");
@@ -316,6 +317,8 @@ export default function AdminDashboard() {
     onSuccess: () => {
       refetchMasterLibraryPrograms();
       refetchMasterLibrary();
+      // Invalidate the listMasterLibrary query so MasterProgramsTab refreshes
+      utils.programs.listMasterLibrary.invalidate();
       alert("Program added to master library successfully!");
     },
     onError: error => {
@@ -328,6 +331,8 @@ export default function AdminDashboard() {
     onSuccess: () => {
       refetchMasterLibraryPrograms();
       refetchMasterLibrary();
+      // Invalidate the listMasterLibrary query so MasterProgramsTab refreshes
+      utils.programs.listMasterLibrary.invalidate();
       alert("Program removed from master library successfully!");
     },
     onError: error => {

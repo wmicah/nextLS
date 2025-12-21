@@ -917,11 +917,12 @@ export const adminRouter = {
         }
       }
 
-      // Update program to be master library
+      // Update program to be master library and set status to ACTIVE
       const updatedProgram = await db.program.update({
         where: { id: input.programId },
         data: {
           isMasterLibrary: true,
+          status: "ACTIVE", // Set to ACTIVE when adding to master library
         },
       });
 
