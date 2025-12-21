@@ -179,6 +179,37 @@ export function hasFeatureAccess(
 }
 
 /**
+ * Check if a user's tier has access to a feature tier level
+ * Higher tiers automatically get access to lower tier features
+ * 
+ * Tier hierarchy:
+ * - STANDARD: Base features only
+ * - MASTER_LIBRARY: Includes STANDARD + Master Library features
+ * - PREMADE_ROUTINES: Includes STANDARD + MASTER_LIBRARY + Premade Routines features
+ */
+export function hasTierAccess(
+  userTier: SubscriptionTier,
+  requiredTier: SubscriptionTier
+): boolean {
+  const tierHierarchy: SubscriptionTier[] = [
+    "STANDARD",
+    "MASTER_LIBRARY",
+    "PREMADE_ROUTINES",
+  ];
+
+  const userTierIndex = tierHierarchy.indexOf(userTier);
+  const requiredTierIndex = tierHierarchy.indexOf(requiredTier);
+
+  // If tier not found, deny access
+  if (userTierIndex === -1 || requiredTierIndex === -1) {
+    return false;
+  }
+
+  // User has access if their tier is equal to or higher than required tier
+  return userTierIndex >= requiredTierIndex;
+}
+
+/**
  * Get the recommended client limit for a given number of clients
  */
 export function getRecommendedClientLimit(clientCount: number): ClientLimit {

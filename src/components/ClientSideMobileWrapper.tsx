@@ -31,6 +31,7 @@ import ClientMessagesPage from "./ClientMessagesPage";
 import MobileClientMessagesPage from "./MobileClientMessagesPage";
 import ClientSettingsPage from "./ClientSettingsPage";
 import MobileClientSettingsPage from "./MobileClientSettingsPage";
+import SubscriptionEnforcement from "./SubscriptionEnforcement";
 
 interface ClientSideMobileWrapperProps {
   children?: ReactNode;
@@ -51,11 +52,25 @@ export default function ClientSideMobileWrapper({
     );
   }
 
+  // Coach pages - wrap with subscription enforcement
+  const coachPages = [
+    "/dashboard",
+    "/clients",
+    "/library",
+    "/programs",
+    "/schedule",
+    "/notifications",
+    "/messages",
+    "/videos",
+  ];
+
   // Determine which component to render based on pathname and mobile detection
   if (pathname === "/dashboard") {
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        {isMobile ? <MobileDashboard /> : <Dashboard />}
+        <SubscriptionEnforcement>
+          {isMobile ? <MobileDashboard /> : <Dashboard />}
+        </SubscriptionEnforcement>
       </ErrorBoundary>
     );
   }
@@ -63,7 +78,9 @@ export default function ClientSideMobileWrapper({
   if (pathname === "/clients") {
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        {isMobile ? <MobileClientsPage /> : <ClientsPage />}
+        <SubscriptionEnforcement>
+          {isMobile ? <MobileClientsPage /> : <ClientsPage />}
+        </SubscriptionEnforcement>
       </ErrorBoundary>
     );
   }
@@ -71,7 +88,9 @@ export default function ClientSideMobileWrapper({
   if (pathname === "/library") {
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        {isMobile ? <MobileLibraryPage /> : <LibraryPage />}
+        <SubscriptionEnforcement>
+          {isMobile ? <MobileLibraryPage /> : <LibraryPage />}
+        </SubscriptionEnforcement>
       </ErrorBoundary>
     );
   }
@@ -79,7 +98,9 @@ export default function ClientSideMobileWrapper({
   if (pathname === "/programs") {
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        {isMobile ? <MobileProgramsPage /> : <ProgramsPage />}
+        <SubscriptionEnforcement>
+          {isMobile ? <MobileProgramsPage /> : <ProgramsPage />}
+        </SubscriptionEnforcement>
       </ErrorBoundary>
     );
   }
@@ -87,7 +108,9 @@ export default function ClientSideMobileWrapper({
   if (pathname === "/schedule") {
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        {isMobile ? <MobileSchedulePage /> : <SchedulePageClient />}
+        <SubscriptionEnforcement>
+          {isMobile ? <MobileSchedulePage /> : <SchedulePageClient />}
+        </SubscriptionEnforcement>
       </ErrorBoundary>
     );
   }
@@ -95,7 +118,9 @@ export default function ClientSideMobileWrapper({
   if (pathname === "/notifications") {
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        {isMobile ? <MobileNotificationsPage /> : <NotificationsPage />}
+        <SubscriptionEnforcement>
+          {isMobile ? <MobileNotificationsPage /> : <NotificationsPage />}
+        </SubscriptionEnforcement>
       </ErrorBoundary>
     );
   }
@@ -103,7 +128,9 @@ export default function ClientSideMobileWrapper({
   if (pathname === "/messages") {
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        {isMobile ? <MobileMessagesPage /> : <MessagesPage />}
+        <SubscriptionEnforcement>
+          {isMobile ? <MobileMessagesPage /> : <MessagesPage />}
+        </SubscriptionEnforcement>
       </ErrorBoundary>
     );
   }
@@ -111,7 +138,9 @@ export default function ClientSideMobileWrapper({
   if (pathname === "/videos") {
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        <VideosPage />
+        <SubscriptionEnforcement>
+          <VideosPage />
+        </SubscriptionEnforcement>
       </ErrorBoundary>
     );
   }

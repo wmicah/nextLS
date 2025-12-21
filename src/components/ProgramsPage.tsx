@@ -58,6 +58,8 @@ import ProgramDetailsModal from "./ProgramDetailsModal";
 import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
 import RoutinesTab from "@/components/RoutinesTab";
 import VideoLibraryDialog from "@/components/VideoLibraryDialog";
+import MasterProgramsTab from "@/components/MasterProgramsTab";
+import MasterRoutinesTab from "@/components/MasterRoutinesTab";
 import {
   Dialog,
   DialogContent,
@@ -193,9 +195,16 @@ function ProgramsPage() {
     url?: string;
     thumbnail?: string;
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<"programs" | "routines">(
+  const [activeTab, setActiveTab] = useState<"programs" | "routines" | "masterPrograms" | "masterRoutines">(
     "programs"
   );
+
+  // Get user profile to check subscription tier
+  const { data: userProfile } = trpc.user.getProfile.useQuery();
+  // PREMADE_ROUTINES tier includes MASTER_LIBRARY access (higher tiers get all lower tier features)
+  const hasMasterLibraryAccess = 
+    userProfile?.subscriptionTier === "MASTER_LIBRARY" || 
+    userProfile?.subscriptionTier === "PREMADE_ROUTINES";
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [programToRename, setProgramToRename] = useState<ProgramListItem | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
@@ -664,42 +673,96 @@ function ProgramsPage() {
                 >
                   Routines
                 </button>
-              </div>
-
-              {/* Right: Action Buttons */}
-              <div className="flex gap-1.5">
-                {activeTab === "programs" ? (
-                  <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
-                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
-                    }}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Create Program</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setIsRoutineModalOpen(true)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
-                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
-                    }}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Create Routine</span>
-                  </button>
+                {hasMasterLibraryAccess && (
+                  <>
+                    <button
+                      onClick={() => setActiveTab("masterPrograms")}
+                      className={`px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium ${
+                        activeTab === "masterPrograms" ? "" : ""
+                      }`}
+                      style={{
+                        backgroundColor: activeTab === "masterPrograms" ? COLORS.GOLDEN_DARK : "transparent",
+                        color: activeTab === "masterPrograms" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                      }}
+                      onMouseEnter={e => {
+                        if (activeTab !== "masterPrograms") {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (activeTab !== "masterPrograms") {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        }
+                      }}
+                    >
+                      Master Programs
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("masterRoutines")}
+                      className={`px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium ${
+                        activeTab === "masterRoutines" ? "" : ""
+                      }`}
+                      style={{
+                        backgroundColor: activeTab === "masterRoutines" ? COLORS.GOLDEN_DARK : "transparent",
+                        color: activeTab === "masterRoutines" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                      }}
+                      onMouseEnter={e => {
+                        if (activeTab !== "masterRoutines") {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (activeTab !== "masterRoutines") {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        }
+                      }}
+                    >
+                      Master Routines
+                    </button>
+                  </>
                 )}
               </div>
+
+              {/* Right: Action Buttons - Only show for own programs/routines, not master library */}
+              {(activeTab === "programs" || activeTab === "routines") && (
+                <div className="flex gap-1.5">
+                  {activeTab === "programs" ? (
+                    <button
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                      style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Create Program</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setIsRoutineModalOpen(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
+                      style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Create Routine</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1148,6 +1211,29 @@ function ProgramsPage() {
                 setIsAssignRoutineModalOpen(true);
               }}
             />
+          )}
+
+          {/* Master Library Tabs - Only shown if user has MASTER_LIBRARY tier */}
+          {hasMasterLibraryAccess && (
+            <>
+              {activeTab === "masterPrograms" && (
+                <MasterProgramsTab
+                  onAssignProgram={(program) => {
+                    setSelectedProgram(program);
+                    setIsAssignModalOpen(true);
+                  }}
+                />
+              )}
+
+              {activeTab === "masterRoutines" && (
+                <MasterRoutinesTab
+                  onAssignRoutine={(routine) => {
+                    setSelectedRoutine(routine);
+                    setIsAssignRoutineModalOpen(true);
+                  }}
+                />
+              )}
+            </>
           )}
 
           {/* Modals */}

@@ -3307,4 +3307,177 @@ export const programsRouter = router({
 
       return { success: true };
     }),
+
+  // ============ MASTER LIBRARY ENDPOINTS ============
+  // These endpoints are for coaches with MASTER_LIBRARY subscription tier
+  // to view and assign master library programs (read-only)
+
+  // List all master library programs (view-only for MASTER_LIBRARY tier coaches)
+  listMasterLibrary: publicProcedure
+    .input(
+      z
+        .object({
+          search: z.string().optional(),
+          category: z.string().optional(),
+          sport: z.string().optional(),
+          level: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+        select: {
+          id: true,
+          subscriptionTier: true,
+        },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view master library programs",
+        });
+      }
+
+      // Check if coach has MASTER_LIBRARY subscription tier or higher
+      // PREMADE_ROUTINES tier includes MASTER_LIBRARY access (higher tiers get all lower tier features)
+      if (coach.subscriptionTier !== "MASTER_LIBRARY" && coach.subscriptionTier !== "PREMADE_ROUTINES") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Master Library subscription tier required to access master library programs",
+        });
+      }
+
+      // Build where clause for master library programs
+      const whereClause: any = {
+        isMasterLibrary: true,
+        status: "ACTIVE", // Only show active master programs
+        // Exclude temporary programs (those with [TEMP] in the title)
+        title: {
+          not: {
+            startsWith: "[TEMP]",
+          },
+        },
+      };
+
+      if (input?.search) {
+        whereClause.OR = [
+          { title: { contains: input.search, mode: "insensitive" } },
+          { description: { contains: input.search, mode: "insensitive" } },
+        ];
+      }
+
+      if (input?.category) {
+        whereClause.level = input.category;
+      }
+
+      if (input?.sport) {
+        whereClause.sport = input.sport;
+      }
+
+      if (input?.level) {
+        whereClause.level = input.level;
+      }
+
+      // Get master library programs (limited fields for list view)
+      const programs = await db.program.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          level: true,
+          sport: true,
+          duration: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return programs;
+    }),
+
+  // Get master library program by ID with full details (read-only)
+  getMasterLibraryById: publicProcedure
+    .input(z.object({ programId: z.string() }))
+    .query(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+        select: {
+          id: true,
+          subscriptionTier: true,
+        },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view master library programs",
+        });
+      }
+
+      // Check if coach has MASTER_LIBRARY subscription tier or higher
+      // PREMADE_ROUTINES tier includes MASTER_LIBRARY access (higher tiers get all lower tier features)
+      if (coach.subscriptionTier !== "MASTER_LIBRARY" && coach.subscriptionTier !== "PREMADE_ROUTINES") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Master Library subscription tier required to access master library programs",
+        });
+      }
+
+      // Get the master library program with full structure
+      const program = await db.program.findFirst({
+        where: {
+          id: input.programId,
+          isMasterLibrary: true,
+          status: "ACTIVE",
+          // Exclude temporary programs (those with [TEMP] in the title)
+          title: {
+            not: {
+              startsWith: "[TEMP]",
+            },
+          },
+        },
+        include: {
+          weeks: {
+            orderBy: { weekNumber: "asc" },
+            include: {
+              days: {
+                orderBy: { dayNumber: "asc" },
+                include: {
+                  drills: {
+                    orderBy: { order: "asc" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!program) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Master library program not found",
+        });
+      }
+
+      return program;
+    }),
 });

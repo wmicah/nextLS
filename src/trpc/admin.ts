@@ -600,4 +600,407 @@ export const adminRouter = {
       message: `Announcement sent to ${result.success} users. ${result.failed} failed.`,
     };
   }),
+
+  // ============ MASTER LIBRARY PROGRAMS MANAGEMENT ============
+  
+  // Get all programs for admin to select which ones to add to master library
+  getAllProgramsForAdmin: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+
+    // Check if user is admin
+    await requireAdmin(user.id, "get_all_programs_for_admin");
+
+    // Get all programs (both master library and non-master library)
+    // Exclude temporary programs (those with [TEMP] in the title)
+    const programs = await db.program.findMany({
+      where: {
+        // Exclude temporary programs (those with [TEMP] in the title)
+        title: {
+          not: {
+            startsWith: "[TEMP]",
+          },
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        level: true,
+        sport: true,
+        duration: true,
+        status: true,
+        isMasterLibrary: true,
+        createdAt: true,
+        coach: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return programs;
+  }),
+
+  // Get master library programs for admin
+  getMasterLibraryProgramsForAdmin: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+
+    // Check if user is admin
+    await requireAdmin(user.id, "get_master_library_programs_admin");
+
+    // Get all master library programs (exclude temp programs)
+    const programs = await db.program.findMany({
+      where: {
+        isMasterLibrary: true,
+        // Exclude temporary programs (those with [TEMP] in the title)
+        title: {
+          not: {
+            startsWith: "[TEMP]",
+          },
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        level: true,
+        sport: true,
+        duration: true,
+        status: true,
+        createdAt: true,
+        coach: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Log admin action
+    await logAdminAction(
+      "viewed_master_library_programs_admin",
+      {
+        programCount: programs.length,
+      },
+      user.id
+    );
+
+    return programs;
+  }),
+
+  // Add program to master library
+  addProgramToMasterLibrary: publicProcedure
+    .input(z.object({ programId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      // Check if user is admin
+      await requireAdmin(user.id, "add_program_to_master_library");
+
+      // Verify program exists
+      const program = await db.program.findUnique({
+        where: { id: input.programId },
+      });
+
+      if (!program) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Program not found",
+        });
+      }
+
+      // Update program to be master library
+      const updatedProgram = await db.program.update({
+        where: { id: input.programId },
+        data: {
+          isMasterLibrary: true,
+        },
+      });
+
+      // Log admin action
+      await logAdminAction(
+        "added_program_to_master_library",
+        {
+          programId: input.programId,
+          programTitle: program.title,
+        },
+        user.id
+      );
+
+      return {
+        id: updatedProgram.id,
+        message: "Program added to master library successfully",
+        program: updatedProgram,
+      };
+    }),
+
+  // Remove program from master library
+  removeProgramFromMasterLibrary: publicProcedure
+    .input(z.object({ programId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      // Check if user is admin
+      await requireAdmin(user.id, "remove_program_from_master_library");
+
+      // Verify program exists and is in master library
+      const program = await db.program.findFirst({
+        where: {
+          id: input.programId,
+          isMasterLibrary: true,
+        },
+      });
+
+      if (!program) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Master library program not found",
+        });
+      }
+
+      // Remove from master library
+      const updatedProgram = await db.program.update({
+        where: { id: input.programId },
+        data: {
+          isMasterLibrary: false,
+        },
+      });
+
+      // Log admin action
+      await logAdminAction(
+        "removed_program_from_master_library",
+        {
+          programId: input.programId,
+          programTitle: program.title,
+        },
+        user.id
+      );
+
+      return {
+        id: updatedProgram.id,
+        message: "Program removed from master library successfully",
+        program: updatedProgram,
+      };
+    }),
+
+  // ============ MASTER LIBRARY ROUTINES MANAGEMENT ============
+  
+  // Get all routines for admin to select which ones to add to master library
+  getAllRoutinesForAdmin: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+
+    // Check if user is admin
+    await requireAdmin(user.id, "get_all_routines_for_admin");
+
+    // Get all routines (both master library and non-master library)
+    const routines = await db.routine.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        isMasterLibrary: true,
+        createdAt: true,
+        coach: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return routines;
+  }),
+
+  // Get master library routines for admin
+  getMasterLibraryRoutinesForAdmin: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+
+    // Check if user is admin
+    await requireAdmin(user.id, "get_master_library_routines_admin");
+
+    // Get all master library routines
+    const routines = await db.routine.findMany({
+      where: {
+        isMasterLibrary: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        createdAt: true,
+        coach: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Log admin action
+    await logAdminAction(
+      "viewed_master_library_routines_admin",
+      {
+        routineCount: routines.length,
+      },
+      user.id
+    );
+
+    return routines;
+  }),
+
+  // Add routine to master library
+  addRoutineToMasterLibrary: publicProcedure
+    .input(z.object({ routineId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      // Check if user is admin
+      await requireAdmin(user.id, "add_routine_to_master_library");
+
+      // Verify routine exists
+      const routine = await db.routine.findUnique({
+        where: { id: input.routineId },
+      });
+
+      if (!routine) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Routine not found",
+        });
+      }
+
+      // Update routine to be master library
+      const updatedRoutine = await db.routine.update({
+        where: { id: input.routineId },
+        data: {
+          isMasterLibrary: true,
+        },
+      });
+
+      // Log admin action
+      await logAdminAction(
+        "added_routine_to_master_library",
+        {
+          routineId: input.routineId,
+          routineName: routine.name,
+        },
+        user.id
+      );
+
+      return {
+        id: updatedRoutine.id,
+        message: "Routine added to master library successfully",
+        routine: updatedRoutine,
+      };
+    }),
+
+  // Remove routine from master library
+  removeRoutineFromMasterLibrary: publicProcedure
+    .input(z.object({ routineId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      // Check if user is admin
+      await requireAdmin(user.id, "remove_routine_from_master_library");
+
+      // Verify routine exists and is in master library
+      const routine = await db.routine.findFirst({
+        where: {
+          id: input.routineId,
+          isMasterLibrary: true,
+        },
+      });
+
+      if (!routine) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Master library routine not found",
+        });
+      }
+
+      // Remove from master library
+      const updatedRoutine = await db.routine.update({
+        where: { id: input.routineId },
+        data: {
+          isMasterLibrary: false,
+        },
+      });
+
+      // Log admin action
+      await logAdminAction(
+        "removed_routine_from_master_library",
+        {
+          routineId: input.routineId,
+          routineName: routine.name,
+        },
+        user.id
+      );
+
+      return {
+        id: updatedRoutine.id,
+        message: "Routine removed from master library successfully",
+        routine: updatedRoutine,
+      };
+    }),
 };

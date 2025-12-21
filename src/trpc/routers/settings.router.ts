@@ -14,6 +14,12 @@ import {
 } from "@/lib/youtube";
 import { deleteFileFromUploadThing } from "@/lib/uploadthing-utils";
 import { ensureUserId, sendWelcomeMessage } from "./_helpers";
+import {
+  getTierRestrictions,
+  canAddClient,
+  canAccessMasterLibrary,
+  canAccessPremadeRoutines,
+} from "@/lib/subscription-restrictions";
 
 /**
  * Settings Router
@@ -228,6 +234,72 @@ export const settingsRouter = router({
       success: true,
       data: userData,
       exportedAt: new Date().toISOString(),
+    };
+  }),
+
+  /**
+   * Get subscription restrictions and current usage for the current user
+   * Used by the UI to display limits and check if actions are allowed
+   */
+  getSubscriptionRestrictions: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    // Verify user is a COACH (restrictions only apply to coaches)
+    const coach = await db.user.findFirst({
+      where: { id: user.id, role: "COACH" },
+      select: {
+        subscriptionTier: true,
+        clientLimit: true,
+      },
+    });
+
+    if (!coach) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only coaches have subscription restrictions",
+      });
+    }
+
+    // Count current active (non-archived) clients
+    const currentClientCount = await db.client.count({
+      where: {
+        coachId: user.id,
+        archived: false,
+      },
+    });
+
+    // Get tier restrictions
+    const restrictions = getTierRestrictions(
+      coach.subscriptionTier,
+      coach.clientLimit
+    );
+
+    // Check if user can add more clients
+    const canAdd = canAddClient(
+      coach.subscriptionTier,
+      coach.clientLimit,
+      currentClientCount
+    );
+
+    return {
+      tier: coach.subscriptionTier,
+      restrictions: {
+        ...restrictions,
+        currentClientCount,
+        canAddClient: canAdd.allowed,
+        clientLimitReached: !canAdd.allowed,
+        clientLimitExceeded: canAdd.isOverLimit ?? false,
+        clientLimitMessage: canAdd.reason,
+      },
+      access: {
+        hasMasterLibraryAccess: canAccessMasterLibrary(coach.subscriptionTier),
+        hasPremadeRoutinesAccess: canAccessPremadeRoutines(
+          coach.subscriptionTier
+        ),
+      },
     };
   }),
 });
