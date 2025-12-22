@@ -60,11 +60,15 @@ export default function MasterProgramViewer({
     { 
       enabled: isOpen && !!programId,
       retry: 1,
-      onError: (error) => {
-        console.error("Error loading master library program:", error);
-      }
     }
   );
+
+  // Log errors when they occur
+  useEffect(() => {
+    if (error) {
+      console.error("Error loading master library program:", error);
+    }
+  }, [error]);
 
   // Auto-expand all weeks, days, and routines when program loads
   useEffect(() => {

@@ -2214,6 +2214,7 @@ export const programsRouter = router({
         select: {
           id: true,
           subscriptionTier: true,
+          name: true,
         },
       });
 
