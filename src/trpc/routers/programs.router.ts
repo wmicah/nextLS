@@ -2211,6 +2211,10 @@ export const programsRouter = router({
       // Verify user is a COACH
       const coach = await db.user.findFirst({
         where: { id: user.id, role: "COACH" },
+        select: {
+          id: true,
+          subscriptionTier: true,
+        },
       });
 
       if (!coach) {
@@ -2228,37 +2232,75 @@ export const programsRouter = router({
         },
       });
 
-      // Build where clause for program - include own programs and organization-shared programs
-      let programWhereClause: any = {
-        id: input.programId,
-      };
-
-      if (coachOrganization?.organizationId) {
-        programWhereClause.OR = [
-          { coachId: ensureUserId(user.id) },
-          {
-            organizationId: coachOrganization.organizationId,
-            sharedWithOrg: true,
-          },
-        ];
-      } else {
-        programWhereClause.coachId = ensureUserId(user.id);
-      }
-
-      // Verify program exists and is accessible
-      const program = await db.program.findFirst({
-        where: programWhereClause,
-        include: {
-          weeks: {
-            include: {
-              days: {
-                orderBy: { dayNumber: "asc" },
-              },
-            },
-            orderBy: { weekNumber: "asc" },
-          },
+      // First, check if the program is a master library program
+      const masterLibraryProgram = await db.program.findFirst({
+        where: {
+          id: input.programId,
+          isMasterLibrary: true,
         },
       });
+
+      let program;
+
+      if (masterLibraryProgram) {
+        // Check if coach has MASTER_LIBRARY subscription tier or higher
+        if (coach.subscriptionTier !== "MASTER_LIBRARY" && coach.subscriptionTier !== "PREMADE_ROUTINES") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Master Library subscription tier required to assign master library programs",
+          });
+        }
+
+        // Fetch the full master library program
+        program = await db.program.findFirst({
+          where: {
+            id: input.programId,
+            isMasterLibrary: true,
+          },
+          include: {
+            weeks: {
+              include: {
+                days: {
+                  orderBy: { dayNumber: "asc" },
+                },
+              },
+              orderBy: { weekNumber: "asc" },
+            },
+          },
+        });
+      } else {
+        // Build where clause for program - include own programs and organization-shared programs
+        let programWhereClause: any = {
+          id: input.programId,
+        };
+
+        if (coachOrganization?.organizationId) {
+          programWhereClause.OR = [
+            { coachId: ensureUserId(user.id) },
+            {
+              organizationId: coachOrganization.organizationId,
+              sharedWithOrg: true,
+            },
+          ];
+        } else {
+          programWhereClause.coachId = ensureUserId(user.id);
+        }
+
+        // Verify program exists and is accessible
+        program = await db.program.findFirst({
+          where: programWhereClause,
+          include: {
+            weeks: {
+              include: {
+                days: {
+                  orderBy: { dayNumber: "asc" },
+                },
+              },
+              orderBy: { weekNumber: "asc" },
+            },
+          },
+        });
+      }
 
       if (!program) {
         throw new TRPCError({
@@ -3442,33 +3484,36 @@ export const programsRouter = router({
       }
 
       // Get the master library program with full structure
-      const program = await db.program.findFirst({
-        where: {
-          id: input.programId,
-          isMasterLibrary: true,
-          // Don't filter by status - allow viewing all master library programs
-          // Exclude temporary programs (those with [TEMP] in the title)
-          title: {
-            not: {
-              startsWith: "[TEMP]",
+      try {
+        const program = await db.program.findFirst({
+          where: {
+            id: input.programId,
+            isMasterLibrary: true,
+            // Don't filter by status - allow viewing all master library programs
+            // Exclude temporary programs (those with [TEMP] in the title)
+            title: {
+              not: {
+                startsWith: "[TEMP]",
+              },
             },
           },
-        },
-        include: {
-          weeks: {
-            orderBy: { weekNumber: "asc" },
-            include: {
-              days: {
-                orderBy: { dayNumber: "asc" },
-                include: {
-                  drills: {
-                    orderBy: { order: "asc" },
-                    include: {
-                      routine: {
-                        include: {
-                          exercises: {
-                            orderBy: { order: "asc" },
+          include: {
+            weeks: {
+              orderBy: { weekNumber: "asc" },
+              include: {
+                days: {
+                  orderBy: { dayNumber: "asc" },
+                  include: {
+                    drills: {
+                      orderBy: { order: "asc" },
+                      include: {
+                        routine: {
+                          include: {
+                            exercises: {
+                              orderBy: { order: "asc" },
+                            },
                           },
+                          // Allow null routines (in case routine was deleted but drill still references it)
                         },
                       },
                     },
@@ -3477,16 +3522,26 @@ export const programsRouter = router({
               },
             },
           },
-        },
-      });
+        });
 
-      if (!program) {
+        if (!program) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Master library program not found",
+          });
+        }
+
+        return program;
+      } catch (error) {
+        // If it's already a TRPCError, re-throw it
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        // Otherwise, wrap it in a BAD_REQUEST error
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Master library program not found",
+          code: "BAD_REQUEST",
+          message: `Failed to load master library program: ${error instanceof Error ? error.message : "Unknown error"}`,
         });
       }
-
-      return program;
     }),
 });

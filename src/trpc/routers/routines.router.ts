@@ -99,17 +99,102 @@ export const routinesRouter = router({
 
       if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-      const routine = await db.routine.findFirst({
+      // Verify user is a COACH
+      const coach = await db.user.findFirst({
+        where: { id: user.id, role: "COACH" },
+        select: {
+          id: true,
+          subscriptionTier: true,
+        },
+      });
+
+      if (!coach) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only coaches can view routines",
+        });
+      }
+
+      // First, check if the routine is a master library routine OR is referenced by a master library program
+      const masterLibraryRoutine = await db.routine.findFirst({
         where: {
           id: input.id,
-          coachId: ensureUserId(user.id),
+          isMasterLibrary: true,
         },
-        include: {
-          exercises: {
-            orderBy: { order: "asc" },
+      });
+
+      // Also check if this routine is referenced by any master library program
+      // Need to navigate through day -> week -> program to check isMasterLibrary
+      const isReferencedByMasterProgram = await db.programDrill.findFirst({
+        where: {
+          routineId: input.id,
+          day: {
+            week: {
+              program: {
+                isMasterLibrary: true,
+              },
+            },
           },
         },
       });
+
+      let routine;
+
+      if (masterLibraryRoutine || isReferencedByMasterProgram) {
+        // Check if coach has MASTER_LIBRARY subscription tier or higher
+        if (coach.subscriptionTier !== "MASTER_LIBRARY" && coach.subscriptionTier !== "PREMADE_ROUTINES") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Master Library subscription tier required to access master library routines",
+          });
+        }
+
+        // Fetch the routine (either marked as master library or referenced by master library program)
+        routine = await db.routine.findFirst({
+          where: {
+            id: input.id,
+          },
+          include: {
+            exercises: {
+              orderBy: { order: "asc" },
+            },
+          },
+        });
+      } else {
+        // Check if coach is in an organization
+        const coachOrganization = await db.coachOrganization.findFirst({
+          where: {
+            coachId: ensureUserId(user.id),
+            isActive: true,
+          },
+        });
+
+        // Build where clause - include own routines and organization-shared routines
+        let whereClause: any = {
+          id: input.id,
+        };
+
+        if (coachOrganization?.organizationId) {
+          whereClause.OR = [
+            { coachId: ensureUserId(user.id) },
+            {
+              organizationId: coachOrganization.organizationId,
+              sharedWithOrg: true,
+            },
+          ];
+        } else {
+          whereClause.coachId = ensureUserId(user.id);
+        }
+
+        routine = await db.routine.findFirst({
+          where: whereClause,
+          include: {
+            exercises: {
+              orderBy: { order: "asc" },
+            },
+          },
+        });
+      }
 
       if (!routine) {
         throw new TRPCError({

@@ -9,7 +9,7 @@ import {
   Loader2,
 } from "lucide-react";
 import MasterProgramViewer from "./MasterProgramViewer";
-import SimpleAssignProgramModal from "./SimpleAssignProgramModal";
+import AssignProgramModal from "./AssignProgramModal";
 
 interface MasterProgramsTabProps {
   onAssignProgram?: (program: any) => void;
@@ -189,15 +189,13 @@ export default function MasterProgramsTab({
 
       {/* Assign Modal */}
       {selectedProgram && isAssignModalOpen && (
-        <SimpleAssignProgramModal
+        <AssignProgramModal
           isOpen={isAssignModalOpen}
           onClose={() => {
             setIsAssignModalOpen(false);
             setSelectedProgram(null);
           }}
           programId={selectedProgram.id}
-          clientId={undefined}
-          clientName={undefined}
         />
       )}
     </>

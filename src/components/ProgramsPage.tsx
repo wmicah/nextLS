@@ -195,7 +195,7 @@ function ProgramsPage() {
     url?: string;
     thumbnail?: string;
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<"programs" | "routines" | "masterPrograms" | "masterRoutines">(
+  const [activeTab, setActiveTab] = useState<"programs" | "routines" | "masterPrograms" | "masterRoutines" | "premadePrograms">(
     "programs"
   );
 
@@ -204,6 +204,9 @@ function ProgramsPage() {
   // PREMADE_ROUTINES tier includes MASTER_LIBRARY access (higher tiers get all lower tier features)
   const hasMasterLibraryAccess = 
     userProfile?.subscriptionTier === "MASTER_LIBRARY" || 
+    userProfile?.subscriptionTier === "PREMADE_ROUTINES";
+  // Only PREMADE_ROUTINES tier gets the premade programs tab
+  const hasPremadeProgramsAccess = 
     userProfile?.subscriptionTier === "PREMADE_ROUTINES";
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [programToRename, setProgramToRename] = useState<ProgramListItem | null>(null);
@@ -725,6 +728,32 @@ function ProgramsPage() {
                     </button>
                   </>
                 )}
+                {hasPremadeProgramsAccess && (
+                  <button
+                    onClick={() => setActiveTab("premadePrograms")}
+                    className={`px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium ${
+                      activeTab === "premadePrograms" ? "" : ""
+                    }`}
+                    style={{
+                      backgroundColor: activeTab === "premadePrograms" ? COLORS.GOLDEN_DARK : "transparent",
+                      color: activeTab === "premadePrograms" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                    }}
+                    onMouseEnter={e => {
+                      if (activeTab !== "premadePrograms") {
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (activeTab !== "premadePrograms") {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }
+                    }}
+                  >
+                    Premade Programs
+                  </button>
+                )}
               </div>
 
               {/* Right: Action Buttons - Only show for own programs/routines, not master library */}
@@ -1234,6 +1263,16 @@ function ProgramsPage() {
                 />
               )}
             </>
+          )}
+
+          {/* Premade Programs Tab - Only shown if user has PREMADE_ROUTINES tier */}
+          {hasPremadeProgramsAccess && activeTab === "premadePrograms" && (
+            <MasterProgramsTab
+              onAssignProgram={(program) => {
+                setSelectedProgram(program);
+                setIsAssignModalOpen(true);
+              }}
+            />
           )}
 
           {/* Modals */}
