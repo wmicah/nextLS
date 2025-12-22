@@ -93,7 +93,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import SimpleAssignProgramModal from "@/components/SimpleAssignProgramModal";
 import QuickAssignProgramModal from "@/components/QuickAssignProgramModal";
 import QuickAssignRoutineModal from "@/components/QuickAssignRoutineModal";
 import QuickAssignRoutineFromDayModal from "@/components/QuickAssignRoutineFromDayModal";
@@ -729,8 +728,6 @@ function ClientDetailPage({
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showAssignProgramModal, setShowAssignProgramModal] = useState(false);
-  const [showQuickAssignProgramModal, setShowQuickAssignProgramModal] =
-    useState(false);
   const [showQuickAssignRoutineModal, setShowQuickAssignRoutineModal] =
     useState(false);
   const [
@@ -2925,7 +2922,7 @@ function ClientDetailPage({
                       No program assigned
                     </p>
                     <button
-                      onClick={() => setShowQuickAssignProgramModal(true)}
+                      onClick={() => setShowAssignProgramModal(true)}
                       className="text-xs font-medium transition-colors"
                       style={{ color: COLORS.GOLDEN_ACCENT }}
                       onMouseEnter={e => {
@@ -3854,27 +3851,10 @@ function ClientDetailPage({
 
           {/* Modals */}
           {showAssignProgramModal && (
-            <SimpleAssignProgramModal
+            <QuickAssignProgramModal
               isOpen={showAssignProgramModal}
               onClose={() => {
                 setShowAssignProgramModal(false);
-                refreshAllData();
-              }}
-              clientId={clientId}
-              clientName={client.name}
-              startDate={
-                selectedDate
-                  ? selectedDate.toISOString().split("T")[0]
-                  : undefined
-              }
-            />
-          )}
-
-          {showQuickAssignProgramModal && (
-            <QuickAssignProgramModal
-              isOpen={showQuickAssignProgramModal}
-              onClose={() => {
-                setShowQuickAssignProgramModal(false);
                 refreshAllData();
               }}
               clientId={clientId}
@@ -3886,6 +3866,7 @@ function ClientDetailPage({
               }
             />
           )}
+
 
           {showQuickAssignRoutineModal && (
             <QuickAssignRoutineModal
@@ -3982,7 +3963,7 @@ function ClientDetailPage({
               setShowDayDetailsModal(false);
             }}
             onAssignProgram={() => {
-              setShowQuickAssignProgramModal(true);
+              setShowAssignProgramModal(true);
               setShowDayDetailsModal(false);
             }}
             onAssignRoutine={() => {

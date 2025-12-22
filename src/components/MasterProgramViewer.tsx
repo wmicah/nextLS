@@ -57,7 +57,13 @@ export default function MasterProgramViewer({
     error,
   } = trpc.programs.getMasterLibraryById.useQuery(
     { programId },
-    { enabled: isOpen && !!programId }
+    { 
+      enabled: isOpen && !!programId,
+      retry: 1,
+      onError: (error) => {
+        console.error("Error loading master library program:", error);
+      }
+    }
   );
 
   // Auto-expand all weeks, days, and routines when program loads
@@ -235,8 +241,8 @@ export default function MasterProgramViewer({
                               {expandedDays.has(day.id) && !day.isRestDay && day.drills && day.drills.length > 0 && (
                                 <div className="px-3 pb-3 space-y-2">
                                   {day.drills.map((drill: any, index: number) => {
-                                    // Check if this drill has a routine
-                                    if (drill.routine && drill.routine.exercises) {
+                                    // Check if this drill has a routine with exercises
+                                    if (drill.routineId && drill.routine && drill.routine.exercises && Array.isArray(drill.routine.exercises)) {
                                       return (
                                         <div
                                           key={drill.id || `drill-${index}`}
@@ -264,7 +270,7 @@ export default function MasterProgramViewer({
                                           </button>
 
                                           {/* Routine Exercises */}
-                                          {expandedRoutines.has(drill.routine.id) && (
+                                          {expandedRoutines.has(drill.routine.id) && drill.routine.exercises && drill.routine.exercises.length > 0 && (
                                             <div className="ml-6 space-y-2 mt-2">
                                               {drill.routine.exercises.map((exercise: any, exIndex: number) => (
                                                 <div
@@ -312,6 +318,11 @@ export default function MasterProgramViewer({
                                                   </div>
                                                 </div>
                                               ))}
+                                            </div>
+                                          )}
+                                          {expandedRoutines.has(drill.routine.id) && (!drill.routine.exercises || drill.routine.exercises.length === 0) && (
+                                            <div className="ml-6 mt-2 text-sm" style={{ color: COLORS.TEXT_MUTED }}>
+                                              No exercises found in routine.
                                             </div>
                                           )}
                                         </div>

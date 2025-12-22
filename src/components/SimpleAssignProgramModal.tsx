@@ -9,6 +9,7 @@ import {
   Plus,
   Trash2,
   Search,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { COLORS } from "@/lib/colors";
@@ -170,6 +171,41 @@ export default function SimpleAssignProgramModal({
     });
   };
 
+  // Direct assign function for when clientId is provided (simple mode)
+  const handleDirectAssign = async (programIdToAssign: string) => {
+    if (!clientId) {
+      // Fall back to regular flow
+      setSelectedProgram(programIdToAssign);
+      return;
+    }
+
+    const targetStartDate = propStartDate || startDate || new Date().toISOString().split("T")[0];
+    
+    // Validate that start date is not in the past (allow today and future)
+    const selectedDate = new Date(targetStartDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      addToast({
+        type: "error",
+        title: "Invalid Start Date",
+        message:
+          "Programs cannot start in the past. Please select today or a future date.",
+      });
+      return;
+    }
+
+    setIsAssigning(true);
+    assignProgramMutation.mutate({
+      programId: programIdToAssign,
+      clientIds: [clientId],
+      startDate: targetStartDate,
+      repetitions: 1,
+    });
+  };
+
   const handleAssign = async () => {
     if (!selectedProgram) {
       addToast({
@@ -294,16 +330,18 @@ export default function SimpleAssignProgramModal({
     }
   };
 
-  // Filter programs based on search term
-  const filteredPrograms = programs.filter(
-    program =>
-      program.title.toLowerCase().includes(programSearchTerm.toLowerCase()) ||
-      program.level.toLowerCase().includes(programSearchTerm.toLowerCase()) ||
-      (program.description &&
-        program.description
-          .toLowerCase()
-          .includes(programSearchTerm.toLowerCase()))
-  );
+  // Filter programs based on search term and sort alphabetically
+  const filteredPrograms = programs
+    .filter(
+      program =>
+        program.title.toLowerCase().includes(programSearchTerm.toLowerCase()) ||
+        program.level.toLowerCase().includes(programSearchTerm.toLowerCase()) ||
+        (program.description &&
+          program.description
+            .toLowerCase()
+            .includes(programSearchTerm.toLowerCase()))
+    )
+    .sort((a, b) => (a.title || "").localeCompare(b.title || ""));
 
   // Filter clients based on search term
   const filteredClients = clients.filter(
@@ -433,66 +471,80 @@ export default function SimpleAssignProgramModal({
                   )}
                 </div>
 
-                {/* Programs Grid - Fixed Height with Scroll */}
-                <div className="max-h-80 overflow-y-auto border rounded-md p-3" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {filteredPrograms.length === 0 ? (
-                      <div className="col-span-full text-center py-6">
-                        <p className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
-                          No programs found
-                        </p>
-                        <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
-                          {programSearchTerm
-                            ? `No programs match "${programSearchTerm}"`
-                            : "No programs available"}
-                        </p>
-                      </div>
-                    ) : (
-                      filteredPrograms.map(program => (
-                        <button
+                {/* Programs List - Fixed Height with Scroll */}
+                <div className="max-h-96 overflow-y-auto border rounded-md p-3" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}>
+                  {filteredPrograms.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
+                        No programs found
+                      </p>
+                      <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                        {programSearchTerm
+                          ? `No programs match "${programSearchTerm}"`
+                          : "No programs available"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredPrograms.map(program => (
+                        <div
                           key={program.id}
-                          onClick={() => setSelectedProgram(program.id)}
-                          className="p-3 rounded-md border-2 text-left transition-colors"
+                          className="flex items-center justify-between p-3 rounded-lg border"
                           style={{
-                            borderColor: selectedProgram === program.id ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
-                            backgroundColor: selectedProgram === program.id ? "rgba(229, 178, 50, 0.1)" : COLORS.BACKGROUND_DARK,
-                          }}
-                          onMouseEnter={e => {
-                            if (selectedProgram !== program.id) {
-                              e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
-                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                            }
-                          }}
-                          onMouseLeave={e => {
-                            if (selectedProgram !== program.id) {
-                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
-                            }
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            borderColor: COLORS.BORDER_SUBTLE,
                           }}
                         >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <h4 className="text-xs font-semibold truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                               {program.title}
-                            </h4>
-                            {selectedProgram === program.id && (
-                              <CheckCircle className="h-4 w-4 flex-shrink-0 ml-1" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                            </div>
+                            <div className="flex items-center gap-2 text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                              <span>{program.level}</span>
+                              <span>•</span>
+                              <span>{program.duration} weeks</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (clientId) {
+                                // Direct assign mode - assign immediately
+                                handleDirectAssign(program.id);
+                              } else {
+                                // Multi-step mode - select program first
+                                setSelectedProgram(program.id);
+                              }
+                            }}
+                            disabled={isAssigning}
+                            className="px-4 py-2 rounded-md text-sm font-medium transition-colors ml-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              backgroundColor: COLORS.GOLDEN_ACCENT,
+                              color: "#000000",
+                            }}
+                            onMouseEnter={e => {
+                              if (!isAssigning) {
+                                e.currentTarget.style.opacity = "0.9";
+                              }
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.opacity = "1";
+                            }}
+                          >
+                            {isAssigning ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin inline" />
+                                Assigning...
+                              </>
+                            ) : selectedProgram === program.id && !clientId ? (
+                              "Selected"
+                            ) : (
+                              "Click to Assign"
                             )}
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] mb-1">
-                            <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(112, 207, 112, 0.2)", color: COLORS.GREEN_PRIMARY }}>
-                              {program.level}
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(229, 178, 50, 0.2)", color: COLORS.GOLDEN_ACCENT }}>
-                              {program.duration} weeks
-                            </span>
-                          </div>
-                          <p className="text-[10px] mt-1" style={{ color: COLORS.TEXT_MUTED }}>
-                            {program.activeClientCount} active clients
-                          </p>
-                        </button>
-                      ))
-                    )}
-                  </div>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Programs Summary */}
                   {filteredPrograms.length > 0 && (

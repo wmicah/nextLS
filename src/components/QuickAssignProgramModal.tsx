@@ -1,10 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Search, BookOpen } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
 import { useToast } from "@/lib/hooks/use-toast";
 import { COLORS } from "@/lib/colors";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { format } from "date-fns";
 
 interface QuickAssignProgramModalProps {
   isOpen: boolean;
@@ -21,31 +31,62 @@ export default function QuickAssignProgramModal({
   clientName,
   startDate,
 }: QuickAssignProgramModalProps) {
+  const [activeTab, setActiveTab] = useState<"programs" | "master">("programs");
   const [searchTerm, setSearchTerm] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
+  // Get user profile to check subscription tier
+  const { data: userProfile } = trpc.user.getProfile.useQuery();
+  const hasPremadeProgramsAccess =
+    userProfile?.subscriptionTier === "PREMADE_ROUTINES";
+
   // Get all programs
   const { data: programs = [] } = trpc.programs.list.useQuery();
 
+  // Get master library programs (only if user has access)
+  const { data: masterPrograms = [] } =
+    trpc.programs.listMasterLibrary.useQuery(
+      {},
+      {
+        enabled: hasPremadeProgramsAccess,
+        staleTime: 2 * 60 * 1000,
+        gcTime: 5 * 60 * 1000,
+      }
+    );
+
   // Assignment mutation
   const assignProgramMutation = trpc.programs.assignToClients.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Program Assigned!",
         description: `Program has been assigned to ${clientName}.`,
       });
-      // Invalidate relevant queries to refresh the UI
-      utils.clients.list.invalidate();
-      utils.clients.getById.invalidate({ id: clientId });
-      utils.clients.getAssignedPrograms.invalidate({ clientId });
-      utils.library.getClientAssignments.invalidate({ clientId });
-      utils.scheduling.getCoachSchedule.invalidate();
-      utils.scheduling.getCoachUpcomingLessons.invalidate();
-      utils.events.getUpcoming.invalidate();
-      utils.programs.list.invalidate();
-      onClose();
+      // Fast refresh - invalidate and refetch immediately
+      await Promise.all([
+        utils.clients.list.invalidate(),
+        utils.clients.getById.invalidate({ id: clientId }),
+        utils.clients.getAssignedPrograms.invalidate({ clientId }),
+        utils.library.getClientAssignments.invalidate({ clientId }),
+        utils.scheduling.getCoachSchedule.invalidate(),
+        utils.scheduling.getCoachUpcomingLessons.invalidate(),
+        utils.events.getUpcoming.invalidate(),
+        utils.programs.list.invalidate(),
+        hasPremadeProgramsAccess
+          ? utils.programs.listMasterLibrary.invalidate()
+          : Promise.resolve(),
+      ]);
+
+      // Refetch the current programs list immediately
+      if (activeTab === "master" && hasPremadeProgramsAccess) {
+        await utils.programs.listMasterLibrary.refetch();
+      } else {
+        await utils.programs.list.refetch();
+      }
+
+      setIsAssigning(false);
+      // Keep modal open for quick multiple assignments
     },
     onError: error => {
       toast({
@@ -57,11 +98,14 @@ export default function QuickAssignProgramModal({
     },
   });
 
+  // Get current programs list based on active tab
+  const currentPrograms = activeTab === "master" ? masterPrograms : programs;
+
   // Filter programs based on search term
-  const filteredPrograms = programs.filter(
+  const filteredPrograms = currentPrograms.filter(
     program =>
       program.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      program.level.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      program.level?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (program.description &&
         program.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -79,81 +123,119 @@ export default function QuickAssignProgramModal({
     });
   };
 
-  // Reset search when modal closes
+  // Reset search when modal closes or tab changes
   useEffect(() => {
     if (!isOpen) {
       setSearchTerm("");
       setIsAssigning(false);
+      setActiveTab("programs");
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}>
-      <div
-        className="rounded-2xl shadow-xl border w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent
+        className="max-w-lg max-h-[90vh] overflow-y-auto p-0"
         style={{
-          backgroundColor: "#1C2021",
+          backgroundColor: COLORS.BACKGROUND_DARK,
           borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 p-6 pb-0">
-          <div>
-            <h2 className="text-2xl font-bold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
-              Quick Assign Program
-            </h2>
-            <p style={{ color: COLORS.TEXT_SECONDARY }}>
-              Assign a program to {clientName} for{" "}
-              {new Date(startDate).toLocaleDateString()}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="transition-colors"
-            style={{ color: COLORS.TEXT_SECONDARY }}
-            onMouseEnter={(e) => e.currentTarget.style.color = COLORS.TEXT_PRIMARY}
-            onMouseLeave={(e) => e.currentTarget.style.color = COLORS.TEXT_SECONDARY}
+        <DialogHeader className="px-6 pt-6 pb-4">
+          <DialogTitle
+            className="text-xl font-bold"
+            style={{ color: COLORS.TEXT_PRIMARY }}
           >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+            Quick Assign Program
+          </DialogTitle>
+          <DialogDescription
+            className="text-sm mt-1"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+          >
+            Assign a program to {clientName} for{" "}
+            {format(new Date(startDate), "M/d/yyyy")}
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Content */}
         <div className="px-6 pb-6">
+          {/* Tabs */}
+          {hasPremadeProgramsAccess && (
+            <div
+              className="flex gap-2 mb-4 border-b"
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
+            >
+              <button
+                onClick={() => setActiveTab("programs")}
+                className="px-4 py-2 text-sm font-medium transition-colors relative"
+                style={{
+                  color:
+                    activeTab === "programs"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
+                }}
+              >
+                Programs
+                {activeTab === "programs" && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-0.5"
+                    style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
+                  />
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("master")}
+                className="px-4 py-2 text-sm font-medium transition-colors relative"
+                style={{
+                  color:
+                    activeTab === "master"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
+                }}
+              >
+                Master
+                {activeTab === "master" && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-0.5"
+                    style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
+                  />
+                )}
+              </button>
+            </div>
+          )}
+
           {/* Search */}
-          <div className="mb-6">
+          <div className="mb-4">
             <div className="relative">
-              <input
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              />
+              <Input
                 type="text"
                 placeholder="Search programs by name, level, or description..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
+                className="pl-10"
                 style={{
-                  backgroundColor: "#2A2F2F",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
                   borderColor: COLORS.BORDER_SUBTLE,
                   color: COLORS.TEXT_PRIMARY,
                 }}
               />
             </div>
-            {searchTerm && (
-              <p className="text-sm mt-2" style={{ color: COLORS.TEXT_SECONDARY }}>
-                {filteredPrograms.length} program
-                {filteredPrograms.length !== 1 ? "s" : ""} found
-              </p>
-            )}
           </div>
 
           {/* Programs List */}
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {filteredPrograms.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-lg font-semibold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <p
+                  className="text-sm font-medium mb-1"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   {searchTerm ? "No Programs Found" : "No Programs Available"}
-                </div>
-                <p style={{ color: COLORS.TEXT_SECONDARY }}>
+                </p>
+                <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                   {searchTerm
                     ? `No programs match "${searchTerm}"`
                     : "There are no programs available to assign."}
@@ -163,49 +245,45 @@ export default function QuickAssignProgramModal({
               filteredPrograms.map(program => (
                 <div
                   key={program.id}
-                  onClick={() => handleProgramSelect(program)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-                    isAssigning
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:scale-[1.01]"
-                  }`}
+                  className="flex items-center justify-between p-3 rounded-lg border transition-all"
                   style={{
-                    backgroundColor: "#2A2F2F",
+                    backgroundColor: COLORS.BACKGROUND_CARD,
                     borderColor: COLORS.BORDER_SUBTLE,
                   }}
-                  onMouseEnter={(e) => {
-                    if (!isAssigning) {
-                      e.currentTarget.style.backgroundColor = "#353A3A";
-                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isAssigning) {
-                      e.currentTarget.style.backgroundColor = "#2A2F2F";
-                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                    }
-                  }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
-                          {program.title}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="ml-3 flex-shrink-0">
-                      <div className="text-sm font-medium" style={{ color: COLORS.GOLDEN_ACCENT }}>
-                        {isAssigning ? "Assigning..." : "Click to Assign"}
-                      </div>
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className="font-medium text-sm truncate"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      {program.title}
                     </div>
                   </div>
+                  <Button
+                    onClick={() => handleProgramSelect(program)}
+                    disabled={isAssigning}
+                    size="sm"
+                    className="ml-3 flex-shrink-0"
+                    style={{
+                      backgroundColor: COLORS.GOLDEN_ACCENT,
+                      color: "#000000",
+                    }}
+                  >
+                    {isAssigning ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Assigning...
+                      </>
+                    ) : (
+                      "Click to Assign"
+                    )}
+                  </Button>
                 </div>
               ))
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
