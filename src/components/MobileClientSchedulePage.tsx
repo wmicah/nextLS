@@ -1653,6 +1653,52 @@ export default function MobileClientSchedulePage() {
           </div>
         </div>
       )}
+
+      {/* Switch Requests Modal */}
+      {showSwitchRequests && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          style={{ pointerEvents: "auto" }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowSwitchRequests(false);
+            }
+          }}
+        >
+          <div
+            className="rounded-2xl shadow-xl border w-full max-w-md max-h-[85vh] overflow-y-auto"
+            style={{
+              backgroundColor: "#353A3A",
+              borderColor: "#606364",
+              pointerEvents: "auto",
+              position: "relative",
+              zIndex: 51,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="sticky top-0 border-b px-4 py-4 flex items-center justify-between z-10"
+              style={{
+                backgroundColor: "#353A3A",
+                borderColor: "#606364",
+              }}
+            >
+              <h2 className="text-xl font-bold text-white">
+                Switch Requests
+              </h2>
+              <button
+                onClick={() => setShowSwitchRequests(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-4">
+              <MobileSwapRequests />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

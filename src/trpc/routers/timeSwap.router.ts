@@ -630,7 +630,18 @@ export const timeSwapRouter = router({
 
       const swapRequest = await db.timeSwapRequest.findUnique({
         where: { id: input.swapRequestId },
-        select: { status: true },
+        include: {
+          requesterEvent: {
+            select: {
+              date: true,
+            },
+          },
+          targetEvent: {
+            select: {
+              date: true,
+            },
+          },
+        },
       });
 
       if (!swapRequest) {
@@ -638,6 +649,24 @@ export const timeSwapRouter = router({
           code: "NOT_FOUND",
           message: "Swap request not found",
         });
+      }
+
+      // Check if request has expired (either lesson date has passed)
+      if (swapRequest.status === "PENDING") {
+        const now = new Date();
+        const requesterDate = new Date(swapRequest.requesterEvent.date);
+        const targetDate = new Date(swapRequest.targetEvent.date);
+
+        // If either lesson date has passed, automatically expire the request
+        if (requesterDate < now || targetDate < now) {
+          await db.timeSwapRequest.update({
+            where: { id: input.swapRequestId },
+            data: {
+              status: "EXPIRED",
+            },
+          });
+          return { status: "EXPIRED" as const };
+        }
       }
 
       return { status: swapRequest.status };
@@ -869,9 +898,56 @@ export const timeSwapRouter = router({
       }),
     ]);
 
+    // Automatically cancel/reject requests where lesson dates have passed
+    const now = new Date();
+    const expiredRequestIds: string[] = [];
+
+    // Check sent requests
+    for (const request of sentRequests) {
+      const requesterDate = new Date(request.requesterEvent.date);
+      const targetDate = new Date(request.targetEvent.date);
+      
+      // If either lesson date has passed, mark as expired
+      if (requesterDate < now || targetDate < now) {
+        expiredRequestIds.push(request.id);
+      }
+    }
+
+    // Check received requests
+    for (const request of receivedRequests) {
+      const requesterDate = new Date(request.requesterEvent.date);
+      const targetDate = new Date(request.targetEvent.date);
+      
+      // If either lesson date has passed, mark as expired
+      if (requesterDate < now || targetDate < now) {
+        expiredRequestIds.push(request.id);
+      }
+    }
+
+    // Update expired requests to EXPIRED status
+    if (expiredRequestIds.length > 0) {
+      await db.timeSwapRequest.updateMany({
+        where: {
+          id: { in: expiredRequestIds },
+          status: "PENDING",
+        },
+        data: {
+          status: "EXPIRED",
+        },
+      });
+    }
+
+    // Filter out expired requests from the results
+    const validSentRequests = sentRequests.filter(
+      (req) => !expiredRequestIds.includes(req.id)
+    );
+    const validReceivedRequests = receivedRequests.filter(
+      (req) => !expiredRequestIds.includes(req.id)
+    );
+
     return {
-      sent: sentRequests,
-      received: receivedRequests,
+      sent: validSentRequests,
+      received: validReceivedRequests,
     };
   }),
 
