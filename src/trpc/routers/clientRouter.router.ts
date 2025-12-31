@@ -3978,36 +3978,6 @@ export const clientRouterRouter = router({
         });
       }
 
-      // Check if this was an exchange (old lesson data stored in description)
-      const reasonText = event.description || "";
-      
-      // Extract the outermost [OLD_LESSON_DATA] tag (handle nested patterns)
-      const firstIndex = reasonText.indexOf("[OLD_LESSON_DATA]");
-      const lastIndex = reasonText.lastIndexOf("[/OLD_LESSON_DATA]");
-      
-      let oldLessonId: string | null = null;
-      if (firstIndex !== -1 && lastIndex !== -1 && lastIndex > firstIndex) {
-        try {
-          // Extract the content between first [OLD_LESSON_DATA] and last [/OLD_LESSON_DATA]
-          const dataStart = firstIndex + "[OLD_LESSON_DATA]".length;
-          const dataEnd = lastIndex;
-          let extractedData = reasonText.substring(dataStart, dataEnd);
-          
-          // Remove any nested [OLD_LESSON_DATA] tags from the extracted data
-          let cleanedData = extractedData;
-          let dataPreviousLength = 0;
-          while (cleanedData.length !== dataPreviousLength) {
-            dataPreviousLength = cleanedData.length;
-            cleanedData = cleanedData.replace(/\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g, "");
-          }
-          
-          const oldLessonData = JSON.parse(cleanedData);
-          oldLessonId = oldLessonData.id;
-        } catch (error) {
-          console.error("Failed to parse old lesson data from schedule request:", error);
-        }
-      }
-
       // Update the event status to CONFIRMED and change the title
       const updatedEvent = await db.event.update({
         where: { id: input.eventId },
@@ -4018,18 +3988,6 @@ export const clientRouterRouter = router({
           }`,
         },
       });
-
-      // If this was an exchange, delete the old lesson now that it's approved
-      if (oldLessonId) {
-        try {
-          await db.event.delete({
-            where: { id: oldLessonId },
-          });
-        } catch (error) {
-          console.error("Failed to delete old lesson after approval:", error);
-          // Don't throw - the new lesson is already confirmed, so continue
-        }
-      }
 
       // Create notification for the client
       if (event.client?.userId) {
@@ -4707,8 +4665,10 @@ export const clientRouterRouter = router({
         status: oldLesson.status,
       });
 
-      // Don't delete the old lesson yet - it will be deleted when the coach approves
-      // This allows the coach to see what lesson is being exchanged and restore it if rejected
+      // Delete the old lesson
+      await db.event.delete({
+        where: { id: input.oldLessonId },
+      });
 
       // Create new schedule request (as Event) with old lesson data stored in description
       const scheduleRequest = await db.event.create({
