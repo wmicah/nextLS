@@ -321,13 +321,30 @@ export async function sendLessonReminderNotification(
   lessonDate: Date,
   lessonTime: string,
   coachName: string,
-  eventId?: string
+  eventId?: string,
+  lessonDateFormatted?: string // Optional pre-formatted date string in client's timezone
 ) {
-  const dateStr = lessonDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  // Use pre-formatted date if provided (from email service which uses client timezone)
+  // Otherwise, try to format using client's timezone from database
+  let dateStr: string;
+  if (lessonDateFormatted) {
+    dateStr = lessonDateFormatted;
+  } else {
+    // Fallback: try to get client timezone and format correctly
+    try {
+      const { getUserTimezoneFromDB, formatDateInTimezone } = await import("@/lib/timezone-utils");
+      const clientTimezone = await getUserTimezoneFromDB(clientUserId);
+      dateStr = formatDateInTimezone(lessonDate, clientTimezone, "EEEE, MMMM d");
+    } catch (error) {
+      // If timezone formatting fails, use a basic format (but this should rarely happen)
+      console.error("Failed to format lesson date with timezone:", error);
+      dateStr = lessonDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      });
+    }
+  }
 
   return await sendPushNotification(
     clientUserId,
