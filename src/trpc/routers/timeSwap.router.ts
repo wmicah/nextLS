@@ -6,6 +6,7 @@ import { z } from "zod";
 import { format, addDays, addMonths } from "date-fns";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { safeUTCToLocal } from "@/lib/dst-utils";
+import { getUserTimezoneFromDB } from "@/lib/timezone-utils";
 import {
   extractYouTubeVideoId,
   extractPlaylistId,
@@ -451,26 +452,14 @@ export const timeSwapRouter = router({
 
       // Send a message to the target client
       if (targetEvent.client.userId) {
-        // Get target client's timezone from their user settings
-        const targetUser = await db.user.findUnique({
-          where: { id: targetEvent.client.userId },
-          select: {
-            settings: {
-              select: {
-                timezone: true,
-              },
-            },
-          },
-        });
-
-        // Default to America/New_York if no timezone is set
-        const targetTimezone = targetUser?.settings?.timezone || "America/New_York";
+        // Get target client's timezone from their user settings (converted to IANA format)
+        const targetTimezone = await getUserTimezoneFromDB(targetEvent.client.userId);
         
         // Convert UTC dates to target client's timezone
         const requesterEventDate = new Date(requesterEvent.date);
         const targetEventDate = new Date(targetEvent.date);
         
-        // Format dates in the target client's timezone
+        // Format dates in the target client's timezone using formatInTimeZone
         const requesterDateStr = formatInTimeZone(
           requesterEventDate,
           targetTimezone,

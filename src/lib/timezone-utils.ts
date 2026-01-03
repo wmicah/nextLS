@@ -225,36 +225,54 @@ export const getUserTimezoneFromDB = async (userId: string): Promise<string> => 
 
 /**
  * Formats a UTC date to a time string in the user's timezone (server-side)
- * @param utcDate - UTC Date object
+ * @param utcDate - UTC Date object (must be a Date object representing UTC time)
+ *   Note: Prisma returns Date objects that represent UTC times from the database
  * @param timezone - IANA timezone string (e.g., "America/New_York")
  * @param formatString - Date-fns format string (default: "h:mm a")
- * @returns Formatted time string
+ * @returns Formatted time string in the target timezone
  */
 export const formatTimeInTimezone = (
   utcDate: Date,
   timezone: string,
   formatString: string = "h:mm a"
 ): string => {
-  // Explicitly convert UTC date to the target timezone, then format
-  // toZonedTime interprets the Date as UTC and converts to the target timezone
-  const zonedDate = toZonedTime(utcDate, timezone);
-  return format(zonedDate, formatString);
+  // Ensure we have a valid Date object
+  if (!(utcDate instanceof Date) || isNaN(utcDate.getTime())) {
+    console.error("Invalid date passed to formatTimeInTimezone:", utcDate);
+    return "Invalid Date";
+  }
+
+  // formatInTimeZone from date-fns-tz treats the input date as UTC and converts it to the target timezone
+  // This is correct because:
+  // 1. Prisma stores dates in UTC in PostgreSQL
+  // 2. Prisma returns Date objects that represent UTC times
+  // 3. formatInTimeZone correctly interprets the Date as UTC and converts to the target timezone
+  return formatInTimeZone(utcDate, timezone, formatString);
 };
 
 /**
  * Formats a UTC date to a date string in the user's timezone (server-side)
- * @param utcDate - UTC Date object
+ * @param utcDate - UTC Date object (must be a Date object representing UTC time)
+ *   Note: Prisma returns Date objects that represent UTC times from the database
  * @param timezone - IANA timezone string (e.g., "America/New_York")
  * @param formatString - Date-fns format string (default: "EEEE, MMMM d")
- * @returns Formatted date string
+ * @returns Formatted date string in the target timezone
  */
 export const formatDateInTimezone = (
   utcDate: Date,
   timezone: string,
   formatString: string = "EEEE, MMMM d"
 ): string => {
-  // Explicitly convert UTC date to the target timezone, then format
-  // toZonedTime interprets the Date as UTC and converts to the target timezone
-  const zonedDate = toZonedTime(utcDate, timezone);
-  return format(zonedDate, formatString);
+  // Ensure we have a valid Date object
+  if (!(utcDate instanceof Date) || isNaN(utcDate.getTime())) {
+    console.error("Invalid date passed to formatDateInTimezone:", utcDate);
+    return "Invalid Date";
+  }
+
+  // formatInTimeZone from date-fns-tz treats the input date as UTC and converts it to the target timezone
+  // This is correct because:
+  // 1. Prisma stores dates in UTC in PostgreSQL
+  // 2. Prisma returns Date objects that represent UTC times
+  // 3. formatInTimeZone correctly interprets the Date as UTC and converts to the target timezone
+  return formatInTimeZone(utcDate, timezone, formatString);
 };

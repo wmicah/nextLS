@@ -314,7 +314,8 @@ If you can't make it, please let me know as soon as possible so I can offer the 
                 lesson.date,
                 lessonTime,
                 lesson.coach.name || "Coach",
-                lesson.id
+                lesson.id,
+                lessonDate // Pass the formatted date string in client's timezone
               );
 
               // Send email notification if email exists

@@ -4743,11 +4743,14 @@ export const clientRouterRouter = router({
       });
 
       if (coachUser?.email) {
-        // Format dates in UTC for email
-        const oldLessonDateFormatted = formatInTimeZone(oldLesson.date, utcTimeZone, "MMM d, yyyy");
-        const oldLessonTimeFormatted = formatInTimeZone(oldLesson.date, utcTimeZone, "h:mm a");
-        const newDateFormatted = formatInTimeZone(utcDateTime, utcTimeZone, "MMM d, yyyy");
-        const newTimeFormatted = formatInTimeZone(utcDateTime, utcTimeZone, "h:mm a");
+        // Format dates in coach's timezone for email (not UTC)
+        const { getUserTimezoneFromDB, formatTimeInTimezone, formatDateInTimezone } = await import("@/lib/timezone-utils");
+        const coachTimezone = await getUserTimezoneFromDB(targetCoachId);
+        
+        const oldLessonDateFormatted = formatDateInTimezone(oldLesson.date, coachTimezone, "MMM d, yyyy");
+        const oldLessonTimeFormatted = formatTimeInTimezone(oldLesson.date, coachTimezone, "h:mm a");
+        const newDateFormatted = formatDateInTimezone(utcDateTime, coachTimezone, "MMM d, yyyy");
+        const newTimeFormatted = formatTimeInTimezone(utcDateTime, coachTimezone, "h:mm a");
 
         await emailService.sendScheduleExchangeRequest(
           coachUser.email,
