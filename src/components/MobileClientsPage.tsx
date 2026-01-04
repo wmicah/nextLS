@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
+import { usePersistedSort } from "@/lib/hooks/usePersistedSort";
+import { compareClientsByProgramDueDate } from "@/lib/client-sorting-utils";
+import { getStartOfDay } from "@/lib/date-utils";
 import { extractNoteContent } from "@/lib/note-utils";
 import {
   Calendar,
@@ -654,8 +657,11 @@ export default function MobileClientsPage() {
   const [selectedClientForProfile, setSelectedClientForProfile] =
     useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortBy, setSortBy, sortOrder, setSortOrder] = usePersistedSort({
+    storageKey: "clients-sort",
+    defaultSortBy: "name",
+    defaultSortOrder: "asc",
+  });
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
 
@@ -885,189 +891,37 @@ export default function MobileClientsPage() {
     return lesson > today;
   };
 
-  // Filter and sort clients
-  const filteredAndSortedClients: Client[] = clients
-    .filter(
-      (client: Client) =>
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.email &&
-          client.email.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .sort((a: Client, b: Client) => {
+  // Filter clients by search term
+  const filteredClients = clients.filter(
+    (client: Client) =>
+      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.email &&
+        client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Sort clients using the shared utility
+  const filteredAndSortedClients: Client[] = filteredClients.sort(
+    (a: Client, b: Client) => {
       let aValue: any, bValue: any;
-      const now = new Date(); // Declare once for use in multiple cases
+      const now = new Date();
 
       switch (sortBy) {
         case "name":
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
           break;
-        case "dueDate": {
-          // Calculate the NEAREST due date for each client across ALL assignments (programs and routines)
-          // For "nearest due date", we want the closest upcoming date (or most recent overdue date)
-          const getClosestDueDate = (
-            client: Client
-          ): {
-            overdue: Date | null;
-            upcoming: Date | null;
-            nearest: Date | null;
-          } | null => {
-            const nowNormalized = new Date(
-              now.getFullYear(),
-              now.getMonth(),
-              now.getDate()
-            );
-            let nearestUpcoming: Date | null = null; // Track the NEAREST upcoming due date
-            let mostRecentOverdue: Date | null = null; // Track the MOST RECENT overdue date (closest to today)
 
-            // Process all active, non-completed program assignments
-            if (client.programAssignments && client.programAssignments.length > 0) {
-              for (const assignment of client.programAssignments) {
-                // Skip completed assignments
-                if (assignment.completed) continue;
+        case "dueDate":
+          // Use the shared utility function for program due date sorting
+          return compareClientsByProgramDueDate(a, b, sortOrder);
 
-                // Use startDate if available, otherwise use assignedAt
-                const startDate = assignment.startDate
-                  ? new Date(assignment.startDate)
-                  : new Date(assignment.assignedAt);
-
-                // Calculate end date: startDate + (duration * 7 days)
-                const endDate = new Date(startDate);
-                endDate.setDate(
-                  endDate.getDate() + assignment.program.duration * 7
-                );
-
-                // Normalize to start of day (midnight) for consistent comparison
-                const endDateNormalized = new Date(
-                  endDate.getFullYear(),
-                  endDate.getMonth(),
-                  endDate.getDate()
-                );
-
-                if (endDateNormalized < nowNormalized) {
-                  // Overdue - track the most recent (closest to today)
-                  if (!mostRecentOverdue || endDateNormalized > mostRecentOverdue) {
-                    mostRecentOverdue = endDateNormalized;
-                  }
-                } else {
-                  // Upcoming - track the nearest (earliest upcoming)
-                  if (!nearestUpcoming || endDateNormalized < nearestUpcoming) {
-                    nearestUpcoming = endDateNormalized;
-                  }
-                }
-              }
-            }
-
-            // Process all active, non-completed routine assignments
-            // For routines, they are ongoing assignments - only consider them if they're already active (startDate is today or in the past)
-            // Future routine startDates should NOT be considered for sorting (routines don't have a true "due date")
-            if (client.routineAssignments && client.routineAssignments.length > 0) {
-              for (const assignment of client.routineAssignments) {
-                // Skip completed assignments
-                if (assignment.completedAt) continue;
-
-                // Use startDate if available, otherwise use assignedAt
-                const startDate = assignment.startDate
-                  ? new Date(assignment.startDate)
-                  : new Date(assignment.assignedAt);
-
-                // Normalize to start of day (midnight) for consistent comparison
-                const startDateNormalized = new Date(
-                  startDate.getFullYear(),
-                  startDate.getMonth(),
-                  startDate.getDate()
-                );
-
-                // Only consider routines that are already active (startDate is today or in the past)
-                // Routines with future startDates should not affect sorting (they're not "due" yet)
-                if (startDateNormalized <= nowNormalized) {
-                  // Routine is active - treat as overdue (since routines are ongoing, active ones are "due")
-                  // Track the most recent active start date (closest to today)
-                  if (!mostRecentOverdue || startDateNormalized > mostRecentOverdue) {
-                    mostRecentOverdue = startDateNormalized;
-                  }
-                }
-                // If startDate is in the future, ignore it for sorting purposes
-              }
-            }
-
-            // If no assignments found, return null
-            if (!nearestUpcoming && !mostRecentOverdue) {
-              return { overdue: null, upcoming: null, nearest: null };
-            }
-
-            return {
-              overdue: mostRecentOverdue, // Most recent overdue date (closest to today)
-              upcoming: nearestUpcoming, // Nearest upcoming date (earliest future date)
-              nearest: nearestUpcoming || mostRecentOverdue, // Nearest date overall (prefer upcoming)
-            };
-          };
-
-          const aDates = getClosestDueDate(a);
-          const bDates = getClosestDueDate(b);
-
-          // Prioritize overdue programs: they should always appear first
-          // Among overdue, most recent (closest to today) comes first
-          // Among upcoming, nearest (earliest date) comes first
-          const FAR_FUTURE_DATE = new Date("9999-12-31");
-
-          // Determine if clients have active programs (upcoming or overdue)
-          const aHasActivePrograms = aDates?.upcoming || aDates?.overdue;
-          const bHasActivePrograms = bDates?.upcoming || bDates?.overdue;
-
-          // Prioritize clients with NO programs (most urgent - need assignment)
-          // Sorting priority: No programs > Overdue (most overdue first) > Upcoming (nearest first)
-          if (!aHasActivePrograms && !bHasActivePrograms) {
-            // Both have no programs - sort by creation date (newest first)
-            const aCreated = new Date(a.createdAt).getTime();
-            const bCreated = new Date(b.createdAt).getTime();
-            if (sortOrder === "asc") {
-              return bCreated - aCreated; // Newest first
-            } else {
-              return aCreated - bCreated; // Oldest first
-            }
-          } else if (!aHasActivePrograms && bHasActivePrograms) {
-            // A has no programs, B has programs - A comes first (needs assignment)
-            return -1;
-          } else if (aHasActivePrograms && !bHasActivePrograms) {
-            // B has no programs, A has programs - B comes first (needs assignment)
-            return 1;
-          } else if (aDates?.overdue && !bDates?.overdue) {
-            // Client A has overdue programs, B doesn't - A should come first (most urgent)
-            return -1;
-          } else if (!aDates?.overdue && bDates?.overdue) {
-            // Client B has overdue programs, A doesn't - B should come first
-            return 1;
-          } else if (aDates?.overdue && bDates?.overdue) {
-            // Both have overdue programs - compare by most recent (closest to today, latest past date)
-            // Most recent overdue (latest past date) should come first
-            aValue = aDates.overdue.getTime();
-            bValue = bDates.overdue.getTime();
-          } else if (aDates?.upcoming && bDates?.upcoming) {
-            // Both have upcoming programs (and no overdue) - compare by nearest upcoming date
-            aValue = aDates.upcoming.getTime();
-            bValue = bDates.upcoming.getTime();
-          } else {
-            // Fallback case (shouldn't happen, but just in case)
-            const aNearest = aDates?.nearest?.getTime() || FAR_FUTURE_DATE.getTime();
-            const bNearest = bDates?.nearest?.getTime() || FAR_FUTURE_DATE.getTime();
-            aValue = aNearest;
-            bValue = bNearest;
-          }
-          // For all other cases, continue to final comparison
-          break;
-        }
         case "createdAt":
           aValue = new Date(a.createdAt);
           bValue = new Date(b.createdAt);
           break;
-        case "nextLesson":
-          // (now is already declared at the top of the sort function)
-          const today = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate()
-          );
+
+        case "nextLesson": {
+          const today = getStartOfDay(now);
 
           const getNextLessonDate = (client: Client) => {
             if (client.nextLessonDate) {
@@ -1092,28 +946,19 @@ export default function MobileClientsPage() {
             bValue = new Date(b.createdAt);
           }
           break;
+        }
+
         default:
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
       }
 
+      // Handle different sort types
       if (sortBy === "createdAt") {
         if (sortOrder === "asc") {
           return aValue < bValue ? 1 : -1;
         } else {
           return aValue > bValue ? 1 : -1;
-        }
-      } else if (sortBy === "dueDate") {
-        // At least one client has programs - use date comparison
-        // (Clients with no programs are already handled in the case block)
-        const aTime = (aValue as Date).getTime();
-        const bTime = (bValue as Date).getTime();
-        if (sortOrder === "asc") {
-          // Ascending: smaller dates (sooner/closer) come first
-          return aTime - bTime;
-        } else {
-          // Descending: larger dates (farther) come first
-          return bTime - aTime;
         }
       } else {
         // For name and nextLesson, use normal logic
@@ -1123,7 +968,8 @@ export default function MobileClientsPage() {
           return aValue < bValue ? 1 : -1;
         }
       }
-    });
+    }
+  );
 
   // Calculate stats
   const totalClients = clients.length;
