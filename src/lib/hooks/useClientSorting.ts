@@ -24,6 +24,17 @@ export interface ClientForSorting {
       duration: number;
     };
   }>;
+  routineAssignments?: Array<{
+    id: string;
+    routineId: string;
+    assignedAt: string;
+    startDate: string | null;
+    completedAt: string | null;
+    routine: {
+      id: string;
+      name: string;
+    };
+  }>;
 }
 
 export type SortBy = "name" | "dueDate" | "createdAt" | "nextLesson";

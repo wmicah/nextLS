@@ -339,10 +339,10 @@ export async function sendLessonReminderNotification(
       // If timezone formatting fails, use a basic format (but this should rarely happen)
       console.error("Failed to format lesson date with timezone:", error);
       dateStr = lessonDate.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-      });
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
     }
   }
 

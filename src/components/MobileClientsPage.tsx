@@ -893,10 +893,10 @@ export default function MobileClientsPage() {
 
   // Filter clients by search term
   const filteredClients = clients.filter(
-    (client: Client) =>
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (client.email &&
-        client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      (client: Client) =>
+        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (client.email &&
+          client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Sort clients using the shared utility
