@@ -223,6 +223,35 @@ export const clientsRouter = router({
                   sport: true,
                   level: true,
                   duration: true,
+                  weeks: {
+                    select: {
+                      id: true,
+                      weekNumber: true,
+                      days: {
+                        select: {
+                          id: true,
+                          dayNumber: true,
+                          isRestDay: true,
+                        },
+                        orderBy: {
+                          dayNumber: "asc",
+                        },
+                      },
+                    },
+                    orderBy: {
+                      weekNumber: "asc",
+                    },
+                  },
+                },
+              },
+              replacements: {
+                select: {
+                  id: true,
+                  replacedDate: true,
+                  replacementReason: true,
+                },
+                orderBy: {
+                  replacedDate: "asc",
                 },
               },
             },

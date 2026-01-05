@@ -242,11 +242,14 @@ function QuickMessagePopup({
           boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
         }}
       >
-        <div className="flex flex-col h-full" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+        <div
+          className="flex flex-col h-full"
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+        >
           {/* Header */}
           <div
             className="flex items-center justify-between px-3 py-2.5 border-b"
-            style={{ 
+            style={{
               borderColor: COLORS.BORDER_SUBTLE,
               backgroundColor: COLORS.BACKGROUND_DARK,
             }}
@@ -268,7 +271,8 @@ function QuickMessagePopup({
               className="p-1 rounded-md transition-colors"
               style={{ color: COLORS.TEXT_SECONDARY }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
@@ -318,20 +322,22 @@ function QuickMessagePopup({
                             isCurrentUser ? "rounded-br-sm" : "rounded-bl-sm"
                           }`}
                           style={{
-                            backgroundColor: isCurrentUser 
-                              ? COLORS.GOLDEN_ACCENT 
+                            backgroundColor: isCurrentUser
+                              ? COLORS.GOLDEN_ACCENT
                               : COLORS.BACKGROUND_CARD,
-                            color: isCurrentUser 
-                              ? COLORS.BACKGROUND_DARK 
+                            color: isCurrentUser
+                              ? COLORS.BACKGROUND_DARK
                               : COLORS.TEXT_PRIMARY,
                             border: "1px solid",
-                            borderColor: isCurrentUser 
-                              ? COLORS.GOLDEN_BORDER 
+                            borderColor: isCurrentUser
+                              ? COLORS.GOLDEN_BORDER
                               : COLORS.BORDER_SUBTLE,
                             animationDelay: `${index * 50}ms`,
                             animation:
                               isOpen && !isAnimating
-                                ? `slideInLeft 0.3s ease-out ${index * 50}ms both`
+                                ? `slideInLeft 0.3s ease-out ${
+                                    index * 50
+                                  }ms both`
                                 : undefined,
                           }}
                         >
@@ -341,10 +347,10 @@ function QuickMessagePopup({
                             </div>
                             <span
                               className="text-[10px] flex-shrink-0 opacity-60 ml-1.5"
-                              style={{ 
-                                color: isCurrentUser 
-                                  ? COLORS.BACKGROUND_DARK 
-                                  : COLORS.TEXT_MUTED 
+                              style={{
+                                color: isCurrentUser
+                                  ? COLORS.BACKGROUND_DARK
+                                  : COLORS.TEXT_MUTED,
                               }}
                             >
                               {formatTime(message.createdAt)}
@@ -362,7 +368,7 @@ function QuickMessagePopup({
           {conversationToUse && (
             <div
               className="px-2.5 py-2 border-t"
-              style={{ 
+              style={{
                 borderColor: COLORS.BORDER_SUBTLE,
                 backgroundColor: COLORS.BACKGROUND_DARK,
               }}
@@ -419,9 +425,9 @@ function QuickMessagePopup({
           )}
 
           {/* Footer */}
-          <div 
-            className="px-2.5 py-2 border-t" 
-            style={{ 
+          <div
+            className="px-2.5 py-2 border-t"
+            style={{
               borderColor: COLORS.BORDER_SUBTLE,
               backgroundColor: COLORS.BACKGROUND_DARK,
             }}
@@ -436,7 +442,8 @@ function QuickMessagePopup({
                 border: `1px solid ${COLORS.BORDER_SUBTLE}`,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
@@ -831,7 +838,7 @@ function ClientRequestsModal({
       // Also invalidate clients list in case client was deleted
       utils.clients.list.invalidate();
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Error rejecting client request:", error);
       addToast({
         type: "error",
@@ -929,7 +936,9 @@ function ClientRequestsModal({
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
-                          acceptRequest.mutate({ notificationId: request.notificationId });
+                          acceptRequest.mutate({
+                            notificationId: request.notificationId,
+                          });
                         }}
                         disabled={
                           acceptRequest.isPending || rejectRequest.isPending
@@ -957,7 +966,9 @@ function ClientRequestsModal({
                       </button>
                       <button
                         onClick={() => {
-                          rejectRequest.mutate({ notificationId: request.notificationId });
+                          rejectRequest.mutate({
+                            notificationId: request.notificationId,
+                          });
                         }}
                         disabled={
                           acceptRequest.isPending || rejectRequest.isPending
