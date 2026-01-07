@@ -2068,46 +2068,19 @@ function ClientDetailPage({
     if (!clipboardData) return;
 
     try {
-      // If multi-day copy, paste each day intelligently
+      // If multi-day copy, paste each day sequentially starting from target date
       if (clipboardData.isMultiDay && clipboardData.multiDayAssignments) {
         let totalSuccessCount = 0;
         let totalErrorCount = 0;
 
-        // Smart detection: if all copied days were in the same week, use day-of-week matching
-        // Otherwise, use sequential paste (old behavior)
-        const useDayOfWeekMatching = clipboardData.allInSameWeek === true;
-
         for (let i = 0; i < clipboardData.multiDayAssignments.length; i++) {
           const dayData = clipboardData.multiDayAssignments[i];
           
-          // Calculate paste date based on smart detection
-          let pasteDate: Date;
-          if (useDayOfWeekMatching && dayData.dayOfWeek !== undefined) {
-            // Day-of-week matching: paste to matching day of week
-            // Example: Copy Mon, Wed, Fri → Paste on Mon → Mon→Mon, Wed→Wed, Fri→Fri
-            // Example: Copy Mon, Wed, Fri → Paste on Tue → Mon→Mon (next), Wed→Wed (next), Fri→Fri (next)
-            const targetDayOfWeek = targetDate.getDay();
-            const copiedDayOfWeek = dayData.dayOfWeek;
-            
-            // Calculate days to add to reach the matching day of week
-            // Find the next occurrence of the copied day of week from the target date
-            let daysToAdd = copiedDayOfWeek - targetDayOfWeek;
-            if (daysToAdd < 0) {
-              // Copied day is earlier in the week, go to next week
-              daysToAdd += 7;
-            } else if (daysToAdd === 0 && i > 0) {
-              // If it's not the first day and we're matching the same day, go to next week
-              daysToAdd += 7;
-            }
-            // If daysToAdd === 0 and i === 0, paste on the same day (correct for first day)
-            
-            pasteDate = addDays(targetDate, daysToAdd);
-          } else {
-            // Sequential paste: paste in order starting from target date
-            // Example: Copy Mon, Wed, Fri (offsets 0, 2, 4) → Paste on Mon → Mon→Mon, Wed→Wed, Fri→Fri
-            // Uses actual day offset (0, 2, 4) not array index (0, 1, 2)
-            pasteDate = addDays(targetDate, dayData.dayOffset);
-          }
+          // Sequential paste: paste in order starting from target date
+          // Example: Copy Mon, Wed, Fri → Paste on Mon → Mon→Mon, Tue→Tue, Wed→Wed
+          // Example: Copy Mon, Wed, Fri → Paste on Wed → Wed→Wed, Thu→Thu, Fri→Fri
+          // Always paste sequentially from the selected day, ignoring original day-of-week
+          pasteDate = addDays(targetDate, i);
           
           const pasteDateStr = pasteDate.toISOString().split("T")[0];
 
