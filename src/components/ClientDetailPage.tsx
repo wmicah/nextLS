@@ -1760,8 +1760,11 @@ function ClientDetailPage({
         const programsForDate = getProgramsForDate(day);
         const videosForDate = getVideosForDate(day);
 
+        // Calculate actual day offset from the first day (not just array index)
+        const actualDayOffset = differenceInDays(day, firstDay);
+
         return {
-          dayOffset: index, // Keep for backward compatibility
+          dayOffset: actualDayOffset, // Actual number of days from first day
           dayOfWeek: day.getDay(), // Store day of week (0 = Sunday, 1 = Monday, etc.)
           assignments: {
             routines: routinesForDate.map((routine: any) => ({
@@ -2082,19 +2085,27 @@ function ClientDetailPage({
           if (useDayOfWeekMatching && dayData.dayOfWeek !== undefined) {
             // Day-of-week matching: paste to matching day of week
             // Example: Copy Mon, Wed, Fri → Paste on Mon → Mon→Mon, Wed→Wed, Fri→Fri
+            // Example: Copy Mon, Wed, Fri → Paste on Tue → Mon→Mon (next), Wed→Wed (next), Fri→Fri (next)
             const targetDayOfWeek = targetDate.getDay();
             const copiedDayOfWeek = dayData.dayOfWeek;
             
             // Calculate days to add to reach the matching day of week
+            // Find the next occurrence of the copied day of week from the target date
             let daysToAdd = copiedDayOfWeek - targetDayOfWeek;
             if (daysToAdd < 0) {
-              daysToAdd += 7; // Wrap to next week
+              // Copied day is earlier in the week, go to next week
+              daysToAdd += 7;
+            } else if (daysToAdd === 0 && i > 0) {
+              // If it's not the first day and we're matching the same day, go to next week
+              daysToAdd += 7;
             }
+            // If daysToAdd === 0 and i === 0, paste on the same day (correct for first day)
             
             pasteDate = addDays(targetDate, daysToAdd);
           } else {
             // Sequential paste: paste in order starting from target date
-            // Example: Copy Mon, Wed, Fri → Paste on Mon → Mon→Mon, Wed→Tue, Fri→Wed
+            // Example: Copy Mon, Wed, Fri (offsets 0, 2, 4) → Paste on Mon → Mon→Mon, Wed→Wed, Fri→Fri
+            // Uses actual day offset (0, 2, 4) not array index (0, 1, 2)
             pasteDate = addDays(targetDate, dayData.dayOffset);
           }
           
