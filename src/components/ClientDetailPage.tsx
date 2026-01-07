@@ -2080,7 +2080,7 @@ function ClientDetailPage({
           // Example: Copy Mon, Wed, Fri → Paste on Mon → Mon→Mon, Tue→Tue, Wed→Wed
           // Example: Copy Mon, Wed, Fri → Paste on Wed → Wed→Wed, Thu→Thu, Fri→Fri
           // Always paste sequentially from the selected day, ignoring original day-of-week
-          pasteDate = addDays(targetDate, i);
+          const pasteDate = addDays(targetDate, i);
           
           const pasteDateStr = pasteDate.toISOString().split("T")[0];
 
