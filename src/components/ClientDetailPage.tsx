@@ -45,6 +45,7 @@ import {
   Clipboard,
   ChevronDown,
   Send,
+  File as FileIcon,
 } from "lucide-react";
 import {
   Dialog,
@@ -600,20 +601,101 @@ function QuickMessagePopup({
                                 : undefined,
                           }}
                         >
-                          <div className="flex items-start justify-between gap-1.5">
-                            <div className="flex-1 text-xs leading-relaxed">
-                              <FormattedMessage content={message.content} />
-                            </div>
-                            <span
-                              className="text-[10px] flex-shrink-0 opacity-60 ml-1.5"
-                              style={{
-                                color: isCurrentUser
-                                  ? COLORS.BACKGROUND_DARK
-                                  : COLORS.TEXT_MUTED,
-                              }}
-                            >
-                              {formatTime(message.createdAt)}
-                            </span>
+                          <div className="flex flex-col gap-1.5">
+                            {/* Message Content */}
+                            {message.content && (
+                              <div className="flex items-start justify-between gap-1.5">
+                                <div className="flex-1 text-xs leading-relaxed">
+                                  <FormattedMessage content={message.content} />
+                                </div>
+                                <span
+                                  className="text-[10px] flex-shrink-0 opacity-60 ml-1.5"
+                                  style={{
+                                    color: isCurrentUser
+                                      ? COLORS.BACKGROUND_DARK
+                                      : COLORS.TEXT_MUTED,
+                                  }}
+                                >
+                                  {formatTime(message.createdAt)}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* File Attachment */}
+                            {message.attachmentUrl && (
+                              <div className="mt-1">
+                                {message.attachmentType?.startsWith("image/") ? (
+                                  <img
+                                    src={message.attachmentUrl}
+                                    alt={message.attachmentName || "Image"}
+                                    className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
+                                    style={{ maxHeight: "150px" }}
+                                    onClick={() =>
+                                      message.attachmentUrl &&
+                                      window.open(
+                                        message.attachmentUrl,
+                                        "_blank"
+                                      )
+                                    }
+                                  />
+                                ) : message.attachmentType?.startsWith(
+                                    "video/"
+                                  ) ? (
+                                  <div className="space-y-1">
+                                    <video
+                                      src={message.attachmentUrl}
+                                      controls
+                                      className="max-w-full rounded-lg"
+                                      style={{ maxHeight: "150px" }}
+                                      preload="metadata"
+                                    >
+                                      Your browser does not support the video
+                                      tag.
+                                    </video>
+                                  </div>
+                                ) : (
+                                  <a
+                                    href={message.attachmentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-1.5 rounded-lg transition-all duration-200 hover:scale-105 text-xs"
+                                    style={{
+                                      backgroundColor: isCurrentUser
+                                        ? COLORS.GOLDEN_DARK
+                                        : COLORS.BACKGROUND_DARK,
+                                      color: isCurrentUser
+                                        ? "#ffffff"
+                                        : COLORS.TEXT_PRIMARY,
+                                      border: "1px solid",
+                                      borderColor: isCurrentUser
+                                        ? COLORS.GOLDEN_BORDER
+                                        : COLORS.BORDER_SUBTLE,
+                                    }}
+                                  >
+                                    <FileIcon className="h-3 w-3" />
+                                    <span className="truncate">
+                                      {message.attachmentName || "Attachment"}
+                                    </span>
+                                  </a>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Timestamp for messages without content but with attachment */}
+                            {!message.content && message.attachmentUrl && (
+                              <div className="flex justify-end">
+                                <span
+                                  className="text-[10px] flex-shrink-0 opacity-60"
+                                  style={{
+                                    color: isCurrentUser
+                                      ? COLORS.BACKGROUND_DARK
+                                      : COLORS.TEXT_MUTED,
+                                  }}
+                                >
+                                  {formatTime(message.createdAt)}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
