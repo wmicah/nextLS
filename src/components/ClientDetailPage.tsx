@@ -3636,8 +3636,9 @@ function ClientDetailPage({
                             {format(day, "d")}
                           </div>
                           {/* Copy/Paste Buttons */}
-                          <div className="flex items-center gap-0.5">
+                          <div className="flex items-center gap-0.5 relative z-10">
                             {/* Copy Button - only show if day has assignments */}
+                            {/* Allow copying past days - coaches can copy but not paste to past dates */}
                             {(lessonsForDay.length > 0 ||
                               programsForDay.length > 0 ||
                               routineAssignmentsForDay.length > 0 ||
@@ -3650,6 +3651,8 @@ function ClientDetailPage({
                                 className="p-0.5 rounded transition-all duration-200"
                                 style={{
                                   backgroundColor: "transparent",
+                                  zIndex: 10,
+                                  position: "relative",
                                 }}
                                 onMouseEnter={e => {
                                   e.currentTarget.style.backgroundColor =
@@ -3659,11 +3662,20 @@ function ClientDetailPage({
                                   e.currentTarget.style.backgroundColor =
                                     "transparent";
                                 }}
-                                title="Copy day assignments"
+                                title={
+                                  isPastDay
+                                    ? "Copy day assignments (past days can be copied but not pasted to)"
+                                    : "Copy day assignments"
+                                }
                               >
                                 <Copy
                                   className="h-2.5 w-2.5"
-                                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                                  style={{
+                                    color: isPastDay
+                                      ? COLORS.GOLDEN_ACCENT
+                                      : COLORS.GOLDEN_ACCENT,
+                                    opacity: isPastDay ? 0.9 : 1,
+                                  }}
                                 />
                               </button>
                             )}
