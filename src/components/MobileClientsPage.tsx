@@ -147,19 +147,87 @@ function MobileInviteCodeButton() {
       }`
     : null;
 
-  const handleCopyInviteCode = () => {
+  const handleCopyInviteCode = async () => {
     if (generateInviteCode.data?.inviteCode) {
-      navigator.clipboard.writeText(generateInviteCode.data.inviteCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        // Safari requires HTTPS and user interaction - this is called from a button click
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(generateInviteCode.data.inviteCode);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } else {
+          // Fallback for older browsers or Safari without clipboard API
+          const textArea = document.createElement("textarea");
+          textArea.value = generateInviteCode.data.inviteCode;
+          textArea.style.position = "fixed";
+          textArea.style.left = "-999999px";
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
+      } catch (error) {
+        console.error("Failed to copy invite code:", error);
+        // Fallback for Safari or other browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = generateInviteCode.data.inviteCode;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand("copy");
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (fallbackError) {
+          console.error("Fallback copy also failed:", fallbackError);
+        }
+        document.body.removeChild(textArea);
+      }
     }
   };
 
-  const handleCopyInviteLink = () => {
+  const handleCopyInviteLink = async () => {
     if (inviteLink) {
-      navigator.clipboard.writeText(inviteLink);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      try {
+        // Safari requires HTTPS and user interaction - this is called from a button click
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(inviteLink);
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2000);
+        } else {
+          // Fallback for older browsers or Safari without clipboard API
+          const textArea = document.createElement("textarea");
+          textArea.value = inviteLink;
+          textArea.style.position = "fixed";
+          textArea.style.left = "-999999px";
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2000);
+        }
+      } catch (error) {
+        console.error("Failed to copy invite link:", error);
+        // Fallback for Safari or other browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = inviteLink;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand("copy");
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2000);
+        } catch (fallbackError) {
+          console.error("Fallback copy also failed:", fallbackError);
+        }
+        document.body.removeChild(textArea);
+      }
     }
   };
 
