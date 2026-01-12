@@ -93,7 +93,7 @@ const nextConfig: NextConfig = {
   },
 
   // Performance optimizations
-  swcMinify: true,
+  // Note: swcMinify is enabled by default in Next.js 15, no need to specify
   compiler: {
     removeConsole: process.env.NODE_ENV === "production" ? {
       exclude: ["error", "warn"],
