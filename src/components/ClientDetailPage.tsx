@@ -869,7 +869,7 @@ function ClientDetailPage({
   const [expandedDrills, setExpandedDrills] = useState<Set<string>>(new Set());
   const [routineCache, setRoutineCache] = useState<Map<string, any>>(new Map());
 
-  // Fetch client data
+  // Fetch client data - optimized caching
   const {
     data: client,
     isLoading: clientLoading,
@@ -878,8 +878,11 @@ function ClientDetailPage({
     { id: clientId },
     {
       enabled: !!clientId,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchOnWindowFocus: false, // Reduce unnecessary refetches
+      refetchOnMount: false, // Use cached data on mount
+      refetchOnReconnect: true, // Only refetch on reconnect
     }
   );
 
@@ -893,38 +896,66 @@ function ClientDetailPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientError, clientLoading, client?.archived, router, backPath]);
 
-  // Fetch coach's schedule for the current month (includes all client lessons)
+  // Fetch coach's schedule for the current month (includes all client lessons) - optimized
   const { data: coachSchedule = [] } =
-    trpc.scheduling.getCoachSchedule.useQuery({
-      month: currentMonth.getMonth(),
-      year: currentMonth.getFullYear(),
-    });
+    trpc.scheduling.getCoachSchedule.useQuery(
+      {
+        month: currentMonth.getMonth(),
+        year: currentMonth.getFullYear(),
+      },
+      {
+        staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+      }
+    );
 
-  // Filter lessons for this specific client
-  const clientLessons = coachSchedule.filter(
-    (lesson: any) => lesson.clientId === clientId
+  // Filter lessons for this specific client - memoized
+  const clientLessons = useMemo(
+    () => coachSchedule.filter((lesson: any) => lesson.clientId === clientId),
+    [coachSchedule, clientId]
   );
 
-  // Fetch upcoming lessons for the coach (we'll filter for this client)
+  // Fetch upcoming lessons for the coach (we'll filter for this client) - optimized
   const { data: coachUpcomingLessons = [] } =
-    trpc.scheduling.getCoachUpcomingLessons.useQuery();
+    trpc.scheduling.getCoachUpcomingLessons.useQuery(undefined, {
+      staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    });
 
-  // Filter upcoming lessons for this specific client
-  const upcomingLessons = coachUpcomingLessons.filter(
-    (lesson: any) => lesson.clientId === clientId
+  // Filter upcoming lessons for this specific client - memoized
+  const upcomingLessons = useMemo(
+    () =>
+      coachUpcomingLessons.filter((lesson: any) => lesson.clientId === clientId),
+    [coachUpcomingLessons, clientId]
   );
 
-  // Fetch client's assigned programs
+  // Fetch client's assigned programs - optimized
   const { data: assignedPrograms = [] } =
-    trpc.clients.getAssignedPrograms.useQuery({
-      clientId,
-    });
+    trpc.clients.getAssignedPrograms.useQuery(
+      { clientId },
+      {
+        staleTime: 3 * 60 * 1000, // Cache for 3 minutes
+        gcTime: 10 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+      }
+    );
 
-  // Fetch client's routine assignments
+  // Fetch client's routine assignments - optimized
   const { data: assignedRoutines = [], isLoading: isLoadingRoutines } =
-    trpc.routines.getClientRoutineAssignments.useQuery({
-      clientId,
-    });
+    trpc.routines.getClientRoutineAssignments.useQuery(
+      { clientId },
+      {
+        staleTime: 3 * 60 * 1000, // Cache for 3 minutes
+        gcTime: 10 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+      }
+    );
 
   // Debug: Log routine assignments when they change
   useEffect(() => {
@@ -941,11 +972,17 @@ function ClientDetailPage({
     }
   }, [assignedRoutines]);
 
-  // Fetch client's video assignments
+  // Fetch client's video assignments - optimized
   const { data: assignmentsData, error: assignmentsError } =
-    trpc.library.getClientAssignments.useQuery({
-      clientId,
-    });
+    trpc.library.getClientAssignments.useQuery(
+      { clientId },
+      {
+        staleTime: 3 * 60 * 1000, // Cache for 3 minutes
+        gcTime: 10 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+      }
+    );
 
   const videoAssignments = assignmentsData?.videoAssignments || [];
 
@@ -954,26 +991,51 @@ function ClientDetailPage({
   console.log("ClientDetailPage - assignmentsError:", assignmentsError);
   console.log("ClientDetailPage - videoAssignments:", videoAssignments);
 
-  // Fetch coach's working hours for time slot generation
-  const { data: coachProfile } = trpc.user.getProfile.useQuery();
-
-  // Fetch client compliance data
-  const { data: complianceData, isLoading: complianceLoading } =
-    trpc.clients.getComplianceData.useQuery({
-      clientId,
-      period: compliancePeriod,
-    });
-
-  // Fetch temporary program day replacements for this client
-  const { data: temporaryReplacements = [] } =
-    trpc.programs.getTemporaryReplacements.useQuery({
-      clientId,
-    });
-
-  // Fetch client's last activity
-  const { data: lastActivity } = trpc.clients.getLastActivity.useQuery({
-    clientId,
+  // Fetch coach's working hours for time slot generation - optimized
+  const { data: coachProfile } = trpc.user.getProfile.useQuery(undefined, {
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes (rarely changes)
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
+
+  // Fetch client compliance data - optimized
+  const { data: complianceData, isLoading: complianceLoading } =
+    trpc.clients.getComplianceData.useQuery(
+      {
+        clientId,
+        period: compliancePeriod,
+      },
+      {
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        gcTime: 15 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+      }
+    );
+
+  // Fetch temporary program day replacements for this client - optimized
+  const { data: temporaryReplacements = [] } =
+    trpc.programs.getTemporaryReplacements.useQuery(
+      { clientId },
+      {
+        staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+        gcTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+      }
+    );
+
+  // Fetch client's last activity - optimized
+  const { data: lastActivity } = trpc.clients.getLastActivity.useQuery(
+    { clientId },
+    {
+      staleTime: 1 * 60 * 1000, // Cache for 1 minute (changes frequently)
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    }
+  );
 
   const utils = trpc.useUtils();
 

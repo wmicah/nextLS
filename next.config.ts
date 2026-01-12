@@ -88,6 +88,16 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
     esmExternals: true,
+    // Enable partial prerendering for better performance
+    ppr: false, // Can enable when stable
+  },
+
+  // Performance optimizations
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production" ? {
+      exclude: ["error", "warn"],
+    } : false,
   },
 
   // Turbopack configuration to fix workspace root warning

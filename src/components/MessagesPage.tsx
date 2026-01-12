@@ -88,8 +88,13 @@ function MessagesPage({}: MessagesPageProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Get current user info
-  const { data: currentUser } = trpc.user.getProfile.useQuery();
+  // Get current user info - optimized caching
+  const { data: currentUser } = trpc.user.getProfile.useQuery(undefined, {
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes (rarely changes)
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
   const utils = trpc.useUtils();
 
   // Use Supabase Realtime for real-time updates instead of polling

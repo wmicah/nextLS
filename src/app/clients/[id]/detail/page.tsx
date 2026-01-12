@@ -1,7 +1,21 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
 import { redirect } from "next/navigation"
 import { db } from "@/db"
-import ClientDetailPage from "@/components/ClientDetailPage"
+import dynamic from "next/dynamic"
+import { Suspense } from "react"
+
+// Dynamically import heavy component with no SSR to improve initial load
+const ClientDetailPage = dynamic(
+	() => import("@/components/ClientDetailPage"),
+	{
+		ssr: false,
+		loading: () => (
+			<div className="flex items-center justify-center min-h-screen">
+				<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-300" />
+			</div>
+		),
+	}
+)
 
 interface PageProps {
 	params: Promise<{ id: string }>
@@ -39,7 +53,17 @@ const Page = async ({ params }: PageProps) => {
 
 	const resolvedParams = await params
 
-	return <ClientDetailPage clientId={resolvedParams.id} />
+	return (
+		<Suspense
+			fallback={
+				<div className="flex items-center justify-center min-h-screen">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-300" />
+				</div>
+			}
+		>
+			<ClientDetailPage clientId={resolvedParams.id} />
+		</Suspense>
+	)
 }
 
 export default Page
