@@ -18,24 +18,33 @@ export function useMobileDetection() {
       const width = window.innerWidth;
       const userAgent = navigator.userAgent;
 
-      // iPad-specific detection
+      // Better iPad detection - distinguish from Mac
+      // Safari on iPad reports as "MacIntel" but we can detect iPad more accurately
       const isIPad =
         /iPad/i.test(userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        (navigator.platform === "MacIntel" && 
+         navigator.maxTouchPoints > 1 && 
+         !window.matchMedia("(pointer: fine)").matches); // iPad doesn't have fine pointer
+
+      // Check if it's actually a Mac (not iPad)
+      const isMacDesktop = 
+        navigator.platform === "MacIntel" && 
+        navigator.maxTouchPoints === 0 && // Mac desktops don't have touch points
+        window.matchMedia("(pointer: fine)").matches; // Mac has fine pointer (mouse/trackpad)
 
       // Mobile width: phones and small tablets only (640px = typical mobile breakpoint)
       const isMobileWidth = width < 640;
 
-      // Touch device detection
+      // Touch device detection (but exclude Mac desktops)
       const isTouchDevice =
-        "ontouchstart" in window || navigator.maxTouchPoints > 0;
+        ("ontouchstart" in window || navigator.maxTouchPoints > 0) && !isMacDesktop;
 
       // Should use mobile layout: only for actual mobile devices
-      // Desktop users get desktop layout even with narrow windows
+      // Desktop users (including Mac) get desktop layout even with narrow windows
       const shouldBeMobile =
-        isMobileWidth ||
+        (isMobileWidth && !isMacDesktop) ||
         (isIPad && width < 1024) ||
-        (isTouchDevice && width < 640);
+        (isTouchDevice && width < 640 && !isMacDesktop);
 
       setIsMobile(shouldBeMobile);
     };
