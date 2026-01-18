@@ -141,7 +141,8 @@ interface ProgramListItem {
 interface RoutineExercise {
   id: string;
   title: string;
-  type: "exercise" | "drill" | "video" | "routine";
+  type: "exercise" | "drill" | "video" | "routine" | "superset";
+  description?: string;
   notes?: string;
   sets?: number;
   reps?: number;
@@ -151,6 +152,11 @@ interface RoutineExercise {
   videoId?: string;
   videoTitle?: string;
   videoThumbnail?: string;
+  supersetId?: string;
+  supersetOrder?: number;
+  supersetDescription?: string;
+  supersetInstructions?: string;
+  supersetNotes?: string;
 }
 
 interface Routine {
@@ -243,8 +249,9 @@ function ProgramsPage() {
       id: exercise.id,
       title: exercise.title,
       type:
-        (exercise.type as "exercise" | "drill" | "video" | "routine") ||
+        (exercise.type as "exercise" | "drill" | "video" | "routine" | "superset") ||
         "exercise",
+      description: exercise.description || "",
       notes: exercise.notes || "",
       sets: exercise.sets ?? undefined,
       reps: exercise.reps ?? undefined,
@@ -254,6 +261,12 @@ function ProgramsPage() {
       videoTitle: exercise.videoTitle || "",
       videoThumbnail: exercise.videoThumbnail || "",
       videoUrl: exercise.videoUrl || "",
+      // Include superset fields for proper duplication
+      supersetId: (exercise as any).supersetId ?? undefined,
+      supersetOrder: (exercise as any).supersetOrder ?? undefined,
+      supersetDescription: (exercise as any).supersetDescription ?? undefined,
+      supersetInstructions: (exercise as any).supersetInstructions ?? undefined,
+      supersetNotes: (exercise as any).supersetNotes ?? undefined,
     })),
     createdAt: new Date(routine.createdAt).toISOString(),
     updatedAt: new Date(routine.updatedAt).toISOString(),
