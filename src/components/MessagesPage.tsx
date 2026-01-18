@@ -1309,58 +1309,6 @@ function MessagesPage({}: MessagesPageProps) {
                   className="p-6 border-t"
                   style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
-                  {/* Selected File Indicator */}
-                  {selectedFile && (
-                    <div
-                      className="mb-3 p-3 rounded-lg flex items-center justify-between"
-                      style={{
-                        backgroundColor: COLORS.BACKGROUND_CARD,
-                        border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        {selectedFile.file.type.startsWith("image/") ? (
-                          <ImageIcon
-                            className="h-4 w-4"
-                            style={{ color: COLORS.GOLDEN_ACCENT }}
-                          />
-                        ) : selectedFile.file.type.startsWith("video/") ? (
-                          <Video
-                            className="h-4 w-4"
-                            style={{ color: COLORS.GOLDEN_ACCENT }}
-                          />
-                        ) : (
-                          <File
-                            className="h-4 w-4"
-                            style={{ color: COLORS.GOLDEN_ACCENT }}
-                          />
-                        )}
-                        <span
-                          className="text-sm"
-                          style={{ color: COLORS.TEXT_PRIMARY }}
-                        >
-                          {selectedFile.file.name}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedFile(null)}
-                        className="p-1 rounded transition-colors"
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor =
-                            COLORS.BACKGROUND_CARD_HOVER;
-                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )}
                   <RichMessageInput
                     value={messageText}
                     onChange={setMessageText}
@@ -1369,6 +1317,8 @@ function MessagesPage({}: MessagesPageProps) {
                     placeholder="Type a message..."
                     disabled={false}
                     isPending={sendMessageMutation.isPending}
+                    selectedFile={selectedFile}
+                    onRemoveFile={() => setSelectedFile(null)}
                   />
                 </div>
               </>

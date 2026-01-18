@@ -634,6 +634,8 @@ export default function MobileClientMessagesPage() {
                 placeholder="Type a message..."
                 disabled={false}
                 isPending={sendMessageMutation.isPending}
+                selectedFile={selectedFile}
+                onRemoveFile={() => setSelectedFile(null)}
               />
             </div>
           </div>
