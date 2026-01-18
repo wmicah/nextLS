@@ -65,11 +65,14 @@ export default function RichMessageInput({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (value.trim()) {
+      if (value.trim() || selectedFile) {
         onSend();
       }
     }
   };
+
+  // Enable send button if there's either text or a file
+  const canSend = value.trim() || selectedFile;
 
   const formatText = (format: "bold" | "italic" | "underline" | "list") => {
     const textarea = textareaRef.current;
@@ -122,30 +125,128 @@ export default function RichMessageInput({
       {/* Selected File Preview */}
       {selectedFile && (
         <div
-          className="mb-3 p-3 rounded-lg border"
+          className="mb-3 rounded-lg border overflow-hidden"
           style={{
             backgroundColor: COLORS.BACKGROUND_CARD,
             borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {selectedFile.uploadData.attachmentType.startsWith("image/") ? (
-                <img
-                  src={selectedFile.uploadData.attachmentUrl}
-                  alt="Preview"
-                  className="w-12 h-12 rounded-lg object-cover"
-                />
-              ) : selectedFile.uploadData.attachmentType.startsWith(
-                  "video/"
-                ) ? (
-                <video
-                  src={selectedFile.uploadData.attachmentUrl}
-                  className="w-12 h-12 rounded-lg object-cover"
-                  controls={false}
-                  muted
-                />
-              ) : (
+          {selectedFile.uploadData.attachmentType.startsWith("image/") ? (
+            <div className="relative">
+              <img
+                src={selectedFile.uploadData.attachmentUrl}
+                alt="Preview"
+                className="w-full max-h-64 object-contain bg-black/10"
+              />
+              <div className="absolute top-2 right-2">
+                {onRemoveFile && (
+                  <button
+                    type="button"
+                    onClick={onRemoveFile}
+                    className="p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
+                    style={{
+                      backgroundColor: "rgba(0, 0, 0, 0.5)",
+                      color: "#ffffff",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.8)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+                    }}
+                    title="Remove file"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <div className="p-3 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+                <div 
+                  className="text-sm font-medium truncate"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  {selectedFile.uploadData.attachmentName}
+                </div>
+                <div 
+                  className="text-xs mt-1"
+                  style={{ color: COLORS.TEXT_MUTED }}
+                >
+                  Ready to send
+                </div>
+              </div>
+            </div>
+          ) : selectedFile.uploadData.attachmentType.startsWith("video/") ? (
+            <div className="relative">
+              <video
+                src={selectedFile.uploadData.attachmentUrl}
+                className="w-full max-h-64 object-contain bg-black/10"
+                controls={true}
+                muted
+              />
+              <div className="absolute top-2 right-2">
+                {onRemoveFile && (
+                  <button
+                    type="button"
+                    onClick={onRemoveFile}
+                    className="p-2 rounded-full transition-all duration-200 backdrop-blur-sm"
+                    style={{
+                      backgroundColor: "rgba(0, 0, 0, 0.5)",
+                      color: "#ffffff",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.8)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+                    }}
+                    title="Remove file"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <div className="p-3 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+                <div 
+                  className="text-sm font-medium truncate"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  {selectedFile.uploadData.attachmentName}
+                </div>
+                <div 
+                  className="text-xs mt-1"
+                  style={{ color: COLORS.TEXT_MUTED }}
+                >
+                  Ready to send
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-3">
+              <div className="flex items-center gap-3">
                 <div 
                   className="w-12 h-12 rounded-lg flex items-center justify-center"
                   style={{ 
@@ -157,56 +258,56 @@ export default function RichMessageInput({
                     style={{ color: COLORS.TEXT_SECONDARY }}
                   />
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div 
-                  className="text-sm font-medium truncate"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  {selectedFile.uploadData.attachmentName}
-                </div>
-                <div 
-                  className="text-xs"
-                  style={{ color: COLORS.TEXT_MUTED }}
-                >
-                  {selectedFile.uploadData.attachmentType} • Ready to send
+                <div className="flex-1 min-w-0">
+                  <div 
+                    className="text-sm font-medium truncate"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    {selectedFile.uploadData.attachmentName}
+                  </div>
+                  <div 
+                    className="text-xs"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  >
+                    {selectedFile.uploadData.attachmentType} • Ready to send
+                  </div>
                 </div>
               </div>
-            </div>
-            {onRemoveFile && (
-              <button
-                type="button"
-                onClick={onRemoveFile}
-                className="p-1 rounded-lg transition-all duration-200"
-                style={{
-                  color: COLORS.TEXT_MUTED,
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
-                  e.currentTarget.style.color = COLORS.RED_ALERT;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.color = COLORS.TEXT_MUTED;
-                }}
-                title="Remove file"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              {onRemoveFile && (
+                <button
+                  type="button"
+                  onClick={onRemoveFile}
+                  className="p-1 rounded-lg transition-all duration-200"
+                  style={{
+                    color: COLORS.TEXT_MUTED,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
+                    e.currentTarget.style.color = COLORS.RED_ALERT;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                  }}
+                  title="Remove file"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            )}
-          </div>
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -355,20 +456,20 @@ export default function RichMessageInput({
         <button
           type="button"
           onClick={onSend}
-          disabled={!value.trim() || disabled || isPending}
+          disabled={!canSend || disabled || isPending}
           className="p-2 rounded-lg transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center"
           style={{
-            backgroundColor: value.trim() ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_MUTED,
-            color: value.trim() ? "#000000" : COLORS.TEXT_SECONDARY,
+            backgroundColor: canSend ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_MUTED,
+            color: canSend ? "#000000" : COLORS.TEXT_SECONDARY,
           }}
           onMouseEnter={e => {
-            if (value.trim() && !disabled && !isPending) {
+            if (canSend && !disabled && !isPending) {
               e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
               e.currentTarget.style.transform = "scale(1.1)";
             }
           }}
           onMouseLeave={e => {
-            if (value.trim() && !disabled && !isPending) {
+            if (canSend && !disabled && !isPending) {
               e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
               e.currentTarget.style.transform = "scale(1)";
             }

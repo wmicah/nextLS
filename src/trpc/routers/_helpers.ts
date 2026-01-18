@@ -3,7 +3,6 @@
  */
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
-import { emailService } from "@/lib/email-service";
 
 /**
  * Helper function to ensure user.id is not null

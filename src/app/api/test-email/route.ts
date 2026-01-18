@@ -2,7 +2,6 @@
 // Test your email service configuration
 
 import { NextRequest, NextResponse } from "next/server";
-import { emailService } from "@/lib/email-service";
 import { CompleteEmailService } from "@/lib/complete-email-service";
 
 export async function POST(request: NextRequest) {
@@ -19,6 +18,8 @@ export async function POST(request: NextRequest) {
     let result = false;
     let message = "";
 
+    const emailService = CompleteEmailService.getInstance();
+
     switch (testType) {
       case "welcome":
         result = await emailService.sendWelcomeEmail(
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case "coach-notification":
-        result = await emailService.sendCoachNotification(
+        result = await emailService.sendNewClientRequest(
           email,
           coachName || "Test Coach",
           name || "Test Client",
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case "program-assignment":
-        result = await emailService.sendProgramAssignment(
+        result = await emailService.sendProgramAssigned(
           email,
           name || "Test Client",
           coachName || "Test Coach",
@@ -70,7 +71,6 @@ export async function POST(request: NextRequest) {
 
       case "lesson-scheduled":
         {
-          const completeEmailService = CompleteEmailService.getInstance();
           // Create a test date for tomorrow at 7:00 PM in the user's timezone
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
             hour12: true,
           });
 
-          result = await completeEmailService.sendLessonScheduled(
+          result = await emailService.sendLessonScheduled(
             email,
             name || "Test Client",
             coachName || "Test Coach",

@@ -229,39 +229,22 @@ Looking forward to seeing you!
 
 - Coach ${lesson.coach.name}`;
 
-        // Send actual email reminder
-        if (process.env.RESEND_API_KEY) {
+        // Send actual email reminder using the email service
+        if (lesson.client?.user?.email && lesson.client?.user?.id) {
           try {
-            const { Resend } = await import("resend");
-            const resend = new Resend(process.env.RESEND_API_KEY);
-
-            await resend.emails.send({
-              from: "Coach Platform <onboarding@resend.dev>",
-              to: [lesson.client?.user?.email || ""],
-              subject: `🔔 Lesson Reminder - Tomorrow at ${lessonTime}`,
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                  <div style="background: linear-gradient(135deg, #4A5A70 0%, #606364 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                    <h1>🏆 Lesson Reminder</h1>
-                  </div>
-                  <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-                    <p>Hi ${lesson.client?.name || "there"}!</p>
-                    <p>This is a friendly reminder that you have a lesson scheduled for <strong>tomorrow</strong> (${lessonDate}) at <strong>${lessonTime}</strong>.</p>
-                    <p>Please make sure to:</p>
-                    <ul>
-                      <li>Arrive 5-10 minutes early</li>
-                      <li>Bring any equipment you need</li>
-                      <li>Let me know if you need to reschedule</li>
-                    </ul>
-                    <p>Looking forward to seeing you!</p>
-                    <p>- Coach ${lesson.coach.name}</p>
-                  </div>
-                </div>
-              `,
-            });
-
+            const { CompleteEmailService } = await import("@/lib/complete-email-service");
+            const emailService = CompleteEmailService.getInstance();
+            
+            await emailService.sendLessonReminder(
+              lesson.client.user.email,
+              lesson.client.name || "Client",
+              lesson.coach.name || "Coach",
+              lessonDate,
+              lessonTime,
+              lesson.client.user.id
+            );
           } catch (emailError) {
-
+            console.error("Failed to send lesson reminder email:", emailError);
           }
         }
 

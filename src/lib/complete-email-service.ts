@@ -5,18 +5,62 @@ import { Resend } from "resend";
 import { completeEmailTemplates } from "./complete-email-templates";
 import { db } from "@/db";
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export class CompleteEmailService {
   private static instance: CompleteEmailService;
   private fromEmail = "NextLevel Coaching <noreply@nxlvlcoach.com>";
+  private resendInstance: Resend | null = null;
 
   // Rate limiting for message notifications (24 hours)
   private messageNotificationCooldown = new Map<string, number>();
   private readonly MESSAGE_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
   private constructor() {}
+
+  // Lazy initialization of Resend - only when needed and API key is available
+  private getResend(): Resend | null {
+    if (!process.env.RESEND_API_KEY) {
+      console.error("❌ RESEND_API_KEY not configured - cannot send emails");
+      return null;
+    }
+
+    if (!this.resendInstance) {
+      this.resendInstance = new Resend(process.env.RESEND_API_KEY);
+    }
+
+    return this.resendInstance;
+  }
+
+  // Helper method to safely send emails with error handling
+  private async sendEmail(
+    to: string | string[],
+    subject: string,
+    html: string,
+    from?: string
+  ): Promise<{ success: boolean; error?: any }> {
+    const resend = this.getResend();
+    if (!resend) {
+      return { success: false, error: "RESEND_API_KEY not configured" };
+    }
+
+    try {
+      const result = await resend.emails.send({
+        from: from || this.fromEmail,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html,
+      });
+
+      if (result.error) {
+        console.error("❌ Resend API error:", result.error);
+        return { success: false, error: result.error };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Failed to send email:", error);
+      return { success: false, error };
+    }
+  }
 
   public static getInstance(): CompleteEmailService {
     if (!CompleteEmailService.instance) {
@@ -65,6 +109,11 @@ export class CompleteEmailService {
         }
       }
 
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.welcomeClient(
         clientName,
         coachName
@@ -77,7 +126,12 @@ export class CompleteEmailService {
         html: template.html,
       });
 
-      console.log("Welcome email sent:", result);
+      if (result.error) {
+        console.error("❌ Failed to send welcome email:", result.error);
+        return false;
+      }
+
+      console.log("✅ Welcome email sent successfully:", result.data?.id);
       return true;
     } catch (error) {
       console.error("Failed to send welcome email:", error);
@@ -107,6 +161,11 @@ export class CompleteEmailService {
         }
       }
 
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.newClientRequest(
         coachName,
         clientName,
@@ -120,7 +179,12 @@ export class CompleteEmailService {
         html: template.html,
       });
 
-      console.log("New client request email sent:", result);
+      if (result.error) {
+        console.error("❌ Failed to send new client request email:", result.error);
+        return false;
+      }
+
+      console.log("✅ New client request email sent successfully:", result.data?.id);
       return true;
     } catch (error) {
       console.error("Failed to send new client request email:", error);
@@ -158,6 +222,11 @@ export class CompleteEmailService {
           );
           return false;
         }
+      }
+
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
       }
 
       const template = completeEmailTemplates.scheduleExchangeRequest(
@@ -218,6 +287,11 @@ export class CompleteEmailService {
         }
       }
 
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.lessonReminder(
         clientName,
         coachName,
@@ -273,6 +347,11 @@ export class CompleteEmailService {
         }
       }
 
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.lessonScheduled(
         clientName,
         coachName,
@@ -308,6 +387,11 @@ export class CompleteEmailService {
     programName: string
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.programAssigned(
         clientName,
         coachName,
@@ -336,6 +420,11 @@ export class CompleteEmailService {
     workoutName: string
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.workoutAssigned(
         clientName,
         coachName,
@@ -368,6 +457,11 @@ export class CompleteEmailService {
       // Check if RESEND_API_KEY is configured
       if (!process.env.RESEND_API_KEY) {
         console.error("❌ RESEND_API_KEY not configured - cannot send daily workout reminder email");
+        return false;
+      }
+
+      const resend = this.getResend();
+      if (!resend) {
         return false;
       }
 
@@ -442,6 +536,11 @@ export class CompleteEmailService {
         return false; // Skip sending due to rate limiting
       }
 
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.newMessage(
         clientName,
         coachName,
@@ -479,6 +578,11 @@ export class CompleteEmailService {
     videoTitle: string
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.videoFeedback(
         clientName,
         coachName,
@@ -507,6 +611,11 @@ export class CompleteEmailService {
     videoTitle: string
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.videoAssigned(
         clientName,
         coachName,
@@ -536,6 +645,11 @@ export class CompleteEmailService {
     inviterName: string
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.organizationInvite(
         coachName,
         organizationName,
@@ -564,6 +678,11 @@ export class CompleteEmailService {
     reason: string
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.accountSuspended(
         userName,
         reason
@@ -592,6 +711,11 @@ export class CompleteEmailService {
     dueDate: string
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.paymentReminder(
         userName,
         amount,
@@ -621,6 +745,11 @@ export class CompleteEmailService {
     from?: string
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const result = await resend.emails.send({
         from: from || this.fromEmail,
         to: Array.isArray(to) ? to : [to],
@@ -643,6 +772,11 @@ export class CompleteEmailService {
   ): Promise<{ success: number; failed: number }> {
     let success = 0;
     let failed = 0;
+
+    const resend = this.getResend();
+    if (!resend) {
+      return { success: 0, failed: recipients.length };
+    }
 
     for (const recipient of recipients) {
       try {
@@ -671,6 +805,11 @@ export class CompleteEmailService {
   // Test email configuration
   async testEmailConfiguration(): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const result = await resend.emails.send({
         from: this.fromEmail,
         to: [process.env.ADMIN_EMAIL || "admin@nxlvlcoach.com"],
@@ -742,6 +881,11 @@ export class CompleteEmailService {
         }
       }
 
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.lessonConfirmationReminder(
         clientName,
         coachName,
@@ -801,6 +945,11 @@ export class CompleteEmailService {
         }
       }
 
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.lessonAutoCancelled(
         clientName,
         coachName,
@@ -834,6 +983,11 @@ export class CompleteEmailService {
     unreadCount: number
   ): Promise<boolean> {
     try {
+      const resend = this.getResend();
+      if (!resend) {
+        return false;
+      }
+
       const template = completeEmailTemplates.dailyDigest(
         userName,
         unreadCount
@@ -873,6 +1027,11 @@ export class CompleteEmailService {
         },
       });
 
+
+      const resend = this.getResend();
+      if (!resend) {
+        return { success: 0, failed: 0 };
+      }
 
       let success = 0;
       let failed = 0;

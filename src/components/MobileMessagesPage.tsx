@@ -1257,6 +1257,8 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                 placeholder="Type a message..."
                 disabled={false}
                 isPending={sendMessageMutation.isPending}
+                selectedFile={selectedFile}
+                onRemoveFile={() => setSelectedFile(null)}
               />
             </div>
           </div>
