@@ -21,6 +21,7 @@ export interface ClientForSorting {
     program: {
       id: string;
       title: string;
+      status?: string; // DRAFT, ACTIVE, ARCHIVED - only ACTIVE should be counted
       duration: number;
       weeks?: Array<{
         id: string;
@@ -151,10 +152,35 @@ export function getClientDueTimestamp(
         duration: assignment.program.duration,
       };
 
-      // Skip temporary programs (identified by [TEMP] prefix in title)
-      // Temp programs are single-day replacements and shouldn't affect sorting
+      // Handle temporary programs (identified by [TEMP] prefix in title)
+      // Temp programs are single-day replacements - their end date IS their start date
       if (assignment.program.title.startsWith("[TEMP]")) {
-        assignmentInfo.reason = "Skipped: temporary program (single-day replacement)";
+        // Must have a startDate
+        if (!assignment.startDate) {
+          assignmentInfo.reason = "Skipped: temp program with no startDate";
+          debugInfo.programAssignments.push(assignmentInfo);
+          continue;
+        }
+
+        const tempStartDate = new Date(assignment.startDate);
+        const tempStartDateNormalized = getStartOfDay(tempStartDate);
+        
+        // Validate the date
+        if (isNaN(tempStartDateNormalized.getTime())) {
+          assignmentInfo.reason = `Skipped: temp program with invalid startDate (${assignment.startDate})`;
+          debugInfo.programAssignments.push(assignmentInfo);
+          continue;
+        }
+
+        // Only include if the temp program date is today or in the future
+        if (isTodayOrFuture(tempStartDateNormalized, today)) {
+          programEndDates.push(tempStartDateNormalized);
+          assignmentInfo.endDate = tempStartDateNormalized.toISOString().split("T")[0];
+          assignmentInfo.included = true;
+          assignmentInfo.reason = "Included: temp program (single-day, uses startDate as endDate)";
+        } else {
+          assignmentInfo.reason = `Skipped: temp program date (${tempStartDateNormalized.toISOString().split("T")[0]}) is in the past`;
+        }
         debugInfo.programAssignments.push(assignmentInfo);
         continue;
       }
@@ -162,6 +188,14 @@ export function getClientDueTimestamp(
       // Skip completed assignments (check both completed flag and completedAt)
       if (assignment.completed || assignment.completedAt) {
         assignmentInfo.reason = "Skipped: completed";
+        debugInfo.programAssignments.push(assignmentInfo);
+        continue;
+      }
+
+      // Skip programs that are not ACTIVE (DRAFT or ARCHIVED should not count)
+      // Only active programs represent real work for the client
+      if (assignment.program.status && assignment.program.status !== "ACTIVE") {
+        assignmentInfo.reason = `Skipped: program status is ${assignment.program.status} (not ACTIVE)`;
         debugInfo.programAssignments.push(assignmentInfo);
         continue;
       }
@@ -317,35 +351,22 @@ export function getClientDueTimestamp(
     }
   }
 
-  // PRIORITY: Clients with NO PROGRAMS should always sort first (most urgent - need program assignment)
-  // Even if they have routines, no programs = -Infinity (highest priority)
-  if (programEndDates.length === 0) {
-    debugInfo.result = "-Infinity (no active programs - needs program assignment)";
-    if (enableDebug) {
-      devLog("getClientDueTimestamp:", {
-        ...debugInfo,
-        resultTimestamp: -Infinity,
-        result: "-Infinity (no active programs - needs program assignment)",
-        note: "Client has routines but no programs - prioritizing program assignment need",
-      });
-    }
-    return -Infinity;
+  // Calculate the latest program end time (if any programs exist)
+  let latestProgramEndTime: number | null = null;
+  if (programEndDates.length > 0) {
+    const programEndDateTimes = programEndDates.map((d) => {
+      const time = d.getTime();
+      if (isNaN(time)) {
+        throw new Error(`Invalid program end date timestamp for client ${client.name}`);
+      }
+      return time;
+    });
+    latestProgramEndTime = Math.max(...programEndDateTimes);
+    debugInfo.allProgramEndDates = programEndDates.map((d) => d.toISOString().split("T")[0]);
   }
 
-  // For programs, use the LATEST end date (when all programs are done)
-  // This is the date of the last program day - what we sort by
-  const programEndDateTimes = programEndDates.map((d) => {
-    const time = d.getTime();
-    if (isNaN(time)) {
-      throw new Error(`Invalid program end date timestamp for client ${client.name}`);
-    }
-    return time;
-  });
-  const latestProgramEndTime = Math.max(...programEndDateTimes);
-  debugInfo.allProgramEndDates = programEndDates.map((d) => d.toISOString().split("T")[0]);
-
   // Process all active, non-completed routine assignments
-  // Only consider routines if client already has programs (routines are secondary)
+  // Routines are considered alongside programs for due date sorting
   const routineStartDates: Date[] = [];
   if (client.routineAssignments && client.routineAssignments.length > 0) {
     for (const assignment of client.routineAssignments) {
@@ -393,10 +414,57 @@ export function getClientDueTimestamp(
     }
   }
 
-  // For "Program Due Date" sorting, we use ONLY the latest program end date
-  // Routines are not considered for this sort - we only care about when programs end
-  // The latest program end date is the date of the last program day
-  const finalDueTime = latestProgramEndTime;
+  // For "Due Date" sorting (coach's perspective):
+  // This represents when the client will RUN OUT of assigned work.
+  // - Programs: use the LATEST end date (when all programs are done)
+  // - Routines: use the LATEST start date (when the last routine is due)
+  // Final due date = MAXIMUM of all dates (the furthest-out assignment)
+  // Coaches need to see clients sorted by who runs out of work soonest.
+  
+  // Calculate latest routine start time (if any routines exist)
+  let latestRoutineStartTime: number | null = null;
+  if (routineStartDates.length > 0) {
+    const routineStartDateTimes = routineStartDates.map((d) => {
+      const time = d.getTime();
+      if (isNaN(time)) {
+        throw new Error(`Invalid routine start date timestamp for client ${client.name}`);
+      }
+      return time;
+    });
+    latestRoutineStartTime = Math.max(...routineStartDateTimes);
+    debugInfo.allRoutineStartDates = routineStartDates.map((d) => d.toISOString().split("T")[0]);
+  }
+  
+  // Determine the final due time based on what's available
+  // Use the LATEST/MAXIMUM date - this is when the client runs out of work
+  let finalDueTime: number;
+  let finalDueSource: string;
+  
+  if (latestProgramEndTime !== null && latestRoutineStartTime !== null) {
+    // Both programs and routines exist - use the LATEST date (furthest out)
+    if (latestRoutineStartTime > latestProgramEndTime) {
+      finalDueTime = latestRoutineStartTime;
+      finalDueSource = "routine";
+    } else {
+      finalDueTime = latestProgramEndTime;
+      finalDueSource = "program";
+    }
+  } else if (latestProgramEndTime !== null) {
+    // Only programs exist
+    finalDueTime = latestProgramEndTime;
+    finalDueSource = "program";
+  } else if (latestRoutineStartTime !== null) {
+    // Only routines exist
+    finalDueTime = latestRoutineStartTime;
+    finalDueSource = "routine";
+  } else {
+    // No programs or routines - client needs assignment (highest priority)
+    debugInfo.result = "-Infinity (no active programs or routines - needs assignment)";
+    // Always log when returning -Infinity to debug sorting issues
+    const skippedReasons = debugInfo.programAssignments.map(p => `${p.programTitle}: ${p.reason || 'no reason'}`);
+    console.log(`[DUE DATE] ${client.name}: -Infinity (no active assignments) | Programs: ${client.programAssignments?.length || 0} | Routines: ${client.routineAssignments?.length || 0} | SKIP REASONS: ${skippedReasons.join(' | ') || 'none'}`);
+    return -Infinity;
+  }
   
   // Final validation - ensure we never return NaN
   if (isNaN(finalDueTime)) {
@@ -409,6 +477,9 @@ export function getClientDueTimestamp(
   debugInfo.result = new Date(finalDueTime).toISOString().split("T")[0];
   debugInfo.resultTime = finalDueTime;
 
+  // Log due date calculation for debugging
+  console.log(`[DUE DATE] ${client.name}: ${debugInfo.result} (${finalDueSource})`);
+
   if (enableDebug) {
     const totalReplacedDays = debugInfo.programAssignments.reduce(
       (sum, pa) => sum + (pa.replacedDaysCount || 0),
@@ -418,15 +489,24 @@ export function getClientDueTimestamp(
       clientName: debugInfo.clientName,
       allProgramEndDates: debugInfo.allProgramEndDates || [],
       allRoutineStartDates: debugInfo.allRoutineStartDates || [],
-      latestProgramEndDate: debugInfo.result,
-      latestProgramEndTimestamp: finalDueTime,
+      latestProgramEndDate: latestProgramEndTime !== null 
+        ? new Date(latestProgramEndTime).toISOString().split("T")[0] 
+        : "none",
+      latestProgramEndTimestamp: latestProgramEndTime,
+      latestRoutineDate: latestRoutineStartTime !== null
+        ? new Date(latestRoutineStartTime).toISOString().split("T")[0]
+        : "none",
+      latestRoutineTimestamp: latestRoutineStartTime,
+      finalDueDate: debugInfo.result,
+      finalDueTimestamp: finalDueTime,
+      dueSource: finalDueSource,
       programCount: debugInfo.programAssignments.length,
       routineCount: debugInfo.routineAssignments?.length || 0,
       includedProgramCount: programEndDates.length,
       includedRoutineCount: routineStartDates.length,
       totalReplacedDays,
       isValid: !isNaN(finalDueTime),
-      note: "Using latest program end date for sorting (routines not considered)",
+      note: `Using ${finalDueSource === "routine" ? "latest routine" : "latest program end"} date - client runs out of work on this date`,
     });
   }
 
@@ -436,7 +516,7 @@ export function getClientDueTimestamp(
 /**
  * Compare two clients for sorting by program due date
  * Uses numeric timestamps for reliable comparison
- * Clients with no active programs (Infinity) sort to the bottom
+ * Clients with no active programs (-Infinity) sort to the TOP (most urgent - need assignment)
  * 
  * @param a - First client
  * @param b - Second client
@@ -450,11 +530,35 @@ export function compareClientsByProgramDueDate(
   sortOrder: "asc" | "desc" = "asc",
   enableDebug: boolean = process.env.NODE_ENV === "development"
 ): number {
-  // Get numeric timestamps (Infinity for no due date)
-  const aTimestamp = getClientDueTimestamp(a, enableDebug);
-  const bTimestamp = getClientDueTimestamp(b, enableDebug);
+  // Get numeric timestamps (-Infinity for no due date = needs assignment)
+  const aTimestamp = getClientDueTimestamp(a, false); // Disable inner debug to reduce noise
+  const bTimestamp = getClientDueTimestamp(b, false);
 
-  // Validate timestamps - should never be NaN
+  // Handle -Infinity explicitly (clients with no assignments should come FIRST)
+  const aNoAssignments = aTimestamp === -Infinity;
+  const bNoAssignments = bTimestamp === -Infinity;
+
+  // Debug: Log sorting decisions for clients with no assignments
+  if (aNoAssignments || bNoAssignments) {
+    let result: number;
+    let resultReason: string;
+    
+    if (aNoAssignments && bNoAssignments) {
+      result = a.name.localeCompare(b.name);
+      resultReason = `both no assignments, sort by name`;
+    } else if (aNoAssignments) {
+      result = -1;
+      resultReason = `${a.name} has NO assignments, comes FIRST`;
+    } else {
+      result = 1;
+      resultReason = `${b.name} has NO assignments, comes FIRST`;
+    }
+    
+    console.log(`[SORT] ${a.name} vs ${b.name} → ${result} (${resultReason})`);
+    return result;
+  }
+
+  // Validate timestamps - should never be NaN at this point
   if (isNaN(aTimestamp) || isNaN(bTimestamp)) {
     if (enableDebug) {
       devLog("ERROR: NaN timestamp detected in comparison:", {
@@ -464,22 +568,25 @@ export function compareClientsByProgramDueDate(
         bTimestamp,
       });
     }
-    // Fallback: treat NaN as -Infinity (needs assignment - most urgent)
-    const aSafe = isNaN(aTimestamp) ? -Infinity : aTimestamp;
-    const bSafe = isNaN(bTimestamp) ? -Infinity : bTimestamp;
-    return sortOrder === "asc" ? aSafe - bSafe : bSafe - aSafe;
+    // Fallback: treat NaN as highest priority
+    if (isNaN(aTimestamp)) return -1;
+    if (isNaN(bTimestamp)) return 1;
+    return 0;
   }
 
-  // Calculate difference
+  // Both have valid timestamps - compare normally
   // For "asc": smaller timestamp (earlier date) comes first
   // For "desc": larger timestamp (later date) comes first
-  const diff = sortOrder === "asc" ? aTimestamp - bTimestamp : bTimestamp - aTimestamp;
-
-  // Format dates for logging (-Infinity shows as "no due date")
-  const aDateStr = aTimestamp === -Infinity ? "no due date (-Infinity - needs assignment)" : aTimestamp === Infinity ? "no due date (Infinity)" : new Date(aTimestamp).toISOString().split("T")[0];
-  const bDateStr = bTimestamp === -Infinity ? "no due date (-Infinity - needs assignment)" : bTimestamp === Infinity ? "no due date (Infinity)" : new Date(bTimestamp).toISOString().split("T")[0];
+  let diff: number;
+  if (sortOrder === "asc") {
+    diff = aTimestamp - bTimestamp;
+  } else {
+    diff = bTimestamp - aTimestamp;
+  }
 
   if (enableDebug) {
+    const aDateStr = new Date(aTimestamp).toISOString().split("T")[0];
+    const bDateStr = new Date(bTimestamp).toISOString().split("T")[0];
     devLog("compareClientsByProgramDueDate:", {
       clientA: a.name,
       clientB: b.name,
@@ -490,13 +597,12 @@ export function compareClientsByProgramDueDate(
       sortOrder,
       diff,
       result: diff < 0 ? `${a.name} first` : diff > 0 ? `${b.name} first` : "equal",
-      aIsNegativeInfinity: aTimestamp === -Infinity,
-      bIsNegativeInfinity: bTimestamp === -Infinity,
-      aIsInfinity: aTimestamp === Infinity,
-      bIsInfinity: bTimestamp === Infinity,
     });
   }
-
-  return diff;
+  
+  // Return proper comparison values (-1, 0, 1)
+  if (diff < 0) return -1;
+  if (diff > 0) return 1;
+  return 0;
 }
 

@@ -1039,6 +1039,16 @@ export default function MobileClientsPage() {
     }
   );
 
+  // Debug: Log final sorted order when sorting by dueDate
+  if (process.env.NODE_ENV === "development" && sortBy === "dueDate") {
+    console.log("[FINAL SORT ORDER]", filteredAndSortedClients.slice(0, 15).map((c, i) => ({
+      position: i + 1,
+      name: c.name,
+      programCount: c.programAssignments?.filter(p => !p.completed && !p.completedAt).length || 0,
+      routineCount: c.routineAssignments?.filter(r => !r.completedAt).length || 0,
+    })));
+  }
+
   // Calculate stats
   const totalClients = clients.length;
   const activeClients = activeClientsData.length;

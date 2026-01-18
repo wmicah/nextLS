@@ -273,6 +273,45 @@ export const programsRouter = router({
         });
       }
 
+      // Validate that all referenced routineIds exist in the database
+      // This prevents foreign key constraint errors when creating drills with routine references
+      const allRoutineIds = new Set<string>();
+      for (const week of cleanedData.weeks) {
+        for (const day of week.days) {
+          for (const drill of day.drills) {
+            if (drill.routineId && drill.routineId.trim() !== "") {
+              allRoutineIds.add(drill.routineId);
+            }
+          }
+        }
+      }
+
+      if (allRoutineIds.size > 0) {
+        const existingRoutines = await db.routine.findMany({
+          where: {
+            id: { in: Array.from(allRoutineIds) },
+          },
+          select: { id: true, name: true },
+        });
+
+        const existingRoutineIds = new Set(existingRoutines.map(r => r.id));
+        const missingRoutineIds = Array.from(allRoutineIds).filter(
+          id => !existingRoutineIds.has(id)
+        );
+
+        if (missingRoutineIds.length > 0) {
+          console.error("[PROGRAM CREATE] Missing routine IDs:", missingRoutineIds);
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Program references routines that don't exist. This can happen if a routine was recently deleted. Please remove the routine(s) from the program and try again. Missing routine IDs: ${missingRoutineIds.join(", ")}`,
+          });
+        }
+
+        console.log("[PROGRAM CREATE] Validated routine IDs:", 
+          existingRoutines.map(r => ({ id: r.id, name: r.name }))
+        );
+      }
+
       try {
         // Create the program with all its structure
         const program = await db.program.create({
@@ -352,9 +391,13 @@ export const programsRouter = router({
 
         return program;
       } catch (error) {
+        console.error("[PROGRAM CREATE] Error creating program:", error);
+        
         // Provide more specific error messages
         if (error instanceof Error) {
-          if (error.message.includes("timeout")) {
+          const errorMessage = error.message.toLowerCase();
+          
+          if (errorMessage.includes("timeout")) {
             throw new TRPCError({
               code: "TIMEOUT",
               message:
@@ -362,20 +405,39 @@ export const programsRouter = router({
             });
           }
           if (
-            error.message.includes("too large") ||
-            error.message.includes("size")
+            errorMessage.includes("too large") ||
+            errorMessage.includes("size")
           ) {
             throw new TRPCError({
               code: "PAYLOAD_TOO_LARGE",
               message: "Program data is too large. Please reduce complexity.",
             });
           }
+          // Check for foreign key constraint errors (routine not found)
+          if (
+            errorMessage.includes("foreign key constraint") ||
+            errorMessage.includes("fk_") ||
+            errorMessage.includes("routine") ||
+            errorMessage.includes("p2003") // Prisma foreign key error code
+          ) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "One or more routines referenced in this program no longer exist. Please remove the invalid routine(s) and try again.",
+            });
+          }
+          // Log the actual error for debugging
+          console.error("[PROGRAM CREATE] Unhandled error type:", {
+            name: error.name,
+            message: error.message,
+            stack: error.stack?.substring(0, 500),
+          });
         }
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message:
-            "Failed to create program. Please try again with simpler data.",
+            "Failed to create program. Please try again or contact support if the issue persists.",
         });
       }
     }),
