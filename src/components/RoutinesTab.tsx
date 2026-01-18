@@ -37,7 +37,8 @@ import { COLORS } from "@/lib/colors";
 interface RoutineExercise {
   id: string;
   title: string;
-  type: "exercise" | "drill" | "video" | "routine";
+  type: "exercise" | "drill" | "video" | "routine" | "superset";
+  description?: string;
   notes?: string;
   sets?: number;
   reps?: number;
@@ -48,6 +49,11 @@ interface RoutineExercise {
   videoTitle?: string;
   videoThumbnail?: string;
   routineId?: string;
+  supersetId?: string;
+  supersetOrder?: number;
+  supersetDescription?: string;
+  supersetInstructions?: string;
+  supersetNotes?: string;
 }
 
 interface Routine {

@@ -255,10 +255,30 @@ export const programsRouter = router({
       // Validate and clean the data
       const validation = validateAndCleanProgramData(input);
       if (!validation.success) {
+        console.error("[PROGRAM CREATE] Validation failed:", {
+          errors: validation.errors,
+          inputTitle: input.title,
+          weeksCount: input.weeks?.length,
+          // Log drill info for debugging
+          drillsInfo: input.weeks?.flatMap((week: any, weekIdx: number) => 
+            week.days?.flatMap((day: any, dayIdx: number) => 
+              day.drills?.map((drill: any, drillIdx: number) => ({
+                week: weekIdx + 1,
+                day: dayIdx + 1,
+                drill: drillIdx + 1,
+                title: drill.title,
+                type: drill.type,
+                routineId: drill.routineId,
+                supersetId: drill.supersetId,
+                hasVideo: !!drill.videoUrl || !!drill.videoId,
+              }))
+            )
+          ),
+        });
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Validation failed: ${
-            validation.errors?.map(e => e.message).join(", ") ||
+            validation.errors?.map(e => `${e.path}: ${e.message}`).join(", ") ||
             "Unknown validation error"
           }`,
         });
@@ -276,23 +296,37 @@ export const programsRouter = router({
       // Validate that all referenced routineIds exist in the database
       // This prevents foreign key constraint errors when creating drills with routine references
       const allRoutineIds = new Set<string>();
+      const drillsWithRoutines: { title: string; routineId: string; type: string | undefined }[] = [];
       for (const week of cleanedData.weeks) {
         for (const day of week.days) {
           for (const drill of day.drills) {
             if (drill.routineId && drill.routineId.trim() !== "") {
               allRoutineIds.add(drill.routineId);
+              drillsWithRoutines.push({
+                title: drill.title,
+                routineId: drill.routineId,
+                type: drill.type,
+              });
             }
           }
         }
       }
 
+      console.log("[PROGRAM CREATE] Drills with routine references:", drillsWithRoutines);
+
       if (allRoutineIds.size > 0) {
+        console.log("[PROGRAM CREATE] Looking up routine IDs:", Array.from(allRoutineIds));
+        
         const existingRoutines = await db.routine.findMany({
           where: {
             id: { in: Array.from(allRoutineIds) },
           },
-          select: { id: true, name: true },
+          select: { id: true, name: true, coachId: true },
         });
+
+        console.log("[PROGRAM CREATE] Found routines in database:", 
+          existingRoutines.map(r => ({ id: r.id, name: r.name, coachId: r.coachId }))
+        );
 
         const existingRoutineIds = new Set(existingRoutines.map(r => r.id));
         const missingRoutineIds = Array.from(allRoutineIds).filter(
