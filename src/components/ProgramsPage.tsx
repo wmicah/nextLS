@@ -1681,6 +1681,18 @@ function ProgramCard({
                   >
                     View Details
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={onDuplicate}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    Duplicate
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
                   <DropdownMenuItem
                     onClick={onDelete}
@@ -1793,6 +1805,18 @@ function ProgramCard({
                 }}
               >
                 View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={onDuplicate}
+                style={{ color: COLORS.TEXT_PRIMARY }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator style={{ backgroundColor: COLORS.BORDER_SUBTLE }} />
               <DropdownMenuItem

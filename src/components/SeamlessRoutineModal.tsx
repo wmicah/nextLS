@@ -461,8 +461,8 @@ function ExerciseEditDialog({
 interface SortableExerciseItemProps {
   exercise: RoutineExercise;
   index: number;
-  onUpdate: (index: number, field: keyof RoutineExercise, value: any) => void;
-  onRemove: (index: number) => void;
+  onUpdate: (exerciseId: string, field: keyof RoutineExercise, value: any) => void;
+  onRemove: (exerciseId: string) => void;
   getExerciseColor: (type: string) => string;
   onCreateSuperset: (exerciseId: string, existingSupersetId?: string) => void;
   onRemoveSuperset: (exerciseId: string) => void;
@@ -678,7 +678,7 @@ function SortableExerciseItem({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => onRemove(index)}
+          onClick={() => onRemove(exercise.id)}
           className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 h-6 w-6 flex-shrink-0"
         >
           <Trash2 className="h-3 w-3" />
@@ -696,7 +696,7 @@ function SortableExerciseItem({
                 onChange={e => {
                   const value = parseInt(e.target.value);
                   if (value >= 0) {
-                    onUpdate(index, "sets", value || undefined);
+                    onUpdate(exercise.id, "sets", value || undefined);
                   }
                 }}
                 type="number"
@@ -711,7 +711,7 @@ function SortableExerciseItem({
                 onChange={e => {
                   const value = parseInt(e.target.value);
                   if (value >= 0) {
-                    onUpdate(index, "reps", value || undefined);
+                    onUpdate(exercise.id, "reps", value || undefined);
                   }
                 }}
                 type="number"
@@ -725,7 +725,7 @@ function SortableExerciseItem({
               </Label>
               <Input
                 value={exercise.tempo || ""}
-                onChange={e => onUpdate(index, "tempo", e.target.value)}
+                onChange={e => onUpdate(exercise.id, "tempo", e.target.value)}
                 placeholder="e.g., 30 seconds or 2-0-2"
                 className="bg-[#353A3A] border-gray-500 text-white text-sm h-8"
               />
@@ -735,7 +735,7 @@ function SortableExerciseItem({
             <Label className="text-gray-400 text-xs block mb-1">Notes</Label>
             <Textarea
               value={exercise.notes || ""}
-              onChange={e => onUpdate(index, "notes", e.target.value)}
+              onChange={e => onUpdate(exercise.id, "notes", e.target.value)}
               placeholder="Add any notes or instructions..."
               className="bg-[#353A3A] border-gray-500 text-white text-sm resize-none w-full"
               rows={2}
@@ -1435,21 +1435,21 @@ export default function SeamlessRoutineModal({
   };
 
   const updateExercise = (
-    index: number,
+    exerciseId: string,
     field: keyof RoutineExercise,
     value: any
   ) => {
     hasUserMadeChanges.current = true;
     setExercises(prev =>
-      prev.map((exercise, i) =>
-        i === index ? { ...exercise, [field]: value } : exercise
+      prev.map(exercise =>
+        exercise.id === exerciseId ? { ...exercise, [field]: value } : exercise
       )
     );
   };
 
-  const removeExercise = (index: number) => {
+  const removeExercise = (exerciseId: string) => {
     hasUserMadeChanges.current = true;
-    setExercises(prev => prev.filter((_, i) => i !== index));
+    setExercises(prev => prev.filter(ex => ex.id !== exerciseId));
   };
 
   const addEmptyExercise = () => {

@@ -341,8 +341,8 @@ function ExerciseEditDialog({
 interface SortableExerciseItemProps {
   exercise: RoutineExercise;
   index: number;
-  onUpdate: (index: number, field: keyof RoutineExercise, value: any) => void;
-  onRemove: (index: number) => void;
+  onUpdate: (exerciseId: string, field: keyof RoutineExercise, value: any) => void;
+  onRemove: (exerciseId: string) => void;
   getExerciseColor: (type: string) => string;
   onCreateSuperset: (exerciseId: string, existingSupersetId?: string) => void;
   onRemoveSuperset: (exerciseId: string) => void;
@@ -582,7 +582,7 @@ function SortableExerciseItem({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => onRemove(index)}
+          onClick={() => onRemove(exercise.id)}
           className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 h-8 w-8 min-h-[44px] min-w-[44px]"
         >
           <Trash2 className="h-4 w-4" />
@@ -1004,21 +1004,21 @@ export default function MobileSeamlessRoutineModal({
   };
 
   const updateExercise = (
-    index: number,
+    exerciseId: string,
     field: keyof RoutineExercise,
     value: any
   ) => {
     hasUserMadeChanges.current = true;
     setExercises(prev =>
-      prev.map((exercise, i) =>
-        i === index ? { ...exercise, [field]: value } : exercise
+      prev.map(exercise =>
+        exercise.id === exerciseId ? { ...exercise, [field]: value } : exercise
       )
     );
   };
 
-  const removeExercise = (index: number) => {
+  const removeExercise = (exerciseId: string) => {
     hasUserMadeChanges.current = true;
-    setExercises(prev => prev.filter((_, i) => i !== index));
+    setExercises(prev => prev.filter(ex => ex.id !== exerciseId));
   };
 
   const handleVideoSelect = (video: {
