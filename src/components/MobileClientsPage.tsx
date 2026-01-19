@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
 import { usePersistedSort } from "@/lib/hooks/usePersistedSort";
@@ -41,12 +42,14 @@ import {
   PenTool,
 } from "lucide-react";
 import { format } from "date-fns";
-import ClientProfileModal from "./ClientProfileModal";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import NotesDisplay from "./NotesDisplay";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
+
+// Lazy load heavy modal
+const ClientProfileModal = dynamic(() => import("./ClientProfileModal"), { ssr: false });
 
 interface Client {
   id: string;

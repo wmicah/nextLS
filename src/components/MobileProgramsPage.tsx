@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import {
@@ -49,23 +50,25 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Skeleton } from "./ui/skeleton";
 import { useToast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import SeamlessProgramModal from "./SeamlessProgramModal";
-import MobileSeamlessProgramModal from "./MobileSeamlessProgramModal";
-import SimpleAssignProgramModal from "./SimpleAssignProgramModal";
-import MobileSimpleAssignProgramModal from "./MobileSimpleAssignProgramModal";
-import ProgramDetailsModal from "./ProgramDetailsModal";
-import MobileProgramDetailsModal from "./MobileProgramDetailsModal";
-import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
-import MobileSeamlessRoutineModal from "@/components/MobileSeamlessRoutineModal";
-import RoutinesTab from "@/components/RoutinesTab";
-import MobileRoutinesTab from "@/components/MobileRoutinesTab";
-import VideoLibraryDialog from "@/components/VideoLibraryDialog";
-import SimpleAssignRoutineModal from "@/components/SimpleAssignRoutineModal";
-import MobileSimpleAssignRoutineModal from "@/components/MobileSimpleAssignRoutineModal";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import CategoryDropdown from "./ui/CategoryDropdown";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
+
+// Lazy load heavy modals and tabs - only loaded when needed
+const SeamlessProgramModal = dynamic(() => import("./SeamlessProgramModal"), { ssr: false });
+const MobileSeamlessProgramModal = dynamic(() => import("./MobileSeamlessProgramModal"), { ssr: false });
+const SimpleAssignProgramModal = dynamic(() => import("./SimpleAssignProgramModal"), { ssr: false });
+const MobileSimpleAssignProgramModal = dynamic(() => import("./MobileSimpleAssignProgramModal"), { ssr: false });
+const ProgramDetailsModal = dynamic(() => import("./ProgramDetailsModal"), { ssr: false });
+const MobileProgramDetailsModal = dynamic(() => import("./MobileProgramDetailsModal"), { ssr: false });
+const SeamlessRoutineModal = dynamic(() => import("@/components/SeamlessRoutineModal"), { ssr: false });
+const MobileSeamlessRoutineModal = dynamic(() => import("@/components/MobileSeamlessRoutineModal"), { ssr: false });
+const RoutinesTab = dynamic(() => import("@/components/RoutinesTab"), { ssr: false });
+const MobileRoutinesTab = dynamic(() => import("@/components/MobileRoutinesTab"), { ssr: false });
+const VideoLibraryDialog = dynamic(() => import("@/components/VideoLibraryDialog"), { ssr: false });
+const SimpleAssignRoutineModal = dynamic(() => import("@/components/SimpleAssignRoutineModal"), { ssr: false });
+const MobileSimpleAssignRoutineModal = dynamic(() => import("@/components/MobileSimpleAssignRoutineModal"), { ssr: false });
 
 interface ProgramWeek {
   id: string;

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientsPage from "./MobileClientsPage";
@@ -45,9 +46,13 @@ import Sidebar from "./Sidebar";
 import Link from "next/link";
 import FormattedMessage from "./FormattedMessage";
 
-import ClientProfileModal from "./ClientProfileModal";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import NotesDisplay from "./NotesDisplay";
+
+// Lazy load heavy modal
+const ClientProfileModal = dynamic(() => import("./ClientProfileModal"), {
+  ssr: false,
+});
 import { useUIStore } from "@/lib/stores/uiStore";
 import { usePersistedSort } from "@/lib/hooks/usePersistedSort";
 import { useClientSorting } from "@/lib/hooks/useClientSorting";

@@ -86,7 +86,34 @@ const nextConfig: NextConfig = {
 
   // Experimental features for performance
   experimental: {
-    optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
+    optimizePackageImports: [
+      "lucide-react",
+      "@radix-ui/react-icons",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-select",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-accordion",
+      "@radix-ui/react-alert-dialog",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-label",
+      "@radix-ui/react-progress",
+      "@radix-ui/react-scroll-area",
+      "@radix-ui/react-separator",
+      "@radix-ui/react-slider",
+      "@radix-ui/react-switch",
+      "framer-motion",
+      "date-fns",
+      "react-hook-form",
+      "@hookform/resolvers",
+      "zod",
+      "lottie-react",
+      "@tanstack/react-query",
+      "recharts",
+    ],
     esmExternals: true,
     // Enable partial prerendering for better performance
     ppr: false, // Can enable when stable

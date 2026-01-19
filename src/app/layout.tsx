@@ -5,20 +5,17 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PageErrorFallback } from "@/components/ErrorFallback";
-import CustomAnalytics from "@/components/Analytics";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import Toast from "@/components/common/Toast";
-import ChatbotWrapper from "@/components/Chatbot/ChatbotWrapper";
 import { ChatbotProvider } from "@/components/Chatbot/ChatbotContext";
-import ClientBugReportButton from "@/components/ClientBugReportButton";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 // Lesson reminder service will be initialized via API route instead of layout
 import MessagingServiceProvider from "@/components/MessagingServiceProvider";
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import PWAProvider from "@/components/PWAProvider";
 import SessionManager from "@/components/SessionManager";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { LazyClientComponents } from "@/components/LazyClientComponents";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -327,10 +324,7 @@ export default function RootLayout({
                     <ConditionalNavbar />
                     {children}
                     <Toast />
-                    <ChatbotWrapper />
-                    <ClientBugReportButton />
-                    <CustomAnalytics />
-                    <ServiceWorkerRegistration />
+                    <LazyClientComponents />
                   </PWAProvider>
                 </MessagingServiceProvider>
               </ChatbotProvider>

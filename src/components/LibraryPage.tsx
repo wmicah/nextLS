@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -20,9 +21,6 @@ import {
 } from "lucide-react";
 
 import YouTubePlayer from "./YouTubePlayer";
-import YouTubeImportModal from "./YouTubeImportModal";
-import UploadResourceModal from "./UploadResourceModal";
-import VideoViewerModal from "./VideoViewerModal";
 import Sidebar from "./Sidebar";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { withMobileDetection } from "@/lib/mobile-detection";
@@ -31,6 +29,25 @@ import CategoryDropdown from "./ui/CategoryDropdown";
 import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonVideoGrid, SkeletonCard } from "@/components/SkeletonLoader";
 import { COLORS } from "@/lib/colors";
+
+// Lazy load modals - only loaded when user interacts
+const ModalLoader = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
+  </div>
+);
+const YouTubeImportModal = dynamic(() => import("./YouTubeImportModal"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const UploadResourceModal = dynamic(() => import("./UploadResourceModal"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const VideoViewerModal = dynamic(() => import("./VideoViewerModal"), {
+  loading: ModalLoader,
+  ssr: false,
+});
 
 // Default categories that are always available
 const DEFAULT_CATEGORIES = [
