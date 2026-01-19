@@ -1231,7 +1231,7 @@ interface Client {
       avatarUrl: string | null;
     } | null;
   } | null;
-  programAssignments?: {
+  programAssignments?: Array<{
     id: string;
     programId: string;
     assignedAt: string;
@@ -1246,8 +1246,22 @@ interface Client {
       sport: string | null;
       level: string;
       duration: number;
+      weeks?: Array<{
+        id: string;
+        weekNumber: number;
+        days: Array<{
+          id: string;
+          dayNumber: number;
+          isRestDay: boolean;
+        }>;
+      }>;
     };
-  }[];
+    replacements?: Array<{
+      id: string;
+      replacedDate: string;
+      replacementReason: string;
+    }>;
+  }>;
   routineAssignments?: {
     id: string;
     routineId: string;
@@ -1626,7 +1640,8 @@ function ClientsPage() {
   );
 
   // Sort clients using the shared utility
-  const filteredAndSortedClients: Client[] = filteredClients.sort(
+  // Important: Create a copy to avoid mutating the original array from React Query
+  const filteredAndSortedClients: Client[] = [...filteredClients].sort(
     (a: Client, b: Client) => {
       let aValue: any, bValue: any;
       const now = new Date();
@@ -1719,15 +1734,6 @@ function ClientsPage() {
     }
   );
 
-  // Debug: Log final sorted order when sorting by dueDate
-  if (process.env.NODE_ENV === "development" && sortBy === "dueDate") {
-    console.log("[FINAL SORT ORDER]", filteredAndSortedClients.slice(0, 15).map((c, i) => ({
-      position: i + 1,
-      name: c.name,
-      programCount: c.programAssignments?.filter(p => !p.completed && !p.completedAt).length || 0,
-      routineCount: c.routineAssignments?.filter(r => !r.completedAt).length || 0,
-    })));
-  }
 
   // Calculate stats
   const totalClients = clients.length;

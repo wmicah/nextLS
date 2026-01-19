@@ -15,13 +15,14 @@ export interface ClientForSorting {
   nextLessonDate: string | null;
   programAssignments?: Array<{
     id: string;
+    assignedAt?: string;
     startDate: string | null;
     completed: boolean;
     completedAt: string | null;
     program: {
       id: string;
       title: string;
-      status?: string; // DRAFT, ACTIVE, ARCHIVED - only ACTIVE should be counted
+      status?: string; // DRAFT, ACTIVE, ARCHIVED - status of the template (not used for sorting)
       duration: number;
       weeks?: Array<{
         id: string;
@@ -192,27 +193,25 @@ export function getClientDueTimestamp(
         continue;
       }
 
-      // Skip programs that are not ACTIVE (DRAFT or ARCHIVED should not count)
-      // Only active programs represent real work for the client
-      if (assignment.program.status && assignment.program.status !== "ACTIVE") {
-        assignmentInfo.reason = `Skipped: program status is ${assignment.program.status} (not ACTIVE)`;
+      // Note: We intentionally don't filter by program.status here
+      // If a program is assigned to a client and not completed, it counts as active work
+      // The program.status (DRAFT/ACTIVE/ARCHIVED) is about the template, not the client's assignment
+
+      // Use startDate if available, otherwise fall back to assignedAt
+      // Programs without startDate still need to be sorted, they just start from when assigned
+      const startDateStr = assignment.startDate || assignment.assignedAt;
+      if (!startDateStr) {
+        assignmentInfo.reason = "Skipped: no startDate or assignedAt";
         debugInfo.programAssignments.push(assignmentInfo);
         continue;
       }
 
-      // Must have a startDate to calculate end date properly
-      if (!assignment.startDate) {
-        assignmentInfo.reason = "Skipped: no startDate";
-        debugInfo.programAssignments.push(assignmentInfo);
-        continue;
-      }
-
-      const startDate = new Date(assignment.startDate);
+      const startDate = new Date(startDateStr);
       const startDateTime = startDate.getTime();
 
       // Validate the date - catch NaN early
       if (isNaN(startDateTime)) {
-        assignmentInfo.reason = `Skipped: invalid startDate (${assignment.startDate})`;
+        assignmentInfo.reason = `Skipped: invalid date (${startDateStr})`;
         debugInfo.programAssignments.push(assignmentInfo);
         continue;
       }
@@ -460,9 +459,11 @@ export function getClientDueTimestamp(
   } else {
     // No programs or routines - client needs assignment (highest priority)
     debugInfo.result = "-Infinity (no active programs or routines - needs assignment)";
-    // Always log when returning -Infinity to debug sorting issues
-    const skippedReasons = debugInfo.programAssignments.map(p => `${p.programTitle}: ${p.reason || 'no reason'}`);
-    console.log(`[DUE DATE] ${client.name}: -Infinity (no active assignments) | Programs: ${client.programAssignments?.length || 0} | Routines: ${client.routineAssignments?.length || 0} | SKIP REASONS: ${skippedReasons.join(' | ') || 'none'}`);
+    // Only log in development mode to avoid production performance issues
+    if (enableDebug) {
+      const skippedReasons = debugInfo.programAssignments.map(p => `${p.programTitle}: ${p.reason || 'no reason'}`);
+      devLog(`[DUE DATE] ${client.name}: -Infinity (no active assignments) | Programs: ${client.programAssignments?.length || 0} | Routines: ${client.routineAssignments?.length || 0} | SKIP REASONS: ${skippedReasons.join(' | ') || 'none'}`);
+    }
     return -Infinity;
   }
   
@@ -476,9 +477,6 @@ export function getClientDueTimestamp(
 
   debugInfo.result = new Date(finalDueTime).toISOString().split("T")[0];
   debugInfo.resultTime = finalDueTime;
-
-  // Log due date calculation for debugging
-  console.log(`[DUE DATE] ${client.name}: ${debugInfo.result} (${finalDueSource})`);
 
   if (enableDebug) {
     const totalReplacedDays = debugInfo.programAssignments.reduce(
@@ -538,24 +536,18 @@ export function compareClientsByProgramDueDate(
   const aNoAssignments = aTimestamp === -Infinity;
   const bNoAssignments = bTimestamp === -Infinity;
 
-  // Debug: Log sorting decisions for clients with no assignments
+  // Handle -Infinity (clients with no assignments should come FIRST - they need programs assigned)
   if (aNoAssignments || bNoAssignments) {
-    let result: number;
-    let resultReason: string;
-    
     if (aNoAssignments && bNoAssignments) {
-      result = a.name.localeCompare(b.name);
-      resultReason = `both no assignments, sort by name`;
+      // Both have no assignments - sort alphabetically
+      return a.name.localeCompare(b.name);
     } else if (aNoAssignments) {
-      result = -1;
-      resultReason = `${a.name} has NO assignments, comes FIRST`;
+      // a has no assignments, comes FIRST (highest priority)
+      return -1;
     } else {
-      result = 1;
-      resultReason = `${b.name} has NO assignments, comes FIRST`;
+      // b has no assignments, comes FIRST (highest priority)
+      return 1;
     }
-    
-    console.log(`[SORT] ${a.name} vs ${b.name} → ${result} (${resultReason})`);
-    return result;
   }
 
   // Validate timestamps - should never be NaN at this point
