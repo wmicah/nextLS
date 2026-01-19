@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
 import {
   Calendar,
@@ -42,10 +43,18 @@ import {
 import Sidebar from "@/components/Sidebar";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileSchedulePage from "@/components/MobileSchedulePage";
-import WorkingHoursModal from "@/components/WorkingHoursModal";
-import BlockedTimesModal from "@/components/BlockedTimesModal";
-import AddTimeModal from "@/components/AddTimeModal";
 import { COLORS, getGoldenAccent, getRedAlert, getGreenPrimary } from "@/lib/colors";
+
+// Lazy load modals - only loaded when user needs them
+const WorkingHoursModal = dynamic(() => import("@/components/WorkingHoursModal"), {
+  ssr: false,
+});
+const BlockedTimesModal = dynamic(() => import("@/components/BlockedTimesModal"), {
+  ssr: false,
+});
+const AddTimeModal = dynamic(() => import("@/components/AddTimeModal"), {
+  ssr: false,
+});
 
 function SchedulePageClient() {
   const [currentMonth, setCurrentMonth] = useState(new Date());

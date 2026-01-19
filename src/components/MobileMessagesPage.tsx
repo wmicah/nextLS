@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -16,6 +17,7 @@ import {
   Download,
   Video,
   MessageCircle,
+  Users,
 } from "lucide-react";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
@@ -26,9 +28,10 @@ import RichMessageInput from "./RichMessageInput";
 import FormattedMessage from "./FormattedMessage";
 import MessageAcknowledgment from "./MessageAcknowledgment";
 import { downloadVideoFromMessage } from "@/lib/download-utils";
-import MassMessageModal from "./MassMessageModal";
-import { Users } from "lucide-react";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
+
+// Lazy load heavy modal
+const MassMessageModal = dynamic(() => import("./MassMessageModal"), { ssr: false });
 
 interface MobileMessagesPageProps {
   // Add props here if needed in the future

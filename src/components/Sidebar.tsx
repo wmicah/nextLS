@@ -37,7 +37,12 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs";
-import Lottie from "lottie-react";
+import dynamic from "next/dynamic";
+// Lazy load Lottie to reduce initial bundle size
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => null,
+});
 // Removed complex SSE hooks - using simple polling instead
 import MessagePopup from "./MessagePopup";
 import NotificationPopup from "./NotificationPopup";

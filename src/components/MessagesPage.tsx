@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
 import {
   Search,
@@ -26,9 +27,13 @@ import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileMessagesPage from "./MobileMessagesPage";
 import { LoadingState, DataLoadingState } from "@/components/LoadingState";
 import { SkeletonMessageList, SkeletonCard } from "@/components/SkeletonLoader";
-import MassMessageModal from "./MassMessageModal";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
 import { useSupabaseRealtime } from "@/hooks/useSupabaseRealtime";
+
+// Lazy load heavy modal
+const MassMessageModal = dynamic(() => import("./MassMessageModal"), {
+  ssr: false,
+});
 
 interface MessagesPageProps {
   // Add props here if needed in the future

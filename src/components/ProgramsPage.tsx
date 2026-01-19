@@ -1,7 +1,6 @@
 "use client";
-import React from "react";
-
-import { useState, useCallback } from "react";
+import React, { useState, useCallback, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { COLORS } from "@/lib/colors";
@@ -52,14 +51,6 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Skeleton } from "./ui/skeleton";
 import { useToast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import SeamlessProgramModal from "./SeamlessProgramModal";
-import SimpleAssignProgramModal from "./SimpleAssignProgramModal";
-import ProgramDetailsModal from "./ProgramDetailsModal";
-import SeamlessRoutineModal from "@/components/SeamlessRoutineModal";
-import RoutinesTab from "@/components/RoutinesTab";
-import VideoLibraryDialog from "@/components/VideoLibraryDialog";
-import MasterProgramsTab from "@/components/MasterProgramsTab";
-import MasterRoutinesTab from "@/components/MasterRoutinesTab";
 import {
   Dialog,
   DialogContent,
@@ -70,9 +61,53 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import SimpleAssignRoutineModal from "@/components/SimpleAssignRoutineModal";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import CategoryDropdown from "./ui/CategoryDropdown";
+
+// Loading component for lazy-loaded modals
+const ModalLoader = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
+  </div>
+);
+
+// Lazy load heavy modals and tabs - only loaded when needed
+const SeamlessProgramModal = dynamic(() => import("./SeamlessProgramModal"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const SimpleAssignProgramModal = dynamic(() => import("./SimpleAssignProgramModal"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const ProgramDetailsModal = dynamic(() => import("./ProgramDetailsModal"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const SeamlessRoutineModal = dynamic(() => import("@/components/SeamlessRoutineModal"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const RoutinesTab = dynamic(() => import("@/components/RoutinesTab"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const VideoLibraryDialog = dynamic(() => import("@/components/VideoLibraryDialog"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const MasterProgramsTab = dynamic(() => import("@/components/MasterProgramsTab"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const MasterRoutinesTab = dynamic(() => import("@/components/MasterRoutinesTab"), {
+  loading: ModalLoader,
+  ssr: false,
+});
+const SimpleAssignRoutineModal = dynamic(() => import("@/components/SimpleAssignRoutineModal"), {
+  loading: ModalLoader,
+  ssr: false,
+});
 
 interface ProgramWeek {
   id: string;
