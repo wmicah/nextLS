@@ -99,7 +99,7 @@ interface Client {
       avatarUrl: string | null;
     } | null;
   } | null;
-  programAssignments?: {
+  programAssignments?: Array<{
     id: string;
     programId: string;
     assignedAt: string;
@@ -114,8 +114,22 @@ interface Client {
       sport: string | null;
       level: string;
       duration: number;
+      weeks?: Array<{
+        id: string;
+        weekNumber: number;
+        days: Array<{
+          id: string;
+          dayNumber: number;
+          isRestDay: boolean;
+        }>;
+      }>;
     };
-  }[];
+    replacements?: Array<{
+      id: string;
+      replacedDate: string;
+      replacementReason: string;
+    }>;
+  }>;
   routineAssignments?: {
     id: string;
     routineId: string;
@@ -971,7 +985,8 @@ export default function MobileClientsPage() {
   );
 
   // Sort clients using the shared utility
-  const filteredAndSortedClients: Client[] = filteredClients.sort(
+  // Important: Create a copy to avoid mutating the original array from React Query
+  const filteredAndSortedClients: Client[] = [...filteredClients].sort(
     (a: Client, b: Client) => {
       let aValue: any, bValue: any;
       const now = new Date();
