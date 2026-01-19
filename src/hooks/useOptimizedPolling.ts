@@ -2,23 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
-import { useSmartPolling } from "./useSmartPolling";
+import { useVisibilityAwareInterval } from "./useSmartPolling";
 
-// Optimized notification polling
+// Optimized notification polling - pauses when tab is hidden
 export function useOptimizedNotifications() {
-  const { interval, isActive, handleError, handleSuccess } = useSmartPolling({
-    baseInterval: 60000, // 1 minute
-    maxInterval: 300000, // 5 minutes max
-    pauseWhenInactive: true,
-    resetOnActivity: true,
-  });
-
+  // No polling for notifications - uses refetchOnWindowFocus instead
   const { data: unreadCount = 0, error } =
     trpc.notifications.getUnreadCount.useQuery(undefined, {
       refetchInterval: false, // NO POLLING - will add WebSocket support later
       refetchOnWindowFocus: true, // Only refetch when user returns to tab
       refetchOnReconnect: true,
-      enabled: isActive,
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     });
 
@@ -29,7 +22,6 @@ export function useOptimizedNotifications() {
         refetchInterval: false, // NO POLLING - will add WebSocket support later
         refetchOnWindowFocus: true,
         refetchOnReconnect: true,
-        enabled: isActive,
         staleTime: 5 * 60 * 1000, // Cache for 5 minutes
         gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
       }
@@ -38,42 +30,46 @@ export function useOptimizedNotifications() {
   return {
     unreadCount,
     notifications,
-    isActive,
+    isActive: true, // Always active, but only refetches on focus
     error,
   };
 }
 
-// Optimized messaging polling
+// Optimized messaging polling - visibility aware
 export function useOptimizedMessaging() {
-  const { interval, isActive, handleError, handleSuccess } = useSmartPolling({
-    baseInterval: 30000, // 30 seconds
-    maxInterval: 180000, // 3 minutes max
-    pauseWhenInactive: true,
-    resetOnActivity: true,
-  });
+  // Smart polling interval - pauses when tab is hidden
+  const pollingInterval = useVisibilityAwareInterval(
+    30000, // 30 seconds when visible
+    false // Pause when hidden
+  );
 
   const { data: unreadCount = 0, error } =
     trpc.messaging.getUnreadCount.useQuery(undefined, {
-      refetchInterval: interval,
-      refetchOnWindowFocus: false,
+      refetchInterval: pollingInterval,
+      refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      enabled: isActive,
+      staleTime: 15000, // Cache for 15 seconds
     });
+
+  // Longer interval for conversation counts
+  const conversationPollingInterval = useVisibilityAwareInterval(
+    60000, // 60 seconds when visible
+    false // Pause when hidden
+  );
 
   const { data: conversationCounts = [] } =
     trpc.messaging.getConversationUnreadCounts.useQuery(undefined, {
-      refetchInterval: interval * 2, // Poll less frequently for conversation counts
+      refetchInterval: conversationPollingInterval,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      enabled: isActive,
-      staleTime: 15000, // Cache for 15 seconds
+      staleTime: 30000, // Cache for 30 seconds
       gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
     });
 
   return {
     unreadCount,
     conversationCounts,
-    isActive,
+    isActive: pollingInterval !== false,
     error,
   };
 }

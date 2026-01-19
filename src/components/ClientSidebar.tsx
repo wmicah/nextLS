@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useState, useRef, useEffect } from "react";
+import { useMessagingService } from "@/components/MessagingServiceProvider";
 import { useMobileDetection } from "@/lib/mobile-detection";
 import {
   FiSettings,
@@ -182,13 +183,17 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
     } catch {}
   }, [isOpen]);
 
+  // Get realtime connection status - only poll when realtime not connected
+  const { isConnected: realtimeConnected } = useMessagingService();
+
   // Get messages for selected conversation
   const { data: messages = [], refetch: refetchMessages } =
     trpc.messaging.getMessages.useQuery(
       { conversationId: selectedConversationId! },
       {
         enabled: !!selectedConversationId && showRecentMessages,
-        refetchInterval: 3000, // Poll every 3 seconds when in conversation
+        // Only poll as fallback when Supabase Realtime isn't connected
+        refetchInterval: !realtimeConnected ? 5000 : false,
       }
     );
 
