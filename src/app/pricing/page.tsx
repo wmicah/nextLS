@@ -273,7 +273,7 @@ export default function PricingPage() {
               Join thousands of coaches who are already using NextLevel to grow
               their business.
             </p>
-            <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-gray-900 transition-all hover:bg-gray-100 hover:shadow-lg hover:scale-[1.02]">
+            <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-[#E5B232] px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-[#1a1f20] transition-all hover:bg-[#F5C242] hover:shadow-lg hover:shadow-[#E5B232]/20 hover:scale-[1.02]">
               Get Started
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />
             </RegisterLink>
@@ -477,7 +477,7 @@ function PricingCard({
         </div>
 
         {/* CTA Button */}
-        <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-semibold text-gray-900 transition-all hover:bg-gray-100 hover:shadow-lg hover:scale-[1.02] w-full justify-center">
+        <RegisterLink className="group inline-flex items-center gap-2 rounded-xl bg-[#E5B232] px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-semibold text-[#1a1f20] transition-all hover:bg-[#F5C242] hover:shadow-lg hover:shadow-[#E5B232]/20 hover:scale-[1.02] w-full justify-center">
           Get Started
           <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 transition-transform group-hover:translate-x-1" />
         </RegisterLink>
@@ -720,7 +720,7 @@ function FAQSection() {
     {
       question: "Is there a free trial?",
       answer:
-        "Athletes can use the platform for free. Coaches pay monthly with no credit card required to sign up. You can cancel anytime.",
+        "Athletes can use the platform for free. Coaches pay monthly starting at $25/month. You can cancel anytime.",
     },
     {
       question: "Can I cancel anytime?",

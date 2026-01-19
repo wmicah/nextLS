@@ -160,7 +160,7 @@ const Navbar = () => {
             )}
 
             <RegisterLink>
-              <span className="inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 bg-white rounded-lg hover:bg-gray-100 transition-all duration-200">
+              <span className="inline-flex items-center px-4 py-2 text-sm font-semibold text-[#1a1f20] bg-[#E5B232] rounded-lg hover:bg-[#F5C242] transition-all duration-200 shadow-sm hover:shadow-md hover:shadow-[#E5B232]/20">
                 Get Started
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </span>
@@ -256,7 +256,7 @@ const Navbar = () => {
                     className="pt-2"
                   >
                     <RegisterLink
-                      className="flex items-center justify-center px-4 py-3 text-base font-semibold text-gray-900 bg-white rounded-lg hover:bg-gray-100 transition-all duration-200 mx-4"
+                      className="flex items-center justify-center px-4 py-3 text-base font-semibold text-[#1a1f20] bg-[#E5B232] rounded-lg hover:bg-[#F5C242] transition-all duration-200 mx-4 shadow-sm"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Get Started
