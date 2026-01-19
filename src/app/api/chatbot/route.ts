@@ -629,7 +629,7 @@ What would you like to know more about?`;
 - 24/7 support
 - Data backup
 
-**Free Trial**: Start with a 14-day free trial, no credit card required!`;
+**Pricing**: Plans start at just $25/month. Athletes always train free!`;
   }
 
   if (
@@ -697,11 +697,11 @@ What would you like to know more about?`;
 - **Coaches**: Basic information about your coaching business
 - **Athletes**: Your coach's invitation code (if applicable)
 
-✨ **Free Trial Benefits:**
+✨ **Getting Started:**
 - Full access to all features
-- No credit card required
+- Plans starting at $25/month
 - Cancel anytime
-- Data export if you decide not to continue
+- Athletes always train free
 
 **Need help?** Our support team is available 24/7 to assist with setup!`;
   }
