@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { extractYouTubeId, getYouTubeThumbnailUrl } from "@/lib/youtube-utils";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useThumbnail } from "@/hooks/useThumbnail";
-import VideoViewerModal from "./VideoViewerModal";
+import dynamic from "next/dynamic";
 
-// Helper function to extract YouTube video ID
-// Helper function to get YouTube thumbnail URL
-const getYouTubeThumbnail = (url: string): string | null => {
-  const videoId = extractYouTubeId(url);
-  if (!videoId) return null;
-  return getYouTubeThumbnailUrl(videoId, "medium");
+// Lazy load video viewer modal
+const VideoViewerModal = dynamic(() => import("./VideoViewerModal"), {
+  ssr: false,
+});
+
+// Helper function to get the best thumbnail URL without API calls
+const getThumbnailUrl = (video: any): string | null => {
+  // 1. Use existing thumbnail from database
+  if (video.thumbnail && !video.thumbnail.includes("undefined")) {
+    return video.thumbnail;
+  }
+
+  // 2. For YouTube videos, construct thumbnail URL
+  if (video.isYoutube && video.youtubeId) {
+    return `https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`;
+  }
+
+  // 3. Check URL for YouTube
+  const url = video.url || video.filename || "";
+  if (url.includes("youtube") || url.includes("youtu.be")) {
+    const videoId = extractYouTubeId(url);
+    if (videoId) {
+      return getYouTubeThumbnailUrl(videoId, "medium");
+    }
+  }
+
+  return null;
 };
 
 export default function OrganizationLibraryView() {
@@ -308,25 +328,9 @@ export default function OrganizationLibraryView() {
   );
 }
 
-// Video Card Component (Grid View)
-function VideoCard({ video, onClick }: { video: any; onClick: () => void }) {
-  const { thumbnailUrl } = useThumbnail(
-    video.filename,
-    "local",
-    true,
-    video.url
-  );
-
-  // Check if it's a YouTube video and get thumbnail
-  const isYouTube =
-    video.filename?.includes("youtube") ||
-    video.filename?.includes("youtu.be") ||
-    video.isYoutube ||
-    video.url?.includes("youtube");
-  const youtubeThumbnail = isYouTube
-    ? getYouTubeThumbnail(video.url || video.filename)
-    : null;
-  const displayThumbnail = youtubeThumbnail || thumbnailUrl;
+// Video Card Component (Grid View) - Memoized for performance
+const VideoCard = memo(function VideoCard({ video, onClick }: { video: any; onClick: () => void }) {
+  const displayThumbnail = getThumbnailUrl(video);
 
   return (
     <div
@@ -344,6 +348,8 @@ function VideoCard({ video, onClick }: { video: any; onClick: () => void }) {
             src={displayThumbnail}
             alt={video.title}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
@@ -383,33 +389,17 @@ function VideoCard({ video, onClick }: { video: any; onClick: () => void }) {
       </div>
     </div>
   );
-}
+});
 
-// Video List Item Component (List View)
-function VideoListItem({
+// Video List Item Component (List View) - Memoized for performance
+const VideoListItem = memo(function VideoListItem({
   video,
   onClick,
 }: {
   video: any;
   onClick: () => void;
 }) {
-  const { thumbnailUrl } = useThumbnail(
-    video.filename,
-    "local",
-    true,
-    video.url
-  );
-
-  // Check if it's a YouTube video and get thumbnail
-  const isYouTube =
-    video.filename?.includes("youtube") ||
-    video.filename?.includes("youtu.be") ||
-    video.isYoutube ||
-    video.url?.includes("youtube");
-  const youtubeThumbnail = isYouTube
-    ? getYouTubeThumbnail(video.url || video.filename)
-    : null;
-  const displayThumbnail = youtubeThumbnail || thumbnailUrl;
+  const displayThumbnail = getThumbnailUrl(video);
 
   return (
     <div
@@ -423,6 +413,8 @@ function VideoListItem({
             src={displayThumbnail}
             alt={video.title}
             className="w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
@@ -473,4 +465,4 @@ function VideoListItem({
       </div>
     </div>
   );
-}
+});

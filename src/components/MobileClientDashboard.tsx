@@ -4,6 +4,7 @@ import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { trpc } from "@/app/_trpc/client";
 import { useState } from "react";
 import { extractNoteContent } from "@/lib/note-utils";
+import { useMessagingService } from "@/components/MessagingServiceProvider";
 import {
   PlayCircle,
   CheckCircle2,
@@ -89,11 +90,14 @@ export default function MobileClientDashboard() {
       gcTime: 15 * 60 * 1000, // 15 minutes
     });
 
-  // Simple polling for unread count
+  // Get realtime connection status - only poll when realtime not connected
+  const { isConnected: realtimeConnected } = useMessagingService();
+
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
     undefined,
     {
-      refetchInterval: 10000, // Poll every 10 seconds
+      // Only poll as fallback when Supabase Realtime isn't connected
+      refetchInterval: !realtimeConnected ? 30000 : false,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     }

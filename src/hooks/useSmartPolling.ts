@@ -1,99 +1,197 @@
-"use client";
+import { useEffect, useState, useCallback, useRef } from "react";
 
-import { useEffect, useRef, useState } from "react";
+/**
+ * Smart polling hook that:
+ * 1. Pauses polling when tab is not visible
+ * 2. Reduces frequency when user is idle
+ * 3. Resumes immediately when tab becomes visible
+ * 4. Supports exponential backoff on errors
+ */
 
 interface UseSmartPollingOptions {
-  baseInterval?: number;
-  maxInterval?: number;
-  backoffMultiplier?: number;
-  resetOnActivity?: boolean;
-  pauseWhenInactive?: boolean;
+  /** Base interval in milliseconds */
+  interval: number;
+  /** Whether polling is enabled */
+  enabled?: boolean;
+  /** Callback to execute on each poll */
+  onPoll: () => void | Promise<void>;
+  /** Interval when tab is hidden (0 = pause completely) */
+  hiddenInterval?: number;
+  /** Interval after user has been idle for idleThreshold */
+  idleInterval?: number;
+  /** Time in ms before considering user idle */
+  idleThreshold?: number;
+  /** Enable exponential backoff on errors */
+  backoffOnError?: boolean;
+  /** Maximum backoff interval */
+  maxBackoff?: number;
 }
 
 export function useSmartPolling({
-  baseInterval = 30000, // 30 seconds
-  maxInterval = 300000, // 5 minutes
-  backoffMultiplier = 1.5,
-  resetOnActivity = true,
-  pauseWhenInactive = true,
-}: UseSmartPollingOptions = {}) {
-  const [interval, setInterval] = useState(baseInterval);
-  const [isActive, setIsActive] = useState(true);
+  interval,
+  enabled = true,
+  onPoll,
+  hiddenInterval = 0, // Default: pause when hidden
+  idleInterval,
+  idleThreshold = 60000, // 1 minute
+  backoffOnError = false,
+  maxBackoff = 60000, // 1 minute max
+}: UseSmartPollingOptions) {
+  const [isVisible, setIsVisible] = useState(true);
+  const [isIdle, setIsIdle] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
   const lastActivityRef = useRef(Date.now());
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined
-  );
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Track user activity
+  // Track tab visibility
   useEffect(() => {
-    if (!resetOnActivity) return;
-
-    const updateActivity = () => {
-      lastActivityRef.current = Date.now();
-      if (resetOnActivity) {
-        setInterval(baseInterval);
+    const handleVisibilityChange = () => {
+      const visible = document.visibilityState === "visible";
+      setIsVisible(visible);
+      
+      // If becoming visible, poll immediately
+      if (visible && enabled) {
+        onPoll();
       }
     };
 
-    const events = [
-      "mousedown",
-      "mousemove",
-      "keypress",
-      "scroll",
-      "touchstart",
-    ];
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [enabled, onPoll]);
+
+  // Track user activity for idle detection
+  useEffect(() => {
+    if (!idleInterval) return;
+
+    const resetActivity = () => {
+      lastActivityRef.current = Date.now();
+      setIsIdle(false);
+    };
+
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
     events.forEach(event => {
-      document.addEventListener(event, updateActivity, { passive: true });
+      window.addEventListener(event, resetActivity, { passive: true });
     });
+
+    // Check for idle state periodically
+    const idleCheck = setInterval(() => {
+      if (Date.now() - lastActivityRef.current > idleThreshold) {
+        setIsIdle(true);
+      }
+    }, 10000); // Check every 10 seconds
 
     return () => {
       events.forEach(event => {
-        document.removeEventListener(event, updateActivity);
+        window.removeEventListener(event, resetActivity);
       });
+      clearInterval(idleCheck);
     };
-  }, [baseInterval, resetOnActivity]);
+  }, [idleInterval, idleThreshold]);
 
-  // Check if user is inactive
+  // Calculate current interval based on state
+  const getCurrentInterval = useCallback(() => {
+    // If tab is hidden
+    if (!isVisible) {
+      return hiddenInterval; // 0 means pause
+    }
+
+    // If user is idle and idleInterval is set
+    if (isIdle && idleInterval) {
+      return idleInterval;
+    }
+
+    // If there have been errors and backoff is enabled
+    if (backoffOnError && errorCount > 0) {
+      const backoff = Math.min(interval * Math.pow(2, errorCount), maxBackoff);
+      return backoff;
+    }
+
+    return interval;
+  }, [isVisible, isIdle, interval, hiddenInterval, idleInterval, backoffOnError, errorCount, maxBackoff]);
+
+  // Main polling effect
   useEffect(() => {
-    if (!pauseWhenInactive) return;
+    if (!enabled) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      return;
+    }
 
-    const checkInactivity = (): void => {
-      const now = Date.now();
-      const timeSinceActivity = now - lastActivityRef.current;
+    const poll = async () => {
+      const currentInterval = getCurrentInterval();
+      
+      // If interval is 0, don't poll (paused)
+      if (currentInterval === 0) {
+        return;
+      }
 
-      // Consider inactive after 5 minutes
-      const inactiveThreshold = 5 * 60 * 1000;
+      try {
+        await onPoll();
+        setErrorCount(0); // Reset error count on success
+      } catch (error) {
+        console.error("Polling error:", error);
+        if (backoffOnError) {
+          setErrorCount(prev => prev + 1);
+        }
+      }
 
-      if (timeSinceActivity > inactiveThreshold && isActive) {
-        setIsActive(false);
-      } else if (timeSinceActivity <= inactiveThreshold && !isActive) {
-        setIsActive(true);
+      // Schedule next poll
+      timeoutRef.current = setTimeout(poll, currentInterval);
+    };
+
+    // Start polling
+    const currentInterval = getCurrentInterval();
+    if (currentInterval > 0) {
+      timeoutRef.current = setTimeout(poll, currentInterval);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
-
-    const intervalId = window.setInterval(checkInactivity, 60000); // Check every minute
-    return () => clearInterval(intervalId);
-  }, [isActive, pauseWhenInactive]);
-
-  // Exponential backoff on errors
-  const handleError = () => {
-    setInterval(prev => {
-      const newInterval = Math.min(prev * backoffMultiplier, maxInterval);
-      return newInterval;
-    });
-  };
-
-  // Reset interval on success
-  const handleSuccess = () => {
-    if (interval !== baseInterval) {
-      setInterval(baseInterval);
-    }
-  };
+  }, [enabled, getCurrentInterval, onPoll, backoffOnError]);
 
   return {
-    interval: isActive ? interval : 0, // 0 means no polling
-    isActive,
-    handleError,
-    handleSuccess,
+    isVisible,
+    isIdle,
+    errorCount,
+    /** Force an immediate poll */
+    pollNow: onPoll,
+    /** Reset error count (e.g., after manual retry) */
+    resetErrors: () => setErrorCount(0),
   };
+}
+
+/**
+ * Hook to get visibility-aware refetch interval for React Query
+ * Returns the appropriate interval based on tab visibility
+ */
+export function useVisibilityAwareInterval(
+  activeInterval: number,
+  hiddenInterval: number | false = false
+): number | false {
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsVisible(document.visibilityState === "visible");
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  if (!isVisible) {
+    return hiddenInterval;
+  }
+
+  return activeInterval;
 }
