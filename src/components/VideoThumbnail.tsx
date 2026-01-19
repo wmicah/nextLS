@@ -1,6 +1,5 @@
-import React from "react";
-import { useThumbnail } from "@/hooks/useThumbnail";
-import { isYouTubeUrl, getYouTubeEmbedUrl } from "@/lib/youtube-utils";
+import React, { useState, useCallback, memo } from "react";
+import { isYouTubeUrl } from "@/lib/youtube-utils";
 import { Play, Video, FileText } from "lucide-react";
 
 interface VideoThumbnailProps {
@@ -9,95 +8,122 @@ interface VideoThumbnailProps {
   className?: string;
 }
 
-export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
+// Use memo to prevent unnecessary re-renders
+export const VideoThumbnail: React.FC<VideoThumbnailProps> = memo(({
   item,
   videoType,
   className = "h-28 lg:h-32",
 }) => {
-  // Extract filename safely, avoiding YouTube URLs
-  const getFilename = () => {
-    if (item.filename) return item.filename;
-    if (item.url && !isYouTubeUrl(item.url)) {
-      return item.url.split("/").pop();
+  const [imageError, setImageError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Get the best available thumbnail without making API calls
+  const getThumbnailUrl = useCallback((): string | null => {
+    // 1. If item already has a thumbnail URL stored in DB, use it
+    if (item.thumbnail && !item.thumbnail.includes("undefined")) {
+      return item.thumbnail;
     }
+
+    // 2. For YouTube videos, construct the thumbnail URL directly
+    if (item.isYoutube && item.youtubeId) {
+      // Use mqdefault (320x180) which loads faster than hqdefault
+      return `https://img.youtube.com/vi/${item.youtubeId}/mqdefault.jpg`;
+    }
+
+    // 3. For YouTube URLs without extracted ID
+    if (item.url && isYouTubeUrl(item.url)) {
+      const videoId = extractYouTubeId(item.url);
+      if (videoId) {
+        return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+      }
+    }
+
     return null;
-  };
+  }, [item.thumbnail, item.isYoutube, item.youtubeId, item.url]);
 
-  const { thumbnailUrl, isGenerating, error } = useThumbnail(
-    getFilename(),
-    videoType,
-    item.type === "video" && !item.isYoutube,
-    item.url
-  );
+  const thumbnailUrl = getThumbnailUrl();
 
-  // For YouTube videos, use the existing YouTubePlayer
-  if (item.isYoutube && item.youtubeId) {
+  const handleImageLoad = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+    setIsLoading(false);
+  }, []);
+
+  // If we have a thumbnail URL and no error, show the image
+  if (thumbnailUrl && !imageError) {
     return (
       <div
-        className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}
+        className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative bg-[#1a1f1f]`}
       >
-        <iframe
-          src={getYouTubeEmbedUrl(item.youtubeId, false)}
-          title={item.title}
-          className="w-full h-full"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        />
-      </div>
-    );
-  }
-
-  // For uploaded videos with generated thumbnails
-  if (thumbnailUrl && item.type === "video") {
-    return (
-      <div
-        className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}
-      >
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#1a1f1f]">
+            <div className="animate-pulse w-full h-full bg-[#2a2f2f]" />
+          </div>
+        )}
         <img
           src={thumbnailUrl}
-          alt={item.title}
-          className="w-full h-full object-cover"
-          onError={e => {
-            // Fallback to emoji if thumbnail fails to load
-            const target = e.target as HTMLImageElement;
-            target.style.display = "none";
-            const fallback = target.nextElementSibling as HTMLElement;
-            if (fallback) fallback.style.display = "flex";
-          }}
+          alt={item.title || "Video thumbnail"}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+          loading="lazy"
+          decoding="async"
+          onLoad={handleImageLoad}
+          onError={handleImageError}
         />
-        {/* Fallback emoji (hidden by default) */}
-        <div className="text-4xl hidden">🎥</div>
+        {/* Play icon overlay for videos */}
+        {item.type === "video" && !isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
+            <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center">
+              <Play className="w-6 h-6 text-white ml-1" fill="white" />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  // For videos without thumbnails or other file types
+  // Fallback for videos without thumbnails or documents
   return (
     <div
-      className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative`}
+      className={`${className} rounded-t-xl flex items-center justify-center overflow-hidden relative bg-[#1a1f1f]`}
     >
-      <div className="text-4xl flex items-center gap-2">
+      <div className="flex flex-col items-center gap-2 text-gray-400">
         {item.type === "video" ? (
           <>
-            {isGenerating ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                <span className="text-sm text-gray-400">Generating...</span>
-              </div>
-            ) : (
-              <>
-                <Video className="h-8 w-8" style={{ color: "#ABA4AA" }} />
-                <span className="text-sm text-gray-400">Video</span>
-              </>
-            )}
+            <Video className="h-8 w-8" style={{ color: "#ABA4AA" }} />
+            <span className="text-xs">Video</span>
           </>
         ) : (
           <>
             <FileText className="h-8 w-8" style={{ color: "#ABA4AA" }} />
-            <span className="text-sm text-gray-400">Document</span>
+            <span className="text-xs">Document</span>
           </>
         )}
       </div>
     </div>
   );
-};
+});
+
+VideoThumbnail.displayName = "VideoThumbnail";
+
+// Helper function to extract YouTube video ID
+function extractYouTubeId(url: string): string | null {
+  if (!url) return null;
+  
+  // Handle various YouTube URL formats
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/,
+    /youtube\.com\/watch\?.*v=([^&\s]+)/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
