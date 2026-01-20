@@ -257,19 +257,6 @@ function ClientDetailPage({
     } catch {}
   }, [dockActiveTab]);
   
-  // Auto-close sidebar when dock opens
-  useEffect(() => {
-    if (dockOpen && isDesktop) {
-      // Close sidebar by setting localStorage and dispatching event
-      try {
-        const currentSidebarState = localStorage.getItem("nls_sidebar_open");
-        if (currentSidebarState === "1") {
-          localStorage.setItem("nls_sidebar_open", "0");
-          window.dispatchEvent(new CustomEvent("sidebarToggle"));
-        }
-      } catch {}
-    }
-  }, [dockOpen, isDesktop]);
   
   // Setup drag sensors
   const dragSensors = useSensors(
@@ -2663,7 +2650,13 @@ function ClientDetailPage({
             }}
           >
             {/* Calendar Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div 
+              className="flex items-center justify-between mb-4"
+              style={{
+                marginRight: dockOpen && isDesktop ? "320px" : "0",
+                transition: "margin-right 0.3s ease",
+              }}
+            >
               <div className="flex items-center gap-3">
                 <h2
                   className="text-lg font-semibold"

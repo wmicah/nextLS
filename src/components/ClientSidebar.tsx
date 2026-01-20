@@ -90,7 +90,15 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
   const [isPending, startTransition] = useTransition();
   const { isMobile } = useMobileDetection();
   const { data: authData } = trpc.authCallback.useQuery();
-  const [isOpen, setIsOpen] = useState(true);
+  // Initialize from localStorage immediately to prevent defaulting to open
+  const [isOpen, setIsOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nls_sidebar_open");
+      return saved !== null ? saved === "1" : true; // Default to open if no saved state
+    } catch {
+      return true;
+    }
+  });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -168,13 +176,6 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
   }, [isOpen]);
 
   // Persist sidebar open/closed state
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("nls_sidebar_open");
-      if (saved !== null) setIsOpen(saved === "1");
-    } catch {}
-  }, []);
-
   useEffect(() => {
     try {
       localStorage.setItem("nls_sidebar_open", isOpen ? "1" : "0");
