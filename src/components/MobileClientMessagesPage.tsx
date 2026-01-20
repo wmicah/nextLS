@@ -170,8 +170,9 @@ export default function MobileClientMessagesPage() {
           attachmentUrl: selectedFile.uploadData.attachmentUrl,
           attachmentType: selectedFile.uploadData.attachmentType,
           attachmentName: selectedFile.uploadData.attachmentName,
+          attachmentSize: selectedFile.uploadData.attachmentSize,
         }
-      : null;
+      : {};
 
     // Add optimistic message
     const optimisticMessage = {
@@ -180,9 +181,11 @@ export default function MobileClientMessagesPage() {
       sender: { id: currentUser?.id, name: currentUser?.name },
       createdAt: new Date().toISOString(),
       status: "sending" as const,
-      attachmentUrl: attachmentData?.attachmentUrl,
-      attachmentType: attachmentData?.attachmentType,
-      attachmentName: attachmentData?.attachmentName,
+      ...(selectedFile && {
+        attachmentUrl: selectedFile.uploadData.attachmentUrl,
+        attachmentType: selectedFile.uploadData.attachmentType,
+        attachmentName: selectedFile.uploadData.attachmentName,
+      }),
     };
 
     setPendingMessages(prev => [...prev, optimisticMessage]);
@@ -193,9 +196,7 @@ export default function MobileClientMessagesPage() {
       {
         conversationId: selectedConversation!,
         content: messageContent,
-        attachmentUrl: attachmentData?.attachmentUrl,
-        attachmentType: attachmentData?.attachmentType,
-        attachmentName: attachmentData?.attachmentName,
+        ...attachmentData,
       },
       {
         onSuccess: () => {
