@@ -83,6 +83,12 @@ export default function ClientDetailCalendarDayCell({
   // Day ID for drag-and-drop
   const dayId = `day-${day.toISOString().split("T")[0]}`;
 
+  // Wrapper function to ensure formatTimeInUserTimezone always receives a string
+  const formatTime = (date: Date | string): string => {
+    const dateString = date instanceof Date ? date.toISOString() : date;
+    return formatTimeInUserTimezone(dateString);
+  };
+
   // Combine all items into a single sortable array
   const allItems = useMemo(() => {
     const items: DayItem[] = [];
@@ -397,7 +403,7 @@ export default function ClientDetailCalendarDayCell({
                 key={item.id}
                 item={item}
                 setSelectedEventDetails={setSelectedEventDetails}
-                formatTimeInUserTimezone={formatTimeInUserTimezone}
+                formatTimeInUserTimezone={formatTime}
                 getStatusColor={getStatusColor}
               />
             ))}
@@ -438,7 +444,7 @@ function SortableDayItem({
       routineId?: string;
     }>;
   }) => void;
-  formatTimeInUserTimezone: (utcDateString: string | Date) => string;
+  formatTimeInUserTimezone: (utcDateString: string) => string;
   getStatusColor: (status: string) => any;
 }) {
   const {
@@ -496,7 +502,7 @@ function DayItemContent({
       routineId?: string;
     }>;
   }) => void;
-  formatTimeInUserTimezone: (utcDateString: string | Date) => string;
+  formatTimeInUserTimezone: (utcDateString: string) => string;
   getStatusColor: (status: string) => any;
   dragHandleProps?: any;
   isDragging?: boolean;
@@ -532,7 +538,7 @@ function DayItemContent({
               lesson.status === "DECLINED" ? COLORS.RED_ALERT : "#F59E0B",
           }}
         />
-        <span className="truncate">{formatTimeInUserTimezone(lesson.date instanceof Date ? lesson.date.toISOString() : lesson.date)}</span>
+        <span className="truncate">{formatTimeInUserTimezone(lesson.date instanceof Date ? lesson.date.toISOString() : String(lesson.date))}</span>
       </div>
     );
   }
