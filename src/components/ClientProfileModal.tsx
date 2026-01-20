@@ -185,7 +185,8 @@ ClientProfileModalProps) {
   }, [(client as any)?.id, (client as any)?.age, (client as any)?.height, isEditingClientInfo]);
 
   // Update client mutation
-  const updateClientMutation = trpc.clients.update.useMutation({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateClientMutation = (trpc.clients.update as any).useMutation({
     onSuccess: () => {
       setIsUpdating(false);
       setIsEditingName(false);
@@ -199,7 +200,7 @@ ClientProfileModalProps) {
       utils.clients.list.invalidate();
       utils.clients.getById.invalidate({ id: clientId });
     },
-    onError: error => {
+    onError: (error: { message?: string }) => {
       setIsUpdating(false);
       setIsEditingName(false);
       setEditedName(clientName);
