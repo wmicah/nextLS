@@ -438,7 +438,7 @@ function SortableDayItem({
       routineId?: string;
     }>;
   }) => void;
-  formatTimeInUserTimezone: (date: Date) => string;
+  formatTimeInUserTimezone: (utcDateString: string | Date) => string;
   getStatusColor: (status: string) => any;
 }) {
   const {
@@ -496,7 +496,7 @@ function DayItemContent({
       routineId?: string;
     }>;
   }) => void;
-  formatTimeInUserTimezone: (date: Date) => string;
+  formatTimeInUserTimezone: (utcDateString: string | Date) => string;
   getStatusColor: (status: string) => any;
   dragHandleProps?: any;
   isDragging?: boolean;
@@ -532,7 +532,7 @@ function DayItemContent({
               lesson.status === "DECLINED" ? COLORS.RED_ALERT : "#F59E0B",
           }}
         />
-        <span className="truncate">{formatTimeInUserTimezone(lesson.date)}</span>
+        <span className="truncate">{formatTimeInUserTimezone(lesson.date instanceof Date ? lesson.date.toISOString() : lesson.date)}</span>
       </div>
     );
   }
