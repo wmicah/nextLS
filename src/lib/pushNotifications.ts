@@ -1,13 +1,15 @@
 "use client";
 
 export class PushNotificationService {
-  private vapidPublicKey: string;
+  private vapidPublicKey: string | undefined;
 
   constructor() {
-    // VAPID public key - should be set in environment variables
-    this.vapidPublicKey =
-      process.env.NEXT_PUBLIC_VAPID_KEY ||
-      "BJmY1hCwoFMlFc67g3k8ehL0RAyf72sPxkVjNzMn8OPk-nv9BwR1xF8hLQwWvkj-mPFtNCPoySRFRitF80l3j44";
+    // VAPID public key - MUST be set in environment variables
+    this.vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_KEY;
+    
+    if (!this.vapidPublicKey) {
+      console.warn("⚠️ NEXT_PUBLIC_VAPID_KEY not configured. Push notifications will not work.");
+    }
   }
 
   async requestPermission(): Promise<boolean> {
@@ -29,6 +31,12 @@ export class PushNotificationService {
   }
 
   async subscribeToPush(): Promise<PushSubscription | null> {
+    // Check if VAPID key is configured
+    if (!this.vapidPublicKey) {
+      console.error("❌ VAPID public key not configured");
+      throw new Error("Push notifications are not configured. Please contact support.");
+    }
+
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
       console.log("❌ Push messaging is not supported");
       throw new Error("Push messaging is not supported in this browser");
