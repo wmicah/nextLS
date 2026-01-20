@@ -3085,10 +3085,11 @@ function ClientDetailPage({
 
                 // Check if this day is part of the selected week
                 const dayWeekStart = startOfWeek(day, { weekStartsOn: 0 });
-                const isInSelectedWeek =
+                const isInSelectedWeek = Boolean(
                   weekSelectMode &&
                   selectedWeekStart &&
-                  dayWeekStart.getTime() === selectedWeekStart.getTime();
+                  dayWeekStart.getTime() === selectedWeekStart.getTime()
+                );
 
                 const itemOrder = dayItemOrders[dayKey];
 
