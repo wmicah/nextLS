@@ -34,9 +34,9 @@ const getThumbnailUrl = (video: any): string | null => {
   // 3. Check URL for YouTube
   const url = video.url || video.filename || "";
   if (url.includes("youtube") || url.includes("youtu.be")) {
-    const videoId = extractYouTubeId(url);
+  const videoId = extractYouTubeId(url);
     if (videoId) {
-      return getYouTubeThumbnailUrl(videoId, "medium");
+  return getYouTubeThumbnailUrl(videoId, "medium");
     }
   }
 

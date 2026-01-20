@@ -108,6 +108,10 @@ import ConvertWeekToProgramModal from "@/components/ConvertWeekToProgramModal";
 import NotesDisplay from "@/components/NotesDisplay";
 import FormattedMessage from "@/components/FormattedMessage";
 import Link from "next/link";
+import DrillItemComponent from "@/components/ClientDetailDrillItem";
+import QuickMessagePopup from "@/components/ClientDetailQuickMessage";
+import ClientDetailCalendarDayCell from "@/components/ClientDetailCalendarDayCell";
+import ClientDetailDock from "@/components/ClientDetailDock";
 import {
   ClipboardData,
   ClipboardRoutineAssignment,
@@ -116,687 +120,23 @@ import {
   ConflictResolution,
   CopyPasteMode,
 } from "@/types/clipboard";
+import { getStatusIcon, getStatusColor } from "@/lib/clientDetailUtils";
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 
 // Component to display a drill item that can expand to show routine exercises
-function DrillItemComponent({
-  item,
-  itemId,
-  isExpanded,
-  onToggle,
-  type,
-  routineCache,
-  setRoutineCache,
-}: {
-  item: {
-    title: string;
-    sets?: number;
-    reps?: number;
-    routineId?: string;
-    id?: string;
-  };
-  itemId: string;
-  isExpanded: boolean;
-  onToggle: () => void;
-  type: "program" | "routine";
-  routineCache: Map<string, any>;
-  setRoutineCache: React.Dispatch<React.SetStateAction<Map<string, any>>>;
-}) {
-  const hasRoutine = !!item.routineId;
-  const routineId = item.routineId;
-  const cachedRef = React.useRef<string | null>(null);
-
-  // Fetch routine data if drill has a routineId and we don't have it cached
-  const isCached = routineId ? routineCache.has(routineId) : false;
-  const { data: routineData, isLoading: isLoadingRoutine } =
-    trpc.routines.get.useQuery(
-      { id: routineId || "" },
-      {
-        enabled: hasRoutine && !!routineId && !isCached,
-      }
-    );
-
-  // Cache routine data when it's fetched (only once per routineId)
-  React.useEffect(() => {
-    if (routineData && routineId && cachedRef.current !== routineId) {
-      cachedRef.current = routineId;
-      setRoutineCache(prev => {
-        // Only update if not already in cache
-        if (prev.has(routineId)) {
-          return prev;
-        }
-        const newCache = new Map(prev);
-        newCache.set(routineId, routineData);
-        return newCache;
-      });
-    }
-  }, [routineData, routineId, setRoutineCache]);
-
-  // Use cached data if available
-  const routine = routineId ? routineCache.get(routineId) || routineData : null;
-  const exercises = routine?.exercises || [];
-
-  return (
-    <div
-      className="rounded border"
-      style={{
-        backgroundColor: COLORS.BACKGROUND_CARD,
-        borderColor: COLORS.BORDER_SUBTLE,
-        borderLeft: `3px solid ${type === "program" ? "#3B82F6" : "#10B981"}`,
-      }}
-    >
-      <div className="px-3 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1">
-            {hasRoutine && (
-              <button
-                onClick={onToggle}
-                className="p-1 rounded transition-colors"
-                style={{ color: COLORS.TEXT_SECONDARY }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                }}
-              >
-                <div
-                  className="transition-transform duration-200 ease-in-out"
-                  style={{
-                    transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                  }}
-                >
-                  <ChevronRight className="h-3 w-3" />
-                </div>
-              </button>
-            )}
-            <div className="flex-1">
-              <div
-                className="text-sm font-medium"
-                style={{ color: COLORS.TEXT_PRIMARY }}
-              >
-                {item.title}
-              </div>
-              {(item.sets || item.reps) && (
-                <div
-                  className="text-xs mt-1"
-                  style={{ color: COLORS.TEXT_SECONDARY }}
-                >
-                  {item.sets && item.reps
-                    ? `${item.sets} sets × ${item.reps} reps`
-                    : item.sets
-                    ? `${item.sets} sets`
-                    : `${item.reps} reps`}
-                </div>
-              )}
-              {hasRoutine && (
-                <div
-                  className="text-xs mt-1"
-                  style={{ color: COLORS.GREEN_PRIMARY }}
-                >
-                  Routine: {routine?.name || "Loading..."}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Show routine exercises when expanded */}
-      <div
-        className="overflow-hidden transition-all duration-300 ease-in-out"
-        style={{
-          maxHeight: isExpanded && hasRoutine ? "1000px" : "0px",
-          opacity: isExpanded && hasRoutine ? 1 : 0,
-        }}
-      >
-        {hasRoutine && (
-          <div
-            className="px-3 pb-2 pt-0 border-t"
-            style={{ borderColor: COLORS.BORDER_SUBTLE }}
-          >
-            {isLoadingRoutine && !routine ? (
-              <div
-                className="text-xs py-2"
-                style={{ color: COLORS.TEXT_MUTED }}
-              >
-                Loading routine exercises...
-              </div>
-            ) : exercises.length > 0 ? (
-              <div className="space-y-1.5 mt-2">
-                <div
-                  className="text-xs font-medium mb-1"
-                  style={{ color: COLORS.TEXT_SECONDARY }}
-                >
-                  Exercises:
-                </div>
-                {exercises.map((exercise: any, exIndex: number) => (
-                  <div
-                    key={exIndex}
-                    className="pl-3 py-1.5 rounded transition-opacity duration-200"
-                    style={{
-                      backgroundColor: COLORS.BACKGROUND_DARK,
-                      opacity: isExpanded ? 1 : 0,
-                    }}
-                  >
-                    <div
-                      className="text-xs font-medium"
-                      style={{ color: COLORS.TEXT_PRIMARY }}
-                    >
-                      {exercise.order}. {exercise.title}
-                    </div>
-                    {exercise.description && (
-                      <div
-                        className="text-[10px] mt-0.5"
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                      >
-                        {exercise.description}
-                      </div>
-                    )}
-                    {(exercise.sets || exercise.reps || exercise.duration) && (
-                      <div
-                        className="text-[10px] mt-0.5"
-                        style={{ color: COLORS.TEXT_MUTED }}
-                      >
-                        {exercise.sets &&
-                          exercise.reps &&
-                          `${exercise.sets} sets × ${exercise.reps} reps`}
-                        {exercise.duration && ` • ${exercise.duration}`}
-                        {exercise.tempo && ` • Tempo: ${exercise.tempo}`}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div
-                className="text-xs py-2"
-                style={{ color: COLORS.TEXT_MUTED }}
-              >
-                No exercises found in routine
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 interface ClientDetailPageProps {
   clientId: string;
   backPath?: string; // Optional custom back path (e.g., for organization view)
   noSidebar?: boolean; // Skip sidebar wrapper (e.g., when already in a layout with sidebar)
-}
-
-// QuickMessagePopup Component
-function QuickMessagePopup({
-  isOpen,
-  onClose,
-  client,
-  buttonRef,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  client: { id: string; name: string; userId: string | null };
-  buttonRef: React.RefObject<HTMLButtonElement | null>;
-}) {
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0 });
-  const [messageText, setMessageText] = useState("");
-  const [isSending, setIsSending] = useState(false);
-
-  // Get messages for this specific client
-  const { data: conversationsData, refetch: refetchConversations } =
-    trpc.messaging.getConversations.useQuery(
-      { limit: 100, offset: 0 },
-      { enabled: isOpen }
-    );
-
-  const conversations = conversationsData?.conversations || [];
-
-  // Filter to only show conversation with this specific client
-  const clientConversation = conversations.find((conv: any) => {
-    if (conv.type === "COACH_CLIENT") {
-      return (
-        conv.clientId === client.userId || conv.client?.id === client.userId
-      );
-    }
-    return false;
-  });
-
-  // Get current user
-  const { data: authData } = trpc.authCallback.useQuery();
-  const currentUserId = authData?.user?.id;
-
-  const conversationToUse = clientConversation;
-  const utils = trpc.useUtils();
-  const sendMessage = trpc.messaging.sendMessage.useMutation();
-
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !conversationToUse || isSending) return;
-
-    setIsSending(true);
-    try {
-      await sendMessage.mutateAsync({
-        conversationId: conversationToUse.id,
-        content: messageText.trim(),
-      });
-      setMessageText("");
-      setIsSending(false);
-      utils.messaging.getConversations.invalidate();
-      refetchConversations();
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setIsSending(false);
-    }
-  };
-
-  useEffect(() => {
-    if (buttonRef?.current && isOpen) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const popupWidth = 320;
-      const popupHeight = 420;
-
-      let left = rect.left + rect.width / 2 - popupWidth / 2;
-      let top = rect.bottom + 8;
-
-      if (left < 8) left = 8;
-      if (left + popupWidth > window.innerWidth - 8) {
-        left = window.innerWidth - popupWidth - 8;
-      }
-      if (top + popupHeight > window.innerHeight - 8) {
-        top = rect.top - popupHeight - 8;
-      }
-
-      setButtonPosition({ top, left });
-    }
-  }, [isOpen, buttonRef]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => {
-        setIsAnimating(false);
-      }, 100);
-      return () => clearTimeout(timer);
-    } else {
-      setIsAnimating(true);
-      return undefined;
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Element;
-      if (isOpen && !target.closest("[data-quick-message-popup]")) {
-        onClose();
-      }
-    }
-
-    const timeoutId = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 150);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60)
-    );
-
-    if (diffInMinutes < 1) return "Just now";
-    if (diffInMinutes < 60) return `${diffInMinutes}m`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
-    return format(date, "MMM d");
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <>
-      <style jsx>{`
-        @keyframes slideInDown {
-          from {
-            transform: translateY(-8px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        @keyframes fadeOut {
-          from {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          to {
-            opacity: 0;
-            transform: translateY(-8px);
-          }
-        }
-      `}</style>
-      <div
-        data-quick-message-popup
-        className={`fixed w-[320px] h-[420px] max-w-[90vw] max-h-[80vh] rounded-lg shadow-lg border z-50 ${
-          isAnimating && !isOpen
-            ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
-            : isAnimating
-            ? "animate-[slideInDown_0.3s_ease-out_forwards]"
-            : "transform scale-100 opacity-100"
-        }`}
-        style={{
-          top: buttonPosition.top,
-          left: buttonPosition.left,
-          backgroundColor: COLORS.BACKGROUND_DARK,
-          borderColor: COLORS.BORDER_SUBTLE,
-          transformOrigin: "top center",
-          animation:
-            !isAnimating && isOpen ? "slideInDown 0.3s ease-out" : undefined,
-          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
-        }}
-      >
-        <div
-          className="flex flex-col h-full overflow-hidden"
-          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-        >
-          <div
-            className="flex items-center justify-between px-3 py-2.5 border-b"
-            style={{
-              borderColor: COLORS.BORDER_SUBTLE,
-              backgroundColor: COLORS.BACKGROUND_DARK,
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <MessageCircle
-                className="h-4 w-4"
-                style={{ color: COLORS.GOLDEN_ACCENT }}
-              />
-              <span
-                className="text-sm font-medium"
-                style={{ color: COLORS.TEXT_PRIMARY }}
-              >
-                {client.name}
-              </span>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-md transition-colors"
-              style={{ color: COLORS.TEXT_SECONDARY }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor =
-                  COLORS.BACKGROUND_CARD_HOVER;
-                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-              }}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          <div
-            className="flex-1 overflow-y-auto"
-            style={{
-              maxHeight: "280px",
-              minHeight: "150px",
-              backgroundColor: COLORS.BACKGROUND_DARK,
-            }}
-          >
-            {!conversationToUse || conversationToUse.messages.length === 0 ? (
-              <div className="p-3 text-center">
-                <MessageCircle
-                  className="h-6 w-6 mx-auto mb-1.5 opacity-50"
-                  style={{ color: COLORS.TEXT_MUTED }}
-                />
-                <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
-                  No messages yet
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1.5 p-2">
-                {conversationToUse.messages
-                  .slice()
-                  .reverse()
-                  .map((message: any, index: number) => {
-                    const isCurrentUser = message.senderId === currentUserId;
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          isCurrentUser ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`max-w-[80%] px-2.5 py-1.5 rounded-lg ${
-                            isCurrentUser ? "rounded-br-sm" : "rounded-bl-sm"
-                          }`}
-                          style={{
-                            backgroundColor: isCurrentUser
-                              ? COLORS.GOLDEN_ACCENT
-                              : COLORS.BACKGROUND_CARD,
-                            color: isCurrentUser
-                              ? COLORS.BACKGROUND_DARK
-                              : COLORS.TEXT_PRIMARY,
-                            border: "1px solid",
-                            borderColor: isCurrentUser
-                              ? COLORS.GOLDEN_BORDER
-                              : COLORS.BORDER_SUBTLE,
-                            animationDelay: `${index * 50}ms`,
-                            animation:
-                              isOpen && !isAnimating
-                                ? `slideInLeft 0.3s ease-out ${
-                                    index * 50
-                                  }ms both`
-                                : undefined,
-                          }}
-                        >
-                          <div className="flex flex-col gap-1.5">
-                            {/* Message Content */}
-                            {message.content && (
-                              <div className="flex items-start justify-between gap-1.5">
-                                <div className="flex-1 text-xs leading-relaxed">
-                                  <FormattedMessage content={message.content} />
-                                </div>
-                                <span
-                                  className="text-[10px] flex-shrink-0 opacity-60 ml-1.5"
-                                  style={{
-                                    color: isCurrentUser
-                                      ? COLORS.BACKGROUND_DARK
-                                      : COLORS.TEXT_MUTED,
-                                  }}
-                                >
-                                  {formatTime(message.createdAt)}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* File Attachment */}
-                            {message.attachmentUrl && (
-                              <div className="mt-1">
-                                {message.attachmentType?.startsWith("image/") ? (
-                                  <img
-                                    src={message.attachmentUrl}
-                                    alt={message.attachmentName || "Image"}
-                                    className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
-                                    style={{ maxHeight: "150px" }}
-                                    onClick={() =>
-                                      message.attachmentUrl &&
-                                      window.open(
-                                        message.attachmentUrl,
-                                        "_blank"
-                                      )
-                                    }
-                                  />
-                                ) : message.attachmentType?.startsWith(
-                                    "video/"
-                                  ) ? (
-                                  <div className="space-y-1">
-                                    <video
-                                      src={message.attachmentUrl}
-                                      controls
-                                      className="max-w-full rounded-lg"
-                                      style={{ maxHeight: "150px" }}
-                                      preload="metadata"
-                                    >
-                                      Your browser does not support the video
-                                      tag.
-                                    </video>
-                                  </div>
-                                ) : (
-                                  <a
-                                    href={message.attachmentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 p-1.5 rounded-lg transition-all duration-200 hover:scale-105 text-xs"
-                                    style={{
-                                      backgroundColor: isCurrentUser
-                                        ? COLORS.GOLDEN_DARK
-                                        : COLORS.BACKGROUND_DARK,
-                                      color: isCurrentUser
-                                        ? "#ffffff"
-                                        : COLORS.TEXT_PRIMARY,
-                                      border: "1px solid",
-                                      borderColor: isCurrentUser
-                                        ? COLORS.GOLDEN_BORDER
-                                        : COLORS.BORDER_SUBTLE,
-                                    }}
-                                  >
-                                    <FileIcon className="h-3 w-3" />
-                                    <span className="truncate">
-                                      {message.attachmentName || "Attachment"}
-                                    </span>
-                                  </a>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Timestamp for messages without content but with attachment */}
-                            {!message.content && message.attachmentUrl && (
-                              <div className="flex justify-end">
-                                <span
-                                  className="text-[10px] flex-shrink-0 opacity-60"
-                                  style={{
-                                    color: isCurrentUser
-                                      ? COLORS.BACKGROUND_DARK
-                                      : COLORS.TEXT_MUTED,
-                                  }}
-                                >
-                                  {formatTime(message.createdAt)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-
-          {conversationToUse && (
-            <div
-              className="px-2.5 py-2 border-t"
-              style={{
-                borderColor: COLORS.BORDER_SUBTLE,
-                backgroundColor: COLORS.BACKGROUND_DARK,
-              }}
-            >
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={messageText}
-                  onChange={e => setMessageText(e.target.value)}
-                  onKeyPress={e => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  placeholder="Type a message..."
-                  className="flex-1 px-2.5 py-1.5 rounded-md border text-xs"
-                  style={{
-                    backgroundColor: COLORS.BACKGROUND_CARD,
-                    borderColor: COLORS.BORDER_SUBTLE,
-                    color: COLORS.TEXT_PRIMARY,
-                  }}
-                  disabled={isSending}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!messageText.trim() || isSending}
-                  className="px-2.5 py-1.5 rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                  style={{
-                    backgroundColor: COLORS.GOLDEN_DARK,
-                    color: COLORS.TEXT_PRIMARY,
-                  }}
-                  onMouseEnter={e => {
-                    if (!e.currentTarget.disabled) {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.GOLDEN_ACCENT;
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!e.currentTarget.disabled) {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.GOLDEN_DARK;
-                    }
-                  }}
-                >
-                  {isSending ? (
-                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Send className="h-3 w-3" />
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div
-            className="px-2.5 py-2 border-t"
-            style={{
-              borderColor: COLORS.BORDER_SUBTLE,
-              backgroundColor: COLORS.BACKGROUND_DARK,
-            }}
-          >
-            <Link
-              href="/messages"
-              onClick={onClose}
-              className="block w-full text-center py-1.5 px-3 rounded-md transition-all duration-200 text-xs font-medium"
-              style={{
-                backgroundColor: COLORS.BACKGROUND_CARD,
-                color: COLORS.TEXT_SECONDARY,
-                border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-              }}
-              onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                e.currentTarget.style.backgroundColor =
-                  COLORS.BACKGROUND_CARD_HOVER;
-                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
-                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-              }}
-            >
-              View All Messages
-            </Link>
-          </div>
-        </div>
-      </div>
-    </>
-  );
 }
 
 function ClientDetailPage({
@@ -852,6 +192,246 @@ function ClientDetailPage({
   const [showNotes, setShowNotes] = useState(false);
   const [isQuickMessageOpen, setIsQuickMessageOpen] = useState(false);
   const quickMessageButtonRef = useRef<HTMLButtonElement | null>(null);
+  
+  // Detect if mobile/tablet - only enable drag-drop on desktop
+  const [isDesktop, setIsDesktop] = useState(true);
+  useEffect(() => {
+    const checkDesktop = () => {
+      const isMobileDevice = window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 1024;
+      setIsDesktop(!isMobileDevice);
+      if (isMobileDevice) {
+        setDockOpen(false); // Close dock on mobile
+      }
+    };
+    checkDesktop();
+    window.addEventListener("resize", checkDesktop);
+    return () => window.removeEventListener("resize", checkDesktop);
+  }, []);
+  
+  // Dock state for drag-and-drop
+  const [dockOpen, setDockOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nls_dock_open");
+      return saved !== null ? saved === "1" : true; // Default to open
+    } catch {
+      return true;
+    }
+  });
+  const [dockActiveTab, setDockActiveTab] = useState<"programs" | "routines">(() => {
+    try {
+      const saved = localStorage.getItem("nls_dock_tab");
+      return (saved === "routines" ? "routines" : "programs") as "programs" | "routines";
+    } catch {
+      return "programs";
+    }
+  });
+  const [dockSearchTerm, setDockSearchTerm] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [draggedItem, setDraggedItem] = useState<{
+    type: "program" | "routine";
+    id: string;
+    title: string;
+  } | null>(null);
+  
+  // Store item order for each day (keyed by date string)
+  const [dayItemOrders, setDayItemOrders] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = localStorage.getItem("nls_day_item_orders");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  
+  // Persist dock state
+  useEffect(() => {
+    try {
+      localStorage.setItem("nls_dock_open", dockOpen ? "1" : "0");
+    } catch {}
+  }, [dockOpen]);
+  
+  useEffect(() => {
+    try {
+      localStorage.setItem("nls_dock_tab", dockActiveTab);
+    } catch {}
+  }, [dockActiveTab]);
+  
+  // Auto-close sidebar when dock opens
+  useEffect(() => {
+    if (dockOpen && isDesktop) {
+      // Close sidebar by setting localStorage and dispatching event
+      try {
+        const currentSidebarState = localStorage.getItem("nls_sidebar_open");
+        if (currentSidebarState === "1") {
+          localStorage.setItem("nls_sidebar_open", "0");
+          window.dispatchEvent(new CustomEvent("sidebarToggle"));
+        }
+      } catch {}
+    }
+  }, [dockOpen, isDesktop]);
+  
+  // Setup drag sensors
+  const dragSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before drag starts
+      },
+    })
+  );
+  
+  // Handle drag start
+  const handleDragStart = (item: { type: "program" | "routine"; id: string; title: string }) => {
+    setDraggedItem(item);
+    setIsDragging(true);
+  };
+  
+  // Handle reordering items within a day
+  const handleReorderItems = (date: Date, newOrder: string[]) => {
+    const dateKey = format(date, "yyyy-MM-dd");
+    setDayItemOrders(prev => {
+      const updated = { ...prev, [dateKey]: newOrder };
+      try {
+        localStorage.setItem("nls_day_item_orders", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+  
+  // Handle drag end - assign to calendar day OR reorder within day
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    const currentDraggedItem = draggedItem;
+    setIsDragging(false);
+    setDraggedItem(null);
+    
+    if (!over) return;
+    
+    // Check if this is a reorder within a day (active.id starts with day-)
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    
+    if (activeId.startsWith("day-") && overId.startsWith("day-") && activeId !== overId) {
+      // Extract date from the IDs (format: day-YYYY-MM-DD-type-id)
+      const activeMatch = activeId.match(/^day-(\d{4}-\d{2}-\d{2})-/);
+      const overMatch = overId.match(/^day-(\d{4}-\d{2}-\d{2})-/);
+      
+      if (activeMatch && overMatch && activeMatch[1] === overMatch[1]) {
+        // Same day - this is a reorder
+        const dateStr = activeMatch[1];
+        const date = new Date(dateStr + "T00:00:00");
+        const dateKey = format(date, "yyyy-MM-dd");
+        
+        // Get current order for this day, or build it from the items if empty
+        let currentOrder = dayItemOrders[dateKey];
+        
+        // If no order exists, we need to wait for the component to initialize it
+        // For now, just return and let the component handle initialization
+        if (!currentOrder || currentOrder.length === 0) {
+          return;
+        }
+        
+        // Find the indices
+        const oldIndex = currentOrder.indexOf(activeId);
+        const newIndex = currentOrder.indexOf(overId);
+        
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          // Use arrayMove to reorder
+          const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
+          handleReorderItems(date, newOrder);
+        }
+      }
+      return;
+    }
+    
+    // Otherwise, check if dropped on a calendar day (assigning from dock)
+    if (!currentDraggedItem) return;
+    
+    const overData = over.data.current;
+    if (overData?.type === "day" && overData.date) {
+      const targetDate = new Date(overData.date as Date);
+      const targetDateStr = format(targetDate, "yyyy-MM-dd");
+      
+      // Validate date is not in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      targetDate.setHours(0, 0, 0, 0);
+      
+      if (targetDate < today) {
+        addToast({
+          type: "error",
+          title: "Invalid Date",
+          message: "Cannot assign to past dates. Please select today or a future date.",
+        });
+        return;
+      }
+      
+      // Set loading state
+      setIsAssigning(true);
+      
+      // Assign program or routine
+      if (currentDraggedItem.type === "program") {
+        assignProgramDragMutation.mutate(
+          {
+            programId: currentDraggedItem.id,
+            clientIds: [clientId],
+            startDate: targetDateStr,
+            repetitions: 1,
+          },
+          {
+            onSuccess: async () => {
+              addToast({
+                type: "success",
+                title: "Program Assigned!",
+                message: `${currentDraggedItem.title} has been assigned to ${format(targetDate, "MMM d, yyyy")}.`,
+              });
+              // Small delay to show refresh
+              await new Promise(resolve => setTimeout(resolve, 300));
+              refreshAllData();
+              setIsAssigning(false);
+            },
+            onError: (error) => {
+              setIsAssigning(false);
+              addToast({
+                type: "error",
+                title: "Assignment Failed",
+                message: error.message || "Failed to assign program.",
+              });
+            },
+          }
+        );
+      } else if (currentDraggedItem.type === "routine") {
+        assignRoutineMutation.mutate(
+          {
+            routineId: currentDraggedItem.id,
+            clientIds: [clientId],
+            startDate: targetDateStr,
+          },
+          {
+            onSuccess: async () => {
+              addToast({
+                type: "success",
+                title: "Routine Assigned!",
+                message: `${currentDraggedItem.title} has been assigned to ${format(targetDate, "MMM d, yyyy")}.`,
+              });
+              // Small delay to show refresh
+              await new Promise(resolve => setTimeout(resolve, 300));
+              refreshAllData();
+              setIsAssigning(false);
+            },
+            onError: (error) => {
+              setIsAssigning(false);
+              addToast({
+                type: "error",
+                title: "Assignment Failed",
+                message: error.message || "Failed to assign routine.",
+              });
+            },
+          }
+        );
+      }
+    }
+  };
 
   // Hover tooltip state
   // Modal state for showing program/routine details
@@ -957,20 +537,7 @@ function ClientDetailPage({
       }
     );
 
-  // Debug: Log routine assignments when they change
-  useEffect(() => {
-    if (assignedRoutines.length > 0) {
-      console.log(
-        "ClientDetailPage: Loaded routine assignments:",
-        assignedRoutines.map(a => ({
-          id: a.id,
-          startDate: a.startDate,
-          assignedAt: a.assignedAt,
-          routineName: a.routine.name,
-        }))
-      );
-    }
-  }, [assignedRoutines]);
+  // Routine assignments loaded and ready
 
   // Fetch client's video assignments - optimized
   const { data: assignmentsData, error: assignmentsError } =
@@ -985,11 +552,6 @@ function ClientDetailPage({
     );
 
   const videoAssignments = assignmentsData?.videoAssignments || [];
-
-  // Debug logging
-  console.log("ClientDetailPage - assignmentsData:", assignmentsData);
-  console.log("ClientDetailPage - assignmentsError:", assignmentsError);
-  console.log("ClientDetailPage - videoAssignments:", videoAssignments);
 
   // Fetch coach's working hours for time slot generation - optimized
   const { data: coachProfile } = trpc.user.getProfile.useQuery(undefined, {
@@ -1122,6 +684,9 @@ function ClientDetailPage({
       console.error("Error assigning video:", error);
     },
   });
+  
+  // Assign program mutation for drag-and-drop
+  const assignProgramDragMutation = trpc.programs.assignToClients.useMutation();
 
   // Create temporary program day mutation for pasting program days
   const createTemporaryProgramDayMutation =
@@ -2426,59 +1991,6 @@ function ClientDetailPage({
     setConflictData(null);
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "CONFIRMED":
-        return (
-          <CheckCircle
-            className="h-4 w-4"
-            style={{ color: COLORS.GREEN_PRIMARY }}
-          />
-        );
-      case "DECLINED":
-        return (
-          <XCircle className="h-4 w-4" style={{ color: COLORS.RED_ALERT }} />
-        );
-      case "PENDING":
-        return (
-          <AlertCircle
-            className="h-4 w-4"
-            style={{ color: COLORS.GOLDEN_ACCENT }}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "CONFIRMED":
-        return {
-          backgroundColor: "rgba(245, 158, 11, 0.2)",
-          color: COLORS.TEXT_PRIMARY,
-          borderColor: "#F59E0B",
-        };
-      case "DECLINED":
-        return {
-          backgroundColor: getRedAlert(0.15),
-          color: COLORS.TEXT_PRIMARY,
-          borderColor: COLORS.RED_ALERT,
-        };
-      case "PENDING":
-        return {
-          backgroundColor: "rgba(245, 158, 11, 0.2)",
-          color: COLORS.TEXT_PRIMARY,
-          borderColor: "#F59E0B",
-        };
-      default:
-        return {
-          backgroundColor: "rgba(245, 158, 11, 0.2)",
-          color: COLORS.TEXT_PRIMARY,
-          borderColor: "#F59E0B",
-        };
-    }
-  };
 
   const getRoutineAssignmentsForDate = (date: Date) => {
     return assignedRoutines
@@ -2622,6 +2134,21 @@ function ClientDetailPage({
   }
 
   return (
+    <DndContext
+      sensors={dragSensors}
+      collisionDetection={closestCenter}
+      onDragStart={(event) => {
+        const data = event.active.data.current;
+        if (data) {
+          handleDragStart({
+            type: data.type as "program" | "routine",
+            id: data.id as string,
+            title: data.title as string,
+          });
+        }
+      }}
+      onDragEnd={handleDragEnd}
+    >
     <SidebarWrapperComponent noSidebar={noSidebar}>
       <div
         className="min-h-screen"
@@ -3129,7 +2656,7 @@ function ClientDetailPage({
 
           {/* Calendar Section */}
           <div
-            className="rounded-lg border p-4"
+            className="rounded-lg border p-4 relative overflow-visible"
             style={{
               backgroundColor: COLORS.BACKGROUND_CARD,
               borderColor: COLORS.BORDER_SUBTLE,
@@ -3529,7 +3056,12 @@ function ClientDetailPage({
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1">
+            <div 
+              className="grid grid-cols-7 gap-1 transition-all duration-300"
+              style={{
+                marginRight: dockOpen && isDesktop ? "320px" : "0",
+              }}
+            >
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                 <div
                   key={day}
@@ -3543,21 +3075,13 @@ function ClientDetailPage({
                 </div>
               ))}
               {calendarDays.map(day => {
-                const isToday = isSameDay(day, new Date());
-                const isCurrentMonth = isSameMonth(day, currentMonth);
-                const isPastDay = isPast(day);
                 const lessonsForDay = getLessonsForDate(day);
                 const programsForDay = getProgramsForDate(day);
                 const videosForDay = getVideosForDate(day);
                 const routineAssignmentsForDay =
                   getRoutineAssignmentsForDate(day);
-                const dayKey = day.toISOString().split("T")[0];
+                const dayKey = format(day, "yyyy-MM-dd");
                 const isSelected = selectedDays.has(dayKey);
-                const hasAssignments =
-                  lessonsForDay.length > 0 ||
-                  programsForDay.length > 0 ||
-                  videosForDay.length > 0 ||
-                  routineAssignmentsForDay.length > 0;
 
                 // Check if this day is part of the selected week
                 const dayWeekStart = startOfWeek(day, { weekStartsOn: 0 });
@@ -3566,375 +3090,53 @@ function ClientDetailPage({
                   selectedWeekStart &&
                   dayWeekStart.getTime() === selectedWeekStart.getTime();
 
+                const itemOrder = dayItemOrders[dayKey];
+
                 return (
-                  <div
+                  <ClientDetailCalendarDayCell
                     key={day.toISOString()}
-                    className={`${
-                      viewMode === "week" ? "min-h-[200px]" : "min-h-[120px]"
-                    } p-2 rounded-lg transition-all duration-200 border-2 relative group cursor-pointer`}
-                    style={{
-                      backgroundColor: isSelected
-                        ? getRedAlert(0.15)
-                        : isInSelectedWeek
-                        ? getGoldenAccent(0.15)
-                        : isToday
-                        ? getGoldenAccent(0.1)
-                        : isPastDay
-                        ? COLORS.BACKGROUND_CARD
-                        : isCurrentMonth
-                        ? COLORS.BACKGROUND_CARD
-                        : COLORS.BACKGROUND_DARK,
-                      color: isSelected
-                        ? COLORS.TEXT_PRIMARY
-                        : isInSelectedWeek
-                        ? COLORS.TEXT_PRIMARY
-                        : isToday
-                        ? COLORS.TEXT_PRIMARY
-                        : isPastDay
-                        ? COLORS.TEXT_MUTED
-                        : isCurrentMonth
-                        ? COLORS.TEXT_PRIMARY
-                        : COLORS.TEXT_MUTED,
-                      borderColor: isSelected
-                        ? COLORS.RED_ALERT
-                        : isInSelectedWeek
-                        ? COLORS.GOLDEN_ACCENT
-                        : isToday
-                        ? COLORS.GOLDEN_ACCENT
-                        : COLORS.BORDER_SUBTLE,
-                      boxShadow: isSelected
-                        ? `0 0 0 2px ${COLORS.RED_ALERT}`
-                        : isInSelectedWeek
-                        ? `0 0 0 2px ${COLORS.GOLDEN_ACCENT}`
-                        : "none",
-                    }}
-                    onMouseEnter={e => {
-                      if (!isSelected && !isInSelectedWeek && !isToday) {
-                        e.currentTarget.style.backgroundColor =
-                          COLORS.BACKGROUND_CARD_HOVER;
-                        e.currentTarget.style.borderColor =
-                          COLORS.GOLDEN_ACCENT;
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (!isSelected && !isInSelectedWeek && !isToday) {
-                        e.currentTarget.style.backgroundColor = isPastDay
-                          ? COLORS.BACKGROUND_CARD
-                          : isCurrentMonth
-                          ? COLORS.BACKGROUND_CARD
-                          : COLORS.BACKGROUND_DARK;
-                        e.currentTarget.style.borderColor =
-                          COLORS.BORDER_SUBTLE;
-                      }
-                    }}
-                    onClick={
-                      weekSelectMode
-                        ? e => {
-                            e.stopPropagation();
-                            handleWeekSelection(day);
-                          }
-                        : multiSelectMode
-                        ? e => {
-                            e.stopPropagation();
-                            toggleDaySelection(day);
-                          }
-                        : undefined
-                    }
-                  >
-                    {/* Selection Checkbox */}
-                    {multiSelectMode && (
-                      <div className="absolute top-2 left-2 z-20">
-                        <div
-                          className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200"
-                          style={{
-                            backgroundColor: isSelected
-                              ? COLORS.RED_ALERT
-                              : COLORS.BACKGROUND_CARD,
-                            borderColor: isSelected
-                              ? COLORS.RED_DARK
-                              : COLORS.BORDER_SUBTLE,
-                          }}
-                        >
-                          {isSelected && (
-                            <CheckCircle
-                              className="h-3 w-3"
-                              style={{ color: "#FFFFFF" }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Day Content - clickable area */}
-                    <div
-                      onClick={
-                        !multiSelectMode && !weekSelectMode
-                          ? e => {
-                              e.stopPropagation();
-                              handleDateClick(day);
-                            }
-                          : weekSelectMode
-                          ? undefined // Let parent handle the click in week select mode
-                          : multiSelectMode
-                          ? e => {
-                              // Stop propagation in multi-select mode to prevent modal
-                              e.stopPropagation();
-                            }
-                          : undefined
-                      }
-                      className={
-                        !multiSelectMode && !weekSelectMode
-                          ? "cursor-pointer h-full"
-                          : "h-full"
-                      }
-                      style={multiSelectMode ? { paddingLeft: "1.75rem" } : {}}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1">
-                          <div
-                            className="font-bold text-sm"
-                            style={{ color: COLORS.TEXT_PRIMARY }}
-                          >
-                            {format(day, "d")}
-                          </div>
-                          {/* Copy/Paste Buttons */}
-                          <div className="flex items-center gap-0.5 relative z-10">
-                            {/* Copy Button - only show if day has assignments */}
-                            {/* Allow copying past days - coaches can copy but not paste to past dates */}
-                            {(lessonsForDay.length > 0 ||
-                              programsForDay.length > 0 ||
-                              routineAssignmentsForDay.length > 0 ||
-                              videosForDay.length > 0) && (
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  handleCopyDay(day);
-                                }}
-                                className="p-0.5 rounded transition-all duration-200"
-                                style={{
-                                  backgroundColor: "transparent",
-                                  zIndex: 10,
-                                  position: "relative",
-                                }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    getGoldenAccent(0.15);
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    "transparent";
-                                }}
-                                title={
-                                  isPastDay
-                                    ? "Copy day assignments (past days can be copied but not pasted to)"
-                                    : "Copy day assignments"
-                                }
-                              >
-                                <Copy
-                                  className="h-2.5 w-2.5"
-                                  style={{
-                                    color: isPastDay
-                                      ? COLORS.GOLDEN_ACCENT
-                                      : COLORS.GOLDEN_ACCENT,
-                                    opacity: isPastDay ? 0.9 : 1,
-                                  }}
-                                />
-                              </button>
-                            )}
-
-                            {/* Paste Button - only show if clipboard has data */}
-                            {clipboardData && (
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  handlePasteDay(day);
-                                }}
-                                className="p-0.5 rounded transition-all duration-200"
-                                style={{
-                                  backgroundColor: "transparent",
-                                }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    getGreenPrimary(0.15);
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    "transparent";
-                                }}
-                                title="Paste assignments"
-                              >
-                                <Clipboard
-                                  className="h-2.5 w-2.5"
-                                  style={{ color: COLORS.GREEN_PRIMARY }}
-                                />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Lessons */}
-                      {lessonsForDay.map((lesson: any, index: number) => (
-                        <div
-                          key={`lesson-${index}`}
-                          className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center gap-1"
-                          style={getStatusColor(lesson.status)}
-                        >
-                          <div
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{
-                              backgroundColor:
-                                lesson.status === "DECLINED"
-                                  ? COLORS.RED_ALERT
-                                  : "#F59E0B",
-                            }}
-                          />
-                          <span className="truncate">
-                            {formatTimeInUserTimezone(lesson.date)}
-                          </span>
-                        </div>
-                      ))}
-
-                      {/* Programs */}
-                      {programsForDay.map((program: any, index: number) => {
-                        const handleDetailsClick = (e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          // Extract drills from program day
-                          const drills = program.programDay?.drills || [];
-                          const drillItems = drills.map((drill: any) => ({
-                            id: drill.id,
-                            title: drill.title,
-                            sets: drill.sets,
-                            reps: drill.reps,
-                            routineId: drill.routineId, // Include routineId if drill is linked to a routine
-                          }));
-
-                          setSelectedEventDetails({
-                            type: "program",
-                            name: program.title,
-                            items: drillItems,
-                          });
-                        };
-
-                        return (
-                          <div
-                            key={`program-${index}`}
-                            className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center justify-between gap-1"
-                            style={{
-                              backgroundColor: "rgba(59, 130, 246, 0.2)",
-                              color: COLORS.TEXT_PRIMARY,
-                              borderColor: "#3B82F6",
-                            }}
-                          >
-                            <div className="flex items-center gap-1 flex-1 min-w-0">
-                              <div
-                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                style={{
-                                  backgroundColor: "#3B82F6",
-                                }}
-                              />
-                              <span className="truncate">{program.title}</span>
-                            </div>
-                            <button
-                              onClick={handleDetailsClick}
-                              className="text-[8px] px-1 py-0.5 rounded flex-shrink-0 hover:opacity-80 transition-opacity"
-                              style={{
-                                backgroundColor: COLORS.BACKGROUND_CARD,
-                                color: COLORS.TEXT_SECONDARY,
-                              }}
-                            >
-                              details
-                            </button>
-                          </div>
+                    day={day}
+                    viewMode={viewMode}
+                    currentMonth={currentMonth}
+                    isSelected={isSelected}
+                    isInSelectedWeek={isInSelectedWeek}
+                    multiSelectMode={multiSelectMode}
+                    weekSelectMode={weekSelectMode}
+                    lessonsForDay={lessonsForDay}
+                    programsForDay={programsForDay}
+                    videosForDay={videosForDay}
+                    routineAssignmentsForDay={routineAssignmentsForDay}
+                    clipboardData={clipboardData}
+                    onDateClick={handleDateClick}
+                    onCopyDay={handleCopyDay}
+                    onPasteDay={handlePasteDay}
+                    onToggleDaySelection={toggleDaySelection}
+                    onWeekSelection={handleWeekSelection}
+                    setSelectedEventDetails={setSelectedEventDetails}
+                    onReorderItems={handleReorderItems}
+                    itemOrder={itemOrder}
+                    isDesktop={isDesktop}
+                  />
                         );
                       })}
-
-                      {/* Videos */}
-                      {videosForDay.map((video: any, index: number) => (
-                        <div
-                          key={`video-${index}`}
-                          className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center gap-1"
-                          style={{
-                            backgroundColor: "rgba(139, 92, 246, 0.2)",
-                            color: COLORS.TEXT_PRIMARY,
-                            borderColor: "#8B5CF6",
-                          }}
-                        >
-                          <div
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{
-                              backgroundColor: "#8B5CF6",
-                            }}
-                          />
-                          <span className="truncate">{video.title}</span>
                         </div>
-                      ))}
-
-                      {/* Routine Assignments */}
-                      {routineAssignmentsForDay.map(
-                        (assignment: any, index: number) => {
-                          const handleDetailsClick = (e: React.MouseEvent) => {
-                            e.stopPropagation();
-                            // Extract exercises from routine
-                            const exercises =
-                              assignment.routine?.exercises || [];
-                            const exerciseItems = exercises.map(
-                              (exercise: any) => ({
-                                title: exercise.title,
-                                sets: exercise.sets,
-                                reps: exercise.reps,
-                              })
-                            );
-
-                            setSelectedEventDetails({
-                              type: "routine",
-                              name: assignment.routine.name,
-                              items: exerciseItems,
-                            });
-                          };
-
-                          return (
-                            <div
-                              key={`routine-${index}`}
-                              className="text-[10px] px-1.5 py-0.5 rounded border mb-0.5 flex items-center justify-between gap-1"
-                              style={{
-                                backgroundColor: "rgba(16, 185, 129, 0.1)",
-                                color: COLORS.TEXT_PRIMARY,
-                                borderColor: "#10B981",
-                              }}
-                            >
-                              <div className="flex items-center gap-1 flex-1 min-w-0">
-                                <div
-                                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                  style={{
-                                    backgroundColor: "#10B981",
-                                  }}
-                                />
-                                <span className="truncate">
-                                  {assignment.routine.name}
-                                </span>
-                              </div>
-                              <button
-                                onClick={handleDetailsClick}
-                                className="text-[8px] px-1 py-0.5 rounded flex-shrink-0 hover:opacity-80 transition-opacity"
-                                style={{
-                                  backgroundColor: COLORS.BACKGROUND_CARD,
-                                  color: COLORS.TEXT_SECONDARY,
-                                  borderColor: COLORS.BORDER_SUBTLE,
-                                  border: "1px solid",
-                                }}
-                              >
-                                details
-                              </button>
-                            </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            
+            {/* Drag-and-Drop Dock - Attached to Calendar */}
+            {isDesktop && (
+              <ClientDetailDock
+                isOpen={dockOpen}
+                activeTab={dockActiveTab}
+                searchTerm={dockSearchTerm}
+                onToggle={() => setDockOpen(!dockOpen)}
+                onTabChange={setDockActiveTab}
+                onSearchChange={setDockSearchTerm}
+                onDragStart={handleDragStart}
+                onDragEnd={(item) => {
+                  setIsDragging(false);
+                  setDraggedItem(null);
+                }}
+              />
+            )}
           </div>
 
           {/* Notes Modal */}
@@ -4269,9 +3471,38 @@ function ClientDetailPage({
               buttonRef={quickMessageButtonRef}
             />
           )}
+          
+          {/* Loading indicator during assignment */}
+          {isDesktop && isAssigning && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+              style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+            >
+              <div
+                className="px-6 py-4 rounded-lg shadow-lg flex items-center gap-3"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.GOLDEN_ACCENT,
+                  border: "2px solid",
+                }}
+              >
+                <Loader2
+                  className="h-5 w-5 animate-spin"
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Assigning...
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </SidebarWrapperComponent>
+    </DndContext>
   );
 }
 

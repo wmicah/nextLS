@@ -447,16 +447,16 @@ function HomeContent() {
               © {new Date().getFullYear()} NextLevel Coaching. All rights reserved.
             </p>
             <span className="text-zinc-600 text-sm">
-              Powered by{" "}
-              <Link
-                href="https://nexishq.com"
-                target="_blank"
-                rel="noopener noreferrer"
+                Powered by{" "}
+                <Link
+                  href="https://nexishq.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 className="text-zinc-500 hover:text-white transition-colors font-medium"
-              >
-                Nexis
-              </Link>
-            </span>
+                >
+                  Nexis
+                </Link>
+              </span>
           </div>
         </MaxWidthWrapper>
       </footer>
@@ -634,31 +634,31 @@ function VideoStepPlayer() {
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 sm:p-6 md:p-8">
             <div className="max-w-2xl">
               <div className="text-xs sm:text-sm font-medium text-[#E5B232] mb-1 sm:mb-2">
-                Step {currentStepData.number}
-              </div>
-              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2">
-                {currentStepData.title}
-              </h3>
-              <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">
-                {currentStepData.description}
-              </p>
+              Step {currentStepData.number}
             </div>
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2">
+              {currentStepData.title}
+            </h3>
+              <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">
+              {currentStepData.description}
+            </p>
           </div>
+        </div>
 
           {/* Play/Pause */}
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
+        <button
+          onClick={() => setIsPlaying(!isPlaying)}
             className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all"
-          >
-            {isPlaying ? (
+        >
+          {isPlaying ? (
               <div className="flex gap-1">
                 <div className="w-0.5 h-3 bg-white rounded-full"></div>
                 <div className="w-0.5 h-3 bg-white rounded-full"></div>
-              </div>
-            ) : (
+            </div>
+          ) : (
               <PlayCircle className="h-5 w-5 text-white" />
-            )}
-          </button>
+          )}
+        </button>
         </div>
       </div>
 
@@ -812,8 +812,8 @@ function ClientManagementDemo() {
               <div className="flex-1 min-w-0">
                 <div className="text-white font-medium text-xs sm:text-sm truncate">{client.name}</div>
                 <div className="text-[10px] text-green-400">{client.status}</div>
-              </div>
-            </div>
+                </div>
+                </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-zinc-500">Progress</span>
@@ -945,7 +945,7 @@ function WhoCard({
         {isTeam && <TeamWorkspaceDemo />}
         {/* Gradient overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#E5B232]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      </div>
+          </div>
       <div className="p-6 sm:p-8">
         <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 group-hover:text-[#E5B232] transition-colors duration-300">{title}</h3>
         <p className="text-zinc-400 mb-6 leading-relaxed">{description}</p>
@@ -1373,7 +1373,7 @@ function DeviceMockup() {
                           >
                             <div className="text-[9px] text-zinc-500">{day}</div>
                             <div className="text-[10px] font-medium text-zinc-300">{13 + idx}</div>
-                          </div>
+                            </div>
                         );
                       })}
                     </div>
@@ -1401,13 +1401,13 @@ function DeviceMockup() {
                       <h3 className="text-sm font-semibold text-white mb-2">Today</h3>
                       <div className="text-[10px] text-zinc-400">2:00 PM - Alex Thompson</div>
                       <div className="text-[10px] text-zinc-400">4:00 PM - Sarah Mitchell</div>
-                    </motion.div>
+                          </motion.div>
+                      </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         <div className="bg-[#1a1a1a] h-2 rounded-b-lg shadow-2xl"></div>
         <div className="bg-[#0f0f0f] h-1 rounded-b-lg mx-8"></div>
       </div>
@@ -1435,16 +1435,16 @@ function CoachDashboardDemo() {
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[9px] text-[#E5B232] font-bold">12</div>
             <div className="text-[7px] text-zinc-500">Athletes</div>
-          </div>
+        </div>
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[9px] text-white font-bold">8</div>
             <div className="text-[7px] text-zinc-500">Programs</div>
-          </div>
+        </div>
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[9px] text-white font-bold">5</div>
             <div className="text-[7px] text-zinc-500">Today</div>
-          </div>
         </div>
+      </div>
         <div className="bg-white/5 rounded p-1.5 border border-white/10">
           <div className="text-[8px] text-white font-medium mb-1">Recent</div>
           <div className="text-[7px] text-zinc-400">Video from Alex T.</div>
@@ -1466,32 +1466,32 @@ function AthleteDashboardDemo() {
         </div>
       </div>
       <div className="grid grid-cols-3 gap-1 mb-2">
-        <div className="bg-white/5 rounded p-1.5 border border-white/10">
+          <div className="bg-white/5 rounded p-1.5 border border-white/10">
           <div className="text-[8px] text-zinc-500">Next Lesson</div>
           <div className="text-[10px] text-white font-medium">Tomorrow</div>
-        </div>
-        <div className="bg-white/5 rounded p-1.5 border border-white/10">
+          </div>
+          <div className="bg-white/5 rounded p-1.5 border border-white/10">
           <div className="text-[8px] text-zinc-500">Progress</div>
           <div className="text-[10px] text-[#E5B232] font-medium">78%</div>
-        </div>
-        <div className="bg-white/5 rounded p-1.5 border border-white/10">
+          </div>
+          <div className="bg-white/5 rounded p-1.5 border border-white/10">
           <div className="text-[8px] text-zinc-500">Messages</div>
           <div className="text-[10px] text-white font-medium">2 new</div>
+          </div>
         </div>
-      </div>
       <div className="flex-1 bg-[#1a1f20] rounded-lg p-2 border border-white/10">
         <div className="text-[9px] font-semibold text-white mb-1">Today's Workout</div>
-        <div className="space-y-1">
+          <div className="space-y-1">
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full bg-green-500/20 flex items-center justify-center">
               <Check className="w-2 h-2 text-green-400" />
             </div>
             <span className="text-[8px] text-zinc-300">Warm-up</span>
-          </div>
+            </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full bg-[#E5B232]/20"></div>
             <span className="text-[8px] text-zinc-300">Mechanics Drill</span>
-          </div>
+            </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full bg-white/10"></div>
             <span className="text-[8px] text-zinc-300">Video Review</span>
@@ -1517,7 +1517,7 @@ function TeamWorkspaceDemo() {
         <div className="flex items-center gap-1 mb-2">
           <div className="w-3 h-3 bg-white/10 rounded"></div>
           <div className="text-[10px] font-bold text-white">Elite Academy</div>
-        </div>
+          </div>
         <div className="grid grid-cols-2 gap-1 mb-2">
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[10px] text-white font-bold">3</div>
@@ -1526,21 +1526,21 @@ function TeamWorkspaceDemo() {
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[10px] text-white font-bold">42</div>
             <div className="text-[7px] text-zinc-500">Athletes</div>
-          </div>
         </div>
+          </div>
         <div className="text-[8px] text-white font-medium mb-1">Team</div>
-        <div className="space-y-1">
+          <div className="space-y-1">
           <div className="flex items-center gap-1 bg-white/5 rounded p-1 border border-white/10">
             <div className="w-4 h-4 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-[7px] font-bold">JD</div>
             <div className="text-[8px] text-white">John Davis</div>
             <div className="text-[6px] text-zinc-500 ml-auto">Owner</div>
-          </div>
+              </div>
           <div className="flex items-center gap-1 bg-white/5 rounded p-1 border border-white/10">
             <div className="w-4 h-4 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-[7px] font-bold">MS</div>
             <div className="text-[8px] text-white">Maria Smith</div>
             <div className="text-[6px] text-zinc-500 ml-auto">Coach</div>
-          </div>
-        </div>
+                </div>
+                </div>
       </div>
     </div>
   );
