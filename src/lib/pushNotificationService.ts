@@ -1,13 +1,17 @@
 import { db } from "@/db";
 import webpush from "web-push";
 
-// Configure web-push with VAPID keys
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || "mailto:notifications@nextlevelcoaching.com",
-  process.env.NEXT_PUBLIC_VAPID_KEY ||
-    "BJmY1hCwoFMlFc67g3k8ehL0RAyf72sPxkVjNzMn8OPk-nv9BwR1xF8hLQwWvkj-mPFtNCPoySRFRitF80l3j44",
-  process.env.VAPID_PRIVATE_KEY || "QBIAsh2xty8paP3Zbd33kCWzOnXLjnP5on5k4xHol9Y"
-);
+// Configure web-push with VAPID keys - these MUST be set in environment variables
+const vapidSubject = process.env.VAPID_SUBJECT || "mailto:notifications@nextlevelcoaching.com";
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (!vapidPublicKey || !vapidPrivateKey) {
+  console.warn("⚠️ VAPID keys not configured. Push notifications will not work.");
+  console.warn("   Set NEXT_PUBLIC_VAPID_KEY and VAPID_PRIVATE_KEY environment variables.");
+} else {
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+}
 
 // Helper function to remove all emojis from text
 function removeEmojis(text: string): string {
