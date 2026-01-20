@@ -461,7 +461,7 @@ export function getClientDueTimestamp(
     debugInfo.result = "-Infinity (no active programs or routines - needs assignment)";
     // Only log in development mode to avoid production performance issues
     if (enableDebug) {
-      const skippedReasons = debugInfo.programAssignments.map(p => `${p.programTitle}: ${p.reason || 'no reason'}`);
+    const skippedReasons = debugInfo.programAssignments.map(p => `${p.programTitle}: ${p.reason || 'no reason'}`);
       devLog(`[DUE DATE] ${client.name}: -Infinity (no active assignments) | Programs: ${client.programAssignments?.length || 0} | Routines: ${client.routineAssignments?.length || 0} | SKIP REASONS: ${skippedReasons.join(' | ') || 'none'}`);
     }
     return -Infinity;

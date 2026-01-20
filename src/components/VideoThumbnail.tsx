@@ -35,7 +35,7 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = memo(({
       const videoId = extractYouTubeId(item.url);
       if (videoId) {
         return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-      }
+    }
     }
 
     return null;
@@ -61,7 +61,7 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = memo(({
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#1a1f1f]">
             <div className="animate-pulse w-full h-full bg-[#2a2f2f]" />
-          </div>
+      </div>
         )}
         <img
           src={thumbnailUrl}
@@ -91,8 +91,8 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = memo(({
     >
       <div className="flex flex-col items-center gap-2 text-gray-400">
         {item.type === "video" ? (
-          <>
-            <Video className="h-8 w-8" style={{ color: "#ABA4AA" }} />
+              <>
+                <Video className="h-8 w-8" style={{ color: "#ABA4AA" }} />
             <span className="text-xs">Video</span>
           </>
         ) : (

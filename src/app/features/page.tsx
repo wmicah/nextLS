@@ -873,20 +873,20 @@ function FeatureDemo({ type, accentColor }: { type: number; accentColor: string 
           {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => (
             <div key={idx} className="flex flex-col">
               <div className="text-[10px] text-zinc-500 text-center mb-1">{day}</div>
-              <motion.div
+            <motion.div
                 className={`flex-1 rounded-lg border ${idx === 2 ? "bg-white/5 border-white/10" : ""}`}
                 style={idx !== 2 ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}30` } : {}}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: idx * 0.05 }}
               >
                 {idx !== 2 && (
                   <div className="p-1.5 space-y-1">
                     <div className="h-1.5 rounded" style={{ backgroundColor: `${accentColor}40`, width: '80%' }} />
                     <div className="h-1.5 rounded" style={{ backgroundColor: `${accentColor}30`, width: '60%' }} />
-                  </div>
+              </div>
                 )}
-              </motion.div>
+            </motion.div>
             </div>
           ))}
         </div>
@@ -913,24 +913,24 @@ function FeatureDemo({ type, accentColor }: { type: number; accentColor: string 
               <div className="w-0 h-0 border-l-[12px] border-t-[8px] border-b-[8px] border-l-white border-t-transparent border-b-transparent ml-1" />
             </motion.div>
           </div>
-          
+
           {/* Progress bar */}
           <div className="absolute bottom-3 left-3 right-3 h-1.5 bg-white/10 rounded-full overflow-hidden">
-            <motion.div
+          <motion.div
               className="h-full rounded-full"
               style={{ backgroundColor: accentColor }}
               initial={{ width: "0%" }}
               animate={{ width: "45%" }}
               transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
             />
-          </div>
+                </div>
 
           {/* Annotation overlay */}
           <motion.div
             className="absolute top-6 right-8 w-10 h-10 rounded-full border-2"
             style={{ borderColor: accentColor }}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
             transition={{ delay: 0.5 }}
           />
           <motion.div
@@ -939,16 +939,16 @@ function FeatureDemo({ type, accentColor }: { type: number; accentColor: string 
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{ delay: 0.8, duration: 0.5 }}
-          />
+            />
         </motion.div>
 
         {/* Tool bar */}
         <div className="flex gap-2">
           {["Pen", "Circle", "Arrow", "Voice"].map((tool, idx) => (
-            <motion.div
+        <motion.div
               key={tool}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + idx * 0.1 }}
               className={`flex-1 rounded-lg py-2 text-center text-[10px] font-medium border ${
                 idx === 0 ? "text-white" : "bg-white/5 text-zinc-400 border-white/10"
@@ -956,9 +956,9 @@ function FeatureDemo({ type, accentColor }: { type: number; accentColor: string 
               style={idx === 0 ? { backgroundColor: accentColor, borderColor: accentColor } : {}}
             >
               {tool}
-            </motion.div>
+        </motion.div>
           ))}
-        </div>
+      </div>
       </div>
     );
   }
@@ -1030,18 +1030,18 @@ function FeatureDemo({ type, accentColor }: { type: number; accentColor: string 
           {Array.from({ length: 28 }).map((_, idx) => {
             const isBooked = [5, 12, 19, 8, 15].includes(idx);
             return (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: idx * 0.015 }}
                 className={`rounded-lg border flex items-center justify-center text-xs font-medium ${
                   isBooked ? "text-white" : "bg-white/5 border-white/10 text-zinc-500"
-                }`}
+              }`}
                 style={isBooked ? { backgroundColor: `${accentColor}30`, borderColor: `${accentColor}50`, color: accentColor } : {}}
-              >
-                {idx + 1}
-              </motion.div>
+            >
+              {idx + 1}
+            </motion.div>
             );
           })}
         </div>
@@ -1083,7 +1083,7 @@ function FeatureDemo({ type, accentColor }: { type: number; accentColor: string 
               style={{ backgroundColor: idx === 5 ? accentColor : `${accentColor}40` }}
             />
           ))}
-        </div>
+      </div>
       </div>
     );
   }
