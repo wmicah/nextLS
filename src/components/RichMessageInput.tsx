@@ -50,6 +50,22 @@ export default function RichMessageInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showFormatting, setShowFormatting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile/touch device
+  useEffect(() => {
+    const checkMobile = () => {
+      // Check for touch capability (primary input is touch)
+      const hasTouch = window.matchMedia('(pointer: coarse)').matches;
+      // Also check screen width as a fallback
+      const isSmallScreen = window.innerWidth < 768;
+      setIsMobile(hasTouch || isSmallScreen);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -63,7 +79,8 @@ export default function RichMessageInput({
   }, [value]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    // On mobile, Enter creates new line. On desktop, Enter sends (Shift+Enter for new line)
+    if (e.key === "Enter" && !e.shiftKey && !isMobile) {
       e.preventDefault();
       if (value.trim() || selectedFile) {
         onSend();
@@ -192,8 +209,10 @@ export default function RichMessageInput({
               <video
                 src={selectedFile.uploadData.attachmentUrl}
                 className="w-full max-h-64 object-contain bg-black/10"
-                controls={true}
+                controls
                 muted
+                playsInline
+                preload="metadata"
               />
               <div className="absolute top-2 right-2">
                 {onRemoveFile && (
