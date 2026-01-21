@@ -719,7 +719,7 @@ function LibraryPage() {
       {/* Empty State - Show when not loading and no items (regardless of search/filter) */}
       {!isLoading && libraryItems.length === 0 && !showError && (
         <div
-          className="flex flex-col items-center justify-center h-64 rounded-lg shadow-lg border relative overflow-hidden"
+          className="flex flex-col items-center justify-center h-64 rounded-lg shadow-sm border relative overflow-hidden"
           style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
         >
           <div className="relative text-center">
@@ -865,7 +865,7 @@ function LibraryPage() {
               {libraryItems.map((item: any, index: number) => (
                 <div
                   key={`${item.id}-${index}`}
-                  className="rounded-lg shadow-lg border transition-all duration-300 transform hover:-translate-y-1 cursor-pointer relative overflow-hidden group w-full h-full"
+                  className="rounded-lg shadow-sm border transition-all duration-200 cursor-pointer relative overflow-hidden group w-full h-full"
                   style={{
                     backgroundColor: COLORS.BACKGROUND_CARD,
                     borderColor: COLORS.BORDER_SUBTLE,
@@ -875,12 +875,13 @@ function LibraryPage() {
                   onMouseEnter={e => {
                     e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                     e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                    e.currentTarget.style.boxShadow =
-                      "0 10px 25px rgba(0, 0, 0, 0.3)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
                     e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.transform = "translateY(0)";
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >
@@ -971,7 +972,7 @@ function LibraryPage() {
               {libraryItems.map((item: any, index: number) => (
                 <div
                   key={`${item.id}-${index}`}
-                  className="rounded-lg shadow-lg p-3 border transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group w-full"
+                  className="rounded-lg shadow-sm p-4 border transition-all duration-200 cursor-pointer relative overflow-hidden group w-full"
                   style={{
                     backgroundColor: COLORS.BACKGROUND_CARD,
                     borderColor: COLORS.BORDER_SUBTLE,
@@ -981,11 +982,13 @@ function LibraryPage() {
                   onMouseEnter={e => {
                     e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                     e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                    e.currentTarget.style.boxShadow = "0 10px 25px rgba(0, 0, 0, 0.3)";
+                    e.currentTarget.style.transform = "translateX(2px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
                     e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.transform = "translateX(0)";
                     e.currentTarget.style.boxShadow = "none";
                   }}
                 >

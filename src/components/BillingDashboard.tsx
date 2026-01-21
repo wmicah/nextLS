@@ -22,6 +22,7 @@ import {
   ExternalLink,
   Crown,
   Library,
+  Clock,
 } from "lucide-react";
 // import PaywallModal from "./PaywallModal";
 
@@ -198,6 +199,21 @@ export default function BillingDashboard() {
                   Cancels at period end
                 </Badge>
               )}
+            </div>
+          </div>
+
+          {/* Subscription Change Notice */}
+          <div className="mt-6 p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
+            <div className="flex items-start gap-3">
+              <Clock className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-semibold text-yellow-400 mb-1">
+                  Subscription Changes
+                </p>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Please allow up to 30 minutes for subscription changes to take effect. Your account will be updated automatically once processing is complete.
+                </p>
+              </div>
             </div>
           </div>
 

@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: "%s | NextLevel Coaching",
   },
   description:
-    "The professional platform trusted by elite coaches to build championship programs, develop athletes, and grow their business. Athletes train free. Coaches pay monthly. Start your free trial today.",
+    "The professional platform trusted by elite coaches to build championship programs, develop athletes, and grow their business. Athletes train free. Coaches pay monthly. Subscribe today.",
   keywords: [
     "sports coaching platform",
     "athletic coaching software",
