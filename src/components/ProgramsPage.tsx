@@ -240,8 +240,13 @@ function ProgramsPage() {
     "programs"
   );
 
-  // Get user profile to check subscription tier
-  const { data: userProfile } = trpc.user.getProfile.useQuery();
+  // Get user profile to check subscription tier - with aggressive caching
+  const { data: userProfile } = trpc.user.getProfile.useQuery(undefined, {
+    staleTime: 30 * 60 * 1000, // 30 minutes (subscriptions can change, but not frequently)
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
   // PREMADE_ROUTINES tier includes MASTER_LIBRARY access (higher tiers get all lower tier features)
   const hasMasterLibraryAccess = 
     userProfile?.subscriptionTier === "MASTER_LIBRARY" || 
@@ -1615,7 +1620,7 @@ function ProgramCard({
   if (viewMode === "list") {
     return (
       <div
-        className="rounded-lg shadow-lg border transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group"
+        className="rounded-lg shadow-sm border transition-all duration-200 cursor-pointer relative overflow-hidden group"
         style={{
           backgroundColor: COLORS.BACKGROUND_CARD,
           borderColor: COLORS.BORDER_SUBTLE,
@@ -1623,10 +1628,14 @@ function ProgramCard({
         onMouseEnter={e => {
           e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
           e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
         }}
         onMouseLeave={e => {
           e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
           e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "none";
         }}
       >
         <div className="relative p-3">
@@ -1765,7 +1774,7 @@ function ProgramCard({
 
   return (
     <div
-      className="rounded-lg shadow-lg border transition-all duration-300 transform hover:-translate-y-1 cursor-pointer relative overflow-hidden group"
+      className="rounded-lg shadow-sm border transition-all duration-200 cursor-pointer relative overflow-hidden group"
       style={{
         backgroundColor: COLORS.BACKGROUND_CARD,
         borderColor: COLORS.BORDER_SUBTLE,
@@ -1773,10 +1782,14 @@ function ProgramCard({
       onMouseEnter={e => {
         e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
         e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
       }}
       onMouseLeave={e => {
         e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
         e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "none";
       }}
     >
       <div className="relative p-3">

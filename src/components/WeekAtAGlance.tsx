@@ -92,11 +92,13 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
       }
     );
 
-  // Fetch coach's profile for working hours - with caching
+  // Fetch coach's profile for working hours - with aggressive caching
+  // Working hours and profile don't change frequently
   const { data: coachProfile } = trpc.user.getProfile.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 60 * 60 * 1000, // 1 hour (working hours can change, but not often)
+    gcTime: 24 * 60 * 60 * 1000, // 24 hours
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Fetch coach's active clients for scheduling - with caching

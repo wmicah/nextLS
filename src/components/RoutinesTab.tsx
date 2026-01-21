@@ -706,7 +706,7 @@ export default function RoutinesTab({
             {filteredRoutines.map((routine, index) => (
               <div
                 key={routine.id}
-                className="rounded-lg shadow-lg border transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer relative overflow-hidden group"
+                className="rounded-lg shadow-sm border transition-all duration-200 cursor-pointer relative overflow-hidden group"
                 style={{
                   backgroundColor: COLORS.BACKGROUND_CARD,
                   borderColor: COLORS.BORDER_SUBTLE,
@@ -715,11 +715,13 @@ export default function RoutinesTab({
                 onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                   e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                  e.currentTarget.style.boxShadow = "0 10px 25px rgba(0, 0, 0, 0.3)";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
                   e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  e.currentTarget.style.transform = "translateY(0)";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >

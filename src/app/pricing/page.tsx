@@ -718,9 +718,9 @@ function FAQSection() {
         "We'll notify you when you're approaching your limit. You can upgrade your plan or we can temporarily increase your limit while you decide.",
     },
     {
-      question: "Is there a free trial?",
+      question: "How does billing work?",
       answer:
-        "Athletes can use the platform for free. Coaches pay monthly starting at $25/month. You can cancel anytime.",
+        "Athletes can use the platform for free. Coaches pay monthly starting at $25/month. You'll be charged immediately upon subscription. You can cancel anytime.",
     },
     {
       question: "Can I cancel anytime?",

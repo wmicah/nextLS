@@ -673,7 +673,7 @@ What would you like to know more about?`;
 
 **To get started:**
 1. Click "Sign Up" to create your account
-2. Choose your plan (14-day free trial)
+2. Choose your plan and subscribe
 3. Start building your first program or join as an athlete
 
 **Contact us** for a personalized demo tailored to your specific needs!`;
@@ -691,7 +691,7 @@ What would you like to know more about?`;
 2. Choose your role (Coach or Athlete)
 3. Enter your email and create a password
 4. Complete your profile information
-5. Start your 14-day free trial
+5. Subscribe to your plan
 
 📋 **What You'll Need:**
 - **Coaches**: Basic information about your coaching business

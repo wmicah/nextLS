@@ -230,7 +230,22 @@ export default function CoachPricingModal({
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-4 w-4" />
-                <span>14-day free trial</span>
+                <span>Monthly billing</span>
+              </div>
+            </div>
+
+            {/* Subscription Change Notice */}
+            <div className="mt-6 p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
+              <div className="flex items-start gap-3">
+                <Clock className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                <div className="text-xs" style={{ color: "#ABA4AA" }}>
+                  <p className="font-semibold text-yellow-400 mb-1">
+                    Subscription Changes
+                  </p>
+                  <p>
+                    Please allow up to 30 minutes for subscription changes to take effect. Your account will be updated automatically once processing is complete.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -242,7 +257,7 @@ export default function CoachPricingModal({
           >
             <div className="flex items-center justify-between">
               <div className="text-sm" style={{ color: "#ABA4AA" }}>
-                You'll be charged ${currentPrice}/month after your free trial
+                You'll be charged ${currentPrice}/month starting today
               </div>
               <div className="flex gap-3">
                 <button
@@ -258,7 +273,7 @@ export default function CoachPricingModal({
                   style={{ backgroundColor: "#0ea5e9" }}
                 >
                   <CreditCard className="h-4 w-4" />
-                  Start Free Trial
+                  Subscribe Now
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </button>
               </div>

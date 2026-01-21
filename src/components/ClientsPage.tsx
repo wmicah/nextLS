@@ -1753,19 +1753,6 @@ function ClientsPage() {
     return lessonDate > today;
   }).length;
 
-  if (isLoading) {
-    return (
-      <Sidebar>
-        <div className="flex items-center justify-center h-64">
-          <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2"
-            style={{ borderColor: COLORS.BORDER_SUBTLE }}
-          />
-        </div>
-      </Sidebar>
-    );
-  }
-
   if (error) {
     return (
       <Sidebar>
@@ -2209,7 +2196,44 @@ function ClientsPage() {
         )}
 
         {/* Enhanced Athletes List/Grid */}
-        {filteredAndSortedClients.length === 0 ? (
+        {isLoading ? (
+          // Show skeleton cards while loading
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="rounded-lg border shadow-sm animate-pulse"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div
+                      className="w-10 h-10 rounded-full"
+                      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+                    />
+                    <div className="flex-1">
+                      <div
+                        className="h-4 rounded mb-2"
+                        style={{ backgroundColor: COLORS.BACKGROUND_DARK, width: "60%" }}
+                      />
+                      <div
+                        className="h-3 rounded"
+                        style={{ backgroundColor: COLORS.BACKGROUND_DARK, width: "40%" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-red-400">Error loading clients: {error.message}</p>
+          </div>
+        ) : filteredAndSortedClients.length === 0 ? (
           <div
             className="rounded-lg border text-center relative overflow-hidden"
             style={{
@@ -2291,7 +2315,7 @@ function ClientsPage() {
                     (client: Client, index: number) => (
                       <div
                         key={client.id}
-                        className="rounded-lg border transition-all duration-300 hover:shadow-lg cursor-pointer relative overflow-hidden group animate-fadeIn"
+                        className="rounded-lg border shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer relative overflow-hidden group animate-fadeIn"
                         style={{
                           backgroundColor: COLORS.BACKGROUND_CARD,
                           borderColor: COLORS.BORDER_SUBTLE,
@@ -2307,12 +2331,14 @@ function ClientsPage() {
                             COLORS.BACKGROUND_CARD_HOVER;
                           e.currentTarget.style.borderColor =
                             COLORS.GOLDEN_ACCENT;
+                          e.currentTarget.style.transform = "translateY(-2px)";
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.backgroundColor =
                             COLORS.BACKGROUND_CARD;
                           e.currentTarget.style.borderColor =
                             COLORS.BORDER_SUBTLE;
+                          e.currentTarget.style.transform = "translateY(0)";
                         }}
                       >
                         <div className="p-[11px]">

@@ -7,12 +7,12 @@ import { ReactNode, Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ComponentErrorFallback } from "@/components/ErrorFallback";
 
-// Loading skeleton component for page transitions
-const PageSkeleton = () => (
-  <div className="flex items-center justify-center h-64">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
-  </div>
-);
+// Loading skeleton component for page transitions (not used anymore, but kept for reference)
+// const PageSkeleton = () => (
+//   <div className="flex items-center justify-center h-64">
+//     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-400" />
+//   </div>
+// );
 
 // ============================================================
 // DYNAMIC IMPORTS - Only load what's needed for the current page
@@ -20,111 +20,111 @@ const PageSkeleton = () => (
 
 // Dashboard components
 const Dashboard = dynamic(() => import("./Dashboard"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileDashboard = dynamic(() => import("./MobileDashboard"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
 // Clients components
 const ClientsPage = dynamic(() => import("./ClientsPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileClientsPage = dynamic(() => import("./MobileClientsPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
 // Library components
 const LibraryPage = dynamic(() => import("./LibraryPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileLibraryPage = dynamic(() => import("./MobileLibraryPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
 // Programs components
 const ProgramsPage = dynamic(() => import("./ProgramsPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileProgramsPage = dynamic(() => import("./MobileProgramsPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
 // Schedule components
 const SchedulePageClient = dynamic(() => import("../app/schedule/SchedulePageClient"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileSchedulePage = dynamic(() => import("./MobileSchedulePage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
 // Notifications components
 const NotificationsPage = dynamic(() => import("./NotificationsPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileNotificationsPage = dynamic(() => import("./MobileNotificationsPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
 // Messages components
 const MessagesPage = dynamic(() => import("./MessagesPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileMessagesPage = dynamic(() => import("./MobileMessagesPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
 // Videos component
 const VideosPage = dynamic(() => import("./VideosPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
 // Client-side pages (for client users)
 const ClientProgramPage = dynamic(() => import("./ClientProgramPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileClientProgramPage = dynamic(() => import("./MobileClientProgramPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const ClientSchedulePageClient = dynamic(() => import("../app/client-schedule/ClientSchedulePageClient"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileClientSchedulePage = dynamic(() => import("./MobileClientSchedulePage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const ClientMessagesPage = dynamic(() => import("./ClientMessagesPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileClientMessagesPage = dynamic(() => import("./MobileClientMessagesPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const ClientSettingsPage = dynamic(() => import("./ClientSettingsPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 const MobileClientSettingsPage = dynamic(() => import("./MobileClientSettingsPage"), {
-  loading: PageSkeleton,
+  loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
 
@@ -160,8 +160,9 @@ export default function ClientSideMobileWrapper({
   const pathname = usePathname();
 
   // Don't render anything until we know if we're on client side
+  // Return null instead of skeleton to avoid flash
   if (!isClient) {
-    return <PageSkeleton />;
+    return null;
   }
 
   // Check for desktop-only routes first
@@ -169,7 +170,7 @@ export default function ClientSideMobileWrapper({
     const Component = DESKTOP_ONLY_ROUTES[pathname];
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        <Suspense fallback={<PageSkeleton />}>
+        <Suspense fallback={null}>
           <Component />
         </Suspense>
       </ErrorBoundary>
@@ -182,7 +183,7 @@ export default function ClientSideMobileWrapper({
     const Component = isMobile ? routeConfig.mobile : routeConfig.desktop;
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        <Suspense fallback={<PageSkeleton />}>
+        <Suspense fallback={null}>
           <Component />
         </Suspense>
       </ErrorBoundary>

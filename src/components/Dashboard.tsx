@@ -15,12 +15,15 @@ import { COLORS, getGoldenAccent, getRedAlert, getGreenPrimary } from "@/lib/col
 export default function Dashboard() {
   const router = useRouter();
 
-  // Get user profile to check role - with caching
+  // Get user profile to check role - with aggressive caching since roles don't change
+  // Roles only change if account is deleted or manually changed by admin
   const { data: userProfile, isLoading: profileLoading } =
     trpc.user.getProfile.useQuery(undefined, {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: Infinity, // Never consider stale - roles don't change
+      gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
       refetchOnWindowFocus: false,
+      refetchOnMount: false, // Don't refetch on mount if we have cached data
+      refetchOnReconnect: false, // Don't refetch on reconnect
     });
 
   // Redirect to client dashboard if user is a client
@@ -30,26 +33,23 @@ export default function Dashboard() {
     }
   }, [userProfile?.role, router]);
 
-  // Show loading state while fetching user profile
+  // Show loading state while fetching user profile - use skeleton instead of blocking
   if (profileLoading) {
     return (
       <Sidebar>
-        <div className="min-h-screen bg-[#15191a]">
-          <div className="p-6">
-            <SkeletonStats />
-          </div>
+        <div className="min-h-screen bg-[#15191a] p-6">
+          <SkeletonStats />
         </div>
       </Sidebar>
     );
   }
 
-  // If user is not a coach, show loading while redirecting
+  // If user is not a coach, show minimal content while redirect happens
+  // (returning null could prevent useEffect from running properly)
   if (userProfile?.role === "CLIENT") {
     return (
       <Sidebar>
-        <div className="flex items-center justify-center h-64 bg-[#15191a]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/20 border-t-white/60" />
-        </div>
+        <div className="min-h-screen bg-[#15191a]" />
       </Sidebar>
     );
   }
@@ -57,39 +57,39 @@ export default function Dashboard() {
   return (
     <Sidebar>
       <div className="min-h-screen bg-[#15191a] p-6">
-        <PushNotificationPrompt />
-        
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold mb-1 text-white">
-            Welcome back{userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
-                    </h1>
-          <p className="text-sm text-zinc-400">
-                    {new Date().toLocaleDateString("en-US", {
-                      weekday: "long",
-              month: "long",
-              day: "numeric",
-                    })}
-          </p>
-                  </div>
-
-        {/* TOP ROW: Week at a Glance + Today's Schedule */}
-        <div className="grid grid-cols-[70%_30%] gap-4 mb-6">
-          <WeekAtAGlanceCompact />
-          <TodaysSchedulePanel />
-        </div>
-
-        {/* MIDDLE ROW: Needs Attention + Recent Activity */}
-        <div className="grid grid-cols-[60%_40%] gap-4 mb-6">
-          <NeedsAttentionPanel />
-          <ClientActivityFeed />
-        </div>
-
-        {/* BOTTOM ROW: Quick Stats */}
-        <div className="mb-6">
-          <QuickStatsPanel />
-        </div>
+      <PushNotificationPrompt />
+      
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold mb-2 text-white">
+          Welcome back{userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
+        </h1>
+        <p className="text-sm text-zinc-400">
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })}
+        </p>
       </div>
+
+      {/* TOP ROW: Week at a Glance + Today's Schedule */}
+      <div className="grid grid-cols-[70%_30%] gap-4 mb-6">
+        <WeekAtAGlanceCompact />
+        <TodaysSchedulePanel />
+      </div>
+
+      {/* MIDDLE ROW: Needs Attention + Recent Activity */}
+      <div className="grid grid-cols-[60%_40%] gap-4 mb-6">
+        <NeedsAttentionPanel />
+        <ClientActivityFeed />
+      </div>
+
+      {/* BOTTOM ROW: Quick Stats */}
+      <div className="mb-6">
+        <QuickStatsPanel />
+      </div>
+    </div>
     </Sidebar>
   );
 }
@@ -97,14 +97,14 @@ export default function Dashboard() {
 // Week at a Glance (Compact) - Now at top
 function WeekAtAGlanceCompact() {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white">
           Week at a Glance
         </h2>
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-zinc-400 font-medium">
           Week of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </span>
+        </span>
       </div>
       <WeekAtAGlance className="compact" />
     </div>
@@ -202,82 +202,84 @@ function TodaysSchedulePanel() {
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white">
           Today's schedule
         </h2>
-        </div>
+      </div>
 
-        {todaysSchedule.length > 0 ? (
+      {todaysSchedule.length > 0 ? (
         <div className="space-y-2">
-            {todaysSchedule.slice(0, 5).map((item: any) => {
-              const isPast = new Date(item.date).getTime() < Date.now();
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    if (item.type === "lesson" && item.clientId) {
-                      router.push(`/clients/${item.clientId}`);
-                    } else {
-                      router.push("/schedule");
-                    }
-                  }}
-                className="w-full p-2 rounded border transition-colors text-left"
-                  style={{
+          {todaysSchedule.slice(0, 5).map((item: any) => {
+            const isPast = new Date(item.date).getTime() < Date.now();
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.type === "lesson" && item.clientId) {
+                    router.push(`/clients/${item.clientId}`);
+                  } else {
+                    router.push("/schedule");
+                  }
+                }}
+                className="w-full p-3 rounded-lg border transition-all duration-200 text-left hover:scale-[1.02]"
+                style={{
                   borderColor: COLORS.GOLDEN_BORDER,
                   backgroundColor: COLORS.BACKGROUND_CARD,
-                  }}
+                }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
                 }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span
-                    className="text-xs font-medium"
+                    className="text-xs font-semibold whitespace-nowrap"
                     style={{ color: COLORS.GOLDEN_ACCENT }}
-                        >
-                          {new Date(item.date).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                  >
+                    {new Date(item.date).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
                   <div className="flex-1 min-w-0">
-                        <p
-                      className={`text-xs font-medium truncate ${
-                        isPast ? "opacity-50" : ""
-                          }`}
+                    <p
+                      className={`text-sm font-medium truncate ${
+                        isPast ? "opacity-60" : ""
+                      }`}
                       style={{ color: "#F5F5F5" }}
-                        >
-                          {item.type === "lesson"
-                            ? item.client?.name || "Unknown Client"
-                            : item.title}
-                        </p>
+                    >
+                      {item.type === "lesson"
+                        ? item.client?.name || "Unknown Client"
+                        : item.title}
+                    </p>
                     {item.type === "lesson" && (
                       <p
-                        className="text-[10px] truncate"
-                        style={{ color: "#6B7280" }}
-                    >
+                        className="text-xs truncate mt-0.5"
+                        style={{ color: "#9CA3AF" }}
+                      >
                         {item.status}
                       </p>
                     )}
                   </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-        <div className="text-center py-4">
-          <p className="text-xs text-zinc-400 mb-2">
-              No lessons or reminders for today
-            </p>
-            <Link
-              href="/schedule"
-            className="inline-block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-sm text-zinc-400 mb-3">
+            No lessons or reminders for today
+          </p>
+          <Link
+            href="/schedule"
+            className="inline-block px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
             style={{
               backgroundColor: COLORS.GOLDEN_DARK,
               color: "#FFFFFF",
@@ -290,7 +292,7 @@ function TodaysSchedulePanel() {
             }}
           >
             Schedule a lesson
-            </Link>
+          </Link>
         </div>
       )}
     </div>
@@ -392,8 +394,8 @@ function NeedsAttentionPanel() {
   };
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-5">
         <h2 
           className="text-lg font-semibold text-white pl-3"
           style={{ borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}` }}
@@ -403,7 +405,7 @@ function NeedsAttentionPanel() {
         {attentionItems.length > 0 && (
           <Link
             href="/notifications"
-            className="text-sm"
+            className="text-sm font-medium transition-colors hover:opacity-80"
             style={{ color: COLORS.GOLDEN_ACCENT }}
           >
             View all →
@@ -412,14 +414,30 @@ function NeedsAttentionPanel() {
       </div>
 
       {attentionItems.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {attentionItems.map((item) => (
             <AttentionItem key={item.id} item={item} formatTimestamp={formatTimestamp} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-8">
-          <p className="text-sm text-zinc-400">All caught up! No items need your attention.</p>
+        <div className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 mb-4">
+            <svg
+              className="w-8 h-8 text-green-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <p className="text-sm text-zinc-400 font-medium">All caught up!</p>
+          <p className="text-xs text-zinc-500 mt-1">No items need your attention.</p>
         </div>
       )}
     </div>
@@ -482,12 +500,14 @@ const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp 
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
         e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+        e.currentTarget.style.transform = "translateX(2px)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
         e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+        e.currentTarget.style.transform = "translateX(0)";
       }}
-      className={`flex items-start gap-2 p-2 rounded-lg border transition-colors ${
+      className={`flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 ${
         (item.clientId || item.href) && !item.actionButton ? "cursor-pointer" : ""
       }`}
     >
@@ -536,11 +556,11 @@ const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp 
       {item.actionButton && (
         <button
           onClick={handleActionClick}
-          className="px-2 py-1 rounded text-[10px] font-medium transition-colors flex-shrink-0"
-                style={{
+          className="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex-shrink-0 hover:scale-105"
+          style={{
             backgroundColor: COLORS.GOLDEN_ACCENT,
             color: "#FFFFFF",
-                }}
+          }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
           }}
@@ -594,29 +614,45 @@ function ClientActivityFeed() {
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6 shadow-sm">
       <h2 
-        className="text-lg font-semibold mb-4 text-white pl-3"
+        className="text-lg font-semibold mb-5 text-white pl-3"
         style={{ borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}` }}
       >
         Recent client activity
       </h2>
 
       {recentCompletions.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {recentCompletions.map((completion: any) => (
             <ActivityItem
               key={completion.id}
               completion={completion}
               formatTimestamp={formatTimestamp}
             />
-            ))}
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-800/50 mb-4">
+            <svg
+              className="w-8 h-8 text-zinc-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
           </div>
-        ) : (
-        <div className="text-center py-6">
-          <p className="text-sm text-zinc-400">No recent completions</p>
-          </div>
-        )}
+          <p className="text-sm text-zinc-400 font-medium">No recent activity</p>
+          <p className="text-xs text-zinc-500 mt-1">Client completions will appear here</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -668,22 +704,23 @@ const ActivityItem = React.memo(function ActivityItem({
   };
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-3 group">
+      <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-2 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-zinc-300">
-          <span className="font-medium text-white">{completion.clientName}</span>{" "}
+        <p className="text-sm text-zinc-300 leading-relaxed">
+          <span className="font-semibold text-white">{completion.clientName}</span>{" "}
           {getActivityText()}
           {getWorkoutName() && (
             <>
               {" "}
-              <span className="text-zinc-300">in </span>
-              <span className="font-medium text-green-400">
+              <span className="text-zinc-400">in </span>
+              <span className="font-semibold text-green-400">
                 {getWorkoutName()}
               </span>
             </>
           )}
         </p>
-        <p className="text-xs mt-0.5 text-zinc-600">
+        <p className="text-xs mt-1.5 text-zinc-500 font-medium">
           {formatTimestamp(completion.completedAt)}
         </p>
       </div>
@@ -713,7 +750,7 @@ function QuickStatsPanel() {
   const statsArray = [
     {
       label: "Active clients",
-      value: clients.length,
+      value: stats.totalClients || 0,
     },
     {
       label: "Scheduled sessions this week",
@@ -746,8 +783,8 @@ function QuickStatsPanel() {
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-      <h2 className="text-lg font-semibold mb-4 text-white">
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6 shadow-sm">
+      <h2 className="text-lg font-semibold mb-5 text-white">
         Quick stats
       </h2>
 
@@ -764,16 +801,24 @@ function QuickStatsPanel() {
 const StatCard = React.memo(function StatCard({ stat }: { stat: any }) {
   return (
     <div
-      className="p-4 rounded-lg border border-white/5 bg-white/[0.02]"
+      className="p-5 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-200 group"
       style={{ borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}` }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderLeftColor = COLORS.GOLDEN_ACCENT;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderLeftColor = COLORS.GOLDEN_HOVER;
+      }}
     >
-      <p className="text-2xl font-bold mb-1 text-white">{stat.value}</p>
-      <p className="text-xs text-zinc-500">{stat.label}</p>
+      <p className="text-3xl font-bold mb-2 text-white group-hover:text-[#E5B232] transition-colors">
+        {stat.value}
+      </p>
+      <p className="text-xs text-zinc-400 font-medium">{stat.label}</p>
       {stat.progress !== undefined && (
-        <div className="mt-2 h-1 rounded-full overflow-hidden bg-white/5">
+        <div className="mt-3 h-1.5 rounded-full overflow-hidden bg-white/5">
           <div
-            className="h-full rounded-full transition-all"
-              style={{
+            className="h-full rounded-full transition-all duration-500"
+            style={{
               backgroundColor: COLORS.GOLDEN_ACCENT,
               width: `${stat.progress}%`,
             }}
