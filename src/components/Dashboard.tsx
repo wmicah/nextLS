@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,9 +15,13 @@ import { COLORS, getGoldenAccent, getRedAlert, getGreenPrimary } from "@/lib/col
 export default function Dashboard() {
   const router = useRouter();
 
-  // Get user profile to check role
+  // Get user profile to check role - with caching
   const { data: userProfile, isLoading: profileLoading } =
-    trpc.user.getProfile.useQuery();
+    trpc.user.getProfile.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+    });
 
   // Redirect to client dashboard if user is a client
   useEffect(() => {
@@ -126,13 +130,24 @@ function TodaysSchedulePanel() {
   );
 
   const { data: thisMonthLessons = [], isLoading: lessonsLoading } =
-    trpc.scheduling.getCoachSchedule.useQuery({
-      month: today.getMonth(),
-      year: today.getFullYear(),
-    });
+    trpc.scheduling.getCoachSchedule.useQuery(
+      {
+        month: today.getMonth(),
+        year: today.getFullYear(),
+      },
+      {
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        gcTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
+      }
+    );
 
   const { data: events = [], isLoading: eventsLoading } =
-    trpc.events.getUpcoming.useQuery();
+    trpc.events.getUpcoming.useQuery(undefined, {
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    });
 
   if (lessonsLoading || eventsLoading) {
     return (
@@ -148,36 +163,39 @@ function TodaysSchedulePanel() {
     );
   }
 
-  // Filter lessons for today
-  const todaysLessonsFiltered = thisMonthLessons.filter((lesson: any) => {
-    const lessonDate = new Date(lesson.date);
-    return lessonDate >= startOfToday && lessonDate <= endOfToday;
-  });
+  // Memoize filtered lessons and reminders to prevent recalculation
+  const todaysSchedule = useMemo(() => {
+    // Filter lessons for today
+    const todaysLessonsFiltered = thisMonthLessons.filter((lesson: any) => {
+      const lessonDate = new Date(lesson.date);
+      return lessonDate >= startOfToday && lessonDate <= endOfToday;
+    });
 
-  // Filter reminders for today
-  const todaysReminders = events.filter((event: any) => {
-    const eventDate = new Date(event.date);
-    return (
-      eventDate >= startOfToday &&
-      eventDate <= endOfToday &&
-      event.status === "PENDING" &&
-      event.clientId === null
-    );
-  });
+    // Filter reminders for today
+    const todaysReminders = events.filter((event: any) => {
+      const eventDate = new Date(event.date);
+      return (
+        eventDate >= startOfToday &&
+        eventDate <= endOfToday &&
+        event.status === "PENDING" &&
+        event.clientId === null
+      );
+    });
 
-  // Combine and sort
-  const todaysSchedule = [
-    ...todaysLessonsFiltered.map((lesson: any) => ({
-      ...lesson,
-      type: "lesson",
-      time: new Date(lesson.date).getTime(),
-    })),
-    ...todaysReminders.map((reminder: any) => ({
-      ...reminder,
-      type: "reminder",
-      time: new Date(reminder.date).getTime(),
-    })),
-  ].sort((a, b) => a.time - b.time);
+    // Combine and sort
+    return [
+      ...todaysLessonsFiltered.map((lesson: any) => ({
+        ...lesson,
+        type: "lesson",
+        time: new Date(lesson.date).getTime(),
+      })),
+      ...todaysReminders.map((reminder: any) => ({
+        ...reminder,
+        type: "reminder",
+        time: new Date(reminder.date).getTime(),
+      })),
+    ].sort((a, b) => a.time - b.time);
+  }, [thisMonthLessons, events, startOfToday, endOfToday]);
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
@@ -277,13 +295,21 @@ function TodaysSchedulePanel() {
 
 // Needs Your Attention Panel - Real data
 function NeedsAttentionPanel() {
-  // Get attention items from new query
+  // Get attention items from new query - with caching
   const { data: attentionItemsData = [], isLoading: attentionLoading } =
-    trpc.sidebar.getAttentionItems.useQuery();
+    trpc.sidebar.getAttentionItems.useQuery(undefined, {
+      staleTime: 1 * 60 * 1000, // 1 minute (needs to be relatively fresh)
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    });
 
-  // Get unread messages separately
+  // Get unread messages separately - with caching
   const { data: conversationsData, isLoading: conversationsLoading } =
-    trpc.messaging.getConversations.useQuery();
+    trpc.messaging.getConversations.useQuery(undefined, {
+      staleTime: 1 * 60 * 1000, // 1 minute
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    });
 
   if (attentionLoading || conversationsLoading) {
     return (
@@ -299,46 +325,51 @@ function NeedsAttentionPanel() {
     );
   }
 
-  // Ensure conversations is an array
-  const conversations = Array.isArray(conversationsData) ? conversationsData : [];
+  // Memoize attention items to prevent recalculation
+  const attentionItems = useMemo(() => {
+    // Ensure conversations is an array
+    const conversations = Array.isArray(conversationsData) ? conversationsData : [];
 
-  // Combine attention items with unread messages
-  const attentionItems: any[] = [...attentionItemsData];
+    // Combine attention items with unread messages
+    const items: any[] = [...attentionItemsData];
 
-  // Add conversations with unread messages (priority 2)
-  if (Array.isArray(conversations)) {
-    conversations.forEach((conversation: any) => {
-      const unreadCount = conversation.unreadCount || 0;
-      if (unreadCount > 0) {
-        const otherUser =
-          conversation.coach?.id !== conversation.client?.id
-            ? conversation.client || conversation.coach
-            : null;
-        const lastMessage = conversation.messages?.[0];
+    // Add conversations with unread messages (priority 2)
+    if (Array.isArray(conversations)) {
+      conversations.forEach((conversation: any) => {
+        const unreadCount = conversation.unreadCount || 0;
+        if (unreadCount > 0) {
+          const otherUser =
+            conversation.coach?.id !== conversation.client?.id
+              ? conversation.client || conversation.coach
+              : null;
+          const lastMessage = conversation.messages?.[0];
 
-        attentionItems.push({
-          id: `message-${conversation.id}`,
-          type: "message",
-          priority: 2,
-          clientName: otherUser?.name || "Unknown",
-          clientId: otherUser?.id || undefined,
-          title: `commented on ${lastMessage?.content ? "message" : "conversation"}`,
-          description: lastMessage?.content || "New message",
-          timestamp: lastMessage?.createdAt || conversation.updatedAt,
-          href: `/messages/${conversation.id}`,
-          actionButton: "Reply",
-        });
-      }
-    });
-  }
-
-  // Sort by priority and timestamp
-  attentionItems.sort((a, b) => {
-    if (a.priority !== b.priority) {
-      return (a.priority || 99) - (b.priority || 99);
+          items.push({
+            id: `message-${conversation.id}`,
+            type: "message",
+            priority: 2,
+            clientName: otherUser?.name || "Unknown",
+            clientId: otherUser?.id || undefined,
+            title: `commented on ${lastMessage?.content ? "message" : "conversation"}`,
+            description: lastMessage?.content || "New message",
+            timestamp: lastMessage?.createdAt || conversation.updatedAt,
+            href: `/messages/${conversation.id}`,
+            actionButton: "Reply",
+          });
+        }
+      });
     }
-    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-  });
+
+    // Sort by priority and timestamp
+    items.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return (a.priority || 99) - (b.priority || 99);
+      }
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+
+    return items;
+  }, [attentionItemsData, conversationsData]);
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -390,8 +421,8 @@ function NeedsAttentionPanel() {
   );
 }
 
-// Attention Item Component
-function AttentionItem({ item, formatTimestamp }: { item: any; formatTimestamp: (ts: string) => string }) {
+// Attention Item Component - Memoized to prevent unnecessary re-renders
+const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp }: { item: any; formatTimestamp: (ts: string) => string }) {
   const router = useRouter();
 
   const getTypeLabel = () => {
@@ -517,12 +548,16 @@ function AttentionItem({ item, formatTimestamp }: { item: any; formatTimestamp: 
       )}
                   </div>
   );
-}
+});
 
 // Client Activity Feed - Real data from completions
 function ClientActivityFeed() {
   const { data: recentCompletions = [], isLoading } =
-    trpc.sidebar.getRecentCompletions.useQuery();
+    trpc.sidebar.getRecentCompletions.useQuery(undefined, {
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    });
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -581,8 +616,8 @@ function ClientActivityFeed() {
   );
 }
 
-// Activity Item Component
-function ActivityItem({
+// Activity Item Component - Memoized to prevent unnecessary re-renders
+const ActivityItem = React.memo(function ActivityItem({
   completion,
   formatTimestamp,
 }: {
@@ -616,18 +651,6 @@ function ActivityItem({
 
   // Get the program/routine name to display
   const getWorkoutName = () => {
-    // Debug logging
-    console.log("ActivityItem - completion data:", {
-      clientName: completion.clientName,
-      programTitle: completion.programTitle,
-      completionType: completion.completionType,
-      latestCompletion: completion.latestCompletion ? {
-        type: completion.latestCompletion.type,
-        programTitle: completion.latestCompletion.programTitle,
-        title: completion.latestCompletion.title,
-      } : null,
-    });
-
     // Prefer the programTitle from the grouped completion
     if (completion.programTitle) {
       return completion.programTitle;
@@ -661,7 +684,7 @@ function ActivityItem({
       </div>
     </div>
   );
-}
+});
 
 // Quick Stats Panel
 function QuickStatsPanel() {
@@ -732,8 +755,8 @@ function QuickStatsPanel() {
   );
 }
 
-// Stat Card Component
-function StatCard({ stat }: { stat: any }) {
+// Stat Card Component - Memoized to prevent unnecessary re-renders
+const StatCard = React.memo(function StatCard({ stat }: { stat: any }) {
   return (
     <div
       className="p-4 rounded-lg border border-white/5 bg-white/[0.02]"
@@ -754,4 +777,4 @@ function StatCard({ stat }: { stat: any }) {
       )}
     </div>
   );
-}
+});

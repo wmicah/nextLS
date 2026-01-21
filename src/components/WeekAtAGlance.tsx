@@ -67,27 +67,49 @@ export default function WeekAtAGlance({ className = "" }: WeekAtAGlanceProps) {
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 0 }); // Saturday
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Fetch events for the current week
+  // Fetch events for the current week - with caching
   const {
     data: events = [],
     isLoading: eventsLoading,
     error: eventsError,
-  } = trpc.events.getUpcoming.useQuery();
-
-  // Fetch coach's schedule for the current month (for day overview modal)
-  const { data: coachSchedule = [] } =
-    trpc.scheduling.getCoachSchedule.useQuery({
-      month: selectedDate?.getMonth() ?? new Date().getMonth(),
-      year: selectedDate?.getFullYear() ?? new Date().getFullYear(),
-    });
-
-  // Fetch coach's profile for working hours
-  const { data: coachProfile } = trpc.user.getProfile.useQuery();
-
-  // Fetch coach's active clients for scheduling
-  const { data: clients = [] } = trpc.clients.list.useQuery({
-    archived: false,
+  } = trpc.events.getUpcoming.useQuery(undefined, {
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
+
+  // Fetch coach's schedule for the current month (for day overview modal) - with caching
+  const { data: coachSchedule = [] } =
+    trpc.scheduling.getCoachSchedule.useQuery(
+      {
+        month: selectedDate?.getMonth() ?? new Date().getMonth(),
+        year: selectedDate?.getFullYear() ?? new Date().getFullYear(),
+      },
+      {
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        gcTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
+      }
+    );
+
+  // Fetch coach's profile for working hours - with caching
+  const { data: coachProfile } = trpc.user.getProfile.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch coach's active clients for scheduling - with caching
+  const { data: clients = [] } = trpc.clients.list.useQuery(
+    {
+      archived: false,
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+    }
+  );
 
   // Filter and sort clients alphabetically based on search term
   const filteredClients = useMemo(() => {
