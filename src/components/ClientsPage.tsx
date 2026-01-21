@@ -2231,7 +2231,9 @@ function ClientsPage() {
           </div>
         ) : error ? (
           <div className="flex items-center justify-center py-12">
-            <p className="text-red-400">Error loading clients: {error.message}</p>
+            <p className="text-red-400">
+              Error loading clients: {String((error as any)?.data?.code || (error as any)?.message || "An unknown error occurred")}
+            </p>
           </div>
         ) : filteredAndSortedClients.length === 0 ? (
           <div
