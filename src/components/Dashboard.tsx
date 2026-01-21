@@ -115,19 +115,6 @@ function WeekAtAGlanceCompact() {
 function TodaysSchedulePanel() {
   const router = useRouter();
   const today = new Date();
-  const startOfToday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
-  const endOfToday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-    23,
-    59,
-    59
-  );
 
   const { data: thisMonthLessons = [], isLoading: lessonsLoading } =
     trpc.scheduling.getCoachSchedule.useQuery(
@@ -149,22 +136,25 @@ function TodaysSchedulePanel() {
       refetchOnWindowFocus: false,
     });
 
-  if (lessonsLoading || eventsLoading) {
-    return (
-      <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
-          <div className="animate-pulse">
-          <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
-          <div className="space-y-2">
-            <div className="h-3 w-full bg-white/10 rounded"></div>
-            <div className="h-3 w-3/4 bg-white/10 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Memoize filtered lessons and reminders to prevent recalculation
+  // MUST be called before early return to follow Rules of Hooks
+  // Calculate date boundaries inside useMemo (not as dependencies) to avoid infinite loops
   const todaysSchedule = useMemo(() => {
+    const currentDate = new Date();
+    const startOfToday = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate()
+    );
+    const endOfToday = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate(),
+      23,
+      59,
+      59
+    );
+
     // Filter lessons for today
     const todaysLessonsFiltered = thisMonthLessons.filter((lesson: any) => {
       const lessonDate = new Date(lesson.date);
@@ -195,7 +185,21 @@ function TodaysSchedulePanel() {
         time: new Date(reminder.date).getTime(),
       })),
     ].sort((a, b) => a.time - b.time);
-  }, [thisMonthLessons, events, startOfToday, endOfToday]);
+  }, [thisMonthLessons, events]); // Only depend on data, not dates
+
+  if (lessonsLoading || eventsLoading) {
+    return (
+      <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
+          <div className="animate-pulse">
+          <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
+          <div className="space-y-2">
+            <div className="h-3 w-full bg-white/10 rounded"></div>
+            <div className="h-3 w-3/4 bg-white/10 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
@@ -311,21 +315,8 @@ function NeedsAttentionPanel() {
       refetchOnWindowFocus: false,
     });
 
-  if (attentionLoading || conversationsLoading) {
-    return (
-      <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-        <div className="animate-pulse">
-          <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-16 w-full bg-white/10 rounded"></div>
-            <div className="h-16 w-full bg-white/10 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Memoize attention items to prevent recalculation
+  // MUST be called before early return to follow Rules of Hooks
   const attentionItems = useMemo(() => {
     // Ensure conversations is an array
     const conversations = Array.isArray(conversationsData) ? conversationsData : [];
@@ -370,6 +361,20 @@ function NeedsAttentionPanel() {
 
     return items;
   }, [attentionItemsData, conversationsData]);
+
+  if (attentionLoading || conversationsLoading) {
+    return (
+      <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+        <div className="animate-pulse">
+          <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-16 w-full bg-white/10 rounded"></div>
+            <div className="h-16 w-full bg-white/10 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);

@@ -196,9 +196,27 @@ export const sidebarRouter = router({
 
     const userId = ensureUserId(user.id);
 
+    // Calculate date range for this week
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+    endOfWeek.setHours(23, 59, 59, 999);
+
     // Get all dashboard data in parallel
-    const [clients, events, programs, todaysLessons] = await Promise.all([
-      // Get active clients
+    const [
+      clients,
+      events,
+      programs,
+      todaysLessons,
+      totalClientsCount,
+      totalProgramsCount,
+      thisWeekLessons,
+      completionData,
+    ] = await Promise.all([
+      // Get active clients (for display, limit to 10)
       db.client.findMany({
         where: {
           coachId: userId,
@@ -236,7 +254,7 @@ export const sidebarRouter = router({
         take: 10,
       }),
 
-      // Get programs
+      // Get programs (for display, limit to 10)
       db.program.findMany({
         where: {
           coachId: userId,
@@ -271,13 +289,149 @@ export const sidebarRouter = router({
         },
         orderBy: { date: "asc" },
       }),
+
+      // Get total count of active clients
+      db.client.count({
+        where: {
+          coachId: userId,
+          archived: false,
+        },
+      }),
+
+      // Get total count of programs
+      db.program.count({
+        where: {
+          coachId: userId,
+        },
+      }),
+
+      // Get lessons for this week
+      db.event.count({
+        where: {
+          coachId: userId,
+          date: {
+            gte: startOfWeek,
+            lte: endOfWeek,
+          },
+        },
+      }),
+
+      // Get completion rate data - calculate after Promise.all resolves
+      Promise.resolve(0), // Placeholder, will calculate below
     ]);
 
+    // Calculate completion rate separately after getting other data
+    // Only include clients that are NOT archived AND have at least one assignment
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    // First, get all active clients with assignments (exclude archived and those with no assignments)
+    const clientsWithAssignments = await db.client.findMany({
+      where: {
+        coachId: userId,
+        archived: false,
+        OR: [
+          {
+            programAssignments: {
+              some: {
+                program: {
+                  status: {
+                    not: "ARCHIVED",
+                  },
+                },
+              },
+            },
+          },
+          {
+            routineAssignments: {
+              some: {},
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const clientIdsWithAssignments = clientsWithAssignments.map((c) => c.id);
+
+    // Only calculate if we have clients with assignments
+    let completionRate = 0;
+    if (clientIdsWithAssignments.length > 0) {
+      const [recentCompletions, totalAssignments] = await Promise.all([
+        // Get recent completions (last 30 days) - only from clients with assignments
+        Promise.all([
+          db.programDrillCompletion.count({
+            where: {
+              clientId: {
+                in: clientIdsWithAssignments,
+              },
+              completedAt: {
+                gte: thirtyDaysAgo,
+              },
+            },
+          }),
+          db.routineExerciseCompletion.count({
+            where: {
+              clientId: {
+                in: clientIdsWithAssignments,
+              },
+              completedAt: {
+                gte: thirtyDaysAgo,
+              },
+            },
+          }),
+          db.exerciseCompletion.count({
+            where: {
+              completed: true,
+              completedAt: {
+                gte: thirtyDaysAgo,
+              },
+              clientId: {
+                in: clientIdsWithAssignments,
+              },
+            },
+          }),
+        ]).then(([a, b, c]) => a + b + c),
+        // Get total active assignments - only from clients with assignments
+        Promise.all([
+          db.programAssignment.count({
+            where: {
+              clientId: {
+                in: clientIdsWithAssignments,
+              },
+              program: {
+                status: {
+                  not: "ARCHIVED",
+                },
+              },
+            },
+          }),
+          db.routineAssignment.count({
+            where: {
+              clientId: {
+                in: clientIdsWithAssignments,
+              },
+            },
+          }),
+        ]).then(([a, b]) => a + b),
+      ]);
+
+      // Calculate completion rate: estimate ~7 items per assignment
+      // Only calculate if we have assignments
+      if (totalAssignments > 0) {
+        completionRate = Math.min(
+          Math.round((recentCompletions / (totalAssignments * 7)) * 100),
+          100
+        );
+      }
+    }
+
     // Calculate stats
-    const totalClients = clients.length;
-    const totalPrograms = programs.length;
-    const totalLessons = todaysLessons.length;
-    const completionRate = 0; // TODO: Calculate from actual data when needed
+    const totalClients = totalClientsCount;
+    const totalPrograms = totalProgramsCount;
+    const totalLessons = thisWeekLessons;
 
     return {
       clients,
@@ -440,22 +594,21 @@ export const sidebarRouter = router({
       return [];
     }
 
-    // Only show completions from the last week
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    oneWeekAgo.setHours(0, 0, 0, 0);
+    // Only show completions from the last 3 days (reduced from 7 for performance)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    threeDaysAgo.setHours(0, 0, 0, 0);
 
-    // Fetch all completions from the last week to ensure we see all clients
-    // The date filter limits the results, so we don't need a take limit
-    // This ensures we capture activity from ALL clients, not just the most active ones
+    // Limit to most recent 100 completions per type for performance
+    // We only need the top 9 grouped results, so fetching 100 should be plenty
     const [programCompletions, routineCompletions, exerciseCompletions] =
       await Promise.all([
-        // Program drill completions
+        // Program drill completions - limited to 100 most recent
         db.programDrillCompletion.findMany({
           where: {
             clientId: { in: clientIds },
             completedAt: {
-              gte: oneWeekAgo,
+              gte: threeDaysAgo,
             },
           },
           select: {
@@ -486,19 +639,18 @@ export const sidebarRouter = router({
             },
           },
           orderBy: { completedAt: "desc" },
-          // No take limit - we want all completions from the last week
-          // The date filter already limits the scope
+          take: 100, // Limit to 100 most recent
         }).catch((err) => {
           console.error("Error fetching program completions:", err);
           return [];
         }),
 
-        // Routine exercise completions
+        // Routine exercise completions - limited to 100 most recent
         db.routineExerciseCompletion.findMany({
           where: {
             clientId: { in: clientIds },
             completedAt: {
-              gte: oneWeekAgo,
+              gte: threeDaysAgo,
             },
           },
           select: {
@@ -523,22 +675,20 @@ export const sidebarRouter = router({
             },
           },
           orderBy: { completedAt: "desc" },
-          // No take limit - we want all completions from the last week
+          take: 100, // Limit to 100 most recent
         }).catch((err) => {
           console.error("Error fetching routine completions:", err);
           return [];
         }),
 
-        // Exercise completions (newer system)
-        // These might be linked to program drills via programDrillId
-        // We need to fetch the program info through the drill -> day -> week -> program chain
+        // Exercise completions (newer system) - limited to 100 most recent
         db.exerciseCompletion.findMany({
           where: {
             clientId: { in: clientIds },
             completed: true,
             completedAt: {
               not: null,
-              gte: oneWeekAgo,
+              gte: threeDaysAgo,
             },
           },
           select: {
@@ -555,7 +705,7 @@ export const sidebarRouter = router({
             },
           },
           orderBy: { completedAt: "desc" },
-          // No take limit - we want all completions from the last week
+          take: 100, // Limit to 100 most recent
         }).catch((err) => {
           console.error("Error fetching exercise completions:", err);
           return [];
@@ -564,20 +714,6 @@ export const sidebarRouter = router({
 
     // Combine all completions into a unified format
     const allCompletions: any[] = [];
-
-    // Debug: Log what we're getting from the queries
-    console.log("Raw completions data:", {
-      programCount: programCompletions.length,
-      routineCount: routineCompletions.length,
-      exerciseCount: exerciseCompletions.length,
-      sampleProgram: programCompletions[0] ? {
-        hasClient: !!programCompletions[0].client,
-        hasDrill: !!programCompletions[0].drill,
-        hasProgramAssignment: !!programCompletions[0].programAssignment,
-        hasProgram: !!programCompletions[0].programAssignment?.program,
-        programTitle: programCompletions[0].programAssignment?.program?.title,
-      } : null,
-    });
 
     // Add program drill completions
     programCompletions.forEach((completion) => {
@@ -629,12 +765,6 @@ export const sidebarRouter = router({
       (c) => c.client && c.completedAt && !c.programDrillId
     );
 
-    console.log("Exercise completions breakdown:", {
-      total: exerciseCompletions.length,
-      withProgramDrill: exerciseCompletionsWithProgramDrill.length,
-      withStandaloneRoutine: exerciseCompletionsWithStandaloneRoutine.length,
-      standalone: exerciseCompletionsStandalone.length,
-    });
 
     // 1. Handle program drill exercises - fetch program info
     const uniqueProgramDrillIds = [
@@ -759,16 +889,6 @@ export const sidebarRouter = router({
         // Get date string in YYYY-MM-DD format (local timezone)
         const dateKey = `${completion.clientId}-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-        // Debug: Log each completion being processed
-        if (completion.programTitle) {
-          console.log("Processing completion with programTitle:", {
-            clientName: completion.clientName,
-            type: completion.type,
-            programTitle: completion.programTitle,
-            dateKey,
-          });
-        }
-
         if (!groupedByDay.has(dateKey)) {
           const newGroup = {
             id: dateKey,
@@ -783,9 +903,6 @@ export const sidebarRouter = router({
             completionType: completion.type,
           };
           groupedByDay.set(dateKey, newGroup);
-          if (completion.programTitle) {
-            console.log("Created new group with programTitle:", newGroup.programTitle);
-          }
         } else {
           const group = groupedByDay.get(dateKey);
           group.count += 1;
@@ -795,10 +912,8 @@ export const sidebarRouter = router({
             group.completedAt = completion.completedAt;
             group.latestCompletion = completion;
             // Update program/routine title - prefer the new one if it exists, otherwise keep the old one
-            // This ensures we don't lose the program/routine name if the latest completion doesn't have it
             if (completion.programTitle) {
               group.programTitle = completion.programTitle;
-              console.log("Updated group programTitle to:", completion.programTitle);
             }
             // Only update completionType if we have a programTitle (to prioritize program/routine over exercise)
             if (completion.programTitle) {
@@ -809,32 +924,19 @@ export const sidebarRouter = router({
             if (completion.programTitle && !group.programTitle) {
               group.programTitle = completion.programTitle;
               group.completionType = completion.type;
-              console.log("Added programTitle from older completion:", completion.programTitle);
             }
           }
         }
       });
 
     // Convert map to array and sort by completedAt (most recent first)
+    // Limit to top 9 results
     const groupedArray = Array.from(groupedByDay.values())
       .sort(
         (a, b) =>
           new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
       )
       .slice(0, 9);
-
-    // Debug logging to see what we're returning
-    console.log("Recent completions - grouped results:", {
-      totalGroups: groupedArray.length,
-      sample: groupedArray.slice(0, 3).map((g: any) => ({
-        clientName: g.clientName,
-        programTitle: g.programTitle,
-        completionType: g.completionType,
-        latestCompletionType: g.latestCompletion?.type,
-        latestProgramTitle: g.latestCompletion?.programTitle,
-        count: g.count,
-      })),
-    });
 
     return groupedArray;
   }),
