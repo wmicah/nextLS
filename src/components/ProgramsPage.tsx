@@ -246,6 +246,7 @@ function ProgramsPage() {
     gcTime: 60 * 60 * 1000, // 1 hour
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    refetchOnReconnect: false,
   });
   // PREMADE_ROUTINES tier includes MASTER_LIBRARY access (higher tiers get all lower tier features)
   const hasMasterLibraryAccess = 
@@ -265,20 +266,39 @@ function ProgramsPage() {
     data: programs = [],
     isLoading,
     error,
-  } = trpc.programs.list.useQuery();
+  } = trpc.programs.list.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes - programs don't change frequently
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  });
 
   // Fetch coach's active clients (including organization clients if coach is in an org)
-  const { data: clients = [] } = trpc.clients.list.useQuery({
-    archived: false,
-    scope: "organization", // Include organization clients if coach is in an organization
-  });
+  const { data: clients = [] } = trpc.clients.list.useQuery(
+    {
+      archived: false,
+      scope: "organization", // Include organization clients if coach is in an organization
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+    }
+  );
 
   // Fetch program categories
   const { data: programCategoriesData = [] } =
-    trpc.programs.getCategories.useQuery();
+    trpc.programs.getCategories.useQuery(undefined, {
+      staleTime: 10 * 60 * 1000, // 10 minutes - categories change rarely
+      gcTime: 30 * 60 * 1000, // 30 minutes
+      refetchOnWindowFocus: false,
+    });
 
   // Fetch routines from database
-  const { data: routinesData = [] } = trpc.routines.list.useQuery();
+  const { data: routinesData = [] } = trpc.routines.list.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  });
 
   // Transform database routines to match frontend interface
   const routines: Routine[] = routinesData.map(routine => ({
