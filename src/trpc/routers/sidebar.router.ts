@@ -188,6 +188,595 @@ export const sidebarRouter = router({
     return conversations;
   }),
 
+  // Optimized batched query for entire dashboard - reduces round trips
+  getDashboardDataBatched: publicProcedure.query(async () => {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+
+    if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+    const userId = ensureUserId(user.id);
+
+    // Calculate date ranges
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    threeDaysAgo.setHours(0, 0, 0, 0);
+
+    // Get all dashboard data in a single batched query
+    const [
+      clients,
+      todaysLessons,
+      todaysEvents,
+      thisMonthLessons,
+      upcomingEvents,
+      programs,
+      totalClientsCount,
+      totalProgramsCount,
+      thisWeekLessons,
+      clientIds,
+    ] = await Promise.all([
+      // Active clients
+      db.client.findMany({
+        where: { coachId: userId, archived: false },
+        select: { id: true, name: true, email: true, avatar: true, lastActivity: true },
+        orderBy: { lastActivity: "desc" },
+        take: 10,
+      }),
+
+      // Today's lessons
+      db.event.findMany({
+        where: {
+          coachId: userId,
+          date: { gte: today, lte: endOfToday },
+        },
+        include: {
+          client: { select: { id: true, name: true, avatar: true } },
+        },
+        orderBy: { date: "asc" },
+      }),
+
+      // Today's reminders (events without client)
+      db.event.findMany({
+        where: {
+          coachId: userId,
+          date: { gte: today, lte: endOfToday },
+          clientId: null,
+          status: "PENDING",
+        },
+        orderBy: { date: "asc" },
+      }),
+
+      // This month's lessons (for WeekAtAGlance)
+      db.event.findMany({
+        where: {
+          coachId: userId,
+          date: {
+            gte: new Date(now.getFullYear(), now.getMonth(), 1),
+            lt: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+          },
+        },
+        include: {
+          client: { select: { id: true, name: true, avatar: true } },
+        },
+        orderBy: { date: "asc" },
+      }),
+
+      // Upcoming events
+      db.event.findMany({
+        where: { coachId: userId, date: { gte: now } },
+        include: {
+          client: { select: { id: true, name: true, avatar: true } },
+        },
+        orderBy: { date: "asc" },
+        take: 10,
+      }),
+
+      // Programs
+      db.program.findMany({
+        where: { coachId: userId },
+        select: { id: true, title: true, status: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+
+      // Counts
+      db.client.count({ where: { coachId: userId, archived: false } }),
+      db.program.count({ where: { coachId: userId } }),
+      db.event.count({
+        where: { coachId: userId, date: { gte: startOfWeek, lte: endOfWeek } },
+      }),
+
+      // Get client IDs for completions query
+      db.client.findMany({
+        where: { coachId: userId, archived: false },
+        select: { id: true },
+      }),
+    ]);
+
+    const clientIdList = clientIds.map((c) => c.id);
+
+      // Get completions and attention items in parallel (only if we have clients)
+      const [recentCompletions, attentionItems, conversations] = await Promise.all([
+        // Recent completions - match the original getRecentCompletions logic
+        clientIdList.length > 0
+          ? Promise.all([
+              db.programDrillCompletion.findMany({
+                where: {
+                  clientId: { in: clientIdList },
+                  completedAt: { gte: threeDaysAgo },
+                },
+                select: {
+                  id: true,
+                  clientId: true,
+                  completedAt: true,
+                  client: { select: { id: true, name: true } },
+                  drill: { select: { id: true, title: true } },
+                  programAssignment: {
+                    select: {
+                      program: { select: { id: true, title: true } },
+                    },
+                  },
+                },
+                orderBy: { completedAt: "desc" },
+                take: 100,
+              }).catch(() => []),
+              db.routineExerciseCompletion.findMany({
+                where: {
+                  clientId: { in: clientIdList },
+                  completedAt: { gte: threeDaysAgo },
+                },
+                select: {
+                  id: true,
+                  clientId: true,
+                  completedAt: true,
+                  client: { select: { id: true, name: true } },
+                  routineAssignment: {
+                    select: {
+                      routine: { select: { id: true, name: true } },
+                    },
+                  },
+                },
+                orderBy: { completedAt: "desc" },
+                take: 100,
+              }).catch(() => []),
+              db.exerciseCompletion.findMany({
+                where: {
+                  clientId: { in: clientIdList },
+                  completed: true,
+                  completedAt: {
+                    not: null,
+                    gte: threeDaysAgo,
+                  },
+                },
+                select: {
+                  id: true,
+                  clientId: true,
+                  completedAt: true,
+                  programDrillId: true,
+                  exerciseId: true,
+                  client: { select: { id: true, name: true } },
+                },
+                orderBy: { completedAt: "desc" },
+                take: 100,
+              }).catch(() => []),
+            ]).then(async ([programCompletions, routineCompletions, exerciseCompletions]) => {
+              // Combine all completions into a unified format (matching original logic)
+              const allCompletions: any[] = [];
+
+              // Add program drill completions
+              programCompletions.forEach((c) => {
+                if (c.client && c.drill && c.programAssignment?.program) {
+                  allCompletions.push({
+                    id: `program-${c.id}`,
+                    clientId: c.clientId,
+                    clientName: c.client.name,
+                    type: "program",
+                    title: c.drill.title,
+                    programTitle: c.programAssignment.program.title,
+                    completedAt: c.completedAt,
+                  });
+                }
+              });
+
+              // Add routine exercise completions
+              routineCompletions.forEach((c) => {
+                if (c.client && c.routineAssignment?.routine) {
+                  allCompletions.push({
+                    id: `routine-${c.id}`,
+                    clientId: c.clientId,
+                    clientName: c.client.name,
+                    type: "routine",
+                    title: "Routine exercise",
+                    programTitle: c.routineAssignment.routine.name,
+                    completedAt: c.completedAt,
+                  });
+                }
+              });
+
+              // Handle exercise completions - need to fetch program/routine info
+              const exerciseCompletionsWithProgramDrill = exerciseCompletions.filter(
+                (c) => c.client && c.completedAt && c.programDrillId && c.programDrillId !== "standalone-routine"
+              );
+              const exerciseCompletionsWithStandaloneRoutine = exerciseCompletions.filter(
+                (c) => c.client && c.completedAt && c.programDrillId === "standalone-routine"
+              );
+              const exerciseCompletionsStandalone = exerciseCompletions.filter(
+                (c) => c.client && c.completedAt && !c.programDrillId
+              );
+
+              // Fetch program drill info for exercise completions
+              const uniqueProgramDrillIds = [
+                ...new Set(exerciseCompletionsWithProgramDrill.map((c) => c.programDrillId).filter(Boolean)),
+              ] as string[];
+              const programDrillsMap = new Map<string, string | null>();
+              if (uniqueProgramDrillIds.length > 0) {
+                try {
+                  const programDrills = await db.programDrill.findMany({
+                    where: { id: { in: uniqueProgramDrillIds } },
+                    select: {
+                      id: true,
+                      day: {
+                        select: {
+                          week: {
+                            select: {
+                              program: { select: { title: true } },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  });
+                  programDrills.forEach((drill) => {
+                    programDrillsMap.set(drill.id, drill.day?.week?.program?.title || null);
+                  });
+                } catch (err) {
+                  console.error("Error batch fetching program drills:", err);
+                }
+              }
+
+              // Fetch routine info for standalone routine exercises
+              const uniqueExerciseIds = [
+                ...new Set(exerciseCompletionsWithStandaloneRoutine.map((c) => c.exerciseId).filter(Boolean)),
+              ] as string[];
+              const routineMap = new Map<string, string | null>();
+              if (uniqueExerciseIds.length > 0) {
+                try {
+                  const routineExercises = await db.routineExercise.findMany({
+                    where: { id: { in: uniqueExerciseIds } },
+                    select: {
+                      id: true,
+                      routine: { select: { id: true, name: true } },
+                    },
+                  });
+                  routineExercises.forEach((exercise) => {
+                    routineMap.set(exercise.id, exercise.routine?.name || null);
+                  });
+                } catch (err) {
+                  console.error("Error batch fetching routine exercises:", err);
+                }
+              }
+
+              // Add exercise completions with program info
+              exerciseCompletionsWithProgramDrill.forEach((c) => {
+                allCompletions.push({
+                  id: `exercise-${c.id}`,
+                  clientId: c.clientId,
+                  clientName: c.client!.name,
+                  type: "exercise",
+                  title: "Exercise",
+                  programTitle: programDrillsMap.get(c.programDrillId!) || null,
+                  completedAt: c.completedAt,
+                });
+              });
+
+              // Add standalone routine exercise completions
+              exerciseCompletionsWithStandaloneRoutine.forEach((c) => {
+                allCompletions.push({
+                  id: `exercise-${c.id}`,
+                  clientId: c.clientId,
+                  clientName: c.client!.name,
+                  type: "routine",
+                  title: "Routine exercise",
+                  programTitle: routineMap.get(c.exerciseId) || null,
+                  completedAt: c.completedAt,
+                });
+              });
+
+              // Add standalone exercises
+              exerciseCompletionsStandalone.forEach((c) => {
+                allCompletions.push({
+                  id: `exercise-${c.id}`,
+                  clientId: c.clientId,
+                  clientName: c.client!.name,
+                  type: "exercise",
+                  title: "Exercise",
+                  programTitle: null,
+                  completedAt: c.completedAt,
+                });
+              });
+
+              // Group by client and date (day) - matching original logic
+              const groupedByDay = new Map<string, any>();
+              allCompletions
+                .filter((c) => c.completedAt)
+                .forEach((completion) => {
+                  const date = new Date(completion.completedAt);
+                  const dateKey = `${completion.clientId}-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+                  if (!groupedByDay.has(dateKey)) {
+                    groupedByDay.set(dateKey, {
+                      id: dateKey,
+                      clientId: completion.clientId,
+                      clientName: completion.clientName,
+                      completedAt: completion.completedAt,
+                      count: 1,
+                      types: new Set([completion.type]),
+                      latestCompletion: completion,
+                      programTitle: completion.programTitle || null,
+                      completionType: completion.type,
+                    });
+                  } else {
+                    const group = groupedByDay.get(dateKey)!;
+                    group.count += 1;
+                    group.types.add(completion.type);
+                    if (new Date(completion.completedAt) > new Date(group.completedAt)) {
+                      group.completedAt = completion.completedAt;
+                      group.latestCompletion = completion;
+                      if (completion.programTitle) {
+                        group.programTitle = completion.programTitle;
+                      }
+                      if (completion.programTitle) {
+                        group.completionType = completion.type;
+                      }
+                    } else {
+                      if (completion.programTitle && !group.programTitle) {
+                        group.programTitle = completion.programTitle;
+                        group.completionType = completion.type;
+                      }
+                    }
+                  }
+                });
+
+              // Convert to array, sort, and limit to top 9
+              return Array.from(groupedByDay.values())
+                .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+                .slice(0, 9);
+            })
+        : Promise.resolve([]),
+
+      // Attention items - use ClientVideoSubmission (has direct client relationship)
+      db.clientVideoSubmission.findMany({
+        where: {
+          coachId: userId,
+          comment: null, // No comment means not reviewed yet
+          createdAt: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+          },
+        },
+        include: {
+          client: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          drill: {
+            select: {
+              title: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }).then((videos) =>
+        videos
+          .filter((v) => v.client && v.client.name) // Filter out videos without a client or client name
+          .map((v) => ({
+            id: `video-${v.id}`,
+            type: "video_review",
+            priority: 1,
+            clientName: v.client.name.trim() || "Unknown", // Ensure we have a name, fallback to Unknown if empty
+            clientId: v.client.id,
+            title: v.drill?.title 
+              ? `submitted a video: ${v.drill.title}` 
+              : `submitted a video: ${v.title}`,
+            description: v.description || v.title || "",
+            timestamp: v.createdAt.toISOString(),
+            href: `/videos/${v.id}`,
+            actionButton: "Review",
+          }))
+      ),
+
+      // Conversations for unread messages
+      db.conversation.findMany({
+        where: {
+          OR: [{ coachId: userId }, { clientId: userId }],
+        },
+        include: {
+          coach: { select: { id: true, name: true } },
+          client: { select: { id: true, name: true } },
+          messages: {
+            where: { isRead: false, senderId: { not: userId } },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { id: true, content: true, createdAt: true },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+      }),
+    ]);
+
+    // Calculate completion rate - match original getDashboardData logic
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    // Only include clients that are NOT archived AND have at least one assignment
+    const clientsWithAssignments = await db.client.findMany({
+      where: {
+        coachId: userId,
+        archived: false,
+        OR: [
+          {
+            programAssignments: {
+              some: {
+                program: {
+                  status: {
+                    not: "ARCHIVED",
+                  },
+                },
+              },
+            },
+          },
+          {
+            routineAssignments: {
+              some: {},
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const clientIdsWithAssignments = clientsWithAssignments.map((c) => c.id);
+    let completionRate = 0;
+
+    if (clientIdsWithAssignments.length > 0) {
+      const [recentCompletions, totalAssignments] = await Promise.all([
+        // Get recent completions (last 30 days) - only from clients with assignments
+        Promise.all([
+          db.programDrillCompletion.count({
+            where: {
+              clientId: { in: clientIdsWithAssignments },
+              completedAt: { gte: thirtyDaysAgo },
+            },
+          }),
+          db.routineExerciseCompletion.count({
+            where: {
+              clientId: { in: clientIdsWithAssignments },
+              completedAt: { gte: thirtyDaysAgo },
+            },
+          }),
+          db.exerciseCompletion.count({
+            where: {
+              completed: true,
+              completedAt: {
+                gte: thirtyDaysAgo,
+              },
+              clientId: { in: clientIdsWithAssignments },
+            },
+          }),
+        ]).then(([a, b, c]) => a + b + c),
+        // Get total active assignments - only from clients with assignments
+        Promise.all([
+          db.programAssignment.count({
+            where: {
+              clientId: { in: clientIdsWithAssignments },
+              program: {
+                status: {
+                  not: "ARCHIVED",
+                },
+              },
+            },
+          }),
+          db.routineAssignment.count({
+            where: {
+              clientId: { in: clientIdsWithAssignments },
+            },
+          }),
+        ]).then(([a, b]) => a + b),
+      ]);
+
+      // Calculate completion rate: estimate ~7 items per assignment
+      // Only calculate if we have assignments
+      if (totalAssignments > 0) {
+        completionRate = Math.min(
+          Math.round((recentCompletions / (totalAssignments * 7)) * 100),
+          100
+        );
+      }
+    }
+
+    // Combine today's schedule
+    const todaysSchedule = [
+      ...todaysLessons.map((lesson) => ({
+        ...lesson,
+        type: "lesson" as const,
+        time: new Date(lesson.date).getTime(),
+      })),
+      ...todaysEvents.map((event) => ({
+        ...event,
+        type: "reminder" as const,
+        time: new Date(event.date).getTime(),
+      })),
+    ].sort((a, b) => a.time - b.time);
+
+    // Add unread messages to attention items
+    const attentionItemsWithMessages = [
+      ...attentionItems,
+      ...conversations
+        .filter((conv) => conv.messages.length > 0)
+        .map((conv) => {
+          const otherUser = conv.coach?.id === userId ? conv.client : conv.coach;
+          const lastMessage = conv.messages[0];
+          return {
+            id: `message-${conv.id}`,
+            type: "message" as const,
+            priority: 2,
+            clientName: otherUser?.name || "Unknown",
+            clientId: otherUser?.id,
+            title: "sent a message",
+            description: lastMessage?.content || "New message",
+            timestamp: lastMessage?.createdAt.toISOString() || conv.updatedAt.toISOString(),
+            href: `/messages/${conv.id}`,
+            actionButton: "Reply",
+          };
+        }),
+    ].sort((a, b) => {
+      if (a.priority !== b.priority) return (a.priority || 99) - (b.priority || 99);
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+
+    return {
+      // Stats
+      stats: {
+        totalClients: totalClientsCount,
+        totalPrograms: totalProgramsCount,
+        totalLessons: thisWeekLessons,
+        completionRate,
+      },
+      // Today's schedule
+      todaysSchedule,
+      // This month's lessons (for WeekAtAGlance)
+      thisMonthLessons,
+      // Upcoming events
+      upcomingEvents,
+      // Attention items
+      attentionItems: attentionItemsWithMessages,
+      // Recent completions
+      recentCompletions,
+      // Clients
+      clients,
+      // Programs
+      programs,
+    };
+  }),
+
   getDashboardData: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession();
     const user = await getUser();

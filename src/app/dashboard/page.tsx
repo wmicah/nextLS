@@ -9,9 +9,13 @@ const Page = async () => {
 
   if (!user?.id) redirect("/auth-callback?origin=/dashboard");
 
+  // Optimize: Only fetch role, not entire user object
   const dbUser = await db.user.findFirst({
     where: {
       id: user.id,
+    },
+    select: {
+      role: true, // Only fetch what we need
     },
   });
 
