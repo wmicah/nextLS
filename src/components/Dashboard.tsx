@@ -1,16 +1,37 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, Suspense } from "react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
+import dynamic from "next/dynamic";
 // Icons removed for cleaner UI
 import Sidebar from "./Sidebar";
-import WeekAtAGlance from "@/components/WeekAtAGlance";
 import { SkeletonStats } from "@/components/SkeletonLoader";
-import PushNotificationPrompt from "./PushNotificationPrompt";
 import { COLORS, getGoldenAccent, getRedAlert, getGreenPrimary } from "@/lib/colors";
+
+// Lazy load non-critical components
+const PushNotificationPrompt = dynamic(() => import("./PushNotificationPrompt"), {
+  ssr: false, // Not needed for SSR
+});
+
+// Lazy load heavy components to improve initial load time
+const WeekAtAGlance = dynamic(() => import("@/components/WeekAtAGlance"), {
+  loading: () => (
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5">
+      <div className="animate-pulse">
+        <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="h-24 bg-white/10 rounded"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  ),
+  ssr: false, // Disable SSR for this heavy component
+});
 
 export default function Dashboard() {
   const router = useRouter();
@@ -57,7 +78,10 @@ export default function Dashboard() {
   return (
     <Sidebar>
       <div className="min-h-screen bg-[#15191a] p-6">
-      <PushNotificationPrompt />
+      {/* Defer push notification prompt - not critical for initial render */}
+      <Suspense fallback={null}>
+        <PushNotificationPrompt />
+      </Suspense>
       
       {/* Header */}
       <div className="mb-8">
@@ -75,19 +99,91 @@ export default function Dashboard() {
 
       {/* TOP ROW: Week at a Glance + Today's Schedule */}
       <div className="grid grid-cols-[70%_30%] gap-4 mb-6">
-        <WeekAtAGlanceCompact />
-        <TodaysSchedulePanel />
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5">
+              <div className="animate-pulse">
+                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                <div className="grid grid-cols-7 gap-2">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} className="h-24 bg-white/10 rounded"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <WeekAtAGlanceCompact />
+        </Suspense>
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
+              <div className="animate-pulse">
+                <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-3 w-full bg-white/10 rounded"></div>
+                  <div className="h-3 w-3/4 bg-white/10 rounded"></div>
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <TodaysSchedulePanel />
+        </Suspense>
       </div>
 
       {/* MIDDLE ROW: Needs Attention + Recent Activity */}
       <div className="grid grid-cols-[60%_40%] gap-4 mb-6">
-        <NeedsAttentionPanel />
-        <ClientActivityFeed />
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+              <div className="animate-pulse">
+                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-16 w-full bg-white/10 rounded"></div>
+                  <div className="h-16 w-full bg-white/10 rounded"></div>
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <NeedsAttentionPanel />
+        </Suspense>
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+              <div className="animate-pulse">
+                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-12 w-full bg-white/10 rounded"></div>
+                  <div className="h-12 w-full bg-white/10 rounded"></div>
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <ClientActivityFeed />
+        </Suspense>
       </div>
 
       {/* BOTTOM ROW: Quick Stats */}
       <div className="mb-6">
-        <QuickStatsPanel />
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+              <div className="animate-pulse">
+                <div className="h-5 w-32 bg-white/10 rounded mb-4"></div>
+                <div className="grid grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-20 bg-white/10 rounded"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <QuickStatsPanel />
+        </Suspense>
       </div>
     </div>
     </Sidebar>
@@ -96,6 +192,13 @@ export default function Dashboard() {
 
 // Week at a Glance (Compact) - Now at top
 function WeekAtAGlanceCompact() {
+  // Use batched dashboard data for this month's lessons if available
+  const { data: batchedData } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -114,8 +217,16 @@ function WeekAtAGlanceCompact() {
 // Today's Schedule Panel (Small, next to Week at a Glance)
 function TodaysSchedulePanel() {
   const router = useRouter();
-  const today = new Date();
 
+  // Use batched dashboard data if available, fallback to individual queries
+  const { data: batchedData, isLoading: batchedLoading } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fallback queries (only used if batched query fails)
+  const today = new Date();
   const { data: thisMonthLessons = [], isLoading: lessonsLoading } =
     trpc.scheduling.getCoachSchedule.useQuery(
       {
@@ -123,23 +234,29 @@ function TodaysSchedulePanel() {
         year: today.getFullYear(),
       },
       {
-        staleTime: 2 * 60 * 1000, // 2 minutes
-        gcTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 2 * 60 * 1000,
+        gcTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
+        enabled: !batchedData && !batchedLoading, // Only fetch if batched query didn't return data and isn't loading
       }
     );
 
   const { data: events = [], isLoading: eventsLoading } =
     trpc.events.getUpcoming.useQuery(undefined, {
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
+      enabled: !batchedData && !batchedLoading, // Only fetch if batched query didn't return data and isn't loading
     });
 
-  // Memoize filtered lessons and reminders to prevent recalculation
-  // MUST be called before early return to follow Rules of Hooks
-  // Calculate date boundaries inside useMemo (not as dependencies) to avoid infinite loops
+  // Use batched data if available, otherwise calculate from individual queries
   const todaysSchedule = useMemo(() => {
+    // If we have batched data, use it directly
+    if (batchedData?.todaysSchedule) {
+      return batchedData.todaysSchedule;
+    }
+
+    // Otherwise, filter from individual queries
     const currentDate = new Date();
     const startOfToday = new Date(
       currentDate.getFullYear(),
@@ -185,9 +302,9 @@ function TodaysSchedulePanel() {
         time: new Date(reminder.date).getTime(),
       })),
     ].sort((a, b) => a.time - b.time);
-  }, [thisMonthLessons, events]); // Only depend on data, not dates
+  }, [batchedData?.todaysSchedule, thisMonthLessons, events]);
 
-  if (lessonsLoading || eventsLoading) {
+  if (batchedLoading || (!batchedData && (lessonsLoading || eventsLoading))) {
     return (
       <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
           <div className="animate-pulse">
@@ -301,29 +418,39 @@ function TodaysSchedulePanel() {
 
 // Needs Your Attention Panel - Real data
 function NeedsAttentionPanel() {
-  // Get attention items from new query - with caching
+  // Use batched dashboard data if available
+  const { data: batchedData, isLoading: batchedLoading } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+    staleTime: 1 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fallback queries (only used if batched query fails)
   const { data: attentionItemsData = [], isLoading: attentionLoading } =
     trpc.sidebar.getAttentionItems.useQuery(undefined, {
-      staleTime: 1 * 60 * 1000, // 1 minute (needs to be relatively fresh)
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 1 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
+      enabled: !batchedData && !batchedLoading,
     });
 
-  // Get unread messages separately - with caching
   const { data: conversationsData, isLoading: conversationsLoading } =
     trpc.messaging.getConversations.useQuery(undefined, {
-      staleTime: 1 * 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 1 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
+      enabled: !batchedData && !batchedLoading,
     });
 
-  // Memoize attention items to prevent recalculation
-  // MUST be called before early return to follow Rules of Hooks
+  // Use batched data if available, otherwise calculate from individual queries
   const attentionItems = useMemo(() => {
-    // Ensure conversations is an array
-    const conversations = Array.isArray(conversationsData) ? conversationsData : [];
+    // If we have batched data, use it directly
+    if (batchedData?.attentionItems) {
+      return batchedData.attentionItems;
+    }
 
-    // Combine attention items with unread messages
+    // Otherwise, combine from individual queries
+    const conversations = Array.isArray(conversationsData) ? conversationsData : [];
     const items: any[] = [...attentionItemsData];
 
     // Add conversations with unread messages (priority 2)
@@ -362,9 +489,9 @@ function NeedsAttentionPanel() {
     });
 
     return items;
-  }, [attentionItemsData, conversationsData]);
+  }, [batchedData?.attentionItems, attentionItemsData, conversationsData]);
 
-  if (attentionLoading || conversationsLoading) {
+  if (batchedLoading || (!batchedData && (attentionLoading || conversationsLoading))) {
     return (
       <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
         <div className="animate-pulse">
@@ -577,15 +704,27 @@ const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp 
 
 // Client Activity Feed - Real data from completions
 function ClientActivityFeed() {
+  // Use batched dashboard data if available
+  const { data: batchedData, isLoading: batchedLoading } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fallback query (only used if batched query fails)
   const { data: recentCompletions = [], isLoading } =
     trpc.sidebar.getRecentCompletions.useQuery(undefined, {
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
+      enabled: !batchedData && !batchedLoading,
     });
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
+  // Use batched data if available
+  const completions = batchedData?.recentCompletions || recentCompletions;
+
+  const formatTimestamp = (timestamp: string | Date) => {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -599,7 +738,7 @@ function ClientActivityFeed() {
     return date.toLocaleDateString();
   };
 
-  if (isLoading) {
+  if (batchedLoading || (!batchedData && isLoading)) {
     return (
       <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
         <div className="animate-pulse">
@@ -622,9 +761,9 @@ function ClientActivityFeed() {
         Recent client activity
       </h2>
 
-      {recentCompletions.length > 0 ? (
+      {completions.length > 0 ? (
         <div className="space-y-4">
-          {recentCompletions.map((completion: any) => (
+          {completions.map((completion: any) => (
             <ActivityItem
               key={completion.id}
               completion={completion}
@@ -730,6 +869,13 @@ const ActivityItem = React.memo(function ActivityItem({
 
 // Quick Stats Panel
 function QuickStatsPanel() {
+  // Use batched dashboard data (preferred) or fallback to original query
+  const { data: batchedData, isLoading: batchedLoading } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   const { data: dashboardData, isLoading } =
     trpc.sidebar.getDashboardData.useQuery(undefined, {
       staleTime: 5 * 60 * 1000,
@@ -737,15 +883,17 @@ function QuickStatsPanel() {
       refetchInterval: false,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
+      enabled: !batchedData && !batchedLoading, // Only fetch if batched query didn't return data and isn't loading
     });
 
-  const clients = dashboardData?.clients || [];
-  const stats = dashboardData?.stats || {
+  // Use batched data if available, otherwise use fallback
+  const stats = batchedData?.stats || dashboardData?.stats || {
     totalClients: 0,
     totalPrograms: 0,
     totalLessons: 0,
     completionRate: 0,
   };
+
 
   const statsArray = [
     {
