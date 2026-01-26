@@ -620,7 +620,12 @@ export default function MobileClientSchedulePage() {
       </div>
 
       {/* Main Content */}
-      <div className="p-4 pb-20 space-y-6">
+      <div 
+        className="p-4 space-y-6"
+        style={{ 
+          paddingBottom: "max(5rem, calc(5rem + env(safe-area-inset-bottom)))", // Account for bottom nav + safe area
+        }}
+      >
         {/* Coach / Organization Working Hours */}
         {isInOrganization && organizationCoaches.length > 0 ? (
           <div className="p-4 rounded-xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl space-y-3">
